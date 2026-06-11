@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, ArrowRight, Check, Download, FileText, Home as HomeIcon, Menu, Phone, Send, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Download, FileText, Home as HomeIcon, Phone, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview } from './components/DoorPreview'
 import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
@@ -88,10 +88,9 @@ export default function App() {
           <span className="app-name"><strong>Home Guard Door Builder</strong><small>Build your door. Download your order. Request a quote.</small></span>
         </div>
         <div className="header-actions">
-          {screen === 'builder' && <button className="home-return" onClick={() => showScreen('home')}><HomeIcon size={15} /> Home</button>}
+          <button className="home-return" aria-label="Home" onClick={() => showScreen('home')}><HomeIcon size={17} /><span>Home</span></button>
           <div className="header-help"><Phone size={16} /><span>Questions? <strong>Talk to a door expert</strong></span></div>
         </div>
-        <button className="menu" aria-label="Menu"><Menu /></button>
       </header>
 
       {screen === 'home' ? <main className="home-page">

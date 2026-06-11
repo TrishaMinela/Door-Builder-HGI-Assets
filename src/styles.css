@@ -91,6 +91,9 @@
 }
 @media(max-width:560px){
   :root{--mobile-header-height:72px;--mobile-progress-height:52px;--mobile-preview-height:175px}
+  .home-return{width:38px;height:38px;padding:0;border:0;border-radius:50%;font-size:0;justify-content:center;background:#ffffff12}
+  .home-return span{display:none}
+  .home-return svg{width:19px;height:19px}
   .stepper{height:52px}
   .stepper span{width:22px;height:22px;font-size:9px}
   .mobile-live-preview{height:var(--mobile-preview-height);min-height:var(--mobile-preview-height)}
