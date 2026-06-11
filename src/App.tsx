@@ -114,18 +114,20 @@ export default function App() {
       </nav>
       <main>
         {step < 4 && <div className="mobile-live-preview"><DoorPreview style={style} finish={finish} glass={glass} hardware={hardware} /></div>}
-        <section className="builder-panel">
+        <section className={`builder-panel ${step < 4 ? 'configuration-step' : 'review-step'}`}>
           {step < 4 && <>
             <div className="section-heading">
               <span>Step {step + 1} of 5</span>
               <h1>{step === 0 ? 'Choose a Door Style' : step === 1 ? 'Choose Your Finish' : step === 2 ? 'Choose Your Glass' : 'Choose Your Hardware'}</h1>
               <p>{step === 0 ? 'Start with a style that feels right for your home.' : step === 1 ? 'Set the tone with a durable, rich exterior finish.' : step === 2 ? 'Balance natural light, privacy, and personality.' : 'Complete your entry with the perfect finishing touch.'}</p>
             </div>
-            <div className={`options-grid step-${step}`}>
-              {step === 0 && doorStyles.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.eyebrow} selected={styleId === item.id} onClick={() => setStyleId(item.id)} visual={<DoorPreview style={item} finish={finish} glass={glass} hardware={hardware} compact />} />)}
-              {step === 1 && availableFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} selected={finishId === item.id} onClick={() => setFinishId(item.id)} visual={<span className="finish-swatch" style={{ background: item.color }}><i style={{ background: item.accent }} /></span>} />)}
-              {step === 2 && availableGlass.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} selected={glassId === item.id} onClick={() => setGlassId(item.id)} visual={<span className={`glass-swatch glass-${item.pattern}`} />} />)}
-              {step === 3 && availableHardware.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} selected={hardwareId === item.id} onClick={() => setHardwareId(item.id)} visual={<span className="hardware-swatch" style={{ '--metal': item.color } as React.CSSProperties}><i /><b /></span>} />)}
+            <div className="builder-options-scroll">
+              <div className={`options-grid step-${step}`}>
+                {step === 0 && doorStyles.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.eyebrow} selected={styleId === item.id} onClick={() => setStyleId(item.id)} visual={<DoorPreview style={item} finish={finish} glass={glass} hardware={hardware} compact />} />)}
+                {step === 1 && availableFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} selected={finishId === item.id} onClick={() => setFinishId(item.id)} visual={<span className="finish-swatch" style={{ background: item.color }}><i style={{ background: item.accent }} /></span>} />)}
+                {step === 2 && availableGlass.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} selected={glassId === item.id} onClick={() => setGlassId(item.id)} visual={<span className={`glass-swatch glass-${item.pattern}`} />} />)}
+                {step === 3 && availableHardware.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} selected={hardwareId === item.id} onClick={() => setHardwareId(item.id)} visual={<span className="hardware-swatch" style={{ '--metal': item.color } as React.CSSProperties}><i /><b /></span>} />)}
+              </div>
             </div>
           </>}
 
