@@ -24,9 +24,8 @@
 @media(max-width:980px){.home-app{overflow:auto}.home-app .home-page{display:block}.home-app .home-hero{min-height:calc(100vh - 116px)}.home-app .home-hero-copy{height:auto}.home-app .home-hero-visual{height:auto;min-height:440px}}
 @media(max-height:720px) and (min-width:981px){.home-app .home-hero-copy{padding-top:22px;padding-bottom:22px}.home-app .home-hero h1{font-size:48px;margin-top:10px;margin-bottom:12px}.home-app .home-hero h1:after{margin-top:15px}.home-app .home-hero-visual .preview-scene{min-height:410px}.home-app .home-hero-visual .door-frame{transform:scale(.93)}}
 
-/* Fixed viewport application shell */
-html,body,#root{height:100%;overflow:hidden}.app{height:100vh;min-height:0;display:flex;flex-direction:column;overflow:hidden}.app>header,.app>footer,.app>.stepper{flex:none}.app>main{flex:1;min-height:0}.app:not(.home-app)>main{height:auto;overflow:hidden}.app:not(.home-app) .builder-panel{min-height:0;overflow-y:auto;overscroll-behavior:contain}.app:not(.home-app) aside{min-height:0;height:100%;overflow:hidden}.app:not(.home-app) aside .preview-scene{flex:1;min-height:0;height:auto}.app:not(.home-app) aside .door-frame{transform:scale(.88)}.app:not(.home-app) footer{height:30px}.home-app .home-page{overflow:hidden}.home-app .home-hero{height:100%;overflow:hidden}
-@media(max-width:900px){html,body,#root{overflow:hidden}.app:not(.home-app)>main{overflow-y:auto;overscroll-behavior:contain}.app:not(.home-app) .builder-panel{overflow:visible}.home-app .home-page{overflow-y:auto}.home-app .home-hero{height:auto;min-height:100%}}
+/* Fixed viewport application shell: desktop only */
+@media(min-width:901px){html,body,#root{height:100%;overflow:hidden}.app{height:100vh;min-height:0;display:flex;flex-direction:column;overflow:hidden}.app>header,.app>footer,.app>.stepper{flex:none}.app>main{flex:1;min-height:0}.app:not(.home-app)>main{height:auto;overflow:hidden}.app:not(.home-app) .builder-panel{min-height:0;overflow-y:auto;overscroll-behavior:contain}.app:not(.home-app) aside{min-height:0;height:100%;overflow:hidden}.app:not(.home-app) aside .preview-scene{flex:1;min-height:0;height:auto}.app:not(.home-app) aside .door-frame{transform:scale(.88)}.app:not(.home-app) footer{height:30px}.home-app .home-page{overflow:hidden}.home-app .home-hero{height:100%;overflow:hidden}}
 
 /* Configurator step shell: fixed heading, scrolling options, fixed navigation */
 @media(min-width:901px){
@@ -49,3 +48,51 @@ html,body,#root{height:100%;overflow:hidden}.app{height:100vh;min-height:0;displ
 /* Dealer finder final step */
 .attachment-card{max-width:750px;background:#edf6f6;border:1px solid #b9d5d7;border-left:5px solid var(--gold);border-radius:6px;padding:16px 18px;margin-bottom:18px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;box-shadow:0 5px 18px #05040b09}.attachment-icon{width:48px;height:48px;border-radius:50%;background:var(--peacock);color:var(--white);display:grid;place-items:center}.attachment-copy{min-width:0;display:grid;gap:3px}.attachment-copy small{color:var(--peacock);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.13em}.attachment-copy strong{color:var(--black);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.attachment-copy em{color:#596166;font-size:8px;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.attachment-copy span{color:#5f686c;font-size:8px}.attachment-card button{border:1px solid var(--peacock);border-radius:3px;background:#fff;color:var(--peacock);padding:9px 11px;display:flex;align-items:center;gap:6px;font-size:9px;text-transform:uppercase;white-space:nowrap}.attachment-card button:hover{background:var(--peacock);color:var(--white)}.review-step .quote-fields{grid-template-columns:repeat(2,1fr)}.review-step .field-wide{grid-column:1/-1}
 @media(max-width:600px){.attachment-card{grid-template-columns:auto 1fr}.attachment-card button{grid-column:1/-1;justify-content:center}.review-step .quote-fields{grid-template-columns:1fr}.review-step .field-wide{grid-column:auto}}
+
+/* Real-device mobile flow */
+@supports (height:100dvh){
+  .app{height:100dvh}
+  .home-app{min-height:100dvh}
+}
+@media(max-width:900px){
+  html,body,#root{height:auto;min-height:100%;max-height:none;overflow-x:hidden;overflow-y:visible}
+  html{overscroll-behavior-y:auto}
+  body{position:static;-webkit-overflow-scrolling:touch;overscroll-behavior-y:auto;touch-action:pan-y;padding-bottom:env(safe-area-inset-bottom)}
+  .app,.home-app{display:block;height:auto;min-height:100vh;min-height:100dvh;max-height:none;overflow:visible}
+  .app>header,.app>.stepper{position:relative;top:auto}
+  .app:not(.home-app)>main,.home-app .home-page{display:block;height:auto;min-height:0;max-height:none;overflow:visible;overscroll-behavior:auto}
+  .app:not(.home-app) .builder-panel,.app:not(.home-app) .builder-panel.configuration-step,.app:not(.home-app) .builder-panel.review-step{display:block;height:auto;min-height:0;max-height:none;overflow:visible;overscroll-behavior:auto;padding:30px 22px 0}
+  .builder-options-scroll{height:auto;min-height:0;max-height:none;overflow:visible;overscroll-behavior:auto;padding:0 0 78px}
+  .mobile-live-preview{height:270px;min-height:270px;overflow:hidden;border-bottom:1px solid #d8e2e4}
+  .mobile-live-preview .preview-scene{height:270px;transform:scale(.5)}
+  .mobile-live-preview .preview-caption{display:none}
+  .configuration-step .section-heading{margin-bottom:22px}
+  .configuration-step .builder-actions{position:-webkit-sticky;position:sticky;bottom:0;z-index:20;margin:0 -22px;padding:14px 22px calc(14px + env(safe-area-inset-bottom));background:#f7fafff5;backdrop-filter:blur(12px);box-shadow:0 -8px 22px #05040b12}
+  .builder-actions button{min-height:46px}
+  .stepper{width:100%;justify-content:space-between;padding:0 12px;overflow:hidden}
+  .stepper button{padding:0 7px}
+  .stepper button:not(:last-child):after{width:14px;right:-8px}
+  .review-step{padding-bottom:calc(28px + env(safe-area-inset-bottom))!important}
+  .mobile-review-preview{height:280px}
+  .mobile-review-preview .preview-scene{height:280px;transform:scale(.5)}
+  .app:not(.home-app) footer{display:flex;height:auto;min-height:34px;padding-top:7px;padding-bottom:calc(7px + env(safe-area-inset-bottom))}
+  .home-app .home-page,.home-app .home-hero{height:auto;min-height:0;overflow:visible}
+  .home-app footer{padding-bottom:calc(7px + env(safe-area-inset-bottom))}
+}
+@media(max-width:560px){
+  .stepper{height:52px}
+  .stepper span{width:22px;height:22px;font-size:9px}
+  .mobile-live-preview{height:235px;min-height:235px}
+  .mobile-live-preview .preview-scene{height:235px;transform:scale(.43)}
+  .app:not(.home-app) .builder-panel,.app:not(.home-app) .builder-panel.configuration-step,.app:not(.home-app) .builder-panel.review-step{padding:24px 16px 0}
+  .builder-options-scroll{padding-bottom:76px}
+  .configuration-step .section-heading h1{font-size:29px}
+  .configuration-step .builder-actions{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}
+  .builder-actions .next{max-width:72%;justify-content:center;text-align:center}
+  .option-card{grid-template-columns:105px minmax(0,1fr)}
+  .option-copy{padding:13px}
+  .option-copy strong{font-size:14px}
+  .mobile-review-preview{height:240px}
+  .mobile-review-preview .preview-scene{height:240px;transform:scale(.43)}
+  .app:not(.home-app) footer{display:flex;font-size:7px;gap:12px}
+}
