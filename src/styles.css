@@ -62,12 +62,12 @@
   .app>header,.app>.stepper{position:relative;top:auto}
   .app:not(.home-app)>main,.home-app .home-page{display:block;height:auto;min-height:0;max-height:none;overflow:visible;overscroll-behavior:auto}
   .app:not(.home-app) .builder-panel,.app:not(.home-app) .builder-panel.configuration-step,.app:not(.home-app) .builder-panel.review-step{display:block;height:auto;min-height:0;max-height:none;overflow:visible;overscroll-behavior:auto;padding:30px 22px 0}
-  .builder-options-scroll{height:auto;min-height:0;max-height:none;overflow:visible;overscroll-behavior:auto;padding:0 0 78px}
+  .builder-options-scroll{height:auto;min-height:0;max-height:none;overflow:visible;overscroll-behavior:auto;padding:0 0 calc(112px + env(safe-area-inset-bottom))}
   .mobile-live-preview{height:270px;min-height:270px;overflow:hidden;border-bottom:1px solid #d8e2e4}
   .mobile-live-preview .preview-scene{height:270px;transform:scale(.5)}
   .mobile-live-preview .preview-caption{display:none}
   .configuration-step .section-heading{margin-bottom:22px}
-  .configuration-step .builder-actions{position:-webkit-sticky;position:sticky;bottom:0;z-index:20;margin:0 -22px;padding:14px 22px calc(14px + env(safe-area-inset-bottom));background:#f7fafff5;backdrop-filter:blur(12px);box-shadow:0 -8px 22px #05040b12}
+  .configuration-step .builder-actions{position:fixed;left:0;right:0;bottom:0;z-index:1000;max-width:none;margin:0;padding:12px 22px calc(12px + env(safe-area-inset-bottom));background:#f7faff;border-top:1px solid #d8e0e4;box-shadow:0 -8px 24px #05040b1f}
   .builder-actions button{min-height:46px}
   .stepper{width:100%;justify-content:space-between;padding:0 12px;overflow:hidden}
   .stepper button{padding:0 7px}
@@ -78,6 +78,12 @@
   .app:not(.home-app) footer{display:flex;height:auto;min-height:34px;padding-top:7px;padding-bottom:calc(7px + env(safe-area-inset-bottom))}
   .home-app .home-page,.home-app .home-hero{height:auto;min-height:0;overflow:visible}
   .home-app footer{padding-bottom:calc(7px + env(safe-area-inset-bottom))}
+  .option-visual,.step-1 .option-visual{height:160px;min-height:160px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .option-visual img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+  .option-visual .preview-scene.compact{height:160px;width:100%;transform:none}
+  .option-visual .preview-scene.compact .door-frame{transform:scale(.3);transform-origin:center}
+  .option-visual .finish-swatch,.option-visual .glass-swatch,.option-visual .hardware-swatch{flex:none;max-width:90%;max-height:140px}
+  .option-card .check{top:9px;right:9px;z-index:3}
 }
 @media(max-width:560px){
   .stepper{height:52px}
@@ -85,11 +91,13 @@
   .mobile-live-preview{height:235px;min-height:235px}
   .mobile-live-preview .preview-scene{height:235px;transform:scale(.43)}
   .app:not(.home-app) .builder-panel,.app:not(.home-app) .builder-panel.configuration-step,.app:not(.home-app) .builder-panel.review-step{padding:24px 16px 0}
-  .builder-options-scroll{padding-bottom:76px}
+  .builder-options-scroll{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
   .configuration-step .section-heading h1{font-size:29px}
-  .configuration-step .builder-actions{margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}
+  .configuration-step .builder-actions{margin:0;padding-left:16px;padding-right:16px}
   .builder-actions .next{max-width:72%;justify-content:center;text-align:center}
-  .option-card{grid-template-columns:105px minmax(0,1fr)}
+  .option-card{grid-template-columns:140px minmax(0,1fr);min-height:160px}
+  .option-visual,.step-1 .option-visual{height:160px;min-height:160px}
+  .option-visual .preview-scene.compact .door-frame{transform:scale(.29)}
   .option-copy{padding:13px}
   .option-copy strong{font-size:14px}
   .mobile-review-preview{height:240px}
