@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, ArrowRight, Check, Download, Menu, Phone, Send, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Download, Home as HomeIcon, Menu, Phone, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview } from './components/DoorPreview'
 import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
@@ -12,6 +12,7 @@ const steps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
 const initialContact: ContactForm = { firstName: '', lastName: '', email: '', phone: '', address: '', city: '', state: '', zip: '', notes: '' }
 
 export default function App() {
+  const [screen, setScreen] = useState<'home' | 'builder'>('home')
   const [step, setStep] = useState(0)
   const [styleId, setStyleId] = useState(doorStyles[0].id)
   const [finishId, setFinishId] = useState(finishes[0].id)
@@ -40,6 +41,11 @@ export default function App() {
 
   const goTo = (next: number) => {
     setStep(next)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const showScreen = (next: 'home' | 'builder') => {
+    setScreen(next)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -74,16 +80,38 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app ${screen === 'home' ? 'home-app' : ''}`}>
       <header>
-        <div className="brand"><span className="brand-mark">HG</span><span><strong>HOME GUARD</strong><small>INDUSTRIES</small></span></div>
-        <div className="header-help"><Phone size={16} /><span>Questions? <strong>Talk to a door expert</strong></span></div>
+        <div className="brand">
+          <img src="/assets/branding/hgi-logo-black.png" alt="Home Guard Industries Doors and Windows" />
+          <span className="app-name"><strong>Home Guard Door Builder</strong><small>Build your door. Download your order. Request a quote.</small></span>
+        </div>
+        <div className="header-actions">
+          {screen === 'builder' && <button className="home-return" onClick={() => showScreen('home')}><HomeIcon size={15} /> Home</button>}
+          <div className="header-help"><Phone size={16} /><span>Questions? <strong>Talk to a door expert</strong></span></div>
+        </div>
         <button className="menu" aria-label="Menu"><Menu /></button>
       </header>
+
+      {screen === 'home' ? <main className="home-page">
+        <section className="home-hero">
+          <div className="home-hero-copy">
+            <span className="home-eyebrow">Home Guard Door Builder</span>
+            <h1>Build Your Home Guard Door</h1>
+            <h2>Design your ideal entry door with real styles, finishes, glass, and hardware options.</h2>
+            <p>Preview your selections instantly, save your configuration, and request a quote when you’re ready.</p>
+            <button className="start-building" onClick={() => showScreen('builder')}>Start Building <ArrowRight size={18} /></button>
+            <span className="home-trust"><ShieldCheck size={15} /> Built for your home. Backed by Home Guard Industries.</span>
+          </div>
+          <div className="home-hero-visual">
+            <div className="home-preview-label"><span>Preview as you build</span><small>Style. Finish. Glass. Hardware.</small></div>
+            <DoorPreview style={style} finish={finish} glass={glass} hardware={hardware} />
+          </div>
+        </section>
+      </main> : <>
       <nav className="stepper" aria-label="Configuration progress">
         {steps.map((label, index) => <button key={label} className={`${index === step ? 'active' : ''} ${index < step ? 'done' : ''}`} onClick={() => index <= step && goTo(index)}><span>{index < step ? <Check size={13} /> : index + 1}</span><em>{label}</em></button>)}
       </nav>
-
       <main>
         {step < 4 && <div className="mobile-live-preview"><DoorPreview style={style} finish={finish} glass={glass} hardware={hardware} /></div>}
         <section className="builder-panel">
@@ -133,6 +161,7 @@ export default function App() {
           <div className="mini-summary"><strong>{style.name}</strong><span>{finish.name} / {glass.name}</span><span>{hardware.name}</span></div>
         </aside>}
       </main>
+      </>}
       <footer><span>Copyright 2026 Home Guard Industries</span><span>Built for your home. Backed for years.</span></footer>
     </div>
   )
