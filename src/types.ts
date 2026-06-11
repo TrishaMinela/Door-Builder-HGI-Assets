@@ -41,13 +41,8 @@ export type HardwareOption = {
 }
 
 export type ContactForm = {
-  firstName: string
-  lastName: string
+  fullName: string
   email: string
   phone: string
-  address: string
-  city: string
-  state: string
   zip: string
-  notes: string
 }

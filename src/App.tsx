@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
-import { ArrowLeft, ArrowRight, Check, Download, Home as HomeIcon, Menu, Phone, Send, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Download, FileText, Home as HomeIcon, Menu, Phone, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview } from './components/DoorPreview'
 import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
 import { doorStyles, finishes, glassOptions, hardwareOptions } from './data/options'
 import type { ContactForm } from './types'
-import { downloadSummary } from './utils/pdf'
+import { configurationPdfName, downloadSummary, generateSummaryAttachment } from './utils/pdf'
 import { submitQuote, type SubmissionResult } from './utils/submission'
 
 const steps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
-const initialContact: ContactForm = { firstName: '', lastName: '', email: '', phone: '', address: '', city: '', state: '', zip: '', notes: '' }
+const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '' }
 
 export default function App() {
   const [screen, setScreen] = useState<'home' | 'builder'>('home')
@@ -56,7 +56,7 @@ export default function App() {
 
   const submit = async () => {
     if (submitting || submitted) return
-    const required: (keyof ContactForm)[] = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zip']
+    const required: (keyof ContactForm)[] = ['fullName', 'email', 'phone', 'zip']
     const nextErrors: Partial<Record<keyof ContactForm, string>> = {}
     required.forEach((key) => { if (!contact[key].trim()) nextErrors[key] = 'Please complete this field.' })
     if (contact.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)) nextErrors.email = 'Enter a valid email address.'
@@ -69,7 +69,8 @@ export default function App() {
     setSubmitting(true)
     setSubmitError('')
     try {
-      const result = await submitQuote({ configuration: { style, finish, glass, hardware }, contact, submittedAt: new Date().toISOString() })
+      const attachment = await generateSummaryAttachment(contact, style, finish, glass, hardware)
+      const result = await submitQuote({ configuration: { style, finish, glass, hardware }, contact, attachment, submittedAt: new Date().toISOString() })
       setSubmissionResult(result)
       setSubmitted(true)
     } catch (error) {
@@ -132,24 +133,29 @@ export default function App() {
           </>}
 
           {step === 4 && !submitted && <>
-            <div className="section-heading review-heading"><span>Final step</span><h1>Your Door, Ready for a Quote</h1><p>Review your selections, then tell us where to send your personalized quote.</p></div>
+            <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
             <div className="mobile-review-preview"><DoorPreview style={style} finish={finish} glass={glass} hardware={hardware} /></div>
             <div className="summary-card">
-              <div className="summary-title"><h2>Configuration Summary</h2><button onClick={() => downloadSummary(contact, style, finish, glass, hardware)}><Download size={16} /> Download PDF</button></div>
+              <div className="summary-title"><h2>Configuration Summary</h2></div>
               {[['Door style', style.name, 0], ['Finish', finish.name, 1], ['Glass', glass.name, 2], ['Hardware', hardware.name, 3]].map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span><button onClick={() => goTo(Number(target))}>Edit</button></div>)}
             </div>
+            <div className="attachment-card">
+              <span className="attachment-icon"><FileText size={25} /></span>
+              <span className="attachment-copy"><small>Attached Configuration PDF</small><strong>{configurationPdfName}</strong><em>{style.name} / {finish.name} / {glass.name} / {hardware.name}</em><span>This file will be sent with your request.</span></span>
+              <button onClick={() => downloadSummary(contact, style, finish, glass, hardware)}><Download size={16} /> Download PDF</button>
+            </div>
             <div className="form-card">
-              <h2>Where should we send your quote?</h2><p>A local Home Guard expert will review your design and follow up with next steps.</p>
+              <h2>Your Contact Information</h2><p>We’ll use your ZIP code to help connect you with the right Home Guard dealer.</p>
               <QuoteForm values={contact} errors={errors} onChange={updateContact} />
-              <label className="consent"><input type="checkbox" defaultChecked /> <span>I agree to be contacted about this quote request.</span></label>
+              <label className="consent"><input type="checkbox" defaultChecked /> <span>I agree to be contacted about this door configuration.</span></label>
               {submitError && <p className="submit-error" role="alert">{submitError}</p>}
-              <button className="submit-button" disabled={submitting} onClick={submit}><Send size={18} /> {submitting ? 'Sending Request...' : 'Request My Quote'}</button>
+              <button className="submit-button" disabled={submitting} onClick={submit}><Send size={18} /> {submitting ? 'Preparing & Sending...' : 'Send My Door Configuration'}</button>
               <p className="privacy"><ShieldCheck size={15} /> Your information is kept private and never sold.</p>
             </div>
           </>}
 
           {submitted && <div className="success">
-            <span><Check size={32} /></span><small>{submissionResult?.mode === 'demo' ? 'Demo complete' : 'Quote request received'}</small><h1>Thanks, {contact.firstName}.</h1>
+            <span><Check size={32} /></span><small>{submissionResult?.mode === 'demo' ? 'Demo complete' : 'Configuration sent'}</small><h1>Thanks, {contact.fullName}.</h1>
             <p>{submissionResult?.message}</p>
             <button onClick={() => downloadSummary(contact, style, finish, glass, hardware)}><Download size={17} /> Download Your Summary</button>
           </div>}

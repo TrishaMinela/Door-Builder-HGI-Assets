@@ -24,7 +24,9 @@ async function applyBrandFont(pdf: jsPDF) {
   pdf.setFont('Montserrat', 'normal')
 }
 
-export async function downloadSummary(contact: ContactForm, style: DoorStyle, finish: Finish, glass: GlassOption, hardware: HardwareOption) {
+export const configurationPdfName = 'Home Guard Door Configuration.pdf'
+
+export async function generateSummaryPdf(contact: ContactForm, style: DoorStyle, finish: Finish, glass: GlassOption, hardware: HardwareOption) {
   const pdf = new jsPDF()
   let brandFont = 'helvetica'
   try {
@@ -90,7 +92,7 @@ export async function downloadSummary(contact: ContactForm, style: DoorStyle, fi
     pdf.text(value, 70, y)
     pdf.setFont(brandFont, 'normal')
   })
-  if (contact.firstName) {
+  if (contact.fullName) {
     pdf.setDrawColor(248, 211, 14)
     pdf.setLineWidth(1.5)
     pdf.line(18, 145, 192, 145)
@@ -101,20 +103,28 @@ export async function downloadSummary(contact: ContactForm, style: DoorStyle, fi
     pdf.setFont(brandFont, 'normal')
     pdf.setFontSize(10)
     pdf.setTextColor(5, 4, 11)
-    pdf.text(`${contact.firstName} ${contact.lastName}`, 18, 172)
+    pdf.text(contact.fullName, 18, 172)
     pdf.text(`${contact.email}  |  ${contact.phone}`, 18, 181)
-    pdf.text(`${contact.address}, ${contact.city}, ${contact.state} ${contact.zip}`, 18, 190)
-    if (contact.notes) {
-      pdf.setFont(brandFont, 'bold')
-      pdf.setTextColor(13, 102, 108)
-      pdf.text('Project notes', 18, 206)
-      pdf.setFont(brandFont, 'normal')
-      pdf.setTextColor(5, 4, 11)
-      pdf.text(pdf.splitTextToSize(contact.notes, 165), 18, 215)
-    }
+    pdf.text(`ZIP Code: ${contact.zip}`, 18, 190)
   }
   pdf.setFontSize(9)
   pdf.setTextColor(70, 72, 78)
   pdf.text('This configuration is a quote request and is not an order or final price.', 18, 276)
-  pdf.save(`home-guard-${style.id}-door-summary.pdf`)
+  return pdf
+}
+
+export async function downloadSummary(contact: ContactForm, style: DoorStyle, finish: Finish, glass: GlassOption, hardware: HardwareOption) {
+  const pdf = await generateSummaryPdf(contact, style, finish, glass, hardware)
+  pdf.save(configurationPdfName)
+}
+
+export async function generateSummaryAttachment(contact: ContactForm, style: DoorStyle, finish: Finish, glass: GlassOption, hardware: HardwareOption) {
+  const pdf = await generateSummaryPdf(contact, style, finish, glass, hardware)
+  const dataUri = pdf.output('datauristring')
+  return {
+    fileName: configurationPdfName,
+    mimeType: 'application/pdf' as const,
+    encoding: 'base64' as const,
+    data: dataUri.slice(dataUri.indexOf(',') + 1),
+  }
 }
