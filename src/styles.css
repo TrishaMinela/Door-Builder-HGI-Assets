@@ -55,16 +55,20 @@
   .home-app{min-height:100dvh}
 }
 @media(max-width:900px){
+  :root{--mobile-header-height:82px;--mobile-progress-height:58px;--mobile-preview-height:190px}
   html,body,#root{height:auto;min-height:100%;max-height:none;overflow-x:hidden;overflow-y:visible}
   html{overscroll-behavior-y:auto}
   body{position:static;-webkit-overflow-scrolling:touch;overscroll-behavior-y:auto;touch-action:pan-y;padding-bottom:env(safe-area-inset-bottom)}
   .app,.home-app{display:block;height:auto;min-height:100vh;min-height:100dvh;max-height:none;overflow:visible}
-  .app>header,.app>.stepper{position:relative;top:auto}
+  .app:not(.home-app)>header{position:fixed;top:0;left:0;right:0;z-index:1050;height:var(--mobile-header-height)}
+  .app:not(.home-app)>.stepper{position:fixed;top:var(--mobile-header-height);left:0;right:0;z-index:1040;height:var(--mobile-progress-height)}
   .app:not(.home-app)>main,.home-app .home-page{display:block;height:auto;min-height:0;max-height:none;overflow:visible;overscroll-behavior:auto}
+  .app:not(.home-app)>main{padding-top:calc(var(--mobile-header-height) + var(--mobile-progress-height) + var(--mobile-preview-height))}
   .app:not(.home-app) .builder-panel,.app:not(.home-app) .builder-panel.configuration-step,.app:not(.home-app) .builder-panel.review-step{display:block;height:auto;min-height:0;max-height:none;overflow:visible;overscroll-behavior:auto;padding:30px 22px 0}
   .builder-options-scroll{height:auto;min-height:0;max-height:none;overflow:visible;overscroll-behavior:auto;padding:0 0 calc(112px + env(safe-area-inset-bottom))}
-  .mobile-live-preview{height:270px;min-height:270px;overflow:hidden;border-bottom:1px solid #d8e2e4}
-  .mobile-live-preview .preview-scene{height:270px;transform:scale(.5)}
+  .mobile-live-preview{position:fixed;top:calc(var(--mobile-header-height) + var(--mobile-progress-height));left:0;right:0;z-index:1030;height:var(--mobile-preview-height);min-height:var(--mobile-preview-height);overflow:hidden;border-top:1px solid #d8e2e4;border-bottom:1px solid #cbd9dc;background:#e9f0f1;box-shadow:0 8px 18px #05040b10}
+  .mobile-live-preview .preview-scene{height:var(--mobile-preview-height);transform:none}
+  .mobile-live-preview .door-frame{transform:scale(.35);transform-origin:center}
   .mobile-live-preview .preview-caption{display:none}
   .configuration-step .section-heading{margin-bottom:22px}
   .configuration-step .builder-actions{position:fixed;left:0;right:0;bottom:0;z-index:1000;max-width:none;margin:0;padding:12px 22px calc(12px + env(safe-area-inset-bottom));background:#f7faff;border-top:1px solid #d8e0e4;box-shadow:0 -8px 24px #05040b1f}
@@ -86,10 +90,12 @@
   .option-card .check{top:9px;right:9px;z-index:3}
 }
 @media(max-width:560px){
+  :root{--mobile-header-height:72px;--mobile-progress-height:52px;--mobile-preview-height:175px}
   .stepper{height:52px}
   .stepper span{width:22px;height:22px;font-size:9px}
-  .mobile-live-preview{height:235px;min-height:235px}
-  .mobile-live-preview .preview-scene{height:235px;transform:scale(.43)}
+  .mobile-live-preview{height:var(--mobile-preview-height);min-height:var(--mobile-preview-height)}
+  .mobile-live-preview .preview-scene{height:var(--mobile-preview-height);transform:none}
+  .mobile-live-preview .door-frame{transform:scale(.31)}
   .app:not(.home-app) .builder-panel,.app:not(.home-app) .builder-panel.configuration-step,.app:not(.home-app) .builder-panel.review-step{padding:24px 16px 0}
   .builder-options-scroll{padding-bottom:calc(108px + env(safe-area-inset-bottom))}
   .configuration-step .section-heading h1{font-size:29px}
