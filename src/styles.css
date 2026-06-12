@@ -113,3 +113,7 @@
   .mobile-review-preview .preview-scene{height:240px;transform:scale(.43)}
   .app:not(.home-app) footer{display:flex;font-size:7px;gap:12px}
 }
+
+.hardware-group-heading{grid-column:1/-1;margin:8px 0 0;color:#0d666c;font-size:15px;font-weight:700}
+.hardware img{position:absolute;inset:-10px -14px;width:50px;height:120px;object-fit:contain;z-index:2}
+.next:disabled{opacity:.45;cursor:not-allowed}

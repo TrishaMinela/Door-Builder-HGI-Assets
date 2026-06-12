@@ -1,7 +1,7 @@
-import type { ContactForm, DoorStyle, Finish, GlassOption, HardwareOption } from '../types'
+import type { ContactForm, DoorStyle, Finish, GlassOption, HardwareOption, ResolvedDoorProduct } from '../types'
 
 export type QuotePayload = {
-  configuration: { style: DoorStyle; finish: Finish; glass: GlassOption; hardware: HardwareOption }
+  configuration: { product: ResolvedDoorProduct; style: DoorStyle; finish: Finish; glass: GlassOption | null; hardware: HardwareOption }
   contact: ContactForm
   attachment: {
     fileName: string

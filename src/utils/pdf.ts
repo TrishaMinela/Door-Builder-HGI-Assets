@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
-import type { ContactForm, DoorStyle, Finish, GlassOption, HardwareOption } from '../types'
+import type { ContactForm, DoorStyle, Finish, GlassOption, HardwareOption, ResolvedDoorProduct } from '../types'
+import { hardwareDisplayName } from '../data/hardware'
 
 async function loadLogo() {
   const response = await fetch('/assets/branding/hgi-logo-black.png')
@@ -26,7 +27,7 @@ async function applyBrandFont(pdf: jsPDF) {
 
 export const configurationPdfName = 'Home Guard Door Configuration.pdf'
 
-export async function generateSummaryPdf(contact: ContactForm, style: DoorStyle, finish: Finish, glass: GlassOption, hardware: HardwareOption) {
+export async function generateSummaryPdf(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
   const pdf = new jsPDF()
   let brandFont = 'helvetica'
   try {
@@ -77,35 +78,40 @@ export async function generateSummaryPdf(contact: ContactForm, style: DoorStyle,
   pdf.circle(173, 92, 1.5, 'F')
   pdf.setFont('helvetica', 'normal')
   pdf.setFontSize(11)
-  const rows = [
+  const rows: [string, string[]][] = [
+    [product.doorTypeLabel, product.doorTypes],
     ['Door style', style.name],
     ['Finish', finish.name],
-    ['Glass', glass.name],
-    ['Hardware', hardware.name],
-  ]
-  rows.forEach(([label, value], i) => {
-    const y = 80 + i * 15
+    ['Glass', glass?.name ?? 'No glass'],
+    ['Hardware', hardwareDisplayName(hardware)],
+    ['Hardware finish', hardware.finish],
+  ].map(([label, value]) => [label as string, Array.isArray(value) ? value : [value as string]])
+  let rowY = 80
+  rows.forEach(([label, values]) => {
     pdf.setTextColor(13, 102, 108)
-    pdf.text(label.toUpperCase(), 18, y)
+    pdf.text(label.toUpperCase(), 18, rowY)
     pdf.setTextColor(5, 4, 11)
     pdf.setFont(brandFont, 'bold')
-    pdf.text(value, 70, y)
+    const valueLines = values.flatMap((value) => pdf.splitTextToSize(values.length > 1 ? `- ${value}` : value, 112) as string[])
+    pdf.text(valueLines, 70, rowY)
     pdf.setFont(brandFont, 'normal')
+    rowY += Math.max(15, valueLines.length * 6 + 5)
   })
   if (contact.fullName) {
+    const contactStart = Math.max(160, rowY + 12)
     pdf.setDrawColor(248, 211, 14)
     pdf.setLineWidth(1.5)
-    pdf.line(18, 145, 192, 145)
+    pdf.line(18, contactStart - 15, 192, contactStart - 15)
     pdf.setFont(brandFont, 'bold')
     pdf.setFontSize(14)
     pdf.setTextColor(13, 102, 108)
-    pdf.text('Contact details', 18, 160)
+    pdf.text('Contact details', 18, contactStart)
     pdf.setFont(brandFont, 'normal')
     pdf.setFontSize(10)
     pdf.setTextColor(5, 4, 11)
-    pdf.text(contact.fullName, 18, 172)
-    pdf.text(`${contact.email}  |  ${contact.phone}`, 18, 181)
-    pdf.text(`ZIP Code: ${contact.zip}`, 18, 190)
+    pdf.text(contact.fullName, 18, contactStart + 12)
+    pdf.text(`${contact.email}  |  ${contact.phone}`, 18, contactStart + 21)
+    pdf.text(`ZIP Code: ${contact.zip}`, 18, contactStart + 30)
   }
   pdf.setFontSize(9)
   pdf.setTextColor(70, 72, 78)
@@ -113,13 +119,13 @@ export async function generateSummaryPdf(contact: ContactForm, style: DoorStyle,
   return pdf
 }
 
-export async function downloadSummary(contact: ContactForm, style: DoorStyle, finish: Finish, glass: GlassOption, hardware: HardwareOption) {
-  const pdf = await generateSummaryPdf(contact, style, finish, glass, hardware)
+export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
+  const pdf = await generateSummaryPdf(contact, product, style, finish, glass, hardware)
   pdf.save(configurationPdfName)
 }
 
-export async function generateSummaryAttachment(contact: ContactForm, style: DoorStyle, finish: Finish, glass: GlassOption, hardware: HardwareOption) {
-  const pdf = await generateSummaryPdf(contact, style, finish, glass, hardware)
+export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
+  const pdf = await generateSummaryPdf(contact, product, style, finish, glass, hardware)
   const dataUri = pdf.output('datauristring')
   return {
     fileName: configurationPdfName,
