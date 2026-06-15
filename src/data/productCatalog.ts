@@ -1,4 +1,5 @@
 import type { DoorLine, DoorStyle, Finish, ResolvedDoorProduct } from '../types'
+import { getDoorAsset } from './doorAssets'
 
 const noGlassCodes = new Set([
   '2PNGSS', '2PPLSS', '2PHD', 'CA', 'CANGSS', 'S1NGSS', '3PNGSS', '3PNG',
@@ -41,18 +42,6 @@ export const productCatalog: DoorLine[] = [
   { id: 'textured-fiberglass', name: 'Textured Fiberglass', grains: ['Oak'], allowsColors: true, styles: textured },
 ]
 
-// Explicit mapping layer: product codes never need to match asset filenames.
-export const doorStyleAssetMap: Record<string, { image: string; panel: DoorStyle['panel'] }> = {
-  CR14: { image: '/assets/doors/craftsman.png', panel: 'craftsman' },
-  F: { image: '/assets/doors/modern.png', panel: 'modern' },
-  F48: { image: '/assets/doors/modern.png', panel: 'modern' },
-  F482: { image: '/assets/doors/modern.png', panel: 'modern' },
-  S: { image: '/assets/doors/heritage.png', panel: 'heritage' },
-  SO: { image: '/assets/doors/heritage.png', panel: 'heritage' },
-  SO2: { image: '/assets/doors/heritage.png', panel: 'heritage' },
-}
-
-const defaultAsset = { image: '/assets/doors/classic.png', panel: 'classic' as const }
 const styleRecords = new Map<string, DoorStyle>()
 productCatalog.forEach((line) => line.styles.forEach((item) => {
   const key = item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
@@ -62,9 +51,10 @@ productCatalog.forEach((line) => line.styles.forEach((item) => {
     existing.allowedGrains = [...new Set([...existing.allowedGrains, ...line.grains])]
     existing.allowsColors ||= line.allowsColors
     existing.variants.push(variant)
+    Object.assign(existing, getDoorAsset(existing.variants.map((entry) => entry.code)))
     return
   }
-  const asset = doorStyleAssetMap[item.code] ?? defaultAsset
+  const asset = getDoorAsset([item.code])
   styleRecords.set(key, {
     id: key,
     code: item.code,

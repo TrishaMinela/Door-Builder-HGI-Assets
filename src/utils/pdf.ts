@@ -2,8 +2,9 @@ import jsPDF from 'jspdf'
 import type { ContactForm, DoorStyle, Finish, GlassOption, HardwareOption, ResolvedDoorProduct } from '../types'
 import { hardwareDisplayName } from '../data/hardware'
 
-async function loadLogo() {
-  const response = await fetch('/assets/branding/hgi-logo-black.png')
+async function loadImage(path: string) {
+  const response = await fetch(path)
+  if (!response.ok) throw new Error(`Unable to load image: ${path}`)
   const blob = await response.blob()
   return await new Promise<string>((resolve) => {
     const reader = new FileReader()
@@ -45,7 +46,7 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
   pdf.setFillColor(247, 250, 255)
   pdf.roundedRect(12, 5, 60, 31, 1.5, 1.5, 'F')
   try {
-    const logo = await loadLogo()
+    const logo = await loadImage('/assets/branding/hgi-logo-black.png')
     pdf.addImage(logo, 'PNG', 15, 7, 54, 27)
   } catch {
     pdf.setTextColor(247, 250, 255)
@@ -68,14 +69,19 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
   pdf.setFont(brandFont, 'normal')
   pdf.setTextColor(70, 72, 78)
   pdf.text(`Generated ${new Date().toLocaleDateString()}`, 18, 68)
-  pdf.setFillColor(finish.color)
-  pdf.roundedRect(145, 56, 38, 74, 2, 2, 'F')
-  pdf.setDrawColor(finish.accent)
-  pdf.rect(151, 64, 26, 22)
-  pdf.rect(151, 94, 11, 25)
-  pdf.rect(166, 94, 11, 25)
-  pdf.setFillColor(hardware.color)
-  pdf.circle(173, 92, 1.5, 'F')
+  try {
+    const doorImage = await loadImage(style.image)
+    pdf.addImage(doorImage, 'PNG', 145, 56, 38, 74)
+  } catch {
+    pdf.setFillColor(finish.color)
+    pdf.roundedRect(145, 56, 38, 74, 2, 2, 'F')
+    pdf.setDrawColor(finish.accent)
+    pdf.rect(151, 64, 26, 22)
+    pdf.rect(151, 94, 11, 25)
+    pdf.rect(166, 94, 11, 25)
+    pdf.setFillColor(hardware.color)
+    pdf.circle(173, 92, 1.5, 'F')
+  }
   pdf.setFont('helvetica', 'normal')
   pdf.setFontSize(11)
   const rows: [string, string[]][] = [

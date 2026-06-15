@@ -18,6 +18,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false }:
           <div className="panels">
             {Array.from({ length: style.panel === 'classic' ? 6 : style.panel === 'craftsman' ? 3 : 4 }).map((_, index) => <span key={index} />)}
           </div>
+          <img className="door-style-image" src={style.image} alt="" onError={(event) => { event.currentTarget.style.display = 'none' }} />
           {hardware.asset && <div className={`hardware hardware-${hardware.type}`} style={{ '--metal': hardware.color } as React.CSSProperties}>
             <i className="deadbolt" /><i className="handle" />
             <img src={`/assets/hardware/${hardware.asset}`} alt="" onError={(event) => { event.currentTarget.style.display = 'none' }} />
