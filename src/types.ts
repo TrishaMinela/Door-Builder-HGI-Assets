@@ -28,6 +28,7 @@ export type Finish = {
   color: string
   accent: string
   category: 'grain' | 'paint' | 'stain'
+  finishType: 'paint' | 'stain'
 }
 
 export type GlassOption = {
@@ -56,6 +57,8 @@ export type HardwareOption = HardwareAsset & {
   type: 'long' | 'lever' | 'round'
 }
 
+export type PreviewHardware = Pick<HardwareOption, 'color' | 'type'> & Partial<HardwareOption>
+
 export type HardwareStyleOption = {
   id: string
   manufacturer: HardwareManufacturer
@@ -77,6 +80,15 @@ export type ResolvedDoorProduct = {
   matchingVariants: DoorStyleVariant[]
   styleCodes: string[]
   grain?: string
+}
+
+export type DoorConfiguration = {
+  product: ResolvedDoorProduct
+  style: DoorStyle
+  grain: string | null
+  finish: Finish
+  glass: GlassOption | null
+  hardware: HardwareOption
 }
 
 export type ContactForm = {

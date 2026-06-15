@@ -27,7 +27,7 @@ async function applyBrandFont(pdf: jsPDF) {
 
 export const configurationPdfName = 'Home Guard Door Configuration.pdf'
 
-export async function generateSummaryPdf(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
+export async function generateSummaryPdf(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
   const pdf = new jsPDF()
   let brandFont = 'helvetica'
   try {
@@ -81,7 +81,9 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
   const rows: [string, string[]][] = [
     [product.doorTypeLabel, product.doorTypes],
     ['Door style', style.name],
-    ['Finish', finish.name],
+    ['Grain', grain ?? 'None'],
+    ['Finish type', finish.finishType === 'paint' ? 'Paint' : 'Stain'],
+    ['Finish color', finish.name],
     ['Glass', glass?.name ?? 'No glass'],
     ['Hardware', hardwareDisplayName(hardware)],
     ['Hardware finish', hardware.finish],
@@ -119,13 +121,13 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
   return pdf
 }
 
-export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
-  const pdf = await generateSummaryPdf(contact, product, style, finish, glass, hardware)
+export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, hardware)
   pdf.save(configurationPdfName)
 }
 
-export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
-  const pdf = await generateSummaryPdf(contact, product, style, finish, glass, hardware)
+export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, hardware)
   const dataUri = pdf.output('datauristring')
   return {
     fileName: configurationPdfName,

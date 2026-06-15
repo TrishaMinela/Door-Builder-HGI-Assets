@@ -18,7 +18,7 @@ const signatureStyles = {
 }
 
 const steel20 = parseStyles([
-  '2PHD|2P HD Flat Top', '3LT|Stacked 3 Lite', '3PNG|3 Panel No Glass', '3STEP|Three Lite Stepping Down From Lock Side', '4LT|Stacked 4 Lite', '5LT|Five Lite Stack', 'CR14|Craftsman 1/4 Rectangle', 'CR14PL|Craftsman 1/4 Cottage', 'E1|Eight Panel No Glass', 'F|Full Lite', 'F1|Flush No Glass', 'F2|Diamond', 'F3|Square', 'F4|Three Lites Stepping Down From Lock Side', 'F48|3/4 Lite', 'F482|3/4 Lite 2 Panel', 'F764|Full Twin Lite', 'F848|Two 8" x 48" Lites, 3/4 Lite', 'FO|Full Oval', 'FRT|Full Round Top Glass Cut Out', 'HDAT1|HD Arch Top', 'HRT|Half Round Top Glass Cut Out', 'N|N Panel', 'N1|Nine Panel No Glass', 'QA|648 Quarter Height Eye Brow', 'S|Half Lite', 'S1|Six Panel No Glass', 'S2|Two Lights Top of 6 Panel Door', 'S3|Four Lite Rectangle', 'S4|Four Lites Together Each With An Arch At Top', 'S836|Two 8" x 36" Lites', 'SAT|Half Arch Top', 'SHAK1|1-Panel Shaker', 'SHAK2|2-Panel Shaker', 'SHAK3|3-Panel Shaker', 'SO|Small Oval 3 Panel', 'SW|Wagon Wheel',
+  '2PHD|2P HD Flat Top', '3LT|Stacked 3 Lite', '3PNG|3 Panel No Glass', '3STEP|Three Lite Stepping Down From Lock Side', '4LT|Stacked 4 Lite', '5LT|Five Lite Stack', 'CR14|Craftsman 1/4 Rectangle', 'E1|Eight Panel No Glass', 'F|Full Lite', 'F1|Flush No Glass', 'F2|Diamond', 'F3|Square', 'F4|Three Lites Stepping Down From Lock Side', 'F48|3/4 Lite', 'F482|3/4 Lite 2 Panel', 'F764|Full Twin Lite', 'F848|Two 8" x 48" Lites, 3/4 Lite', 'FO|Full Oval', 'FRT|Full Round Top Glass Cut Out', 'HDAT1|HD Arch Top', 'HRT|Half Round Top Glass Cut Out', 'N|N Panel', 'N1|Nine Panel No Glass', 'QA|648 Quarter Height Eye Brow', 'S|Half Lite', 'S1|Six Panel No Glass', 'S2|Two Lights Top of 6 Panel Door', 'S3|Four Lite Rectangle', 'S4|Four Lites Together Each With An Arch At Top', 'S836|Two 8" x 36" Lites', 'SAT|Half Arch Top', 'SHAK1|1-Panel Shaker', 'SHAK2|2-Panel Shaker', 'SHAK3|3-Panel Shaker', 'SO|Small Oval 3 Panel', 'SW|Wagon Wheel',
 ])
 
 const steel22 = parseStyles([
@@ -44,7 +44,6 @@ export const productCatalog: DoorLine[] = [
 // Explicit mapping layer: product codes never need to match asset filenames.
 export const doorStyleAssetMap: Record<string, { image: string; panel: DoorStyle['panel'] }> = {
   CR14: { image: '/assets/doors/craftsman.png', panel: 'craftsman' },
-  CR14PL: { image: '/assets/doors/craftsman.png', panel: 'craftsman' },
   F: { image: '/assets/doors/modern.png', panel: 'modern' },
   F48: { image: '/assets/doors/modern.png', panel: 'modern' },
   F482: { image: '/assets/doors/modern.png', panel: 'modern' },
@@ -84,14 +83,17 @@ export const catalogDoorStyles = [...styleRecords.values()].sort((a, b) => a.nam
 
 export function finishesForStyle(style: DoorStyle, allFinishes: Finish[]) {
   return allFinishes.filter((finish) =>
-    style.variants.some((variant) => finish.category === 'grain' ? variant.grains.includes(finish.name) : variant.allowsColors),
+    style.variants.some((variant) => {
+      if (finish.category === 'stain') return variant.grains.length > 0
+      return variant.allowsColors
+    }),
   )
 }
 
-export function resolveDoorProduct(style: DoorStyle, finish: Finish): ResolvedDoorProduct {
-  const grain = finish.category === 'grain' ? finish.name : undefined
+export function resolveDoorProduct(style: DoorStyle, finish: Finish, grain?: string): ResolvedDoorProduct {
   const matchingVariants = style.variants.filter((variant) =>
-    grain ? variant.grains.includes(grain) : variant.allowsColors,
+    (grain ? variant.grains.includes(grain) : variant.grains.length === 0) &&
+    (finish.category === 'stain' ? variant.grains.length > 0 : variant.allowsColors),
   )
   const doorTypes = [...new Set(matchingVariants.map((variant) =>
     grain ? `${variant.lineName} - ${grain}` : variant.lineName,
