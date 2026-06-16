@@ -1,17 +1,17 @@
 import type { DoorStyle } from '../types'
 
-export type DoorAsset = {
+export type DoorStyleThumbnailAsset = {
   image: string
   panel: DoorStyle['panel']
 }
 
-export const fallbackDoorAsset: DoorAsset = {
+export const fallbackDoorStyleThumbnailAsset: DoorStyleThumbnailAsset = {
   image: '/assets/doors/classic.png',
   panel: 'classic',
 }
 
-// Product codes are mapped explicitly so asset filenames can change independently.
-export const doorAssetMap: Record<string, DoorAsset> = {
+// Card thumbnails are intentionally separate from live preview assets.
+export const doorStyleThumbnailAssets: Record<string, DoorStyleThumbnailAsset> = {
   '2PNGSS': { image: '/assets/doors/2PNGSS.png', panel: 'classic' },
   '2PPLSS': { image: '/assets/doors/2PPLSS.png', panel: 'classic' },
   '2PHD': { image: '/assets/doors/2PHD.png', panel: 'classic' },
@@ -57,10 +57,10 @@ export const doorAssetMap: Record<string, DoorAsset> = {
   SW: { image: '/assets/doors/SW.png', panel: 'heritage' },
 }
 
-export function getDoorAsset(codes: string[]): DoorAsset {
-  return codes.map((code) => doorAssetMap[code]).find(Boolean) ?? fallbackDoorAsset
+export function getDoorStyleThumbnailAsset(codes: string[]): DoorStyleThumbnailAsset {
+  return codes.map((code) => doorStyleThumbnailAssets[code]).find(Boolean) ?? fallbackDoorStyleThumbnailAsset
 }
 
-export function hasMappedDoorAsset(image: string) {
-  return image !== fallbackDoorAsset.image
+export function hasMappedDoorStyleThumbnailAsset(image: string) {
+  return image !== fallbackDoorStyleThumbnailAsset.image
 }

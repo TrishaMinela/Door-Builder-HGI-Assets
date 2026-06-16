@@ -1,6 +1,9 @@
 import jsPDF from 'jspdf'
 import type { ContactForm, DoorStyle, Finish, GlassOption, HardwareOption, ResolvedDoorProduct } from '../types'
 import { hardwareDisplayName } from '../data/hardware'
+import { resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
+import { configurationPdfName } from './pdfConfig'
+import { tintDoorPreviewAsset } from './tintPreview'
 
 async function loadImage(path: string) {
   const response = await fetch(path)
@@ -25,8 +28,6 @@ async function applyBrandFont(pdf: jsPDF) {
   pdf.addFont('Montserrat.ttf', 'Montserrat', 'bold')
   pdf.setFont('Montserrat', 'normal')
 }
-
-export const configurationPdfName = 'Home Guard Door Configuration.pdf'
 
 export async function generateSummaryPdf(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
   const pdf = new jsPDF()
@@ -70,7 +71,7 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
   pdf.setTextColor(70, 72, 78)
   pdf.text(`Generated ${new Date().toLocaleDateString()}`, 18, 68)
   try {
-    const doorImage = await loadImage(style.image)
+    const doorImage = await tintDoorPreviewAsset(resolveDoorPreviewAsset(style, grain, finish.finishType, product), finish.color)
     pdf.addImage(doorImage, 'PNG', 145, 56, 38, 74)
   } catch {
     pdf.setFillColor(finish.color)
@@ -87,9 +88,8 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
   const rows: [string, string[]][] = [
     [product.doorTypeLabel, product.doorTypes],
     ['Door style', style.name],
-    ['Grain', grain ?? 'None'],
     ['Finish type', finish.finishType === 'paint' ? 'Paint' : 'Stain'],
-    ['Finish color', finish.name],
+    [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name],
     ['Glass', glass?.name ?? 'No glass'],
     ['Hardware', hardwareDisplayName(hardware)],
     ['Hardware finish', hardware.finish],

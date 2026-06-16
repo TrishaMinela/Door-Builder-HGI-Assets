@@ -1,5 +1,5 @@
 import type { DoorLine, DoorStyle, Finish, ResolvedDoorProduct } from '../types'
-import { getDoorAsset } from './doorAssets'
+import { getDoorStyleThumbnailAsset } from './doorStyleThumbnailAssets'
 
 const noGlassCodes = new Set([
   '2PNGSS', '2PPLSS', '2PHD', 'CA', 'CANGSS', 'S1NGSS', '3PNGSS', '3PNG',
@@ -51,10 +51,10 @@ productCatalog.forEach((line) => line.styles.forEach((item) => {
     existing.allowedGrains = [...new Set([...existing.allowedGrains, ...line.grains])]
     existing.allowsColors ||= line.allowsColors
     existing.variants.push(variant)
-    Object.assign(existing, getDoorAsset(existing.variants.map((entry) => entry.code)))
+    Object.assign(existing, getDoorStyleThumbnailAsset(existing.variants.map((entry) => entry.code)))
     return
   }
-  const asset = getDoorAsset([item.code])
+  const asset = getDoorStyleThumbnailAsset([item.code])
   styleRecords.set(key, {
     id: key,
     code: item.code,
@@ -81,10 +81,10 @@ export function finishesForStyle(style: DoorStyle, allFinishes: Finish[]) {
 }
 
 export function resolveDoorProduct(style: DoorStyle, finish: Finish, grain?: string): ResolvedDoorProduct {
-  const matchingVariants = style.variants.filter((variant) =>
-    (grain ? variant.grains.includes(grain) : variant.grains.length === 0) &&
-    (finish.category === 'stain' ? variant.grains.length > 0 : variant.allowsColors),
-  )
+  const matchingVariants = style.variants.filter((variant) => {
+    if (finish.category === 'stain') return grain ? variant.grains.includes(grain) : variant.grains.length > 0
+    return variant.allowsColors
+  })
   const doorTypes = [...new Set(matchingVariants.map((variant) =>
     grain ? `${variant.lineName} - ${grain}` : variant.lineName,
   ))]
