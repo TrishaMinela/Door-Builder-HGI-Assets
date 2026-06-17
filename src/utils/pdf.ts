@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import type { ContactForm, DoorStyle, Finish, GlassOption, HardwareOption, ResolvedDoorProduct } from '../types'
 import { hardwareDisplayName } from '../data/hardware'
-import { resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
+import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetHasGlass, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
 import { configurationPdfName } from './pdfConfig'
 import { tintDoorPreviewAsset } from './tintPreview'
 
@@ -71,7 +71,14 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
   pdf.setTextColor(70, 72, 78)
   pdf.text(`Generated ${new Date().toLocaleDateString()}`, 18, 68)
   try {
-    const doorImage = await tintDoorPreviewAsset(resolveDoorPreviewAsset(style, grain, finish.finishType, product), finish.color)
+    const previewAsset = resolveDoorPreviewAsset(style, grain, finish.finishType, product)
+    const doorImage = hasDoorPreviewAsset(style)
+      ? await tintDoorPreviewAsset(previewAsset, finish.color, {
+        preserveGlass: previewAssetHasGlass(style),
+        finishType: finish.finishType,
+        glassMask: previewAssetGlassMask(style),
+      })
+      : await loadImage(previewAsset)
     pdf.addImage(doorImage, 'PNG', 145, 56, 38, 74)
   } catch {
     pdf.setFillColor(finish.color)

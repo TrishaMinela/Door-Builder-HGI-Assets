@@ -164,12 +164,12 @@ export default function App() {
               {currentStep === 'Finish' && <div className="finish-toolbar">
                 {effectiveFinishTypes.length > 1 && <div className="finish-tabs" role="tablist" aria-label="Finish type">{effectiveFinishTypes.map((type) => <button type="button" role="tab" aria-selected={activeFinishType === type} className={activeFinishType === type ? 'active' : ''} key={type} onClick={() => selectFinishTab(type)}>{type === 'paint' ? 'Paint' : 'Stain'}</button>)}</div>}
                 <div className="finish-logo-slot">
-                  {activeFinishType === 'paint' && <img src="/assets/branding/pro-match-logo.png" alt="Pro Match paint colors" />}
-                  {activeFinishType === 'stain' && <img src="/assets/branding/timberstain-logo.png" alt="TimberStain" />}
+                  {activeFinishType === 'paint' && <img src="/assets/branding/pro-match-logo.png" alt="Pro Match paint colors" loading="lazy" decoding="async" />}
+                  {activeFinishType === 'stain' && <img src="/assets/branding/timberstain-logo.png" alt="TimberStain" loading="lazy" decoding="async" />}
                 </div>
               </div>}
               <div className={`options-grid step-${step}`}>
-                {currentStep === 'Door Style' && doorStyles.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.eyebrow} selected={styleId === item.id} onClick={() => setStyleId(item.id)} visual={<DoorStyleThumbnail style={item} />} badge={item.variants.some((variant) => variant.lineName === 'Signature Series') ? <img src="/assets/branding/signature-series-logo.png" alt="Available in Signature Series" /> : undefined} />)}
+                {currentStep === 'Door Style' && doorStyles.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.eyebrow} selected={styleId === item.id} onClick={() => setStyleId(item.id)} visual={<DoorStyleThumbnail style={item} />} badge={item.variants.some((variant) => variant.lineName === 'Signature Series') ? <img src="/assets/branding/signature-series-logo.png" alt="Available in Signature Series" loading="lazy" decoding="async" /> : undefined} />)}
                 {currentStep === 'Finish' && visibleFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => { setFinishId(item.id); setFinishTab(item.finishType) }} visual={<span className="finish-swatch" style={{ background: item.color }}><i style={{ background: item.accent }} /></span>} />)}
                 {currentStep === 'Glass' && availableGlass.map((item) => <OptionCard key={item.id} title={item.name} selected={glassId === item.id} onClick={() => setGlassId(item.id)} visual={<span className="glass-swatch glass-clear" />} />)}
                 {currentStep === 'Hardware' && <h2 className="hardware-group-heading">1. Style</h2>}
