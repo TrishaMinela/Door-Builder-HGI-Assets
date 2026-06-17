@@ -35,14 +35,15 @@ export function hardwareFinishesForStyle(manufacturer: HardwareManufacturer, sty
   )].map((name) => ({ name, color: finishColors[name] ?? '#666666' }))
 }
 
-export function resolveHardwareOption(manufacturer: HardwareManufacturer, style: HardwareStyleName, finish: HardwareFinishName, handing: HardwareHanding = 'Left'): HardwareOption | undefined {
+export function resolveHardwareOption(manufacturer: HardwareManufacturer, style: HardwareStyleName, finish: HardwareFinishName, handing?: HardwareHanding): HardwareOption | undefined {
+  const preferredHanding = handing ?? (manufacturer === 'Baldwin' ? 'Right' : 'Left')
   const asset = allHardwareAssets.find((item) =>
-    item.manufacturer === manufacturer && item.style === style && item.finish === finish && item.handing === handing && item.view === 'Exterior',
+    item.manufacturer === manufacturer && item.style === style && item.finish === finish && item.handing === preferredHanding && item.view === 'Exterior',
   )
   if (!asset) return undefined
   return {
     ...asset,
-    id: `${slug(manufacturer)}-${slug(style)}-${slug(finish)}-${handing.toLowerCase()}`,
+    id: `${slug(manufacturer)}-${slug(style)}-${slug(finish)}-${preferredHanding.toLowerCase()}`,
     color: finishColors[finish] ?? '#666666',
     type: style.includes('Knob') ? 'round' : style.includes('Lever') ? 'lever' : 'long',
   }
@@ -53,3 +54,4 @@ export const hardwareOptions: HardwareOption[] = allHardwareAssets
   .map((asset) => resolveHardwareOption(asset.manufacturer, asset.style, asset.finish, asset.handing)!)
 
 export const hardwareDisplayName = (hardware: HardwareOption) => `${hardware.manufacturer} ${hardware.style}`
+export const hardwareAssetUrl = (asset: string) => `/assets/hardware/${asset}?v=3`

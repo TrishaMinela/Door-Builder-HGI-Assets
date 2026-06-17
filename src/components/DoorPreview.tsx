@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { DoorStyle, Finish, GlassOption, PreviewHardware, ResolvedDoorProduct } from '../types'
-import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetHasGlass, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
+import { hardwareAssetUrl } from '../data/hardware'
+import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetHasGlass, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
 import { tintDoorPreviewAsset } from '../utils/tintPreview'
 
 type Props = {
@@ -18,6 +19,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const previewImage = resolveDoorPreviewAsset(style, grain, finish.finishType, product)
   const hasMappedPreview = hasDoorPreviewAsset(style)
   const preservePreviewGlass = previewAssetHasGlass(style)
+  const tintMask = previewAssetTintMask(style)
   const [displayImage, setDisplayImage] = useState(previewImage)
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
         preserveGlass: preservePreviewGlass,
         finishType: finish.finishType,
         glassMask: previewAssetGlassMask(style),
+        tintMask,
       }).then((tintedImage) => {
         if (import.meta.env.DEV) {
           console.info('[door-preview:image-ready]', {
@@ -56,7 +59,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     return () => {
       isCurrent = false
     }
-  }, [previewImage, tintColor, preservePreviewGlass, finish.finishType, hasMappedPreview])
+  }, [previewImage, tintColor, preservePreviewGlass, finish.finishType, hasMappedPreview, tintMask])
 
   return (
     <div className={`preview-scene ${compact ? 'compact' : ''}`} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass ? ` with ${glass.name} glass` : ''}`}>
@@ -69,8 +72,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           </div>
           <img className="door-style-image" src={displayImage} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />
           {hardware.asset && <div className={`hardware hardware-${hardware.type}`} style={{ '--metal': hardware.color } as React.CSSProperties}>
-            <i className="deadbolt" /><i className="handle" />
-            <img src={`/assets/hardware/${hardware.asset}`} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />
+            <img src={hardwareAssetUrl(hardware.asset)} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />
           </div>}
         </div>
       </div>

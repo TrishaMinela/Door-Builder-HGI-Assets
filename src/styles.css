@@ -139,9 +139,11 @@
 .preview-scene.compact .door-style-image{filter:drop-shadow(0 8px 10px rgba(5,4,11,.2))}
 .door-style-thumbnail{display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:12px;overflow:hidden}
 .door-style-thumbnail img{display:block;max-width:85%;max-height:90%;width:auto;height:auto;object-fit:contain}
-.mapped-preview-door{transform:scale(1.3);transform-origin:center}
+.mapped-preview-door{transform:scale(1.65);transform-origin:center}
 
 /* Larger live slab preview; card thumbnails retain their existing sizing. */
+@media(min-width:901px){.app:not(.home-app) aside{position:relative;padding-top:16px;padding-bottom:15px}.app:not(.home-app) aside .aside-top{position:absolute;top:14px;left:4vw;right:4vw;z-index:2}.app:not(.home-app) aside .preview-scene{padding-top:0}}
 @media(min-width:901px){.app:not(.home-app) aside .door-frame{transform:scale(1.15)}}
 @media(min-width:561px) and (max-width:900px){.mobile-live-preview .door-frame{transform:scale(.45)}}
 @media(max-width:560px){.mobile-live-preview .door-frame{transform:scale(.4)}}
+.hardware{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none}.hardware img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:3}

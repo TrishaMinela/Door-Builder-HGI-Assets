@@ -5,14 +5,15 @@ type Rgb = {
 }
 
 const tintCache = new Map<string, Promise<string>>()
-const TINT_ALGORITHM_VERSION = 'v21-inset-glass-masks'
+const TINT_ALGORITHM_VERSION = 'v32-explicit-tint-masks'
 const BACKGROUND_ALPHA_THRESHOLD = 8
 const FORCE_DEBUG_RED_IN_DEV = false
 
 type TintOptions = {
   preserveGlass?: boolean
   finishType?: 'paint' | 'stain'
-  glassMask?: 'ca' | 'full-lite' | 'three-quarter-lite' | 'half-lite' | 'small-oval'
+  glassMask?: 'ca' | 'craftsman-lite' | 'full-lite' | 'three-quarter-lite' | 'half-lite' | 'small-oval' | 'stacked-three-lite'
+  tintMask?: string
 }
 
 function parseHexColor(hex: string): Rgb | null {
@@ -23,6 +24,17 @@ function parseHexColor(hex: string): Rgb | null {
     r: Number.parseInt(normalized.slice(0, 2), 16),
     g: Number.parseInt(normalized.slice(2, 4), 16),
     b: Number.parseInt(normalized.slice(4, 6), 16),
+  }
+}
+
+function saturateColor(color: Rgb, amount = 3): Rgb {
+  const luminance = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b
+  const saturateChannel = (channel: number) => Math.max(0, Math.min(255, Math.round(luminance + (channel - luminance) * amount)))
+
+  return {
+    r: saturateChannel(color.r),
+    g: saturateChannel(color.g),
+    b: saturateChannel(color.b),
   }
 }
 
@@ -78,10 +90,10 @@ function getDoorContentBounds(data: Uint8ClampedArray, width: number, height: nu
 function isCaGlassPixel(x: number, y: number, width: number, height: number) {
   const nx = x / width
   const ny = y / height
-  const inLowerGlass = nx >= 0.477 && nx <= 0.561 && ny >= 0.249 && ny <= 0.675
-  const archX = (nx - 0.519) / 0.042
-  const archY = (ny - 0.249) / 0.045
-  const inUpperArch = ny <= 0.249 && archX * archX + archY * archY <= 1
+  const inLowerGlass = nx >= 0.472 && nx <= 0.552 && ny >= 0.225 && ny <= 0.67
+  const archX = (nx - 0.512) / 0.04
+  const archY = (ny - 0.225) / 0.038
+  const inUpperArch = ny <= 0.225 && archX * archX + archY * archY <= 1
 
   return inLowerGlass || inUpperArch
 }
@@ -93,6 +105,16 @@ function isPreviewGlassPixel(mask: TintOptions['glassMask'], x: number, y: numbe
   const nx = x / width
   const ny = y / height
 
+  if (mask === 'stacked-three-lite') {
+    const inGlassColumn = nx >= 0.445 && nx <= 0.575
+    const inTopLite = ny >= 0.125 && ny <= 0.245
+    const inMiddleLite = ny >= 0.414 && ny <= 0.536
+    const inBottomLite = ny >= 0.722 && ny <= 0.85
+    return inGlassColumn && (inTopLite || inMiddleLite || inBottomLite)
+  }
+  if (mask === 'craftsman-lite') {
+    return nx >= 0.375 && nx <= 0.647 && ny >= 0.12 && ny <= 0.282
+  }
   if (mask === 'full-lite') {
     return nx >= 0.375 && nx <= 0.625 && ny >= 0.135 && ny <= 0.88
   }
@@ -115,6 +137,7 @@ function renderDetailOverlay(
   finishType: TintOptions['finishType'],
   doorBounds: ReturnType<typeof getDoorContentBounds>,
   glassMask: TintOptions['glassMask'],
+  tintMaskData?: Uint8ClampedArray,
 ) {
   const { width, height, data: originalData } = originalImageData
   const materialMask = new ImageData(width, height)
@@ -127,7 +150,11 @@ function renderDetailOverlay(
     const y = Math.floor(pixelIndex / width)
     const alpha = originalData[index + 3]
     const insideBounds = x >= doorBounds.minX && x <= doorBounds.maxX && y >= doorBounds.minY && y <= doorBounds.maxY
-    const isGlass = glassMask ? isPreviewGlassPixel(glassMask, x, y, width, height) : false
+    const maskBrightness = tintMaskData
+      ? (tintMaskData[index] + tintMaskData[index + 1] + tintMaskData[index + 2]) / 3
+      : null
+    const maskMarksWood = maskBrightness !== null && tintMaskData![index + 3] >= BACKGROUND_ALPHA_THRESHOLD && maskBrightness >= 128
+    const isGlass = tintMaskData ? !maskMarksWood : glassMask ? isPreviewGlassPixel(glassMask, x, y, width, height) : false
     const isMaterial = alpha >= BACKGROUND_ALPHA_THRESHOLD && insideBounds && !isGlass
 
     if (isMaterial) {
@@ -172,11 +199,8 @@ function renderDetailOverlay(
   context.drawImage(maskCanvas, 0, 0)
 
   const isStain = finishType === 'stain'
-  context.globalCompositeOperation = 'multiply'
-  context.globalAlpha = isStain ? 0.42 : 0.24
-  context.drawImage(detailCanvas, 0, 0)
-  context.globalCompositeOperation = 'screen'
-  context.globalAlpha = isStain ? 0.1 : 0.07
+  context.globalCompositeOperation = 'source-over'
+  context.globalAlpha = isStain ? 0.45 : 0.4
   context.drawImage(detailCanvas, 0, 0)
 
   context.globalCompositeOperation = 'source-over'
@@ -187,9 +211,9 @@ function renderDetailOverlay(
 export async function tintDoorPreviewAsset(src: string, hexColor?: string | null, options: TintOptions = {}) {
   const color = hexColor ? parseHexColor(hexColor) : null
   if (!color) return src
-  const outputColor = import.meta.env.DEV && FORCE_DEBUG_RED_IN_DEV ? { r: 255, g: 0, b: 0 } : color
+  const outputColor = import.meta.env.DEV && FORCE_DEBUG_RED_IN_DEV ? { r: 255, g: 0, b: 0 } : saturateColor(color)
 
-  const cacheKey = `${TINT_ALGORITHM_VERSION}|${src}|${hexColor}|${options.preserveGlass ? 'glass' : 'solid'}|${options.finishType ?? 'paint'}|${options.glassMask ?? 'auto'}`
+  const cacheKey = `${TINT_ALGORITHM_VERSION}|${src}|${hexColor}|${options.preserveGlass ? 'glass' : 'solid'}|${options.finishType ?? 'paint'}|${options.tintMask ?? options.glassMask ?? 'auto'}`
   const cached = tintCache.get(cacheKey)
   if (cached) return cached
 
@@ -202,7 +226,11 @@ export async function tintDoorPreviewAsset(src: string, hexColor?: string | null
     })
   }
 
-  const tinted = loadPreviewImage(src).then((image) => {
+  const tintMaskPromise = options.tintMask
+    ? loadPreviewImage(options.tintMask).catch(() => null)
+    : Promise.resolve(null)
+
+  const tinted = Promise.all([loadPreviewImage(src), tintMaskPromise]).then(([image, tintMaskImage]) => {
     const canvas = document.createElement('canvas')
     canvas.width = image.naturalWidth
     canvas.height = image.naturalHeight
@@ -214,8 +242,18 @@ export async function tintDoorPreviewAsset(src: string, hexColor?: string | null
     const originalImageData = context.getImageData(0, 0, canvas.width, canvas.height)
     const originalData = originalImageData.data
     const doorBounds = getDoorContentBounds(originalData, canvas.width, canvas.height)
+    let tintMaskData: Uint8ClampedArray | undefined
 
-    renderDetailOverlay(context, originalImageData, outputColor, options.finishType, doorBounds, options.glassMask)
+    if (tintMaskImage) {
+      const tintMaskCanvas = document.createElement('canvas')
+      tintMaskCanvas.width = canvas.width
+      tintMaskCanvas.height = canvas.height
+      const tintMaskContext = tintMaskCanvas.getContext('2d')
+      tintMaskContext?.drawImage(tintMaskImage, 0, 0, canvas.width, canvas.height)
+      tintMaskData = tintMaskContext?.getImageData(0, 0, canvas.width, canvas.height).data
+    }
+
+    renderDetailOverlay(context, originalImageData, outputColor, options.finishType, doorBounds, options.glassMask, tintMaskData)
     const output = canvas.toDataURL('image/png')
 
     if (import.meta.env.DEV) {
@@ -225,6 +263,7 @@ export async function tintDoorPreviewAsset(src: string, hexColor?: string | null
         preserveGlass: Boolean(options.preserveGlass),
         forceDebugRed: FORCE_DEBUG_RED_IN_DEV,
         doorBounds,
+        tintMask: options.tintMask ?? null,
         glassMask: options.glassMask ?? null,
         dataUrlLength: output.length,
       })
