@@ -5,10 +5,10 @@ import { DoorStyleThumbnail } from './components/DoorStyleThumbnail'
 import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
 import { doorStyles, finishes, glassOptions } from './data/options'
-import { hardwareDisplayName, hardwareFinishesForStyle, hardwareStyles, resolveHardwareOption } from './data/hardware'
+import { hardwareDisplayName, hardwareOptions } from './data/hardware'
 import { finishTypesForPreviewAssets } from './data/doorPreviewAssets'
 import { finishesForStyle, resolveDoorProduct } from './data/productCatalog'
-import type { ContactForm, HardwareFinishName, HardwareManufacturer, HardwareStyleName, PreviewHardware } from './types'
+import type { ContactForm, PreviewHardware } from './types'
 import { configurationPdfName } from './utils/pdfConfig'
 import { submitQuote, type SubmissionResult } from './utils/submission'
 
@@ -24,9 +24,7 @@ export default function App() {
   const [finishId, setFinishId] = useState('')
   const [finishTab, setFinishTab] = useState<'paint' | 'stain'>('paint')
   const [glassId, setGlassId] = useState(glassOptions[0].id)
-  const [hardwareManufacturer, setHardwareManufacturer] = useState<HardwareManufacturer | ''>('')
-  const [hardwareStyle, setHardwareStyle] = useState<HardwareStyleName>('')
-  const [hardwareFinish, setHardwareFinish] = useState<HardwareFinishName>('')
+  const [hardwareId, setHardwareId] = useState('')
   const [contact, setContact] = useState(initialContact)
   const [errors, setErrors] = useState<Partial<Record<keyof ContactForm, string>>>({})
   const [submitted, setSubmitted] = useState(false)
@@ -45,8 +43,7 @@ export default function App() {
   const selectedFinish = visibleFinishes.find((item) => item.id === finishId)
   const finish = selectedFinish ?? visibleFinishes[0] ?? availableFinishes[0]
   const glass = glassOptions.find((item) => item.id === glassId)!
-  const availableHardwareFinishes = hardwareManufacturer ? hardwareFinishesForStyle(hardwareManufacturer, hardwareStyle) : []
-  const selectedHardware = hardwareManufacturer ? resolveHardwareOption(hardwareManufacturer, hardwareStyle, hardwareFinish) : undefined
+  const selectedHardware = hardwareOptions.find((item) => item.id === hardwareId)
   const hardware = selectedHardware ?? emptyPreviewHardware
   const steps = style.hasGlass ? glassSteps : noGlassSteps
   const currentStep = steps[step] ?? steps[steps.length - 1]
@@ -59,11 +56,6 @@ export default function App() {
     setFinishTab(effectiveFinishTypes[0])
     if (step >= steps.length) setStep(steps.length - 1)
   }, [styleId])
-
-  useEffect(() => {
-    if (availableHardwareFinishes.some((item) => item.name === hardwareFinish)) return
-    setHardwareFinish(availableHardwareFinishes.length === 1 ? availableHardwareFinishes[0].name : '')
-  }, [hardwareManufacturer, hardwareStyle])
 
   const goTo = (next: number) => {
     setStep(next)
@@ -172,14 +164,7 @@ export default function App() {
                 {currentStep === 'Door Style' && doorStyles.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.eyebrow} selected={styleId === item.id} onClick={() => setStyleId(item.id)} visual={<DoorStyleThumbnail style={item} />} badge={item.variants.some((variant) => variant.lineName === 'Signature Series') ? <img src="/assets/branding/signature-series-logo.png" alt="Available in Signature Series" loading="lazy" decoding="async" /> : undefined} />)}
                 {currentStep === 'Finish' && visibleFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => { setFinishId(item.id); setFinishTab(item.finishType) }} visual={<span className="finish-swatch" style={{ background: item.color }}><i style={{ background: item.accent }} /></span>} />)}
                 {currentStep === 'Glass' && availableGlass.map((item) => <OptionCard key={item.id} title={item.name} selected={glassId === item.id} onClick={() => setGlassId(item.id)} visual={<span className="glass-swatch glass-clear" />} />)}
-                {currentStep === 'Hardware' && <h2 className="hardware-group-heading">1. Style</h2>}
-                {currentStep === 'Hardware' && hardwareStyles.map((item) => {
-                  const validFinishes = hardwareFinishesForStyle(item.manufacturer, item.style)
-                  const option = resolveHardwareOption(item.manufacturer, item.style, validFinishes[0].name)!
-                  return <OptionCard key={item.id} title={item.style} eyebrow={item.manufacturer} selected={hardwareManufacturer === item.manufacturer && hardwareStyle === item.style} onClick={() => { setHardwareManufacturer(item.manufacturer); setHardwareStyle(item.style) }} visual={<span className="hardware-swatch" style={{ '--metal': option.color } as React.CSSProperties}><i /><b /></span>} />
-                })}
-                {currentStep === 'Hardware' && availableHardwareFinishes.length > 1 && <h2 className="hardware-group-heading">2. Finish</h2>}
-                {currentStep === 'Hardware' && availableHardwareFinishes.length > 1 && availableHardwareFinishes.map((item) => <OptionCard key={item.name} title={item.name} eyebrow="Finish" selected={hardwareFinish === item.name} onClick={() => setHardwareFinish(item.name)} visual={<span className="finish-swatch" style={{ background: item.color }} />} />)}
+                {currentStep === 'Hardware' && hardwareOptions.map((item) => <OptionCard key={item.id} title={hardwareDisplayName(item)} eyebrow={item.manufacturer} selected={hardwareId === item.id} onClick={() => setHardwareId(item.id)} visual={item.manufacturer === 'Baldwin' ? <img className="hardware-card-image" src={`/assets/hardware/cards/${item.asset}`} alt="" loading="lazy" decoding="async" /> : <span className="hardware-swatch" style={{ '--metal': item.color } as React.CSSProperties}><i /><b /></span>} />)}
               </div>
             </div>
           </>}
@@ -190,7 +175,7 @@ export default function App() {
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
               <div className="summary-row"><span>{product.doorTypeLabel}{product.doorTypes.map((doorType) => <strong key={doorType}>{doorType}</strong>)}</span></div>
-              {[['Door style', style.name, steps.indexOf('Door Style')], ['Finish type', finish.finishType === 'paint' ? 'Paint' : 'Stain', steps.indexOf('Finish')], [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name, steps.indexOf('Finish')], ...(style.hasGlass ? [['Glass', glass.name, steps.indexOf('Glass')]] : []), ['Hardware', hardwareDisplayName(selectedHardware!), steps.indexOf('Hardware')], ['Hardware finish', selectedHardware!.finish, steps.indexOf('Hardware')]].map(([label, value, target]) => <div className="summary-row" key={String(label)}><span>{label}<strong>{value}</strong></span>{Number(target) >= 0 && <button onClick={() => goTo(Number(target))}>Edit</button>}</div>)}
+              {[['Door style', style.name, steps.indexOf('Door Style')], ['Finish type', finish.finishType === 'paint' ? 'Paint' : 'Stain', steps.indexOf('Finish')], [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name, steps.indexOf('Finish')], ...(style.hasGlass ? [['Glass', glass.name, steps.indexOf('Glass')]] : []), ['Hardware', hardwareDisplayName(selectedHardware!), steps.indexOf('Hardware')]].map(([label, value, target]) => <div className="summary-row" key={String(label)}><span>{label}<strong>{value}</strong></span>{Number(target) >= 0 && <button onClick={() => goTo(Number(target))}>Edit</button>}</div>)}
             </div>
             <div className="attachment-card">
               <span className="attachment-icon"><FileText size={25} /></span>
@@ -213,7 +198,7 @@ export default function App() {
             <button onClick={downloadPdf}><Download size={17} /> Download Your Summary</button>
           </div>}
 
-          {currentStep !== 'Review & Quote' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Back</button><button className="next" disabled={(currentStep === 'Finish' && !selectedFinish) || (currentStep === 'Hardware' && !hardwareFinish)} onClick={() => goTo(step + 1)}>{currentStep === 'Finish' && !selectedFinish ? 'Select a Finish' : currentStep === 'Hardware' && !hardwareFinish ? 'Select a Finish' : `Continue to ${steps[step + 1]}`} <ArrowRight size={17} /></button></div>}
+          {currentStep !== 'Review & Quote' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Back</button><button className="next" disabled={(currentStep === 'Finish' && !selectedFinish) || (currentStep === 'Hardware' && !selectedHardware)} onClick={() => goTo(step + 1)}>{currentStep === 'Finish' && !selectedFinish ? 'Select a Finish' : currentStep === 'Hardware' && !selectedHardware ? 'Select Hardware' : `Continue to ${steps[step + 1]}`} <ArrowRight size={17} /></button></div>}
         </section>
 
         {!submitted && <aside>

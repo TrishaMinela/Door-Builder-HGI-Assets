@@ -108,7 +108,6 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
     [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name],
     ['Glass', glass?.name ?? 'No glass'],
     ['Hardware', hardwareDisplayName(hardware)],
-    ['Hardware finish', hardware.finish],
   ].map(([label, value]) => [label as string, Array.isArray(value) ? value : [value as string]])
   let rowY = 80
   rows.forEach(([label, values]) => {

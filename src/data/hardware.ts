@@ -1,4 +1,4 @@
-import type { HardwareAsset, HardwareFinishName, HardwareHanding, HardwareManufacturer, HardwareOption, HardwareStyleName, HardwareStyleOption } from '../types'
+import type { HardwareAsset, HardwareFinishName, HardwareHanding, HardwareManufacturer, HardwareOption, HardwareStyleName } from '../types'
 import { hardwareAssets as baldwinAssets } from './hardwareAssets'
 import { schlageHardware } from './schlageHardware'
 
@@ -20,21 +20,6 @@ export const allHardwareAssets: HardwareAsset[] = [...baldwinAssets, ...schlageA
 
 const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
-export const hardwareStyles: HardwareStyleOption[] = [...new Map(
-  allHardwareAssets.map((asset) => {
-    const id = `${slug(asset.manufacturer)}-${slug(asset.style)}`
-    return [id, { id, manufacturer: asset.manufacturer, style: asset.style }]
-  }),
-).values()].sort((a, b) => a.manufacturer.localeCompare(b.manufacturer) || a.style.localeCompare(b.style))
-
-export function hardwareFinishesForStyle(manufacturer: HardwareManufacturer, style: HardwareStyleName) {
-  return [...new Set(
-    allHardwareAssets
-      .filter((asset) => asset.manufacturer === manufacturer && asset.style === style)
-      .map((asset) => asset.finish),
-  )].map((name) => ({ name, color: finishColors[name] ?? '#666666' }))
-}
-
 export function resolveHardwareOption(manufacturer: HardwareManufacturer, style: HardwareStyleName, finish: HardwareFinishName, handing?: HardwareHanding): HardwareOption | undefined {
   const preferredHanding = handing ?? (manufacturer === 'Baldwin' ? 'Right' : 'Left')
   const asset = allHardwareAssets.find((item) =>
@@ -49,9 +34,18 @@ export function resolveHardwareOption(manufacturer: HardwareManufacturer, style:
   }
 }
 
-export const hardwareOptions: HardwareOption[] = allHardwareAssets
-  .filter((asset) => asset.view === 'Exterior')
-  .map((asset) => resolveHardwareOption(asset.manufacturer, asset.style, asset.finish, asset.handing)!)
+export const hardwareOptions: HardwareOption[] = [...new Map(
+  allHardwareAssets
+    .filter((asset) => asset.view === 'Exterior' && asset.handing === (asset.manufacturer === 'Baldwin' ? 'Right' : 'Left'))
+    .map((asset) => {
+      const option = resolveHardwareOption(asset.manufacturer, asset.style, asset.finish)!
+      return [option.id, option] as const
+    }),
+).values()].sort((a, b) =>
+  a.manufacturer.localeCompare(b.manufacturer)
+  || a.style.localeCompare(b.style)
+  || a.finish.localeCompare(b.finish),
+)
 
-export const hardwareDisplayName = (hardware: HardwareOption) => `${hardware.manufacturer} ${hardware.style}`
-export const hardwareAssetUrl = (asset: string) => `/assets/hardware/${asset}?v=3`
+export const hardwareDisplayName = (hardware: HardwareOption) => `${hardware.manufacturer} ${hardware.style} - ${hardware.finish}`
+export const hardwareAssetUrl = (asset: string) => `/assets/hardware/${asset}?v=4`
