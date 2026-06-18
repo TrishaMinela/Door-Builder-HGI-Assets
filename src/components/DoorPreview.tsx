@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { DoorStyle, Finish, GlassOption, PreviewHardware, ResolvedDoorProduct } from '../types'
-import { hardwareAssetUrl } from '../data/hardware'
+import type { DoorStyle, Finish, GlassOption, HardwareView, PreviewHardware, ResolvedDoorProduct } from '../types'
+import { hardwarePreviewAssetUrl } from '../data/hardware'
 import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetHasGlass, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
 import { tintDoorPreviewAsset } from '../utils/tintPreview'
 
@@ -21,6 +21,10 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const preservePreviewGlass = previewAssetHasGlass(style)
   const tintMask = previewAssetTintMask(style)
   const [displayImage, setDisplayImage] = useState(previewImage)
+  const [previewView, setPreviewView] = useState<HardwareView>('Exterior')
+  const exteriorHardwareImage = hardwarePreviewAssetUrl(hardware, 'Exterior')
+  const requestedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView)
+  const [hardwareImage, setHardwareImage] = useState(requestedHardwareImage)
 
   useEffect(() => {
     let isCurrent = true
@@ -61,6 +65,10 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     }
   }, [previewImage, tintColor, preservePreviewGlass, finish.finishType, hasMappedPreview, tintMask])
 
+  useEffect(() => {
+    setHardwareImage(requestedHardwareImage)
+  }, [requestedHardwareImage])
+
   return (
     <div className={`preview-scene ${compact ? 'compact' : ''}`} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
@@ -72,11 +80,20 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           </div>
           <img className="door-style-image" src={displayImage} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />
           {hardware.asset && <div className={`hardware hardware-${hardware.type}`} style={{ '--metal': hardware.color } as React.CSSProperties}>
-            <img src={hardwareAssetUrl(hardware.asset)} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />
+            <img src={hardwareImage} alt="" decoding="async" onError={(event) => {
+              if (previewView === 'Interior' && hardwareImage !== exteriorHardwareImage) {
+                setHardwareImage(exteriorHardwareImage)
+                return
+              }
+              event.currentTarget.style.display = 'none'
+            }} />
           </div>}
         </div>
       </div>
-      {!compact && <p className="preview-caption">Live preview · Exterior view</p>}
+      {!compact && hardware.manufacturer === 'Baldwin' && hardware.asset && <div className="preview-view-toggle" role="group" aria-label="Preview view">
+        {(['Exterior', 'Interior'] as const).map((view) => <button type="button" className={previewView === view ? 'active' : ''} aria-pressed={previewView === view} key={view} onClick={() => setPreviewView(view)}>{view}</button>)}
+      </div>}
+      {!compact && <p className="preview-caption">Live preview · {previewView} view</p>}
     </div>
   )
 }

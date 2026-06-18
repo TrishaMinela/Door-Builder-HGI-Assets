@@ -1,4 +1,4 @@
-import type { HardwareAsset, HardwareFinishName, HardwareHanding, HardwareManufacturer, HardwareOption, HardwareStyleName } from '../types'
+import type { HardwareAsset, HardwareFinishName, HardwareHanding, HardwareManufacturer, HardwareOption, HardwareStyleName, HardwareView, PreviewHardware } from '../types'
 import { hardwareAssets as baldwinAssets } from './hardwareAssets'
 import { schlageHardware } from './schlageHardware'
 
@@ -49,3 +49,11 @@ export const hardwareOptions: HardwareOption[] = [...new Map(
 
 export const hardwareDisplayName = (hardware: HardwareOption) => `${hardware.manufacturer} ${hardware.style} - ${hardware.finish}`
 export const hardwareAssetUrl = (asset: string) => `/assets/hardware/${asset}?v=4`
+
+export function hardwarePreviewAssetUrl(hardware: PreviewHardware, view: HardwareView = 'Exterior') {
+  if (hardware.manufacturer === 'Baldwin' && hardware.style && hardware.finish) {
+    const interiorSuffix = view === 'Interior' ? ' - Interior' : ''
+    return `/assets/hardware/baldwin/Preview - Baldwin - ${hardware.style} - ${hardware.finish}${interiorSuffix}.png`
+  }
+  return hardware.asset ? hardwareAssetUrl(hardware.asset) : ''
+}
