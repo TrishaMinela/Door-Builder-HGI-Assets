@@ -5,7 +5,7 @@ type Rgb = {
 }
 
 const tintCache = new Map<string, Promise<string>>()
-const TINT_ALGORITHM_VERSION = 'v32-explicit-tint-masks'
+const TINT_ALGORITHM_VERSION = 'v33-neutral-color-stronger-grey'
 const BACKGROUND_ALPHA_THRESHOLD = 8
 const FORCE_DEBUG_RED_IN_DEV = false
 
@@ -24,17 +24,6 @@ function parseHexColor(hex: string): Rgb | null {
     r: Number.parseInt(normalized.slice(0, 2), 16),
     g: Number.parseInt(normalized.slice(2, 4), 16),
     b: Number.parseInt(normalized.slice(4, 6), 16),
-  }
-}
-
-function saturateColor(color: Rgb, amount = 3): Rgb {
-  const luminance = 0.299 * color.r + 0.587 * color.g + 0.114 * color.b
-  const saturateChannel = (channel: number) => Math.max(0, Math.min(255, Math.round(luminance + (channel - luminance) * amount)))
-
-  return {
-    r: saturateChannel(color.r),
-    g: saturateChannel(color.g),
-    b: saturateChannel(color.b),
   }
 }
 
@@ -200,7 +189,7 @@ function renderDetailOverlay(
 
   const isStain = finishType === 'stain'
   context.globalCompositeOperation = 'source-over'
-  context.globalAlpha = isStain ? 0.45 : 0.4
+  context.globalAlpha = isStain ? 0.5 : 0.45
   context.drawImage(detailCanvas, 0, 0)
 
   context.globalCompositeOperation = 'source-over'
@@ -211,7 +200,7 @@ function renderDetailOverlay(
 export async function tintDoorPreviewAsset(src: string, hexColor?: string | null, options: TintOptions = {}) {
   const color = hexColor ? parseHexColor(hexColor) : null
   if (!color) return src
-  const outputColor = import.meta.env.DEV && FORCE_DEBUG_RED_IN_DEV ? { r: 255, g: 0, b: 0 } : saturateColor(color)
+  const outputColor = import.meta.env.DEV && FORCE_DEBUG_RED_IN_DEV ? { r: 255, g: 0, b: 0 } : color
 
   const cacheKey = `${TINT_ALGORITHM_VERSION}|${src}|${hexColor}|${options.preserveGlass ? 'glass' : 'solid'}|${options.finishType ?? 'paint'}|${options.tintMask ?? options.glassMask ?? 'auto'}`
   const cached = tintCache.get(cacheKey)

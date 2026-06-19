@@ -16,6 +16,7 @@ export const doorPreviewAssets: Record<string, string> = {
   '3PNG': '/assets/doors/previews/preview-3png.png',
   '3PNGSS': '/assets/doors/previews/preview-3png.png',
   '3LT': '/assets/doors/previews/preview-3lt.png',
+  '3STEP': '/assets/doors/previews/preview-3step.png',
 }
 
 function candidateCodes(style: DoorStyle) {
@@ -30,14 +31,13 @@ export function hasDoorPreviewAsset(style: DoorStyle) {
   return Boolean(mappedPreview(style))
 }
 
-const previewGlassCodes = new Set(['3LT', 'CA', 'CR14', 'F', 'F482', 'S', 'SO2'])
+const previewGlassCodes = new Set(['3LT', '3STEP', 'CA', 'CR14', 'F', 'F482', 'S', 'SO2'])
 
 export function previewAssetHasGlass(style: DoorStyle) {
   return candidateCodes(style).some((code) => previewGlassCodes.has(code))
 }
 
 const previewGlassMasks = {
-  '3LT': 'stacked-three-lite',
   CA: 'ca',
   CR14: 'craftsman-lite',
   F: 'full-lite',
@@ -47,7 +47,6 @@ const previewGlassMasks = {
 } as const
 
 const previewTintMasks = {
-  '3LT': '/assets/doors/previews/masks/tint-3lt.svg',
   CA: '/assets/doors/previews/masks/tint-ca.svg?v=2',
   CR14: '/assets/doors/previews/masks/tint-cr14.svg',
   F: '/assets/doors/previews/masks/tint-f.svg',
