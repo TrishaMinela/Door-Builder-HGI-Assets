@@ -5,7 +5,7 @@ type Rgb = {
 }
 
 const tintCache = new Map<string, Promise<string>>()
-const TINT_ALGORITHM_VERSION = 'v33-neutral-color-stronger-grey'
+const TINT_ALGORITHM_VERSION = 'v34-exact-color-multiply-detail'
 const BACKGROUND_ALPHA_THRESHOLD = 8
 const FORCE_DEBUG_RED_IN_DEV = false
 
@@ -187,9 +187,12 @@ function renderDetailOverlay(
   context.globalCompositeOperation = 'destination-in'
   context.drawImage(maskCanvas, 0, 0)
 
+  // The exact finish color remains the base. Multiplying the original slab
+  // into it restores only its luminance/detail, so pale source pixels cannot
+  // wash dark finishes toward gray or shift saturated finishes toward orange.
   const isStain = finishType === 'stain'
-  context.globalCompositeOperation = 'source-over'
-  context.globalAlpha = isStain ? 0.5 : 0.45
+  context.globalCompositeOperation = 'multiply'
+  context.globalAlpha = isStain ? 0.65 : 1
   context.drawImage(detailCanvas, 0, 0)
 
   context.globalCompositeOperation = 'source-over'

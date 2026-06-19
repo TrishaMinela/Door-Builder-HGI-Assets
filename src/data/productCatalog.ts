@@ -1,4 +1,4 @@
-import type { DoorLine, DoorStyle, Finish, ResolvedDoorProduct } from '../types'
+import type { DoorLine, DoorStyle, DoorTypeOption, Finish, ResolvedDoorProduct } from '../types'
 import { getDoorStyleThumbnailAsset } from './doorStyleThumbnailAssets'
 
 const noGlassCodes = new Set([
@@ -13,7 +13,7 @@ const parseStyles = (rows: string[]) => rows.map((row) => {
 
 const signatureStyles = {
   Cherry: parseStyles(['2PNGSS|2 Panel No Glass', '2PPLSS|2 Panel Plank No Glass', 'CA|Fiberglass Center Arch 8 Panel', 'CANGSS|Center Arch No Glass', 'F|Full Lite', 'F482|3/4 Lite 2 Panel', 'S|Half Lite', 'S1NGSS|S1 6-Panel No Glass', 'SO2|Small Oval 2 Panel']),
-  Fir: parseStyles(['CR14|Craftsman 1/4 Rectangle', 'F|Full Lite']),
+  Fir: parseStyles(['CR14|Craftsman 1/4 Rectangle', 'CR14PL|Craftsman 1/4 Rectangle Plank', 'F|Full Lite']),
   Mahogany: parseStyles(['3PNGSS|3 Panel No Glass', 'F|Full Lite', 'F48|3/4 Lite', 'S|Half Lite', 'S1NGSS|S1 6-Panel No Glass']),
   Oak: parseStyles(['F|Full Lite', 'S|Half Lite', 'S1NGSS|S1 6-Panel No Glass']),
 }
@@ -35,11 +35,19 @@ const textured = parseStyles([
 ])
 
 export const productCatalog: DoorLine[] = [
-  ...Object.entries(signatureStyles).map(([grain, styles]) => ({ id: `signature-${grain.toLowerCase()}`, name: 'Signature Series', grains: [grain], allowsColors: true, styles })),
-  { id: '20-gauge-smooth-steel', name: '20-Gauge Smooth Steel', grains: [], allowsColors: true, styles: steel20 },
-  { id: '22-gauge-steel', name: '22 Gauge Steel Doors', grains: ['Oak'], allowsColors: true, styles: steel22 },
+  ...Object.entries(signatureStyles).map(([grain, styles]) => ({ id: `signature-${grain.toLowerCase()}`, name: 'Signature Fiberglass Grained N/C', grains: [grain], allowsColors: true, styles })),
+  { id: '20-gauge-smooth-steel', name: 'Smooth Steel N/C', grains: [], allowsColors: true, styles: steel20 },
+  { id: '22-gauge-steel', name: 'Paintable Stainable Steel N/C', grains: ['Oak'], allowsColors: true, styles: steel22 },
   { id: 'brushed-smooth-fiberglass', name: 'Brushed Smooth Fiberglass', grains: [], allowsColors: true, styles: brushed },
-  { id: 'textured-fiberglass', name: 'Textured Fiberglass', grains: ['Oak'], allowsColors: true, styles: textured },
+  { id: 'textured-fiberglass', name: 'Fiberglass Textured N/C', grains: ['Oak'], allowsColors: true, styles: textured },
+]
+
+export const doorTypeOptions: DoorTypeOption[] = [
+  { id: 'paintable-stainable-steel', name: 'Paintable Stainable Steel N/C', lineIds: ['22-gauge-steel'], requiresGrain: false, grains: [] },
+  { id: 'smooth-steel', name: 'Smooth Steel N/C', lineIds: ['20-gauge-smooth-steel'], requiresGrain: false, grains: [] },
+  { id: 'signature-fiberglass', name: 'Signature Fiberglass Grained N/C', lineIds: Object.keys(signatureStyles).map((grain) => `signature-${grain.toLowerCase()}`), requiresGrain: true, grains: Object.keys(signatureStyles) },
+  { id: 'brushed-smooth-fiberglass', name: 'Brushed Smooth Fiberglass', lineIds: ['brushed-smooth-fiberglass'], requiresGrain: false, grains: [] },
+  { id: 'textured-fiberglass', name: 'Fiberglass Textured N/C', lineIds: ['textured-fiberglass'], requiresGrain: false, grains: [] },
 ]
 
 const styleRecords = new Map<string, DoorStyle>()
@@ -71,23 +79,42 @@ productCatalog.forEach((line) => line.styles.forEach((item) => {
 
 export const catalogDoorStyles = [...styleRecords.values()].sort((a, b) => a.name.localeCompare(b.name))
 
-export function finishesForStyle(style: DoorStyle, allFinishes: Finish[]) {
+export function stylesForDoorType(doorTypeId: string, grain?: string | null) {
+  const doorType = doorTypeOptions.find((item) => item.id === doorTypeId)
+  if (!doorType) return []
+
+  return catalogDoorStyles.filter((style) => style.variants.some((variant) =>
+    doorType.lineIds.includes(variant.lineId)
+      && (!doorType.requiresGrain || Boolean(grain && variant.grains.includes(grain))),
+  ))
+}
+
+export function finishesForStyle(style: DoorStyle, allFinishes: Finish[], doorTypeId?: string, grain?: string | null) {
+  const doorType = doorTypeOptions.find((item) => item.id === doorTypeId)
+  const matchingVariants = style.variants.filter((variant) =>
+    (!doorType || doorType.lineIds.includes(variant.lineId))
+      && (!doorType?.requiresGrain || Boolean(grain && variant.grains.includes(grain))),
+  )
+
   return allFinishes.filter((finish) =>
-    style.variants.some((variant) => {
+    matchingVariants.some((variant) => {
       if (finish.category === 'stain') return variant.grains.length > 0
       return variant.allowsColors
     }),
   )
 }
 
-export function resolveDoorProduct(style: DoorStyle, finish: Finish, grain?: string): ResolvedDoorProduct {
+export function resolveDoorProduct(style: DoorStyle, finish: Finish, grain?: string, doorTypeId?: string): ResolvedDoorProduct {
+  const selectedDoorType = doorTypeOptions.find((item) => item.id === doorTypeId)
   const matchingVariants = style.variants.filter((variant) => {
+    if (selectedDoorType && !selectedDoorType.lineIds.includes(variant.lineId)) return false
+    if (grain && !variant.grains.includes(grain)) return false
     if (finish.category === 'stain') return grain ? variant.grains.includes(grain) : variant.grains.length > 0
     return variant.allowsColors
   })
-  const doorTypes = [...new Set(matchingVariants.map((variant) =>
-    grain ? `${variant.lineName} - ${grain}` : variant.lineName,
-  ))]
+  const doorTypes = selectedDoorType
+    ? [`${selectedDoorType.name}${grain ? ` - ${grain}` : ''}`]
+    : [...new Set(matchingVariants.map((variant) => grain ? `${variant.lineName} - ${grain}` : variant.lineName))]
   return {
     doorTypeLabel: doorTypes.length === 1 ? 'Door Type' : 'Available Door Types',
     doorType: doorTypes.join(' / '),

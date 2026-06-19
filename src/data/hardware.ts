@@ -1,6 +1,6 @@
 import type { HardwareAsset, HardwareFinishName, HardwareHanding, HardwareManufacturer, HardwareOption, HardwareStyleName, HardwareView, PreviewHardware } from '../types'
 import { hardwareAssets as baldwinAssets } from './hardwareAssets'
-import { schlageHardware } from './schlageHardware'
+import { schlageCardAsset, schlageHardware } from './schlageHardware'
 
 const finishColors: Record<string, string> = {
   'Aged Bronze': '#584536',
@@ -11,10 +11,10 @@ const finishColors: Record<string, string> = {
   'Matte Black': '#191919',
 }
 
-const schlageAssets: HardwareAsset[] = schlageHardware.flatMap((option) => [
-  { manufacturer: option.manufacturer, style: option.style, finish: option.finish, handing: 'Left', view: 'Exterior', asset: option.assets.L },
-  { manufacturer: option.manufacturer, style: option.style, finish: option.finish, handing: 'Right', view: 'Exterior', asset: option.assets.R },
-])
+const schlageAssets: HardwareAsset[] = schlageHardware.flatMap((option) => (['Left', 'Right'] as const).flatMap((handing) => [
+  { manufacturer: option.manufacturer, style: option.style, finish: option.finish, handing, view: 'Exterior' as const, asset: option.exterior },
+  ...(option.interior ? [{ manufacturer: option.manufacturer, style: option.style, finish: option.finish, handing, view: 'Interior' as const, asset: option.interior }] : []),
+]))
 
 export const allHardwareAssets: HardwareAsset[] = [...baldwinAssets, ...schlageAssets]
 
@@ -50,10 +50,40 @@ export const hardwareOptions: HardwareOption[] = [...new Map(
 export const hardwareDisplayName = (hardware: HardwareOption) => `${hardware.manufacturer} ${hardware.style} - ${hardware.finish}`
 export const hardwareAssetUrl = (asset: string) => `/assets/hardware/${asset}?v=4`
 
+const finishSwatchAssets: Record<string, string> = {
+  'Bright Brass': 'bright-brass.png',
+  'Dark Bronze': 'dark-bronze.png',
+  'Matte Black': 'matte-black.png',
+  'Satin Nickel': 'satin-nickel.png',
+  'Venetian Bronze': 'venetian-bronze.png',
+}
+
+export function finishSwatchAssetUrl(finish: string) {
+  return `/assets/hardware/finishes/${finishSwatchAssets[finish]}`
+}
+
+export function hardwareCardAssetUrl(hardware: HardwareOption) {
+  if (hardware.manufacturer === 'Schlage') {
+    const asset = schlageCardAsset(hardware.style, hardware.finish)
+    return asset ? hardwareAssetUrl(asset) : hardwareAssetUrl(hardware.asset)
+  }
+  return `/assets/hardware/cards/${hardware.asset}`
+}
+
 export function hardwarePreviewAssetUrl(hardware: PreviewHardware, view: HardwareView = 'Exterior') {
   if (hardware.manufacturer === 'Baldwin' && hardware.style && hardware.finish) {
     const interiorSuffix = view === 'Interior' ? ' - Interior' : ''
     return `/assets/hardware/baldwin/Preview - Baldwin - ${hardware.style} - ${hardware.finish}${interiorSuffix}.png`
+  }
+  if (hardware.manufacturer === 'Schlage' && hardware.style && hardware.finish) {
+    const asset = allHardwareAssets.find((item) =>
+      item.manufacturer === 'Schlage'
+      && item.style === hardware.style
+      && item.finish === hardware.finish
+      && item.handing === (hardware.handing ?? 'Left')
+      && item.view === view,
+    )
+    return asset ? hardwareAssetUrl(asset.asset) : ''
   }
   return hardware.asset ? hardwareAssetUrl(hardware.asset) : ''
 }

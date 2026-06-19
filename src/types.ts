@@ -73,6 +73,14 @@ export type DoorLine = {
   styles: { code: string; name: string; hasGlass: boolean }[]
 }
 
+export type DoorTypeOption = {
+  id: string
+  name: string
+  lineIds: string[]
+  requiresGrain: boolean
+  grains: string[]
+}
+
 export type ResolvedDoorProduct = {
   doorTypeLabel: 'Door Type' | 'Available Door Types'
   doorType: string
