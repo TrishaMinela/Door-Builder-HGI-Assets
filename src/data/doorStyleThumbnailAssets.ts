@@ -24,7 +24,7 @@ export const doorStyleThumbnailAssets: Record<string, DoorStyleThumbnailAsset> =
   CA: { image: '/assets/doors/CA.png', panel: 'heritage' },
   CANGSS: { image: '/assets/doors/CANGSS.png', panel: 'heritage' },
   CR14: { image: '/assets/doors/CR14.png', panel: 'craftsman' },
-  CR14PL: { image: '/assets/doors/previews/preview-cr14pl.png', panel: 'craftsman' },
+  CR14PL: { image: '/assets/doors/CR14PL.png', panel: 'craftsman' },
   E1: { image: '/assets/doors/E1.png', panel: 'classic' },
   F: { image: '/assets/doors/FULL LITE.png', panel: 'modern' },
   F1: { image: '/assets/doors/F1.png', panel: 'modern' },

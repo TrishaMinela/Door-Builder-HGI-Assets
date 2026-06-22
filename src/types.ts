@@ -34,6 +34,8 @@ export type Finish = {
 export type GlassOption = {
   id: string
   name: string
+  thumbnailPath: string
+  overlaysByDoorStyle: Record<string, string>
 }
 
 export type HardwareManufacturer = 'Baldwin' | 'Schlage'
