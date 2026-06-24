@@ -5,7 +5,7 @@ type Rgb = {
 }
 
 const tintCache = new Map<string, Promise<string>>()
-const TINT_ALGORITHM_VERSION = 'v34-exact-color-multiply-detail'
+const TINT_ALGORITHM_VERSION = 'v61-subtle-satin-clear-coat'
 const BACKGROUND_ALPHA_THRESHOLD = 8
 const FORCE_DEBUG_RED_IN_DEV = false
 
@@ -25,6 +25,14 @@ function parseHexColor(hex: string): Rgb | null {
     g: Number.parseInt(normalized.slice(2, 4), 16),
     b: Number.parseInt(normalized.slice(4, 6), 16),
   }
+}
+
+function clampChannel(value: number) {
+  return Math.max(0, Math.min(255, Math.round(value)))
+}
+
+function mixChannel(a: number, b: number, amount: number) {
+  return a + (b - a) * amount
 }
 
 function loadPreviewImage(src: string) {
@@ -131,7 +139,9 @@ function renderDetailOverlay(
   const { width, height, data: originalData } = originalImageData
   const materialMask = new ImageData(width, height)
   const detailLayer = new ImageData(width, height)
+  const stainLayer = new ImageData(width, height)
   const preservedLayer = new ImageData(width, height)
+  const isStain = finishType === 'stain'
 
   for (let index = 0; index < originalData.length; index += 4) {
     const pixelIndex = index / 4
@@ -152,10 +162,50 @@ function renderDetailOverlay(
       materialMask.data[index + 2] = 255
       materialMask.data[index + 3] = alpha
 
-      detailLayer.data[index] = originalData[index]
-      detailLayer.data[index + 1] = originalData[index + 1]
-      detailLayer.data[index + 2] = originalData[index + 2]
+      const sourceLuma = (originalData[index] * 0.299) + (originalData[index + 1] * 0.587) + (originalData[index + 2] * 0.114)
+      const detailValue = clampChannel(255 - (255 - sourceLuma) * 1.65)
+
+      // The source slabs are intentionally very light. If we multiply the raw
+      // pale pixels into the finish color, panel depth and grain nearly vanish.
+      // Use the source luminance as a strengthened detail map so the finished
+      // door keeps the same readable embossing, shadows, and wood texture.
+      detailLayer.data[index] = detailValue
+      detailLayer.data[index + 1] = detailValue
+      detailLayer.data[index + 2] = detailValue
       detailLayer.data[index + 3] = alpha
+
+      if (isStain) {
+        const normalizedLuma = Math.max(0, Math.min(1, (sourceLuma - 72) / 184))
+        const highlightAmount = normalizedLuma
+        const woodWave = (
+          Math.sin((x - doorBounds.minX) * 0.13 + y * 0.031)
+          + Math.sin((x - doorBounds.minX) * 0.049 - y * 0.022)
+          + Math.sin(x * 0.017 + y * 0.009)
+        ) / 3
+        const verticalPosition = (x - doorBounds.minX) / Math.max(1, doorBounds.maxX - doorBounds.minX)
+        const flowingGrain = (
+          Math.sin(verticalPosition * 54 + y * 0.018 + Math.sin(y * 0.011) * 1.8)
+          + Math.sin(verticalPosition * 93 + y * 0.009)
+          + Math.sin(verticalPosition * 147 - y * 0.006)
+        ) / 3
+        const fineGrain = (
+          Math.sin((x - doorBounds.minX) * 0.42 + y * 0.024)
+          + Math.sin((x - doorBounds.minX) * 0.31 - y * 0.017)
+        ) / 2
+        const subtleGrain = woodWave * 0.018 + flowingGrain * 0.035 + fineGrain * 0.012
+        const sourceTexture = ((sourceLuma - 214) / 255) * 0.08
+        const sourceShadow = (1 - normalizedLuma) * 0.12
+        const panelHighlight = Math.max(0, highlightAmount - 0.86) * 0.035
+        const tone = Math.max(0.82, Math.min(1.07, 0.985 + subtleGrain + sourceTexture + panelHighlight - sourceShadow))
+        const red = color.r * tone
+        const green = color.g * tone
+        const blue = color.b * tone
+
+        stainLayer.data[index] = clampChannel(red)
+        stainLayer.data[index + 1] = clampChannel(green)
+        stainLayer.data[index + 2] = clampChannel(blue)
+        stainLayer.data[index + 3] = alpha
+      }
     } else if (alpha >= BACKGROUND_ALPHA_THRESHOLD && isGlass) {
       preservedLayer.data[index] = originalData[index]
       preservedLayer.data[index + 1] = originalData[index + 1]
@@ -174,26 +224,85 @@ function renderDetailOverlay(
   detailCanvas.height = height
   detailCanvas.getContext('2d')?.putImageData(detailLayer, 0, 0)
 
+  const stainCanvas = document.createElement('canvas')
+  stainCanvas.width = width
+  stainCanvas.height = height
+  stainCanvas.getContext('2d')?.putImageData(stainLayer, 0, 0)
+
   const preservedCanvas = document.createElement('canvas')
   preservedCanvas.width = width
   preservedCanvas.height = height
   preservedCanvas.getContext('2d')?.putImageData(preservedLayer, 0, 0)
 
+  const glossCanvas = document.createElement('canvas')
+  glossCanvas.width = width
+  glossCanvas.height = height
+  const glossContext = glossCanvas.getContext('2d')
+
+  if (glossContext) {
+    const verticalSheen = glossContext.createLinearGradient(doorBounds.minX, 0, doorBounds.maxX, 0)
+    verticalSheen.addColorStop(0, 'rgba(255, 255, 255, 0)')
+    verticalSheen.addColorStop(0.34, 'rgba(255, 255, 255, 0.08)')
+    verticalSheen.addColorStop(0.47, 'rgba(255, 255, 255, 0.025)')
+    verticalSheen.addColorStop(0.7, 'rgba(255, 255, 255, 0.055)')
+    verticalSheen.addColorStop(1, 'rgba(255, 255, 255, 0)')
+    glossContext.fillStyle = verticalSheen
+    glossContext.fillRect(doorBounds.minX, doorBounds.minY, doorBounds.maxX - doorBounds.minX, doorBounds.maxY - doorBounds.minY)
+
+    const panelGlint = glossContext.createRadialGradient(
+      width * 0.58,
+      height * 0.22,
+      width * 0.02,
+      width * 0.58,
+      height * 0.22,
+      width * 0.3,
+    )
+    panelGlint.addColorStop(0, 'rgba(255, 255, 255, 0.075)')
+    panelGlint.addColorStop(0.55, 'rgba(255, 255, 255, 0.025)')
+    panelGlint.addColorStop(1, 'rgba(255, 255, 255, 0)')
+    glossContext.fillStyle = panelGlint
+    glossContext.fillRect(doorBounds.minX, doorBounds.minY, doorBounds.maxX - doorBounds.minX, doorBounds.maxY - doorBounds.minY)
+
+    glossContext.globalCompositeOperation = 'destination-in'
+    glossContext.drawImage(maskCanvas, 0, 0)
+  }
+
   context.clearRect(0, 0, width, height)
   context.globalCompositeOperation = 'source-over'
   context.globalAlpha = 1
-  context.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`
-  context.fillRect(0, 0, width, height)
-  context.globalCompositeOperation = 'destination-in'
-  context.drawImage(maskCanvas, 0, 0)
 
-  // The exact finish color remains the base. Multiplying the original slab
-  // into it restores only its luminance/detail, so pale source pixels cannot
-  // wash dark finishes toward gray or shift saturated finishes toward orange.
-  const isStain = finishType === 'stain'
-  context.globalCompositeOperation = 'multiply'
-  context.globalAlpha = isStain ? 0.65 : 1
-  context.drawImage(detailCanvas, 0, 0)
+  if (isStain) {
+    context.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`
+    context.fillRect(0, 0, width, height)
+    context.globalCompositeOperation = 'destination-in'
+    context.drawImage(maskCanvas, 0, 0)
+
+    context.globalCompositeOperation = 'multiply'
+    context.globalAlpha = 0.96
+    context.drawImage(detailCanvas, 0, 0)
+    context.globalCompositeOperation = 'screen'
+    context.globalAlpha = 0.025
+    context.drawImage(detailCanvas, 0, 0)
+    context.globalAlpha = 0.045
+    context.drawImage(glossCanvas, 0, 0)
+    context.globalCompositeOperation = 'multiply'
+    context.globalAlpha = 0.035
+    context.drawImage(detailCanvas, 0, 0)
+  } else {
+    context.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`
+    context.fillRect(0, 0, width, height)
+    context.globalCompositeOperation = 'destination-in'
+    context.drawImage(maskCanvas, 0, 0)
+
+    context.globalCompositeOperation = 'multiply'
+    context.globalAlpha = 1
+    context.drawImage(detailCanvas, 0, 0)
+    context.globalAlpha = 0.1
+    context.drawImage(detailCanvas, 0, 0)
+    context.globalCompositeOperation = 'screen'
+    context.globalAlpha = 0.035
+    context.drawImage(glossCanvas, 0, 0)
+  }
 
   context.globalCompositeOperation = 'source-over'
   context.globalAlpha = 1

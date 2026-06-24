@@ -105,24 +105,182 @@ const cr14Overlays: Record<string, string> = {
   wyngate: 'CR14WYN.png',
 }
 
+const f848Overlays: Record<string, string> = {
+  berkley: 'F848BER.png',
+  blanca: 'F848BLA.png',
+  cadence: 'F848CAD.png',
+  calandra: 'F848CAL.png',
+  carrollton: 'F848CAR.png',
+  chinchilla: 'F848CHI.png',
+  courtyard: 'F848COU.png',
+  crosswalk: 'F848CRO.png',
+  cumulus: 'F848CUM.png',
+  'dorian-nickel': 'F848DORNI.png',
+  'dorian-patina': 'F848DORPA.png',
+  'elegant-black-white': 'F848ELEBW.png',
+  'elegant-nickel': 'F848ELENI.png',
+  'elegant-patina': 'F848ELEPA.png',
+  empire: 'F848EMP.png',
+  clear: 'F848F10.png',
+  geneva: 'F848GEN.png',
+  'grace-patina': 'F848GRAPA.png',
+  'heirlooms-brass': 'F848HEIBB.png',
+  'heirlooms-nickel': 'F848HEINI.png',
+  'high-point': 'F848HIG.png',
+  jacinto: 'F848JAC.png',
+  linen: 'F848LIN.png',
+  'majestic-nickel': 'F848MAJNI.png',
+  margate: 'F848MAR.png',
+  metro: 'F848MET.png',
+  'micro-granite': 'F848MIC.png',
+  mistify: 'F848MIS.png',
+  'monterey-patina': 'F848MONPA.png',
+  neo: 'F848NEO.png',
+  'nouveau-nickel': 'F848NOUNI.png',
+  'nouveau-patina': 'F848NOUPA.png',
+  'oak-park': 'F848OAK.png',
+  paris: 'F848PAR.png',
+  prestige: 'F848PRE.png',
+  rain: 'F848RAI.png',
+  topaz: 'F848TOP.png',
+  vapor: 'F848VAP.png',
+  vilano: 'F848VIL.png',
+  waterside: 'F848WAT.png',
+}
+
+const foOverlays: Record<string, string> = {
+  cadence: 'FOCAD.png',
+  clear: 'FOFOCL.png',
+  'grace-nickel': 'FOGRANI.png',
+  'grace-patina': 'FOGRAPA.png',
+  'heirlooms-brass': 'FOHEIBB.png',
+  'heirlooms-nickel': 'FOHEINI.png',
+  'nouveau-nickel': 'FONOUNI.png',
+  'nouveau-patina': 'FONOUPA.png',
+}
+
+const qaOverlays: Record<string, string> = {
+  clear: 'QAQACL.png',
+  'grace-nickel': 'QAGRANI.png',
+  'grace-patina': 'QAGRAPA.png',
+  london: 'QALON.png',
+  'nouveau-nickel': 'QANOUNI.png',
+  'nouveau-patina': 'QANOUPA.png',
+  pembrook: 'QAPEM.png',
+  riverwood: 'QARIV.png',
+  vincraft: 'QAVIN.png',
+  wyngate: 'QAWYN.png',
+}
+
+const s836Overlays: Record<string, string> = {
+  berkley: 'S836BER.png',
+  blanca: 'S836BLA.png',
+  chinchilla: 'S836CHI.png',
+  crosswalk: 'S836CRO.png',
+  courtyard: 'S836COU.png',
+  cumulus: 'S836CUM.png',
+  'dorian-nickel': 'S836DORNI.png',
+  'dorian-patina': 'S836DORPA.png',
+  'elegant-black-white': 'S836ELEBW.png',
+  'elegant-nickel': 'S836ELEPN.png',
+  'elegant-patina': 'S836ELEPA.png',
+  empire: 'S836EMP.png',
+  clear: 'S836F10.png',
+  'grace-nickel': 'S836GRA.png',
+  blinds: 'S836H8RLB.png',
+  'heirlooms-brass': 'S836HEIBB.png',
+  'heirlooms-nickel': 'S836HEINI.png',
+  lazarus: 'S836LAS.png',
+  linen: 'S836LIN.png',
+  'majestic-patina': 'S836MAJPA.png',
+  margate: 'S836MAR.png',
+  metro: 'S836MET.png',
+  'micro-granite': 'S836MIC.png',
+  mohave: 'S836MOH.png',
+  neo: 'S836NEO.png',
+  'nouveau-nickel': 'S836NOUNI.png',
+  'nouveau-patina': 'S836NOUPA.png',
+  paris: 'S836PAR.png',
+  prestige: 'S836PRE.png',
+  rain: 'S836RAI.png',
+  'renewed-impressions': 'S836REN.png',
+  topaz: 'S836TOP.png',
+  vapor: 'S836VAP.png',
+  vilano: 'S836VIL.png',
+  waterside: 'S836WAT.png',
+}
+
+const swOverlays: Record<string, string> = {
+  clear: 'SWGWH.png',
+  'grace-nickel': 'SWGRC.png',
+  'grace-patina': 'SWGRAPA.png',
+  'heirlooms-brass': 'SWHEIBB.png',
+  'heirlooms-nickel': 'SWHEINI.png',
+  'micro-granite': 'SWMIC.png',
+  'nouveau-nickel': 'SWNOUNI.png',
+  'nouveau-patina': 'SWNOUPA.png',
+  'renewed-impressions': 'SWREN.png',
+}
+
 const variantThumbnailOptions = [
   { id: 'dorian-nickel', name: 'Dorian - Nickel', image: '/assets/glass/DORIAN.png' },
   { id: 'dorian-patina', name: 'Dorian - Patina', image: '/assets/glass/DORIAN.png' },
+  { id: 'elegant-black-white', name: 'Elegant - Black/White', image: '/assets/glass/ELEGANT.jpg' },
+  { id: 'elegant-nickel', name: 'Elegant - Nickel', image: '/assets/glass/ELEGANT.jpg' },
+  { id: 'elegant-patina', name: 'Elegant - Patina', image: '/assets/glass/ELEGANT.jpg' },
+  { id: 'grace-nickel', name: 'Grace - Nickel', image: '/assets/glass/Grace.png' },
+  { id: 'grace-patina', name: 'Grace - Patina', image: '/assets/glass/Grace.png' },
+  { id: 'heirlooms-brass', name: 'Heirlooms - Brass', image: '/assets/glass/Heirlooms.png' },
+  { id: 'heirlooms-nickel', name: 'Heirlooms - Nickel', image: '/assets/glass/Heirlooms.png' },
+  { id: 'majestic-nickel', name: 'Majestic - Nickel', image: '/assets/glass/Majestic.png' },
+  { id: 'majestic-patina', name: 'Majestic - Patina', image: '/assets/glass/Majestic.png' },
   { id: 'monterey-nickel', name: 'Monterey - Nickel', image: '/assets/glass/MONTEREY.jpg' },
   { id: 'monterey-patina', name: 'Monterey - Patina', image: '/assets/glass/MONTEREY.jpg' },
+  { id: 'nouveau-nickel', name: 'Nouveau - Nickel', image: '/assets/glass/Nouveau.png' },
+  { id: 'nouveau-patina', name: 'Nouveau - Patina', image: '/assets/glass/Nouveau.png' },
   { id: 'celestial', name: 'Celestial', image: '/assets/glass/Ocean Caming.png' },
   { id: 'courtyard', name: 'Courtyard', image: '/assets/glass/Decorative.png' },
   { id: 'paris', name: 'Paris', image: '/assets/glass/Heirlooms.png' },
 ]
 
 export const glassOptions: GlassOption[] = [
-  ...glassThumbnailOptions.filter(({ id }) => id !== 'dorian' && id !== 'monterey'),
+  ...glassThumbnailOptions.filter(
+    ({ id }) => !['dorian', 'elegant', 'grace', 'heirlooms', 'majestic', 'monterey', 'nouveau'].includes(id),
+  ),
   ...variantThumbnailOptions,
 ].map(({ image, ...option }) => {
-  const overlay = cr14Overlays[option.id]
-  const overlaysByDoorStyle: Record<string, string> = overlay
-    ? { CR14: `/assets/glass/overlays/CR14/${overlay}?v=3` }
-    : {}
+  const overlaysByDoorStyle: Record<string, string> = {}
+  const cr14Overlay = cr14Overlays[option.id]
+  const f848Overlay = f848Overlays[option.id]
+  const foOverlay = foOverlays[option.id]
+  const qaOverlay = qaOverlays[option.id]
+  const s836Overlay = s836Overlays[option.id]
+  const swOverlay = swOverlays[option.id]
+
+  if (cr14Overlay) {
+    overlaysByDoorStyle.CR14 = `/assets/glass/overlays/CR14/${cr14Overlay}?v=3`
+  }
+
+  if (f848Overlay) {
+    overlaysByDoorStyle.F848 = `/assets/glass/overlays/F848/${f848Overlay}?v=1`
+  }
+
+  if (foOverlay) {
+    overlaysByDoorStyle.FO = `/assets/glass/overlays/FO/${foOverlay}?v=1`
+  }
+
+  if (qaOverlay) {
+    overlaysByDoorStyle.QA = `/assets/glass/overlays/QA/${qaOverlay}?v=1`
+  }
+
+  if (s836Overlay) {
+    overlaysByDoorStyle.S836 = `/assets/glass/overlays/S836/${s836Overlay}?v=1`
+  }
+
+  if (swOverlay) {
+    overlaysByDoorStyle.SW = `/assets/glass/overlays/SW/${swOverlay}?v=1`
+  }
+
   return {
     ...option,
     thumbnailPath: image.replace('/assets/glass/', '/assets/glass/thumbnails/'),

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, Download, FileText, Home as HomeIcon, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview } from './components/DoorPreview'
 import { DoorStyleThumbnail } from './components/DoorStyleThumbnail'
@@ -39,6 +39,8 @@ export default function App() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null)
+  const builderPanelRef = useRef<HTMLElement | null>(null)
+  const builderOptionsRef = useRef<HTMLDivElement | null>(null)
 
   const selectedStyle = doorStyles.find((item) => item.id === styleId)
   const style = selectedStyle ?? doorStyles[0]
@@ -68,6 +70,17 @@ export default function App() {
     if (glassId && !availableGlass.some((item) => item.id === glassId)) setGlassId('')
     if (step >= steps.length) setStep(steps.length - 1)
   }, [styleId, effectiveFinishTypes, finishTab, glassId, availableGlassIds, step, steps.length])
+
+  useEffect(() => {
+    if (screen !== 'builder') return
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      builderPanelRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+      builderOptionsRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+      builderPanelRef.current?.scrollIntoView({ block: 'start' })
+    })
+  }, [screen, currentStep])
 
   const resetStyle = () => {
     setStyleId('')
@@ -179,7 +192,7 @@ export default function App() {
       </nav>
       <main>
         {currentStep !== 'Review & Quote' && <div className="mobile-live-preview"><DoorPreview style={style} finish={finish} glass={glass} hardware={hardware} product={product} tintColor={previewTintColor} /></div>}
-        <section className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
+        <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
           {currentStep !== 'Review & Quote' && <>
             <div className="section-heading">
               <span>Step {step + 1} of {steps.length}</span>
@@ -191,7 +204,7 @@ export default function App() {
                 {currentStep === 'Hardware' && <button onClick={() => setHardwareId('')}><RotateCcw size={14} /> Reset Hardware</button>}
               </div>
             </div>
-            <div className="builder-options-scroll">
+            <div ref={builderOptionsRef} className="builder-options-scroll">
               {currentStep === 'Finish' && <div className="finish-toolbar">
                 {effectiveFinishTypes.length > 1 && <div className="finish-tabs" role="tablist" aria-label="Finish type">{effectiveFinishTypes.map((type) => <button type="button" role="tab" aria-selected={activeFinishType === type} className={activeFinishType === type ? 'active' : ''} key={type} onClick={() => selectFinishTab(type)}>{type === 'paint' ? 'Paint' : 'Stain'}</button>)}</div>}
                 <div className="finish-logo-slot">

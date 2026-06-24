@@ -43,6 +43,7 @@ export const doorPreviewAssets: Record<string, string> = {
   F3: '/assets/doors/previews/preview-f3.png',
   F4: '/assets/doors/previews/preview-f4.png?v=2',
   F48: '/assets/doors/previews/preview-f48.png',
+  F848: '/assets/doors/previews/preview-f848.png?v=1',
   F764: '/assets/doors/previews/preview-f764.png',
 }
 
@@ -59,7 +60,7 @@ export function hasDoorPreviewAsset(style: DoorStyle) {
 }
 
 const previewGlassCodes = new Set([
-  '3LT', '3STEP', '4LT', '5LT', 'CA', 'CR14', 'CR14PL', 'F', 'F2', 'F3', 'F4', 'F48', 'F482', 'F764',
+  '3LT', '3STEP', '4LT', '5LT', 'CA', 'CR14', 'CR14PL', 'F', 'F2', 'F3', 'F4', 'F48', 'F482', 'F764', 'F848',
   'FO', 'FRT', 'HRT', 'N',
   'QA', 'S', 'S2', 'S3', 'S4', 'S836', 'SAT', 'SO', 'SO2', 'SW',
 ])
