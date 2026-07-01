@@ -131,6 +131,16 @@ const previewTintMasks = {
   SO2: '/assets/doors/previews/masks/tint-so2.svg',
 } as const
 
+const previewGlassOverlays = {
+  FRT: '/assets/doors/previews/glass/glass-frt.png?v=1',
+  N: '/assets/doors/previews/glass/glass-n.png?v=1',
+  S3: '/assets/doors/previews/glass/glass-s3.png?v=1',
+  S4: {
+    paint: '/assets/doors/previews/glass/glass-s4.png?v=1',
+    stain: '/assets/doors/previews/glass/glass-s4-stain.png?v=1',
+  },
+} as const
+
 export function previewAssetTintMask(style: DoorStyle) {
   return candidateCodes(style)
     .map((code) => previewTintMasks[code as keyof typeof previewTintMasks])
@@ -140,6 +150,16 @@ export function previewAssetTintMask(style: DoorStyle) {
 export function previewAssetGlassMask(style: DoorStyle) {
   return candidateCodes(style)
     .map((code) => previewGlassMasks[code as keyof typeof previewGlassMasks])
+    .find(Boolean)
+}
+
+export function previewAssetGlassOverlay(style: DoorStyle, finishType?: Finish['finishType'] | null) {
+  return candidateCodes(style)
+    .map((code) => {
+      const overlay = previewGlassOverlays[code as keyof typeof previewGlassOverlays]
+      if (!overlay || typeof overlay === 'string') return overlay
+      return finishType ? overlay[finishType] : undefined
+    })
     .find(Boolean)
 }
 

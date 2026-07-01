@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import type { ContactForm, DoorStyle, Finish, GlassOption, HardwareOption, ResolvedDoorProduct } from '../types'
 import { hardwareAssetUrl, hardwareDisplayName } from '../data/hardware'
-import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetHasGlass, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
+import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetGlassOverlay, previewAssetHasGlass, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
 import { configurationPdfName } from './pdfConfig'
 import { tintDoorPreviewAsset } from './tintPreview'
 
@@ -81,6 +81,11 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
       })
       : await loadImage(previewAsset)
     pdf.addImage(doorImage, 'PNG', 145, 56, 38, 74)
+    const fixedGlassOverlay = previewAssetGlassOverlay(style, finish.finishType)
+    if (fixedGlassOverlay) {
+      const fixedGlassImage = await loadImage(fixedGlassOverlay)
+      pdf.addImage(fixedGlassImage, 'PNG', 145, 56, 38, 74)
+    }
   } catch {
     pdf.setFillColor(finish.color)
     pdf.roundedRect(145, 56, 38, 74, 2, 2, 'F')

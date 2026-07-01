@@ -2,8 +2,8 @@ import type { DoorLine, DoorStyle, DoorTypeOption, Finish, ResolvedDoorProduct }
 import { getDoorStyleThumbnailAsset } from './doorStyleThumbnailAssets'
 
 const noGlassCodes = new Set([
-  '2PNGSS', '2PPLSS', '2PHD', 'CA', 'CANGSS', 'S1NGSS', '3PNGSS', '3PNG',
-  'E1', 'F1', 'HDAT1', 'N', 'N1', 'S1', 'SHAK1', 'SHAK2', 'SHAK3',
+  '2PNGSS', '2PPLSS', '2PHD', 'CANGSS', 'S1NGSS', '3PNGSS', '3PNG',
+  'E1', 'F1', 'HDAT1', 'N1', 'S1', 'SHAK1', 'SHAK2', 'SHAK3',
 ])
 
 const parseStyles = (rows: string[]) => rows.map((row) => {

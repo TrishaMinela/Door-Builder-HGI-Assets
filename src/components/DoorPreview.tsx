@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { DoorStyle, Finish, GlassOption, HardwareView, PreviewHardware, ResolvedDoorProduct } from '../types'
 import { hardwarePreviewAssetUrl } from '../data/hardware'
-import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetHasGlass, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
+import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetGlassOverlay, previewAssetHasGlass, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
 import { tintDoorPreviewAsset } from '../utils/tintPreview'
 
 type Props = {
@@ -20,6 +20,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const hasMappedPreview = hasDoorPreviewAsset(style)
   const preservePreviewGlass = previewAssetHasGlass(style)
   const tintMask = previewAssetTintMask(style)
+  const fixedGlassOverlay = tintColor ? previewAssetGlassOverlay(style, finish.finishType) : undefined
   const glassOverlay = glass?.overlaysByDoorStyle[style.code]
   const glassSitsUnderDoorImage = style.code === 'QA'
   const [displayImage, setDisplayImage] = useState(previewImage)
@@ -82,6 +83,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           </div>
           {glassOverlay && glassSitsUnderDoorImage && <img className="door-glass-overlay under-door-image" src={glassOverlay} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           <img className="door-style-image" src={displayImage} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />
+          {fixedGlassOverlay && <img className="door-glass-overlay fixed-glass-overlay" src={fixedGlassOverlay} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {glassOverlay && !glassSitsUnderDoorImage && <img className="door-glass-overlay" src={glassOverlay} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {hardware.asset && <div className={`hardware hardware-${hardware.type}`} style={{ '--metal': hardware.color } as React.CSSProperties}>
             <img src={hardwareImage} alt="" decoding="async" onError={(event) => {
