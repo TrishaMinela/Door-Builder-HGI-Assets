@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf'
 import type { ContactForm, DoorStyle, Finish, GlassOption, HardwareOption, ResolvedDoorProduct } from '../types'
-import { hardwareAssetUrl, hardwareDisplayName } from '../data/hardware'
+import { hardwareDisplayName, hardwarePreviewAssetUrl } from '../data/hardware'
 import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetGlassOverlay, previewAssetHasGlass, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
 import { configurationPdfName } from './pdfConfig'
 import { tintDoorPreviewAsset } from './tintPreview'
@@ -96,9 +96,10 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
     pdf.setFillColor(hardware.color)
     pdf.circle(173, 92, 1.5, 'F')
   }
-  if (hardware.asset) {
+  const hardwarePreview = hardwarePreviewAssetUrl(hardware, 'Exterior')
+  if (hardwarePreview) {
     try {
-      const hardwareImage = await loadImage(hardwareAssetUrl(hardware.asset))
+      const hardwareImage = await loadImage(hardwarePreview)
       pdf.addImage(hardwareImage, 'PNG', 145, 56, 38, 74)
     } catch {
       // The text summary still identifies the selected hardware if its image is unavailable.

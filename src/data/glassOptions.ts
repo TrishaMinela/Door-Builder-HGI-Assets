@@ -245,6 +245,38 @@ const f764Overlays: Record<string, string> = {
   rain: 'F764Rain.png',
 }
 
+const hrtOverlays: Record<string, string> = {
+  clear: 'HRTClear.png',
+  'nouveau-nickel': 'HRTNouveaNickel.png',
+  'nouveau-patina': 'HRTNouveaPatina.png',
+}
+
+const satOverlays: Record<string, string> = {
+  clear: 'SATClear.png',
+  'low-e': 'SATClearLowE.png',
+  'grace-nickel': 'SATGraceNickel.png',
+  'grace-patina': 'SATGracePatina.png',
+  laurel: 'SATLaurel.png',
+}
+
+const soOverlays: Record<string, string> = {
+  bristol: 'SOBRI.png',
+  cadence: 'SOCAD.png',
+  carrollton: 'SOCAR.png',
+  'elegant-nickel': 'SOELENI.png',
+  'elegant-patina': 'SOELEPA.png',
+  'grace-nickel': 'SOGRC.png',
+  'heirlooms-brass': 'SOHEIBB.png',
+  'heirlooms-nickel': 'SOHEINI.png',
+  jameston: 'SOJAM.png',
+  laurel: 'SOLAU.png',
+  'nouveau-nickel': 'SONOUNI.png',
+  'nouveau-patina': 'SONOUPA.png',
+  ovation: 'SOOVA.png',
+  rain: 'SORAI.png',
+  'renewed-impressions': 'SOREN.png',
+}
+
 const sOverlays: Record<string, string> = {
   berkley: 'SBER.png',
   blanca: 'SBLA.png',
@@ -536,6 +568,9 @@ export const glassOptions: GlassOption[] = [
   const f3Overlay = f3Overlays[option.id]
   const f4Overlay = f4Overlays[option.id]
   const f764Overlay = f764Overlays[option.id]
+  const hrtOverlay = hrtOverlays[option.id]
+  const satOverlay = satOverlays[option.id]
+  const soOverlay = soOverlays[option.id]
   const sOverlay = sOverlays[option.id]
   const fOverlay = fOverlays[option.id]
   const f482Overlay = f482Overlays[option.id]
@@ -593,6 +628,19 @@ export const glassOptions: GlassOption[] = [
 
   if (f764Overlay) {
     overlaysByDoorStyle.F764 = `/assets/glass/overlays/F764/${f764Overlay}?v=1`
+  }
+
+  if (hrtOverlay) {
+    overlaysByDoorStyle.HRT = `/assets/glass/overlays/HRT/${hrtOverlay}?v=1`
+  }
+
+  if (satOverlay) {
+    overlaysByDoorStyle.SAT = `/assets/glass/overlays/SAT/${satOverlay}?v=1`
+  }
+
+  if (soOverlay) {
+    overlaysByDoorStyle.SO = `/assets/glass/overlays/SO/${soOverlay}?v=1`
+    overlaysByDoorStyle.SO2 = `/assets/glass/overlays/SO/${soOverlay}?v=1`
   }
 
   if (sOverlay) {

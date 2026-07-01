@@ -1,6 +1,6 @@
 import type { HardwareAsset, HardwareFinishName, HardwareHanding, HardwareManufacturer, HardwareOption, HardwareStyleName, HardwareView, PreviewHardware } from '../types'
 import { hardwareAssets as baldwinAssets } from './hardwareAssets'
-import { schlageCardAsset, schlageHardware } from './schlageHardware'
+import { resolveSchlageHardware, schlageHardware } from './schlageHardware'
 
 const finishColors: Record<string, string> = {
   'Aged Bronze': '#584536',
@@ -12,8 +12,8 @@ const finishColors: Record<string, string> = {
 }
 
 const schlageAssets: HardwareAsset[] = schlageHardware.flatMap((option) => (['Left', 'Right'] as const).flatMap((handing) => [
-  { manufacturer: option.manufacturer, style: option.style, finish: option.finish, handing, view: 'Exterior' as const, asset: option.exterior },
-  ...(option.interior ? [{ manufacturer: option.manufacturer, style: option.style, finish: option.finish, handing, view: 'Interior' as const, asset: option.interior }] : []),
+  { manufacturer: option.manufacturer, style: option.style, finish: option.finish, handing, view: 'Exterior' as const, asset: option.cardImage },
+  ...(option.interiorPreviewImage ? [{ manufacturer: option.manufacturer, style: option.style, finish: option.finish, handing, view: 'Interior' as const, asset: option.interiorPreviewImage }] : []),
 ]))
 
 export const allHardwareAssets: HardwareAsset[] = [...baldwinAssets, ...schlageAssets]
@@ -26,8 +26,12 @@ export function resolveHardwareOption(manufacturer: HardwareManufacturer, style:
     item.manufacturer === manufacturer && item.style === style && item.finish === finish && item.handing === preferredHanding && item.view === 'Exterior',
   )
   if (!asset) return undefined
+  const schlageOption = manufacturer === 'Schlage' ? resolveSchlageHardware(style, finish) : undefined
   return {
     ...asset,
+    cardImage: schlageOption?.cardImage,
+    exteriorPreviewImage: schlageOption?.exteriorPreviewImage,
+    interiorPreviewImage: schlageOption?.interiorPreviewImage,
     id: `${slug(manufacturer)}-${slug(style)}-${slug(finish)}-${preferredHanding.toLowerCase()}`,
     color: finishColors[finish] ?? '#666666',
     type: style.includes('Knob') ? 'round' : style.includes('Lever') ? 'lever' : 'long',
@@ -48,7 +52,7 @@ export const hardwareOptions: HardwareOption[] = [...new Map(
 )
 
 export const hardwareDisplayName = (hardware: HardwareOption) => `${hardware.manufacturer} ${hardware.style} - ${hardware.finish}`
-export const hardwareAssetUrl = (asset: string) => `/assets/hardware/${asset}?v=4`
+export const hardwareAssetUrl = (asset: string) => `/assets/hardware/${asset}?v=5`
 
 const finishSwatchAssets: Record<string, string> = {
   'Bright Brass': 'bright-brass.png',
@@ -64,7 +68,7 @@ export function finishSwatchAssetUrl(finish: string) {
 
 export function hardwareCardAssetUrl(hardware: HardwareOption) {
   if (hardware.manufacturer === 'Schlage') {
-    const asset = schlageCardAsset(hardware.style, hardware.finish)
+    const asset = hardware.cardImage ?? resolveSchlageHardware(hardware.style, hardware.finish)?.cardImage
     return asset ? hardwareAssetUrl(asset) : hardwareAssetUrl(hardware.asset)
   }
   return `/assets/hardware/cards/${hardware.asset}`
@@ -76,14 +80,20 @@ export function hardwarePreviewAssetUrl(hardware: PreviewHardware, view: Hardwar
     return `/assets/hardware/baldwin/Preview - Baldwin - ${hardware.style} - ${hardware.finish}${interiorSuffix}.png`
   }
   if (hardware.manufacturer === 'Schlage' && hardware.style && hardware.finish) {
-    const asset = allHardwareAssets.find((item) =>
-      item.manufacturer === 'Schlage'
-      && item.style === hardware.style
-      && item.finish === hardware.finish
-      && item.handing === (hardware.handing ?? 'Left')
-      && item.view === view,
-    )
-    return asset ? hardwareAssetUrl(asset.asset) : ''
+    const option = resolveSchlageHardware(hardware.style, hardware.finish)
+    const asset = view === 'Interior'
+      ? hardware.interiorPreviewImage ?? option?.interiorPreviewImage
+      : hardware.exteriorPreviewImage ?? option?.exteriorPreviewImage
+    if (!asset) {
+      console.warn('[hardware-preview:missing]', {
+        manufacturer: hardware.manufacturer,
+        style: hardware.style,
+        finish: hardware.finish,
+        view,
+      })
+      return ''
+    }
+    return hardwareAssetUrl(asset)
   }
   return hardware.asset ? hardwareAssetUrl(hardware.asset) : ''
 }

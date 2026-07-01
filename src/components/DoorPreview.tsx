@@ -25,7 +25,6 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const glassSitsUnderDoorImage = style.code === 'QA'
   const [displayImage, setDisplayImage] = useState(previewImage)
   const [previewView, setPreviewView] = useState<HardwareView>('Exterior')
-  const exteriorHardwareImage = hardwarePreviewAssetUrl(hardware, 'Exterior')
   const requestedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView)
   const [hardwareImage, setHardwareImage] = useState(requestedHardwareImage)
 
@@ -72,6 +71,16 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     setHardwareImage(requestedHardwareImage)
   }, [requestedHardwareImage])
 
+  useEffect(() => {
+    if (!hardware.manufacturer || !hardware.style || !hardware.finish || requestedHardwareImage) return
+    console.warn('[door-preview:missing-hardware-overlay]', {
+      manufacturer: hardware.manufacturer,
+      style: hardware.style,
+      finish: hardware.finish,
+      view: previewView,
+    })
+  }, [hardware.manufacturer, hardware.style, hardware.finish, previewView, requestedHardwareImage])
+
   return (
     <div className={`preview-scene ${compact ? 'compact' : ''}`} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
@@ -85,12 +94,15 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           <img className="door-style-image" src={displayImage} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />
           {fixedGlassOverlay && <img className="door-glass-overlay fixed-glass-overlay" src={fixedGlassOverlay} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {glassOverlay && !glassSitsUnderDoorImage && <img className="door-glass-overlay" src={glassOverlay} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
-          {hardware.asset && <div className={`hardware hardware-${hardware.type}`} style={{ '--metal': hardware.color } as React.CSSProperties}>
+          {hardwareImage && <div className={`hardware hardware-${hardware.type}`} style={{ '--metal': hardware.color } as React.CSSProperties}>
             <img src={hardwareImage} alt="" decoding="async" onError={(event) => {
-              if (previewView === 'Interior' && hardwareImage !== exteriorHardwareImage) {
-                setHardwareImage(exteriorHardwareImage)
-                return
-              }
+              console.warn('[door-preview:failed-hardware-overlay]', {
+                manufacturer: hardware.manufacturer,
+                style: hardware.style,
+                finish: hardware.finish,
+                view: previewView,
+                src: hardwareImage,
+              })
               event.currentTarget.style.display = 'none'
             }} />
           </div>}

@@ -57,6 +57,9 @@ export type HardwareOption = HardwareAsset & {
   id: string
   color: string
   type: 'long' | 'lever' | 'round'
+  cardImage?: string
+  exteriorPreviewImage?: string
+  interiorPreviewImage?: string
 }
 
 export type PreviewHardware = Pick<HardwareOption, 'color' | 'type'> & Partial<HardwareOption>
