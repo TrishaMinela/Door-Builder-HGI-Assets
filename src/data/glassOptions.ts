@@ -459,6 +459,54 @@ const f482Overlays: Record<string, string> = {
   waterside: 'F482Waterside.png',
 }
 
+const f48Overlays: Record<string, string> = {
+  ashbury: 'F48Ashbury.png',
+  berkley: 'F48Berkley.png',
+  briselle: 'F48Briselle.png',
+  cadence: 'F48Cadence.png',
+  calandra: 'F48Calandra.png',
+  courtyard: 'F48Courtyard.png',
+  crosswalk: 'F48Crosswalk.png',
+  cyndi: 'F48Cyndi.png',
+  'dorian-nickel': 'F48Dorian.png',
+  'dorian-patina': 'F48Dorian.png',
+  edgewood: 'F48Edgewood.png',
+  'elegant-black-white': 'F48Elegant.png',
+  'elegant-nickel': 'F48Elegant.png',
+  'elegant-patina': 'F48Elegant.png',
+  empire: 'F48Empire.png',
+  fragrance: 'F48Fragrance.png',
+  garrison: 'F48Garrison.png',
+  'grace-nickel': 'F48Grace.png',
+  'grace-patina': 'F48Grace.png',
+  'heirlooms-brass': 'F48Heirlooms.png',
+  'heirlooms-nickel': 'F48Heirlooms.png',
+  'high-point': 'F48Highpoint.png',
+  jameston: 'F48Jameston.png',
+  'majestic-nickel': 'F48Majestic.png',
+  'majestic-patina': 'F48Majestic.png',
+  margate: 'F48Margate.png',
+  metro: 'F48Metro.png',
+  mistify: 'F48Mistify.png',
+  mohave: 'F48Mohave.png',
+  'monterey-nickel': 'F48Monterey.png',
+  'monterey-patina': 'F48Monterey.png',
+  neo: 'F48Neo.png',
+  'nouveau-nickel': 'F48Nouvea.png',
+  'nouveau-patina': 'F48Nouvea.png',
+  'oak-park': 'F48Oakpark.png',
+  paris: 'F48Paris.png',
+  pembrook: 'F48Pembrook.png',
+  prestige: 'F48Prestige.png',
+  rill: 'F48Rill.png',
+  riverwood: 'F48Riverwood.png',
+  sterling: 'F48Sterling.png',
+  topaz: 'F48Topaz.png',
+  vilano: 'F48Vilano.png',
+  vincraft: 'F48Vincraft.png',
+  waterside: 'F48Waterside.png',
+}
+
 const s836Overlays: Record<string, string> = {
   berkley: 'S836BER.png',
   blanca: 'S836BLA.png',
@@ -573,6 +621,7 @@ export const glassOptions: GlassOption[] = [
   const soOverlay = soOverlays[option.id]
   const sOverlay = sOverlays[option.id]
   const fOverlay = fOverlays[option.id]
+  const f48Overlay = f48Overlays[option.id]
   const f482Overlay = f482Overlays[option.id]
   const s836Overlay = s836Overlays[option.id]
   const swOverlay = swOverlays[option.id]
@@ -651,8 +700,11 @@ export const glassOptions: GlassOption[] = [
     overlaysByDoorStyle.F = `/assets/glass/overlays/F/${fOverlay}?v=1`
   }
 
+  if (f48Overlay) {
+    overlaysByDoorStyle.F48 = `/assets/glass/overlays/F48/${f48Overlay}?v=1`
+  }
+
   if (f482Overlay) {
-    overlaysByDoorStyle.F48 = `/assets/glass/overlays/F482/${f482Overlay}?v=1`
     overlaysByDoorStyle.F482 = `/assets/glass/overlays/F482/${f482Overlay}?v=1`
   }
 
