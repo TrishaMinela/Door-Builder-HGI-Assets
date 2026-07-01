@@ -22,7 +22,6 @@ export const schlageHardware: SchlageHardwareOption[] = [
   { manufacturer: 'Schlage', style: 'Georgian Knob with Deadbolt', finish: 'Matte Black', cardImage: card('georgian-matte-black'), exteriorPreviewImage: preview('georgian-matte-black', 'exterior'), interiorPreviewImage: preview('georgian-matte-black', 'interior') },
   { manufacturer: 'Schlage', style: 'Georgian Knob with Deadbolt', finish: 'Satin Nickel', cardImage: card('georgian-satin-nickel'), exteriorPreviewImage: preview('georgian-satin-nickel', 'exterior'), interiorPreviewImage: preview('georgian-satin-nickel', 'interior') },
 
-  { manufacturer: 'Schlage', style: 'Latitude Lever with Deadbolt', finish: 'Bright Brass', cardImage: card('latitude-bright-brass'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Latitude - Bright Brass.png', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Latitude - Bright Brass.png' },
   { manufacturer: 'Schlage', style: 'Latitude Lever with Deadbolt', finish: 'Matte Black', cardImage: card('latitude-matte-black'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Latitude - Matte Black.png', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Latitude - Matte Black.png' },
   { manufacturer: 'Schlage', style: 'Latitude Lever with Deadbolt', finish: 'Satin Nickel', cardImage: card('latitude-satin-nickel'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Latitude - Satin Nickel.png', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Latitude - Satin Nickel.png' },
 
