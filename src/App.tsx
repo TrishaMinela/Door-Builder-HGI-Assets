@@ -161,6 +161,15 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const canVisitStep = (target: number) => {
+    const targetStep = steps[target]
+    if (!targetStep) return false
+    if (targetStep === 'Door Style') return true
+    if (!selectedStyle) return false
+    if (targetStep !== 'Review & Quote') return true
+    return Boolean(selectedFinish && selectedHardware && (!steps.includes('Glass') || glass))
+  }
+
   const showScreen = (next: 'home' | 'builder') => {
     setScreen(next)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -241,7 +250,10 @@ export default function App() {
         </section>
       </main> : <>
       <nav className="stepper" aria-label="Configuration progress">
-        {steps.map((label, index) => <button key={label} className={`${index === step ? 'active' : ''} ${index < step ? 'done' : ''}`} onClick={() => index <= step && goTo(index)}><span>{index < step ? <Check size={13} /> : index + 1}</span><em>{label}</em></button>)}
+        {steps.map((label, index) => {
+          const isReachable = canVisitStep(index)
+          return <button key={label} className={`${index === step ? 'active' : ''} ${index < step ? 'done' : ''}`} disabled={!isReachable} aria-current={index === step ? 'step' : undefined} onClick={() => isReachable && goTo(index)}><span>{index < step ? <Check size={13} /> : index + 1}</span><em>{label}</em></button>
+        })}
       </nav>
       <main>
         {currentStep !== 'Review & Quote' && <div className="mobile-live-preview"><DoorPreview style={style} finish={finish} glass={glass} hardware={hardware} product={product} tintColor={previewTintColor} /></div>}
