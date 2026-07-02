@@ -112,6 +112,40 @@ const cr14Overlays: Record<string, string> = {
   wyngate: 'CR14WYN.png',
 }
 
+const cr14plOverlays: Record<string, string> = {
+  'bay-point': 'CR14PLBAY.png',
+  blanca: 'CR14PLBLA.png',
+  celestial: 'CR14PLCEL.png',
+  chinchilla: 'CR14PLCHI.png',
+  cobblestone: 'CR14PLCOB.png',
+  courtyard: 'CR14PLCOU.png',
+  crosswalk: 'CR14PLCRO.png',
+  cumulus: 'CR14PLCUM.png',
+  'dorian-nickel': 'CR14PLDORNI.png',
+  'dorian-patina': 'CR14PLDORPA.png',
+  dutchcraft: 'CR14PLDUT.png',
+  edgewood: 'CR14PLEDG.png',
+  laurel: 'CR14PLLAU.png',
+  leland: 'CR14PLLEL.png',
+  linen: 'CR14PLLIN.png',
+  margate: 'CR14PLMAR.png',
+  'micro-granite': 'CR14PLMIC.png',
+  mistify: 'CR14PLMIS.png',
+  'monterey-nickel': 'CR14PLMONNI.png',
+  'monterey-patina': 'CR14PLMONPA.png',
+  'oak-park': 'CR14PLOAK.png',
+  paris: 'CR14PLPAR.png',
+  pembrook: 'CR14PLPEM.png',
+  rain: 'CR14PLRAI.png',
+  riverwood: 'CR14PLRIV.png',
+  sterling: 'CR14PLSTR.png',
+  topaz: 'CR14PLTOP.png',
+  vapor: 'CR14PLVAP.png',
+  vilano: 'CR14PLVIL.png',
+  vincraft: 'CR14PLVIN.png',
+  wyngate: 'CR14PLWYN.png',
+}
+
 const f848Overlays: Record<string, string> = {
   berkley: 'F848BER.png',
   blanca: 'F848BLA.png',
@@ -604,6 +638,7 @@ export const glassOptions: GlassOption[] = [
 ].map(({ image, ...option }) => {
   const overlaysByDoorStyle: Record<string, string> = {}
   const cr14Overlay = cr14Overlays[option.id]
+  const cr14plOverlay = cr14plOverlays[option.id]
   const f848Overlay = f848Overlays[option.id]
   const foOverlay = foOverlays[option.id]
   const qaOverlay = qaOverlays[option.id]
@@ -628,7 +663,10 @@ export const glassOptions: GlassOption[] = [
 
   if (cr14Overlay) {
     overlaysByDoorStyle.CR14 = `/assets/glass/overlays/CR14/${cr14Overlay}?v=3`
-    overlaysByDoorStyle.CR14PL = `/assets/glass/overlays/CR14/${cr14Overlay}?v=3`
+  }
+
+  if (cr14plOverlay) {
+    overlaysByDoorStyle.CR14PL = `/assets/glass/overlays/CR14PL/${cr14plOverlay}?v=1`
   }
 
   if (f848Overlay) {
