@@ -682,7 +682,7 @@ export const glassOptions: GlassOption[] = [
   }
 
   if (caOverlay) {
-    overlaysByDoorStyle.CA = `/assets/glass/overlays/CA/${caOverlay}?v=1`
+    overlaysByDoorStyle.CA = `/assets/glass/overlays/CA/${caOverlay}?v=2`
   }
 
   if (threeLtOverlay) {

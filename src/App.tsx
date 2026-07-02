@@ -128,12 +128,19 @@ export default function App() {
     if (screen !== 'builder') return
 
     requestAnimationFrame(() => {
+      builderPanelRef.current?.scrollIntoView({ block: 'start' })
+      const selectedCard = builderOptionsRef.current?.querySelector<HTMLElement>('.option-card.selected, .glass-choice-card.selected, .hardware-option-card.selected')
+
+      if (selectedCard) {
+        selectedCard.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' })
+        return
+      }
+
       window.scrollTo({ top: 0, behavior: 'auto' })
       builderPanelRef.current?.scrollTo({ top: 0, behavior: 'auto' })
       builderOptionsRef.current?.scrollTo({ top: 0, behavior: 'auto' })
-      builderPanelRef.current?.scrollIntoView({ block: 'start' })
     })
-  }, [screen, currentStep])
+  }, [screen, currentStep, styleId, finishId, glassId, hardwareId])
 
   const resetStyle = () => {
     setStyleId('')
