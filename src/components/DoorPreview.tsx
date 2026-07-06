@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { DoorStyle, Finish, GlassOption, HardwareView, PreviewHardware, ResolvedDoorProduct } from '../types'
 import { hardwarePreviewAssetUrl } from '../data/hardware'
-import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetHasGlass, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
+import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetGlassOverlay, previewAssetHasGlass, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
 import { tintDoorPreviewAsset } from '../utils/tintPreview'
 
 type Props = {
   style: DoorStyle
   finish: Finish
-  glass: GlassOption
+  glass: GlassOption | null
   hardware: PreviewHardware
   compact?: boolean
   grain?: string | null
@@ -20,9 +20,11 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const hasMappedPreview = hasDoorPreviewAsset(style)
   const preservePreviewGlass = previewAssetHasGlass(style)
   const tintMask = previewAssetTintMask(style)
+  const fixedGlassOverlay = tintColor ? previewAssetGlassOverlay(style, finish.finishType) : undefined
+  const glassOverlay = glass?.overlaysByDoorStyle[style.code]
+  const glassSitsUnderDoorImage = style.code === 'QA'
   const [displayImage, setDisplayImage] = useState(previewImage)
   const [previewView, setPreviewView] = useState<HardwareView>('Exterior')
-  const exteriorHardwareImage = hardwarePreviewAssetUrl(hardware, 'Exterior')
   const requestedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView)
   const [hardwareImage, setHardwareImage] = useState(requestedHardwareImage)
 
@@ -69,8 +71,18 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     setHardwareImage(requestedHardwareImage)
   }, [requestedHardwareImage])
 
+  useEffect(() => {
+    if (!hardware.manufacturer || !hardware.style || !hardware.finish || requestedHardwareImage) return
+    console.warn('[door-preview:missing-hardware-overlay]', {
+      manufacturer: hardware.manufacturer,
+      style: hardware.style,
+      finish: hardware.finish,
+      view: previewView,
+    })
+  }, [hardware.manufacturer, hardware.style, hardware.finish, previewView, requestedHardwareImage])
+
   return (
-    <div className={`preview-scene ${compact ? 'compact' : ''}`} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass ? ` with ${glass.name} glass` : ''}`}>
+    <div className={`preview-scene ${compact ? 'compact' : ''}`} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
       <div className="door-frame">
         <div className={`door door-${style.panel} ${hasMappedPreview ? 'mapped-preview-door' : ''}`} style={{ '--door': tintColor ?? finish.color, '--door-dark': finish.accent } as React.CSSProperties}>
@@ -78,13 +90,19 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           <div className="panels">
             {Array.from({ length: style.panel === 'classic' ? 6 : style.panel === 'craftsman' ? 3 : 4 }).map((_, index) => <span key={index} />)}
           </div>
+          {glassOverlay && glassSitsUnderDoorImage && <img className="door-glass-overlay under-door-image" src={glassOverlay} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           <img className="door-style-image" src={displayImage} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />
-          {hardware.asset && <div className={`hardware hardware-${hardware.type}`} style={{ '--metal': hardware.color } as React.CSSProperties}>
+          {fixedGlassOverlay && <img className="door-glass-overlay fixed-glass-overlay" src={fixedGlassOverlay} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+          {glassOverlay && !glassSitsUnderDoorImage && <img className="door-glass-overlay" src={glassOverlay} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+          {hardwareImage && <div className={`hardware hardware-${hardware.type}`} style={{ '--metal': hardware.color } as React.CSSProperties}>
             <img src={hardwareImage} alt="" decoding="async" onError={(event) => {
-              if (previewView === 'Interior' && hardwareImage !== exteriorHardwareImage) {
-                setHardwareImage(exteriorHardwareImage)
-                return
-              }
+              console.warn('[door-preview:failed-hardware-overlay]', {
+                manufacturer: hardware.manufacturer,
+                style: hardware.style,
+                finish: hardware.finish,
+                view: previewView,
+                src: hardwareImage,
+              })
               event.currentTarget.style.display = 'none'
             }} />
           </div>}

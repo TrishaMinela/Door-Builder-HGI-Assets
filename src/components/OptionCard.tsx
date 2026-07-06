@@ -9,14 +9,17 @@ type Props = {
   onClick: () => void
   visual: ReactNode
   badge?: ReactNode
+  className?: string
 }
 
-export function OptionCard({ title, description, eyebrow, selected, onClick, visual, badge }: Props) {
+export function OptionCard({ title, description, eyebrow, selected, onClick, visual, badge, className = '' }: Props) {
   return (
-    <button type="button" className={`option-card ${selected ? 'selected' : ''}`} onClick={onClick}>
-      <span className="option-visual">{visual}</span>
-      <span className="option-copy">
+    <button type="button" className={`option-card ${className} ${selected ? 'selected' : ''}`.trim()} onClick={onClick}>
+      <span className="option-visual">
+        {visual}
         {badge && <span className="option-badge">{badge}</span>}
+      </span>
+      <span className="option-copy">
         {eyebrow && <small>{eyebrow}</small>}
         <strong>{title}</strong>
         {description && <span>{description}</span>}

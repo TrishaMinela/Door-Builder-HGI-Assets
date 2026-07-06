@@ -34,6 +34,8 @@ export type Finish = {
 export type GlassOption = {
   id: string
   name: string
+  thumbnailPath: string
+  overlaysByDoorStyle: Record<string, string>
 }
 
 export type HardwareManufacturer = 'Baldwin' | 'Schlage'
@@ -55,6 +57,9 @@ export type HardwareOption = HardwareAsset & {
   id: string
   color: string
   type: 'long' | 'lever' | 'round'
+  cardImage?: string
+  exteriorPreviewImage?: string
+  interiorPreviewImage?: string
 }
 
 export type PreviewHardware = Pick<HardwareOption, 'color' | 'type'> & Partial<HardwareOption>

@@ -121,16 +121,22 @@
 @media(max-width:560px){.option-visual:has(.hardware-card-image){height:160px;min-height:160px;padding:6px}}
 .hardware img{position:absolute;inset:-10px -14px;width:50px;height:120px;object-fit:contain;z-index:2}
 .next:disabled{opacity:.45;cursor:not-allowed}
+.stepper button:disabled{cursor:not-allowed;opacity:.45}
+.stepper button:disabled span{box-shadow:none}
 .finish-toolbar{width:100%;max-width:none;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding-right:20px;margin-bottom:14px}.finish-tabs{display:flex;width:fit-content;padding:4px;border:1px solid #c7d7d9;border-radius:5px;background:#edf4f5;gap:4px}.finish-logo-slot{height:90px;min-height:90px;max-height:90px;display:flex;align-items:center;justify-content:flex-end;margin-left:auto;flex:0 0 auto}.finish-logo-slot img{display:block;max-width:180px;max-height:70px;width:auto;height:auto;object-fit:contain}
 .grain-selector{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 12px;color:#596166;font-size:11px}.grain-selector strong{color:#0d666c}.grain-selector button,.grain-label{border:1px solid #b9ccce;border-radius:999px;background:#fff;color:#0d666c;padding:7px 13px;font-size:10px;font-weight:700}.grain-selector button.selected{border-color:#f8d30e;background:#0d666c;color:#f7faff;box-shadow:0 0 0 2px #f8d30e55}
 .finish-tabs button{min-width:110px;border:0;border-radius:3px;padding:10px 18px;background:transparent;color:#0d666c;font-weight:700}
 .finish-tabs button.active{background:#0d666c;color:#f7faff;box-shadow:0 3px 10px #05040b1a}
 @media(max-width:900px){.finish-toolbar{padding-right:0}.finish-logo-slot img{max-width:150px;max-height:64px}}
 @media(max-width:560px){.grain-selector{margin-bottom:8px}.finish-toolbar{display:flex;align-items:flex-start;flex-direction:column;gap:10px;padding-right:0;margin-bottom:12px}.finish-logo-slot{order:1;width:100%;height:72px;min-height:72px;max-height:72px;justify-content:flex-start;margin-left:0;flex:0 0 72px}.finish-logo-slot img{max-width:130px;max-height:58px}.finish-tabs{order:2;width:100%}.finish-tabs button{flex:1;min-width:0}}
+.glass-option-card{height:260px;min-height:260px}.glass-option-card .option-visual{height:200px;min-height:200px;padding:12px;background:#f4f7f8}.glass-option-thumbnail{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center}.glass-option-card .option-copy{min-height:60px;padding:13px 16px;display:flex;align-items:center}.glass-option-card .option-copy strong{line-height:1.3}
+@media(max-width:560px){.glass-option-card{height:180px;min-height:180px}.glass-option-card .option-visual{height:180px;min-height:180px;padding:8px}.glass-option-card .option-copy{height:180px;min-height:180px;padding:14px}}
+.glass-choice-card{position:relative;overflow:hidden;border:1px solid #dfe3e8;border-radius:7px;background:#fff;box-shadow:0 3px 12px #05040b08;transition:.2s}.glass-choice-card:hover{border-color:var(--peacock);box-shadow:0 10px 25px #0d666c18}.glass-choice-card.selected{border:3px solid var(--gold);box-shadow:inset 5px 0 0 var(--peacock),0 10px 28px #0d666c20}.glass-card-main{position:relative;width:100%;display:block;border:0;padding:0;background:#fff;text-align:left;color:var(--black)}.glass-card-main .option-visual{height:200px;min-height:200px;padding:12px;background:#f4f7f8}.glass-choice-card .option-copy{min-height:60px;padding:13px 16px;display:block}.glass-choice-card .option-copy strong{line-height:1.3}.glass-choice-card.selected .check{display:grid}.glass-caming-options{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px 15px;border-top:1px solid #e3e7ea;background:#f8fafb}.glass-caming-options button{min-width:70px;flex:1;border:1px solid #cdd5d9;border-radius:5px;background:#fff;padding:8px 7px;color:#4e575b;font-size:8px;font-weight:700;line-height:1.2;text-align:center}.glass-caming-options button:hover{border-color:var(--peacock)}.glass-caming-options button.selected{border:2px solid var(--gold);box-shadow:0 0 0 2px #0d666c22;color:var(--peacock)}
+@media(max-width:560px){.glass-choice-card{display:grid;grid-template-columns:140px minmax(0,1fr);min-height:190px}.glass-card-main{display:contents}.glass-card-main .option-visual{grid-row:1/3;height:100%;min-height:190px;padding:8px}.glass-choice-card .option-copy{align-self:center;min-height:auto;padding:14px}.glass-caming-options{align-content:center;border-top:1px solid #e3e7ea;padding:10px}.glass-caming-options button{min-width:52px}.glass-caming-options span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 .section-heading .grain-availability{margin-top:12px;color:#596166;font-size:11px}.grain-availability strong{color:#0d666c}
-.step-0 .option-card{height:245px}.step-0 .option-copy{position:relative;height:118px;overflow:hidden}.option-copy:has(.option-badge){padding-right:220px}.option-copy>.option-badge{position:absolute;right:16px;top:18px;width:190px;margin:0;opacity:.9;pointer-events:none}.option-badge img{display:block;width:100%;height:auto}
-@media(max-width:900px){.option-copy:has(.option-badge){padding-right:164px}.option-copy>.option-badge{right:13px;top:16px;width:145px}}
-@media(max-width:560px){.step-0 .option-card{height:166px;min-height:166px}.step-0 .option-copy{height:160px}.option-copy:has(.option-badge){padding-right:13px}.option-copy>.option-badge{left:13px;right:auto;top:88px;bottom:auto;width:108px}}
+.step-0 .option-card{height:260px;min-height:260px}.step-0 .option-visual{position:relative}.step-0 .option-copy{height:115px;padding:12px 18px 14px;overflow:hidden}.step-0 .option-visual>.option-badge{position:absolute;z-index:3;left:50%;top:10px;width:123px;max-width:calc(100% - 24px);margin:0;opacity:.76;pointer-events:none;transform:translateX(-50%)}.step-0 .door-style-thumbnail{padding:42px 12px 10px}.step-0 .option-badge img{display:block;width:100%;height:auto;object-fit:contain}
+@media(max-width:900px){.step-0 .option-card{height:275px;min-height:275px}.step-0 .option-visual>.option-badge{left:50%;top:9px;width:114px;max-width:calc(100% - 22px)}.step-0 .door-style-thumbnail{padding-top:39px}}
+@media(max-width:560px){.step-0 .option-card{height:180px;min-height:180px}.step-0 .option-visual{height:100%;min-height:100%}.step-0 .option-copy{height:180px;padding:12px 14px}.step-0 .option-visual>.option-badge{left:50%;top:8px;width:102px;max-width:calc(100% - 20px)}.step-0 .door-style-thumbnail{padding:36px 10px 8px}}
 
 /* Real door assets: show the supplied PNG only, plus a subtle shadow. */
 .preview-glow{display:none}
@@ -139,6 +145,8 @@
 .door{background:transparent;box-shadow:none;padding:0}
 .door>.glass,.door>.panels{display:none}
 .door-style-image{background:transparent;filter:drop-shadow(0 18px 22px rgba(5,4,11,.22))}
+.door-glass-overlay{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.door-glass-overlay.under-door-image{z-index:1}
 .preview-scene.compact .door-style-image{filter:drop-shadow(0 8px 10px rgba(5,4,11,.2))}
 .door-style-thumbnail{display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:12px;overflow:hidden}
 .door-style-thumbnail img{display:block;max-width:85%;max-height:90%;width:auto;height:auto;object-fit:contain}
@@ -166,8 +174,29 @@
 .section-resets{display:flex;gap:8px;margin-top:12px}.section-resets:empty{display:none}.section-resets button{border:0;background:transparent;color:#667277;padding:0;display:flex;align-items:center;gap:5px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.section-resets button:hover{color:var(--peacock)}
 .door-type-card-visual{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#f9fbfc,#cbd8da);color:var(--peacock);box-shadow:inset 0 0 0 7px #fff,0 5px 15px #05040b18}.door-type-card-visual.grained{background:repeating-linear-gradient(100deg,#d7bea0 0 6px,#b98b61 7px 10px,#e1c9ab 11px 16px);color:#5b321d}
 .grain-card-image{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
-@media(max-width:560px){.start-over{width:38px;height:38px;padding:0;border:0;border-radius:50%;justify-content:center;background:#ffffff12}.start-over span{display:none}.selection-path{margin-top:11px}.step-0 .option-card{height:166px}.door-type-card-visual{width:82px;height:82px}}
+@media(max-width:560px){.start-over{width:38px;height:38px;padding:0;border:0;border-radius:50%;justify-content:center;background:#ffffff12}.start-over span{display:none}.selection-path{margin-top:11px}.step-0 .option-card{height:180px;min-height:180px}.door-type-card-visual{width:82px;height:82px}}
 
 /* One hardware card per style, with only its available finish choices. */
 .hardware-option-card{position:relative;overflow:hidden;border:1px solid #dfe3e8;border-radius:7px;background:#fff;box-shadow:0 3px 12px #05040b08;transition:.2s}.hardware-option-card:hover{border-color:var(--peacock);box-shadow:0 10px 25px #0d666c18}.hardware-option-card.selected{border:3px solid var(--gold);box-shadow:inset 5px 0 0 var(--peacock),0 10px 28px #0d666c20}.hardware-card-main{position:relative;width:100%;display:block;border:0;padding:0;background:#fff;text-align:left;color:var(--black)}.hardware-option-card.selected .check{display:grid}.hardware-finish-options{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px 15px;border-top:1px solid #e3e7ea;background:#f8fafb}.hardware-finish-options button{min-width:66px;flex:1;border:1px solid #cdd5d9;border-radius:5px;background:#fff;padding:6px;display:flex;align-items:center;gap:6px;color:#4e575b;font-size:8px;font-weight:700;line-height:1.2}.hardware-finish-options button:hover{border-color:var(--peacock)}.hardware-finish-options button.selected{border:2px solid var(--gold);box-shadow:0 0 0 2px #0d666c22;color:var(--peacock)}.hardware-finish-options img{width:25px;height:25px;flex:none;border-radius:50%;object-fit:cover;box-shadow:inset 0 0 0 1px #0002}.hardware-finish-options span{text-align:left}
 @media(max-width:560px){.hardware-option-card{display:grid;grid-template-columns:140px minmax(0,1fr);min-height:190px}.hardware-card-main{display:contents}.hardware-card-main .option-visual{grid-row:1/3;height:100%;min-height:190px}.hardware-card-main .option-copy{align-self:center}.hardware-finish-options{align-content:center;border-top:1px solid #e3e7ea;padding:10px}.hardware-finish-options button{min-width:52px}.hardware-finish-options span{display:none}}
+
+/* Clean finish chips: paint and stain swatches stay solid, with no texture lines or patterns. */
+.finish-swatch{
+  width:92px;
+  height:92px;
+  border-radius:50%;
+  background-image:none!important;
+  overflow:hidden;
+  box-shadow:inset 0 0 0 4px #fff,0 3px 12px #0002!important;
+}
+.finish-swatch::before,
+.finish-swatch::after,
+.finish-swatch i{
+  content:none!important;
+  display:none!important;
+  background:none!important;
+  box-shadow:none!important;
+}
+.option-card.selected .finish-swatch{
+  box-shadow:inset 0 0 0 4px #fff,0 0 0 3px var(--gold),0 3px 12px #0002!important;
+}

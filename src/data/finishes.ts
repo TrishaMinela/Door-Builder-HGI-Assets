@@ -19,8 +19,7 @@ export const paintColors: FinishColor[] = [
   { id: 'iron-ore', name: 'Iron Ore', hex: '#434341' },
   { id: 'mocha', name: 'Mocha', hex: '#2A2416' },
   { id: 'musket', name: 'Musket', hex: '#372813' },
-  // Verify Navy hex value.
-  { id: 'navy', name: 'Navy', hex: '#F8F1DF' },
+  { id: 'navy', name: 'Navy', hex: '#10355A' },
   { id: 'pacific-blue', name: 'Pacific Blue', hex: '#5E6C74' },
   { id: 'pewter', name: 'Pewter', hex: '#A8A19B' },
   { id: 'positive-red', name: 'Positive Red', hex: '#AD2C34' },
