@@ -23,12 +23,25 @@ export const doorPreviewAssets: Record<string, string> = {
   F2: '/assets/doors/previews/preview-f2.png',
 }
 
+const paintDoorPreviewAssets: Record<string, string> = {
+  CR14PL: '/assets/doors/previews/preview-cr14pl-paint.png',
+}
+
+const stainDoorPreviewAssets: Record<string, string> = {
+  CR14PL: '/assets/doors/previews/preview-cr14pl-stain.png',
+}
+
 function candidateCodes(style: DoorStyle) {
   return [...new Set([style.code, ...style.variants.map((variant) => variant.code)])]
 }
 
-function mappedPreview(style: DoorStyle) {
-  return candidateCodes(style).map((code) => doorPreviewAssets[code]).find(Boolean)
+function mappedPreview(style: DoorStyle, finishType?: Finish['finishType']) {
+  const assets = finishType === 'paint'
+    ? paintDoorPreviewAssets
+    : finishType === 'stain'
+      ? stainDoorPreviewAssets
+      : doorPreviewAssets
+  return candidateCodes(style).map((code) => assets[code] ?? doorPreviewAssets[code]).find(Boolean)
 }
 
 export function hasDoorPreviewAsset(style: DoorStyle) {
@@ -88,8 +101,8 @@ export function resolveAutomaticPreviewGrain(_style: DoorStyle) {
 export function resolveDoorPreviewAsset(
   style: DoorStyle,
   _grain?: string | null,
-  _finishType?: Finish['finishType'],
+  finishType?: Finish['finishType'],
   _product?: ResolvedDoorProduct | null,
 ) {
-  return mappedPreview(style) ?? style.image
+  return mappedPreview(style, finishType) ?? style.image
 }
