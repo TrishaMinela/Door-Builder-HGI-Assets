@@ -5,7 +5,7 @@ type Rgb = {
 }
 
 const tintCache = new Map<string, Promise<string>>()
-const TINT_ALGORITHM_VERSION = 'v61-subtle-satin-clear-coat'
+const TINT_ALGORITHM_VERSION = 'v62-soften-dark-stains'
 const BACKGROUND_ALPHA_THRESHOLD = 8
 const FORCE_DEBUG_RED_IN_DEV = false
 
@@ -33,6 +33,24 @@ function clampChannel(value: number) {
 
 function mixChannel(a: number, b: number, amount: number) {
   return a + (b - a) * amount
+}
+
+function relativeLuma(color: Rgb) {
+  return (color.r * 0.299) + (color.g * 0.587) + (color.b * 0.114)
+}
+
+function softenDarkStainColor(color: Rgb, finishType: TintOptions['finishType']) {
+  if (finishType !== 'stain') return color
+
+  const luma = relativeLuma(color)
+  if (luma >= 105) return color
+
+  const lightenAmount = Math.min(0.24, Math.max(0.08, (105 - luma) / 280))
+  return {
+    r: clampChannel(mixChannel(color.r, 255, lightenAmount)),
+    g: clampChannel(mixChannel(color.g, 255, lightenAmount)),
+    b: clampChannel(mixChannel(color.b, 255, lightenAmount)),
+  }
 }
 
 function loadPreviewImage(src: string) {
@@ -312,7 +330,8 @@ function renderDetailOverlay(
 export async function tintDoorPreviewAsset(src: string, hexColor?: string | null, options: TintOptions = {}) {
   const color = hexColor ? parseHexColor(hexColor) : null
   if (!color) return src
-  const outputColor = import.meta.env.DEV && FORCE_DEBUG_RED_IN_DEV ? { r: 255, g: 0, b: 0 } : color
+  const finishColor = softenDarkStainColor(color, options.finishType)
+  const outputColor = import.meta.env.DEV && FORCE_DEBUG_RED_IN_DEV ? { r: 255, g: 0, b: 0 } : finishColor
 
   const cacheKey = `${TINT_ALGORITHM_VERSION}|${src}|${hexColor}|${options.preserveGlass ? 'glass' : 'solid'}|${options.finishType ?? 'paint'}|${options.tintMask ?? options.glassMask ?? 'auto'}`
   const cached = tintCache.get(cacheKey)

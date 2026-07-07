@@ -218,3 +218,218 @@
 .option-card.selected .finish-tile-wrap{
   box-shadow:0 0 0 4px #fff,0 0 0 3px var(--gold),0 3px 12px #0002;
 }
+.door-line-card-image{
+  display:block;
+  width:112px;
+  height:112px;
+  border-radius:10px;
+  object-fit:cover;
+  box-shadow:0 3px 12px #0002;
+}
+.option-card.selected .door-line-card-image{
+  box-shadow:0 0 0 4px #fff,0 0 0 3px var(--gold),0 3px 12px #0002;
+}
+.door-swing-grid{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  max-width:980px;
+}
+.door-swing-grid .option-card{
+  min-height:245px;
+}
+.door-swing-grid .option-visual{
+  height:150px;
+  background:#fff;
+}
+.door-swing-image{
+  display:block;
+  width:118px;
+  height:118px;
+  object-fit:contain;
+  border-radius:8px;
+  background:#fff;
+  box-shadow:0 3px 12px #05040b12;
+}
+.door-swing-grid .option-copy strong{
+  line-height:1.3;
+}
+@media(max-width:980px){
+  .door-swing-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width:560px){
+  .door-swing-grid{
+    grid-template-columns:1fr;
+  }
+  .door-swing-grid .option-card{
+    min-height:160px;
+  }
+  .door-swing-grid .option-visual{
+    height:160px;
+    min-height:160px;
+  }
+  .door-swing-image{
+    width:108px;
+    height:108px;
+  }
+}
+.empty-door-preview{
+  position:relative;
+  z-index:1;
+  width:min(100%,320px);
+  min-height:430px;
+  display:grid;
+  place-items:center;
+  margin:auto;
+  border:2px dashed #b9c8cb;
+  border-radius:10px;
+  background:linear-gradient(145deg,#ffffff90,#e9f0f180);
+  color:#516066;
+  text-align:center;
+  padding:28px;
+  box-shadow:0 12px 28px #05040b0d;
+}
+.empty-door-preview span{
+  max-width:180px;
+  font-size:11px;
+  font-weight:700;
+  line-height:1.6;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.mobile-live-preview .empty-door-preview{
+  width:180px;
+  min-height:180px;
+  padding:18px;
+  border-radius:8px;
+}
+.mobile-live-preview .empty-door-preview span{
+  font-size:9px;
+}
+
+/* Homepage hero product demo: fixed house image with animated configured door overlay. */
+.home-hero-visual{
+  overflow:hidden;
+}
+.home-hero-visual:before,
+.home-hero-visual:after{
+  content:none!important;
+  display:none!important;
+}
+.home-entryway-demo{
+  position:relative;
+  z-index:1;
+  width:min(100%,760px);
+  aspect-ratio:1080/700;
+  overflow:hidden;
+  border-radius:12px;
+  background:#dfe7e7;
+  box-shadow:0 28px 55px #05040b30,0 0 0 1px #ffffff70;
+}
+.home-entryway-image{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.home-entryway-door-slot{
+  position:absolute;
+  left:42.6%;
+  top:22.7%;
+  width:13.7%;
+  height:45.3%;
+  z-index:2;
+  pointer-events:none;
+  overflow:visible;
+}
+.home-demo-door-layer{
+  position:absolute;
+  inset:0;
+  opacity:0;
+  transition:opacity .7s ease;
+}
+.home-demo-door-layer.active{
+  opacity:1;
+}
+.home-entryway-door-slot .preview-scene,
+.home-app .home-entryway-door-slot .preview-scene,
+.home-hero-visual .home-entryway-door-slot .preview-scene{
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  max-width:none!important;
+  display:block;
+  transform:none!important;
+}
+.home-entryway-door-slot .preview-glow,
+.home-entryway-door-slot .preview-caption,
+.home-entryway-door-slot .preview-view-toggle{
+  display:none!important;
+}
+.home-entryway-door-slot .door-frame,
+.home-app .home-entryway-door-slot .door-frame,
+.home-hero-visual .home-entryway-door-slot .door-frame{
+  position:absolute;
+  inset:0;
+  width:100%!important;
+  height:100%!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  transform:none!important;
+}
+.home-entryway-door-slot .door-frame:before{
+  content:none!important;
+  display:none!important;
+}
+.home-entryway-door-slot .door{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  padding:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  overflow:visible;
+}
+.home-entryway-door-slot .mapped-preview-door{
+  transform:none!important;
+}
+.home-entryway-door-slot .glass,
+.home-entryway-door-slot .panels{
+  display:none;
+}
+.home-entryway-door-slot .door-style-image,
+.home-entryway-door-slot .door-glass-overlay,
+.home-entryway-door-slot .hardware img{
+  filter:drop-shadow(0 4px 5px rgba(5,4,11,.22));
+}
+.home-entryway-demo .home-preview-label{
+  left:18px;
+  bottom:18px;
+  max-width:calc(100% - 36px);
+}
+.home-entryway-demo .home-preview-label small{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+@media(max-width:980px){
+  .home-entryway-demo{
+    width:min(92vw,720px);
+  }
+}
+@media(max-width:560px){
+  .home-entryway-demo{
+    width:100%;
+    border-radius:0;
+  }
+  .home-entryway-demo .home-preview-label{
+    display:none;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .home-demo-door-layer{
+    transition:none;
+  }
+}

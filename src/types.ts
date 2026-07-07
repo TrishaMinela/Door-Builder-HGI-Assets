@@ -86,6 +86,22 @@ export type DoorTypeOption = {
   grains: string[]
 }
 
+export type DoorLineChoice = {
+  id: string
+  name: string
+  description: string
+  image: string
+  lineIds: string[]
+  paintOnly?: boolean
+  autoGrain?: string
+}
+
+export type DoorSwing = {
+  id: 'LHI' | 'LHO' | 'RHI' | 'RHO'
+  name: string
+  image: string
+}
+
 export type ResolvedDoorProduct = {
   doorTypeLabel: 'Door Type' | 'Available Door Types'
   doorType: string
@@ -102,6 +118,7 @@ export type DoorConfiguration = {
   finish: Finish
   glass: GlassOption | null
   hardware: HardwareOption
+  doorSwing: DoorSwing
 }
 
 export type ContactForm = {

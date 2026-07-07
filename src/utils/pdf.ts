@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import type { ContactForm, DoorStyle, Finish, GlassOption, HardwareOption, ResolvedDoorProduct } from '../types'
+import type { ContactForm, DoorStyle, DoorSwing, Finish, GlassOption, HardwareOption, ResolvedDoorProduct } from '../types'
 import { hardwareDisplayName, hardwarePreviewAssetUrl } from '../data/hardware'
 import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetGlassOverlay, previewAssetHasGlass, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
 import { configurationPdfName } from './pdfConfig'
@@ -29,7 +29,7 @@ async function applyBrandFont(pdf: jsPDF) {
   pdf.setFont('Montserrat', 'normal')
 }
 
-export async function generateSummaryPdf(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
+export async function generateSummaryPdf(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, hardware: HardwareOption, doorSwing: DoorSwing) {
   const pdf = new jsPDF()
   let brandFont = 'helvetica'
   try {
@@ -107,13 +107,16 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
   }
   pdf.setFont('helvetica', 'normal')
   pdf.setFontSize(11)
+  const materialRows = product.doorTypes.map((doorType) => grain ? doorType.replace(` - ${grain}`, '') : doorType)
   const rows: [string, string[]][] = [
-    [product.doorTypeLabel, product.doorTypes],
     ['Door style', style.name],
+    ['Door line / material', materialRows],
+    ...(grain ? [['Grain', grain] as [string, string]] : []),
     ['Finish type', finish.finishType === 'paint' ? 'Paint' : 'Stain'],
     [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name],
     ['Glass', glass?.name ?? 'No glass'],
     ['Hardware', hardwareDisplayName(hardware)],
+    ['Door swing', `${doorSwing.id} - ${doorSwing.name}`],
   ].map(([label, value]) => [label as string, Array.isArray(value) ? value : [value as string]])
   let rowY = 80
   rows.forEach(([label, values]) => {
@@ -148,13 +151,13 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
   return pdf
 }
 
-export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
-  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, hardware)
+export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, hardware: HardwareOption, doorSwing: DoorSwing) {
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, hardware, doorSwing)
   pdf.save(configurationPdfName)
 }
 
-export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, hardware: HardwareOption) {
-  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, hardware)
+export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, hardware: HardwareOption, doorSwing: DoorSwing) {
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, hardware, doorSwing)
   const dataUri = pdf.output('datauristring')
   return {
     fileName: configurationPdfName,
