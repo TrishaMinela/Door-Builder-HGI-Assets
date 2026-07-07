@@ -132,6 +132,7 @@ const previewTintMasks = {
 } as const
 
 const previewGlassOverlays = {
+  '5LT': '/assets/glass/overlays/5LT/5LTCLEAR.png?v=1',
   FRT: '/assets/doors/previews/glass/glass-frt.png?v=1',
   N: '/assets/doors/previews/glass/glass-n.png?v=1',
   S3: '/assets/doors/previews/glass/glass-s3.png?v=1',

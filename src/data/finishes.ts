@@ -29,6 +29,8 @@ export const paintColors: FinishColor[] = [
   { id: 'crabapple', name: 'Crabapple', hex: '#660000' },
   { id: 'orange-krate', name: 'Orange Krate', hex: '#C96F25' },
   { id: 'blue-bayou', name: 'Blue Bayou', hex: '#0078A6' },
+  { id: 'sour-grape', name: 'Sour Grape', hex: '#7A6B9A' },
+  { id: 'lime', name: 'Lime', hex: '#B3BF62' },
 ]
 
 export const stainColors: FinishColor[] = [

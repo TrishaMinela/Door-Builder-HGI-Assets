@@ -18,7 +18,7 @@ const toFinish = (kind: 'paint' | 'stain', color: { id: string; name: string; he
   id: `${kind}-${color.id}`,
   name: color.name,
   description: `Home Guard ${kind} color.`,
-  image: `/assets/finishes/${kind}/${color.id}.jpg`,
+  image: `/assets/finishes/${kind}/${color.id}.png`,
   color: color.hex,
   accent: shade(color.hex),
   category: kind,

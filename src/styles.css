@@ -200,3 +200,21 @@
 .option-card.selected .finish-swatch{
   box-shadow:inset 0 0 0 4px #fff,0 0 0 3px var(--gold),0 3px 12px #0002!important;
 }
+.finish-tile-wrap{
+  width:104px;
+  height:104px;
+  display:block;
+  border-radius:8px;
+  background:var(--fallback-finish,#efeee8);
+  box-shadow:0 3px 12px #0002;
+  overflow:hidden;
+}
+.finish-tile-image{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+}
+.option-card.selected .finish-tile-wrap{
+  box-shadow:0 0 0 4px #fff,0 0 0 3px var(--gold),0 3px 12px #0002;
+}
