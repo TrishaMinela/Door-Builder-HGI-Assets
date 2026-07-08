@@ -9,8 +9,8 @@ export const doorPreviewAssets: Record<string, string> = {
   E1: '/assets/doors/previews/preview-e1.png',
   F: '/assets/doors/previews/preview-f.png',
   F1: '/assets/doors/previews/preview-f1.png',
-  FO: '/assets/doors/previews/preview-fo.png',
-  FRT: '/assets/doors/previews/preview-frt.png',
+  FO: '/assets/doors/previews/preview-fo.png?v=2',
+  FRT: '/assets/doors/previews/preview-frt.png?v=2',
   F482: '/assets/doors/previews/preview-f482.png',
   HDAT1: '/assets/doors/previews/preview-hdat1.png',
   HRT: '/assets/doors/previews/preview-hrt.png',
@@ -54,15 +54,15 @@ const stainDoorPreviewAssets: Record<string, string> = {
   CR14PL: '/assets/doors/previews/preview-cr14pl-stain.png',
   E1: '/assets/doors/previews/preview-e1-stain.png',
   F: '/assets/doors/previews/preview-f-stain.png',
-  FO: '/assets/doors/previews/preview-fo-stain.png',
-  FRT: '/assets/doors/previews/preview-frt-stain.png',
+  FO: '/assets/doors/previews/preview-fo-stain.png?v=2',
+  FRT: '/assets/doors/previews/preview-frt-stain.png?v=2',
   F482: '/assets/doors/previews/preview-f482-stain.png',
   HDAT1: '/assets/doors/previews/preview-hdat1-stain.png',
   HRT: '/assets/doors/previews/preview-hrt-stain.png',
   N: '/assets/doors/previews/preview-n-stain.png',
   N1: '/assets/doors/previews/preview-n1-stain.png',
   QA: '/assets/doors/previews/preview-qa-stain.png',
-  S: '/assets/doors/previews/preview-s-stain.png',
+  S: '/assets/doors/previews/preview-s-stain.png?v=2',
   S1NGSS: '/assets/doors/previews/preview-s1ngss-stain.png',
   S2: '/assets/doors/previews/preview-s2-stain.png',
   S3: '/assets/doors/previews/preview-s3-stain.png',
@@ -107,7 +107,7 @@ export function hasDoorPreviewAsset(style: DoorStyle) {
 
 const previewGlassCodes = new Set([
   '3LT', '3STEP', '4LT', '5LT', 'CA', 'CR14', 'CR14PL', 'F', 'F2', 'F3', 'F4', 'F48', 'F482', 'F764', 'F848',
-  'FO', 'FRT', 'HRT', 'N',
+  'FO', 'HRT', 'N',
   'QA', 'S', 'S2', 'S3', 'S4', 'S836', 'SAT', 'SO', 'SO2', 'SW',
 ])
 
@@ -132,10 +132,13 @@ const previewTintMasks = {
 } as const
 
 const previewGlassOverlays = {
-  '5LT': '/assets/glass/overlays/5LT/5LTCLEAR.png?v=1',
-  FRT: '/assets/doors/previews/glass/glass-frt.png?v=1',
+  FRT: '/assets/doors/previews/glass/glass-frt.png?v=2',
   N: '/assets/doors/previews/glass/glass-n.png?v=1',
   S3: '/assets/doors/previews/glass/glass-s3.png?v=1',
+  '5LT': '/assets/glass/overlays/5LT/5LTCLEAR.png?v=1',
+  F764: '/assets/glass/overlays/F764/F764Clear.png?v=1',
+  HRT: '/assets/glass/overlays/HRT/HRTClear.png?v=1',
+  SAT: '/assets/glass/overlays/SAT/SATClear.png?v=1',
   S4: {
     paint: '/assets/doors/previews/glass/glass-s4.png?v=1',
     stain: '/assets/doors/previews/glass/glass-s4-stain.png?v=1',

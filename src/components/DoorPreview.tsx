@@ -20,8 +20,9 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const hasMappedPreview = hasDoorPreviewAsset(style)
   const preservePreviewGlass = previewAssetHasGlass(style)
   const tintMask = previewAssetTintMask(style)
-  const fixedGlassOverlay = tintColor ? previewAssetGlassOverlay(style, finish.finishType) : undefined
   const glassOverlay = glass?.overlaysByDoorStyle[style.code]
+  const showFixedGlassBeforeFinish = ['F764', 'HRT', 'SAT'].some((code) => style.code === code || style.variants.some((variant) => variant.code === code))
+  const fixedGlassOverlay = !glassOverlay && (tintColor || showFixedGlassBeforeFinish) ? previewAssetGlassOverlay(style, finish.finishType) : undefined
   const glassSitsUnderDoorImage = style.code === 'QA'
   const [displayImage, setDisplayImage] = useState(previewImage)
   const [previewView, setPreviewView] = useState<HardwareView>('Exterior')
