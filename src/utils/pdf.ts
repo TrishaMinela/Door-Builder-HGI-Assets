@@ -96,7 +96,7 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
     pdf.setFillColor(hardware.color)
     pdf.circle(173, 92, 1.5, 'F')
   }
-  const hardwarePreview = hardwarePreviewAssetUrl(hardware, 'Exterior')
+  const hardwarePreview = hardwarePreviewAssetUrl(hardware, 'Exterior', doorSwing)
   if (hardwarePreview) {
     try {
       const hardwareImage = await loadImage(hardwarePreview)

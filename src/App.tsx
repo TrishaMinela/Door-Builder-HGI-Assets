@@ -13,10 +13,24 @@ import type { ContactForm, DoorSwing, GlassOption, PreviewHardware } from './typ
 import { configurationPdfName } from './utils/pdfConfig'
 import { submitQuote, type SubmissionResult } from './utils/submission'
 
-const glassSteps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Door Swing', 'Review & Quote']
-const noGlassSteps = ['Door Style', 'Finish', 'Hardware', 'Door Swing', 'Review & Quote']
+const glassSteps = ['Door Style', 'Door Line', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
+const noGlassSteps = ['Door Style', 'Door Line', 'Finish', 'Hardware', 'Review & Quote']
+const grainGlassSteps = ['Door Style', 'Door Line', 'Grain', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
+const grainNoGlassSteps = ['Door Style', 'Door Line', 'Grain', 'Finish', 'Hardware', 'Review & Quote']
 const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '' }
 const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
+const signatureSeriesId = 'signature-series'
+const grainThumbnails: Record<string, string> = {
+  Cherry: '/assets/door-lines/grains/cherry.jpg',
+  Fir: '/assets/door-lines/grains/fir.jpg',
+  Mahogany: '/assets/door-lines/grains/mahogany.jpg',
+  Oak: '/assets/door-lines/grains/oak.jpg',
+}
+const signatureGrainChoices = (['Cherry', 'Fir', 'Mahogany', 'Oak'] as const).map((grain) => ({
+  id: grain,
+  name: grain,
+  image: grainThumbnails[grain],
+}))
 const doorSwingOptions: DoorSwing[] = [
   { id: 'LHI', name: 'Left Hand Inswing', image: '/assets/door-swing/lhi.png' },
   { id: 'LHO', name: 'Left Hand Outswing', image: '/assets/door-swing/lho.png' },
@@ -74,6 +88,7 @@ export default function App() {
   const [step, setStep] = useState(0)
   const [styleId, setStyleId] = useState('')
   const [doorLineId, setDoorLineId] = useState('')
+  const [grainId, setGrainId] = useState('')
   const [finishId, setFinishId] = useState('')
   const [finishTab, setFinishTab] = useState<'paint' | 'stain'>('paint')
   const [glassId, setGlassId] = useState('')
@@ -94,8 +109,19 @@ export default function App() {
   const availableDoorLines = selectedStyle ? doorLineChoicesForStyle(style) : []
   const availableDoorLineIds = availableDoorLines.map((item) => item.id).join('|')
   const selectedDoorLine = availableDoorLines.find((item) => item.id === doorLineId)
-  const selectedGrain = selectedDoorLine ? autoGrainForDoorLine(style, selectedDoorLine.id) : null
-  const availableFinishes = selectedDoorLine ? finishesForStyle(style, finishes, selectedDoorLine.id, selectedGrain) : []
+  const signatureGrainOptions = selectedStyle && selectedDoorLine?.id === signatureSeriesId
+    ? signatureGrainChoices
+    : []
+  const needsGrainStep = selectedDoorLine?.id === signatureSeriesId
+  const selectedGrain = selectedDoorLine
+    ? selectedDoorLine.id === signatureSeriesId
+      ? needsGrainStep
+        ? grainId || null
+        : signatureGrainOptions[0]?.id ?? autoGrainForDoorLine(style, selectedDoorLine.id)
+      : autoGrainForDoorLine(style, selectedDoorLine.id)
+    : null
+  const finishGrain = selectedDoorLine?.id === signatureSeriesId ? undefined : selectedGrain
+  const availableFinishes = selectedDoorLine && (!needsGrainStep || selectedGrain) ? finishesForStyle(style, finishes, selectedDoorLine.id, finishGrain) : []
   const compatibleFinishTypes = (['paint', 'stain'] as const).filter((type) => availableFinishes.some((item) => item.finishType === type))
   const materialFinishTypes = selectedDoorLine ? finishTypesForDoorLine(style, selectedDoorLine.id) : []
   const effectiveFinishTypes = selectedDoorLine ? compatibleFinishTypes.filter((type) => materialFinishTypes.includes(type)) : []
@@ -133,7 +159,9 @@ export default function App() {
     return groups
   }, new Map<string, GlassOptionGroup>()).values()]
   const availableGlassIds = availableGlass.map((item) => item.id).join('|')
-  const steps = selectedStyle?.hasGlass && !hasFixedGlassPreview && availableGlass.length ? glassSteps : noGlassSteps
+  const steps = selectedStyle?.hasGlass && !hasFixedGlassPreview && availableGlass.length
+    ? needsGrainStep ? grainGlassSteps : glassSteps
+    : needsGrainStep ? grainNoGlassSteps : noGlassSteps
   const currentStep = steps[step] ?? steps[steps.length - 1]
   const product = resolveDoorProduct(style, finish, selectedGrain ?? undefined, selectedDoorLine?.id)
   const previewTintColor = selectedFinish ? finish.color : null
@@ -170,13 +198,19 @@ export default function App() {
   useEffect(() => {
     if (doorLineId && !availableDoorLines.some((item) => item.id === doorLineId)) {
       setDoorLineId('')
+      setGrainId('')
       setFinishId('')
       setFinishTab('paint')
+    }
+    if (grainId && selectedDoorLine?.id !== signatureSeriesId) setGrainId('')
+    if (grainId && needsGrainStep && !signatureGrainOptions.some((item) => item.id === grainId)) {
+      setGrainId('')
+      setFinishId('')
     }
     if (effectiveFinishTypes.length && !effectiveFinishTypes.includes(finishTab)) setFinishTab(effectiveFinishTypes[0])
     if (glassId && !availableGlass.some((item) => item.id === glassId)) setGlassId('')
     if (step >= steps.length) setStep(steps.length - 1)
-  }, [styleId, doorLineId, availableDoorLineIds, effectiveFinishTypes, finishTab, glassId, availableGlassIds, step, steps.length])
+  }, [styleId, doorLineId, grainId, availableDoorLineIds, selectedDoorLine?.id, needsGrainStep, effectiveFinishTypes, finishTab, glassId, availableGlassIds, step, steps.length])
 
   useEffect(() => {
     if (screen !== 'builder') return
@@ -194,7 +228,7 @@ export default function App() {
       builderPanelRef.current?.scrollTo({ top: 0, behavior: 'auto' })
       builderOptionsRef.current?.scrollTo({ top: 0, behavior: 'auto' })
     })
-  }, [screen, currentStep, styleId, doorLineId, finishId, glassId, hardwareId, doorSwingId])
+  }, [screen, currentStep, styleId, doorLineId, grainId, finishId, glassId, hardwareId, doorSwingId])
 
   useEffect(() => {
     if (screen !== 'home') return
@@ -207,6 +241,7 @@ export default function App() {
   const resetStyle = () => {
     setStyleId('')
     setDoorLineId('')
+    setGrainId('')
     setFinishId('')
     setFinishTab('paint')
     goTo(0)
@@ -215,12 +250,14 @@ export default function App() {
   const selectDoorStyle = (nextStyleId: string) => {
     setStyleId(nextStyleId)
     setDoorLineId('')
+    setGrainId('')
     setFinishId('')
     setFinishTab('paint')
   }
 
   const resetFinish = () => {
     setDoorLineId('')
+    setGrainId('')
     setFinishId('')
     setFinishTab('paint')
   }
@@ -228,6 +265,7 @@ export default function App() {
   const startOver = () => {
     setStyleId('')
     setDoorLineId('')
+    setGrainId('')
     setFinishId('')
     setFinishTab('paint')
     setGlassId('')
@@ -253,11 +291,12 @@ export default function App() {
     if (!targetStep) return false
     if (targetStep === 'Door Style') return true
     if (!selectedStyle) return false
-    if (targetStep === 'Finish') return true
-    if (!selectedDoorLine || !selectedFinish) return false
-    if (targetStep === 'Glass') return true
-    if (targetStep === 'Hardware') return !steps.includes('Glass') || Boolean(glass)
-    if (targetStep === 'Door Swing') return Boolean(selectedHardware && (!steps.includes('Glass') || glass))
+    if (targetStep === 'Door Line') return true
+    if (!selectedDoorLine) return false
+    if (targetStep === 'Grain') return needsGrainStep
+    if (targetStep === 'Finish') return !needsGrainStep || Boolean(selectedGrain)
+    if (targetStep === 'Glass') return !needsGrainStep || Boolean(selectedGrain)
+    if (targetStep === 'Hardware') return !needsGrainStep || Boolean(selectedGrain)
     if (targetStep !== 'Review & Quote') return true
     return Boolean(selectedDoorLine && selectedFinish && selectedHardware && selectedDoorSwing && (!steps.includes('Glass') || glass))
   }
@@ -278,13 +317,26 @@ export default function App() {
   }
 
   const selectDoorLine = (nextDoorLineId: string) => {
-    const nextGrain = autoGrainForDoorLine(style, nextDoorLineId)
+    const nextIsSignature = nextDoorLineId === signatureSeriesId
+    const nextGrain = nextIsSignature ? undefined : autoGrainForDoorLine(style, nextDoorLineId)
     const nextFinishes = finishesForStyle(style, finishes, nextDoorLineId, nextGrain)
     const nextMaterialTypes = finishTypesForDoorLine(style, nextDoorLineId)
     const nextTypes = (['paint', 'stain'] as const).filter((type) =>
       nextMaterialTypes.includes(type) && nextFinishes.some((item) => item.finishType === type),
     )
     setDoorLineId(nextDoorLineId)
+    setGrainId('')
+    setFinishId('')
+    setFinishTab(nextTypes[0] ?? 'paint')
+  }
+
+  const selectGrain = (nextGrain: string) => {
+    const nextFinishes = finishesForStyle(style, finishes, doorLineId, undefined)
+    const nextMaterialTypes = finishTypesForDoorLine(style, doorLineId)
+    const nextTypes = (['paint', 'stain'] as const).filter((type) =>
+      nextMaterialTypes.includes(type) && nextFinishes.some((item) => item.finishType === type),
+    )
+    setGrainId(nextGrain)
     setFinishId('')
     setFinishTab(nextTypes[0] ?? 'paint')
   }
@@ -350,7 +402,7 @@ export default function App() {
           </div>
           <div className="home-hero-visual">
             <div className="home-entryway-demo" aria-label="Animated examples of configurable entry doors">
-              <img className="home-entryway-image" src="/assets/home/entryway-demo.png" alt="Front entryway with a customizable door preview" />
+              <img className="home-entryway-image" src="/assets/home/entryway-demo.png?v=2" alt="Modern home entryway with a customizable door preview" />
               <div className="home-entryway-door-slot" aria-hidden="true">
                 {homeDemoConfigurations.map((demo, index) => (
                   <div className={`home-demo-door-layer ${index === homeDemoIndex % homeDemoConfigurations.length ? 'active' : ''}`} key={`${demo.style.code}-${demo.finish.id}-${demo.glass?.id ?? 'glass'}-${demo.hardware.id}`}>
@@ -373,16 +425,16 @@ export default function App() {
         })}
       </nav>
       <main>
-        {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">{selectedStyle ? <DoorPreview style={style} finish={finish} glass={glass} hardware={hardware} product={product} tintColor={previewTintColor} /> : <EmptyDoorPreview />}</div>}
+        {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">{selectedStyle ? <DoorPreview style={style} finish={finish} glass={glass} hardware={hardware} product={product} tintColor={previewTintColor} doorSwing={selectedDoorSwing} /> : <EmptyDoorPreview />}</div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
           {currentStep !== 'Review & Quote' && <>
             <div className="section-heading">
               <span>Step {step + 1} of {steps.length}</span>
-              <h1>{currentStep === 'Door Style' ? 'Choose a Door Style' : currentStep === 'Finish' ? 'Choose Your Finish' : currentStep === 'Glass' ? 'Choose Your Glass' : currentStep === 'Hardware' ? 'Choose Your Hardware' : 'Choose Door Swing'}</h1>
-              <p>{currentStep === 'Door Style' ? 'Browse all available door styles and choose the one that feels right for your home.' : currentStep === 'Finish' ? 'Choose a compatible door line first, then pick from the valid paint or stain finishes.' : currentStep === 'Glass' ? 'Balance natural light, privacy, and personality.' : currentStep === 'Hardware' ? 'Complete your entry with the perfect finishing touch.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
+              <h1>{currentStep === 'Door Style' ? 'Choose a Door Style' : currentStep === 'Door Line' ? 'Choose Your Door Line' : currentStep === 'Grain' ? 'Choose Your Grain' : currentStep === 'Finish' ? 'Choose Your Finish' : currentStep === 'Glass' ? 'Choose Your Glass' : 'Choose Your Hardware'}</h1>
+              <p>{currentStep === 'Door Style' ? 'Browse all available door styles and choose the one that feels right for your home.' : currentStep === 'Door Line' ? 'Choose the compatible material line for this door style.' : currentStep === 'Grain' ? 'Choose the Signature Series grain for this door.' : currentStep === 'Finish' ? 'Pick from the valid paint or stain finishes.' : currentStep === 'Glass' ? 'Balance natural light, privacy, and personality.' : 'Complete your entry with hardware and door swing.'}</p>
               <div className="section-resets">
                 {currentStep === 'Door Style' && selectedStyle && <button onClick={resetStyle}><RotateCcw size={14} /> Reset Style</button>}
-                {currentStep === 'Finish' && <button onClick={resetFinish}><RotateCcw size={14} /> Reset Finish</button>}
+                {(currentStep === 'Door Line' || currentStep === 'Grain' || currentStep === 'Finish') && <button onClick={resetFinish}><RotateCcw size={14} /> Reset Finish</button>}
                 {currentStep === 'Hardware' && <button onClick={() => setHardwareId('')}><RotateCcw size={14} /> Reset Hardware</button>}
               </div>
             </div>
@@ -394,23 +446,29 @@ export default function App() {
                   {activeFinishType === 'stain' && <img src="/assets/branding/timberstain-logo.png" alt="TimberStain" loading="lazy" decoding="async" />}
                 </div>
               </div>}
-              <div className={`options-grid step-${step} ${currentStep === 'Door Swing' ? 'door-swing-grid' : ''}`}>
+              <div className={`options-grid step-${step}`}>
                 {currentStep === 'Door Style' && doorStyles.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.eyebrow} selected={styleId === item.id} onClick={() => selectDoorStyle(item.id)} visual={<DoorStyleThumbnail style={item} />} badge={item.variants.some((variant) => variant.lineName === 'Signature Fiberglass Grained N/C') ? <img src="/assets/branding/signature-series-logo.png" alt="Available in Signature Series" loading="lazy" decoding="async" /> : undefined} />)}
-                {currentStep === 'Finish' && !selectedDoorLine && availableDoorLines.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Door line / material" selected={doorLineId === item.id} onClick={() => selectDoorLine(item.id)} visual={<img className="door-line-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
-                {currentStep === 'Finish' && selectedDoorLine && visibleFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => { setFinishId(item.id); setFinishTab(item.finishType) }} visual={<span className="finish-tile-wrap" style={{ '--fallback-finish': item.color } as CSSProperties}><img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} /></span>} />)}
+                {currentStep === 'Door Line' && availableDoorLines.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Door line / material" selected={doorLineId === item.id} onClick={() => selectDoorLine(item.id)} visual={<img className="door-line-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
+                {currentStep === 'Grain' && signatureGrainOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Signature grain" selected={selectedGrain === item.id} onClick={() => selectGrain(item.id)} visual={<img className="grain-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
+                {currentStep === 'Finish' && visibleFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => { setFinishId(item.id); setFinishTab(item.finishType) }} visual={<span className="finish-tile-wrap" style={{ '--fallback-finish': item.color } as CSSProperties}><img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} /></span>} />)}
                 {currentStep === 'Glass' && glassOptionGroups.map((group) => <GlassOptionCard group={group} selectedId={glassId} onSelect={(item) => setGlassId(item.id)} key={group.key} />)}
                 {currentStep === 'Hardware' && hardwareStyleGroups.map((options) => <HardwareOptionCard key={`${options[0].manufacturer}-${options[0].style}`} options={options} selectedId={hardwareId} onSelect={(option) => setHardwareId(option.id)} />)}
-                {currentStep === 'Door Swing' && doorSwingOptions.map((item) => <OptionCard key={item.id} title={`${item.id} – ${item.name}`} eyebrow="Door swing" selected={doorSwingId === item.id} onClick={() => setDoorSwingId(item.id)} visual={<img className="door-swing-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
               </div>
+              {currentStep === 'Hardware' && <div className="inline-swing-section">
+                <div className="inline-swing-heading"><span>Door Swing</span><small>Choose the direction your door will swing when viewed from the outside.</small></div>
+                <div className="options-grid door-swing-grid">
+                  {doorSwingOptions.map((item) => <OptionCard key={item.id} title={`${item.id} – ${item.name}`} eyebrow="Door swing" selected={doorSwingId === item.id} onClick={() => setDoorSwingId(item.id)} visual={<img className="door-swing-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
+                </div>
+              </div>}
             </div>
           </>}
 
           {currentStep === 'Review & Quote' && !submitted && <>
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
-            <div className="mobile-review-preview"><DoorPreview style={style} finish={finish} glass={glass} hardware={hardware} product={product} tintColor={previewTintColor} /></div>
+            <div className="mobile-review-preview"><DoorPreview style={style} finish={finish} glass={glass} hardware={hardware} product={product} tintColor={previewTintColor} doorSwing={selectedDoorSwing} /></div>
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
-              {[['Door style', style.name, steps.indexOf('Door Style')], ['Door line / material', selectedDoorLine?.name ?? product.doorType, steps.indexOf('Finish')], ...(selectedGrain ? [['Grain', selectedGrain, steps.indexOf('Finish')]] : []), ['Finish type', finish.finishType === 'paint' ? 'Paint' : 'Stain', steps.indexOf('Finish')], [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name, steps.indexOf('Finish')], ...(style.hasGlass ? [['Glass', selectedGlass?.name ?? 'Not selected', steps.indexOf('Glass')]] : []), ['Hardware', hardwareDisplayName(selectedHardware!), steps.indexOf('Hardware')], ['Door swing', selectedDoorSwing?.name ?? 'Not selected', steps.indexOf('Door Swing')]].map(([label, value, target]) => <div className="summary-row" key={String(label)}><span>{label}<strong>{value}</strong></span>{Number(target) >= 0 && <button onClick={() => goTo(Number(target))}>Edit</button>}</div>)}
+              {[['Door style', style.name, steps.indexOf('Door Style')], ['Door line / material', selectedDoorLine?.name ?? product.doorType, steps.indexOf('Door Line')], ...(selectedGrain ? [['Grain', selectedGrain, steps.indexOf('Grain') >= 0 ? steps.indexOf('Grain') : steps.indexOf('Door Line')]] : []), ['Finish type', finish.finishType === 'paint' ? 'Paint' : 'Stain', steps.indexOf('Finish')], [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name, steps.indexOf('Finish')], ...(style.hasGlass ? [['Glass', selectedGlass?.name ?? 'Not selected', steps.indexOf('Glass')]] : []), ['Hardware', hardwareDisplayName(selectedHardware!), steps.indexOf('Hardware')], ['Door swing', selectedDoorSwing?.name ?? 'Not selected', steps.indexOf('Hardware')]].map(([label, value, target]) => <div className="summary-row" key={String(label)}><span>{label}<strong>{value}</strong></span>{Number(target) >= 0 && <button onClick={() => goTo(Number(target))}>Edit</button>}</div>)}
             </div>
             <div className="attachment-card">
               <span className="attachment-icon"><FileText size={25} /></span>
@@ -433,12 +491,12 @@ export default function App() {
             <button onClick={downloadPdf}><Download size={17} /> Download Your Summary</button>
           </div>}
 
-          {currentStep !== 'Review & Quote' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Back</button><button className="next" disabled={(currentStep === 'Door Style' && !selectedStyle) || (currentStep === 'Finish' && (!selectedDoorLine || !selectedFinish)) || (currentStep === 'Glass' && !glass) || (currentStep === 'Hardware' && !selectedHardware) || (currentStep === 'Door Swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>{currentStep === 'Door Style' && !selectedStyle ? 'Select a Door Style' : currentStep === 'Finish' && !selectedDoorLine ? 'Select a Door Line' : currentStep === 'Finish' && !selectedFinish ? 'Select a Finish' : currentStep === 'Glass' && !glass ? 'Select Glass' : currentStep === 'Hardware' && !selectedHardware ? 'Select Hardware' : currentStep === 'Door Swing' && !selectedDoorSwing ? 'Select Door Swing' : `Continue to ${steps[step + 1]}`} <ArrowRight size={17} /></button></div>}
+          {currentStep !== 'Review & Quote' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Back</button><button className="next" disabled={(currentStep === 'Door Style' && !selectedStyle) || (currentStep === 'Door Line' && !selectedDoorLine) || (currentStep === 'Grain' && !selectedGrain) || (currentStep === 'Finish' && !selectedFinish) || (currentStep === 'Glass' && !glass) || (currentStep === 'Hardware' && (!selectedFinish || (steps.includes('Glass') && !glass) || !selectedHardware || !selectedDoorSwing))} onClick={() => goTo(step + 1)}>{currentStep === 'Door Style' && !selectedStyle ? 'Select a Door Style' : currentStep === 'Door Line' && !selectedDoorLine ? 'Select a Door Line' : currentStep === 'Grain' && !selectedGrain ? 'Select a Grain' : currentStep === 'Finish' && !selectedFinish ? 'Select a Finish' : currentStep === 'Glass' && !glass ? 'Select Glass' : currentStep === 'Hardware' && !selectedFinish ? 'Select Finish' : currentStep === 'Hardware' && steps.includes('Glass') && !glass ? 'Select Glass' : currentStep === 'Hardware' && !selectedHardware ? 'Select Hardware' : currentStep === 'Hardware' && !selectedDoorSwing ? 'Select Door Swing' : `Continue to ${steps[step + 1]}`} <ArrowRight size={17} /></button></div>}
         </section>
 
         {!submitted && <aside>
           <div className="aside-top"><span>Your design</span></div>
-          {selectedStyle ? <DoorPreview style={style} finish={finish} glass={glass} hardware={hardware} product={product} tintColor={previewTintColor} /> : <EmptyDoorPreview />}
+          {selectedStyle ? <DoorPreview style={style} finish={finish} glass={glass} hardware={hardware} product={product} tintColor={previewTintColor} doorSwing={selectedDoorSwing} /> : <EmptyDoorPreview />}
           <div className="mini-summary"><strong>{selectedStyle?.name ?? 'Select a door style'}</strong><span>{selectedDoorLine ? `Material: ${selectedDoorLine.name}${selectedGrain ? ` / Grain: ${selectedGrain}` : ''}` : 'Material: Select in Finish step'}</span><span>{selectedStyle ? `${activeFinishType === 'paint' ? 'Paint' : 'Stain'}: ${selectedFinish?.name ?? ''}${style.hasGlass && selectedGlass ? ` / ${selectedGlass.name}` : ''}` : 'Finish: Select a style first'}</span><span>Hardware: {selectedHardware ? hardwareDisplayName(selectedHardware) : ''}</span><span>Door swing: {selectedDoorSwing?.name ?? ''}</span></div>
         </aside>}
       </main>

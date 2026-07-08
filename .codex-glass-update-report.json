@@ -1,0 +1,98 @@
+{
+  "copied": [
+    {
+      "door": "F2",
+      "name": "Clear",
+      "src": "/Users/trishaminela/Downloads/drive-download-20260629T193902Z-3-001/F2.png",
+      "file": "F2Clear.png",
+      "dest": "/Users/trishaminela/Door-Builder/public/glass-options/F2Clear.png",
+      "publicPath": "/glass-options/F2Clear.png"
+    },
+    {
+      "door": "F2",
+      "name": "Frosted",
+      "src": "/Users/trishaminela/Downloads/drive-download-20260629T193902Z-3-001/F2FRO.png",
+      "file": "F2Frosted.png",
+      "dest": "/Users/trishaminela/Door-Builder/public/glass-options/F2Frosted.png",
+      "publicPath": "/glass-options/F2Frosted.png"
+    },
+    {
+      "door": "F3",
+      "name": "Clear",
+      "src": "/Users/trishaminela/Downloads/drive-download-20260629T193925Z-3-001/F3.png",
+      "file": "F3Clear.png",
+      "dest": "/Users/trishaminela/Door-Builder/public/glass-options/F3Clear.png",
+      "publicPath": "/glass-options/F3Clear.png"
+    },
+    {
+      "door": "F3",
+      "name": "Frosted",
+      "src": "/Users/trishaminela/Downloads/drive-download-20260629T193925Z-3-001/F3FRO.png",
+      "file": "F3Frosted.png",
+      "dest": "/Users/trishaminela/Door-Builder/public/glass-options/F3Frosted.png",
+      "publicPath": "/glass-options/F3Frosted.png"
+    },
+    {
+      "door": "F4",
+      "name": "Clear",
+      "src": "/Users/trishaminela/Downloads/F4Clear.png",
+      "file": "F4Clear.png",
+      "dest": "/Users/trishaminela/Door-Builder/public/glass-options/F4Clear.png",
+      "publicPath": "/glass-options/F4Clear.png"
+    }
+  ],
+  "candidates": [
+    {
+      "file": "/Users/trishaminela/Door-Builder/src/data/doorPreviewAssets.ts",
+      "score": 10
+    },
+    {
+      "file": "/Users/trishaminela/Door-Builder/src/data/glassOptions.ts",
+      "score": 10
+    },
+    {
+      "file": "/Users/trishaminela/Door-Builder/src/data/productCatalog.ts",
+      "score": 10
+    },
+    {
+      "file": "/Users/trishaminela/Door-Builder/package-lock.json",
+      "score": 5
+    },
+    {
+      "file": "/Users/trishaminela/Door-Builder/src/App.tsx",
+      "score": 5
+    },
+    {
+      "file": "/Users/trishaminela/Door-Builder/src/components/DoorPreview.tsx",
+      "score": 5
+    },
+    {
+      "file": "/Users/trishaminela/Door-Builder/src/components/GlassOptionCard.tsx",
+      "score": 5
+    },
+    {
+      "file": "/Users/trishaminela/Door-Builder/src/data/doorStyleThumbnailAssets.ts",
+      "score": 5
+    },
+    {
+      "file": "/Users/trishaminela/Door-Builder/src/data/finishes.ts",
+      "score": 5
+    },
+    {
+      "file": "/Users/trishaminela/Door-Builder/src/data/options.ts",
+      "score": 5
+    },
+    {
+      "file": "/Users/trishaminela/Door-Builder/src/types.ts",
+      "score": 5
+    },
+    {
+      "file": "/Users/trishaminela/Door-Builder/src/utils/pdf.ts",
+      "score": 5
+    },
+    {
+      "file": "/Users/trishaminela/Door-Builder/src/utils/tintPreview.ts",
+      "score": 5
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { DoorStyle, Finish, GlassOption, HardwareView, PreviewHardware, ResolvedDoorProduct } from '../types'
+import type { DoorStyle, DoorSwing, Finish, GlassOption, HardwareView, PreviewHardware, ResolvedDoorProduct } from '../types'
 import { hardwarePreviewAssetUrl } from '../data/hardware'
 import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetGlassOverlay, previewAssetHasGlass, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
 import { tintDoorPreviewAsset } from '../utils/tintPreview'
@@ -13,9 +13,10 @@ type Props = {
   grain?: string | null
   product?: ResolvedDoorProduct | null
   tintColor?: string | null
+  doorSwing?: DoorSwing | null
 }
 
-export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null }: Props) {
+export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null }: Props) {
   const previewImage = resolveDoorPreviewAsset(style, grain, finish.finishType, product)
   const hasMappedPreview = hasDoorPreviewAsset(style)
   const preservePreviewGlass = previewAssetHasGlass(style)
@@ -26,7 +27,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const glassSitsUnderDoorImage = style.code === 'QA'
   const [displayImage, setDisplayImage] = useState(previewImage)
   const [previewView, setPreviewView] = useState<HardwareView>('Exterior')
-  const requestedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView)
+  const requestedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView, doorSwing)
   const [hardwareImage, setHardwareImage] = useState(requestedHardwareImage)
 
   useEffect(() => {
@@ -79,8 +80,9 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
       style: hardware.style,
       finish: hardware.finish,
       view: previewView,
+      doorSwing: doorSwing?.id,
     })
-  }, [hardware.manufacturer, hardware.style, hardware.finish, previewView, requestedHardwareImage])
+  }, [hardware.manufacturer, hardware.style, hardware.finish, previewView, requestedHardwareImage, doorSwing?.id])
 
   return (
     <div className={`preview-scene ${compact ? 'compact' : ''}`} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
@@ -102,6 +104,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
                 style: hardware.style,
                 finish: hardware.finish,
                 view: previewView,
+                doorSwing: doorSwing?.id,
                 src: hardwareImage,
               })
               event.currentTarget.style.display = 'none'
