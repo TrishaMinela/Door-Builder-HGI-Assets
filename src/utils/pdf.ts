@@ -1,9 +1,8 @@
 import jsPDF from 'jspdf'
 import type { ContactForm, DoorStyle, DoorSwing, Finish, GlassOption, HardwareOption, ResolvedDoorProduct } from '../types'
 import { hardwareDisplayName, hardwarePreviewAssetUrl } from '../data/hardware'
-import { hasDoorPreviewAsset, previewAssetGlassMask, previewAssetGlassOverlay, previewAssetHasGlass, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
+import { previewAssetGlassOverlay, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
 import { configurationPdfName } from './pdfConfig'
-import { tintDoorPreviewAsset } from './tintPreview'
 
 async function loadImage(path: string) {
   const response = await fetch(path)
@@ -72,14 +71,9 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
   pdf.text(`Generated ${new Date().toLocaleDateString()}`, 18, 68)
   try {
     const previewAsset = resolveDoorPreviewAsset(style, grain, finish.finishType, product)
-    const doorImage = hasDoorPreviewAsset(style)
-      ? await tintDoorPreviewAsset(previewAsset, finish.color, {
-        preserveGlass: previewAssetHasGlass(style),
-        finishType: finish.finishType,
-        glassMask: previewAssetGlassMask(style),
-        tintMask: previewAssetTintMask(style),
-      })
-      : await loadImage(previewAsset)
+    const doorImage = await loadImage(previewAsset)
+    pdf.setFillColor(finish.color)
+    pdf.rect(145, 56, 38, 74, 'F')
     pdf.addImage(doorImage, 'PNG', 145, 56, 38, 74)
     const fixedGlassOverlay = previewAssetGlassOverlay(style, finish.finishType)
     if (fixedGlassOverlay) {
@@ -87,14 +81,11 @@ export async function generateSummaryPdf(contact: ContactForm, product: Resolved
       pdf.addImage(fixedGlassImage, 'PNG', 145, 56, 38, 74)
     }
   } catch {
-    pdf.setFillColor(finish.color)
-    pdf.roundedRect(145, 56, 38, 74, 2, 2, 'F')
-    pdf.setDrawColor(finish.accent)
-    pdf.rect(151, 64, 26, 22)
-    pdf.rect(151, 94, 11, 25)
-    pdf.rect(166, 94, 11, 25)
-    pdf.setFillColor(hardware.color)
-    pdf.circle(173, 92, 1.5, 'F')
+    console.warn('[pdf:missing-door-preview]', {
+      style: style.name,
+      grain,
+      finishType: finish.finishType,
+    })
   }
   const hardwarePreview = hardwarePreviewAssetUrl(hardware, 'Exterior', doorSwing)
   if (hardwarePreview) {

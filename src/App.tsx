@@ -42,7 +42,7 @@ const glassStepFallbackCodes = new Set([
   'F2', 'F3', 'F4', 'F48', 'F764', 'F848', 'FO', 'HRT', 'QA',
   'S836', 'SAT', 'SO', 'SO2', 'SW',
 ])
-const fixedGlassPreviewCodes = new Set(['FRT', 'N', 'S2', 'S3', 'S4'])
+const fixedGlassPreviewCodes = new Set(['5LT', 'F764', 'FRT', 'HRT', 'N', 'S2', 'S3', 'S4', 'SAT'])
 const includedGlassOption: GlassOption = {
   id: 'included-glass',
   name: 'Included clear glass',
@@ -109,18 +109,23 @@ export default function App() {
   const availableDoorLines = selectedStyle ? doorLineChoicesForStyle(style) : []
   const availableDoorLineIds = availableDoorLines.map((item) => item.id).join('|')
   const selectedDoorLine = availableDoorLines.find((item) => item.id === doorLineId)
-  const signatureGrainOptions = selectedStyle && selectedDoorLine?.id === signatureSeriesId
-    ? signatureGrainChoices
+  const isSignatureDoorLine = selectedDoorLine?.id === signatureSeriesId
+  const selectedDoorLineLineIds = selectedDoorLine?.lineIds ?? []
+  const selectedDoorLineLineIdsKey = selectedDoorLineLineIds.join('|')
+  const signatureGrainOptions = selectedStyle && isSignatureDoorLine
+    ? signatureGrainChoices.filter((item) => selectedStyle.variants.some((variant) =>
+      selectedDoorLineLineIds.includes(variant.lineId) && variant.grains.includes(item.id),
+    ))
     : []
-  const needsGrainStep = selectedDoorLine?.id === signatureSeriesId
+  const needsGrainStep = signatureGrainOptions.length > 0
   const selectedGrain = selectedDoorLine
-    ? selectedDoorLine.id === signatureSeriesId
+    ? isSignatureDoorLine
       ? needsGrainStep
         ? grainId || null
-        : signatureGrainOptions[0]?.id ?? autoGrainForDoorLine(style, selectedDoorLine.id)
+        : autoGrainForDoorLine(style, selectedDoorLine.id)
       : autoGrainForDoorLine(style, selectedDoorLine.id)
     : null
-  const finishGrain = selectedDoorLine?.id === signatureSeriesId ? undefined : selectedGrain
+  const finishGrain = selectedGrain
   const availableFinishes = selectedDoorLine && (!needsGrainStep || selectedGrain) ? finishesForStyle(style, finishes, selectedDoorLine.id, finishGrain) : []
   const compatibleFinishTypes = (['paint', 'stain'] as const).filter((type) => availableFinishes.some((item) => item.finishType === type))
   const materialFinishTypes = selectedDoorLine ? finishTypesForDoorLine(style, selectedDoorLine.id) : []
@@ -202,7 +207,7 @@ export default function App() {
       setFinishId('')
       setFinishTab('paint')
     }
-    if (grainId && selectedDoorLine?.id !== signatureSeriesId) setGrainId('')
+    if (grainId && !isSignatureDoorLine) setGrainId('')
     if (grainId && needsGrainStep && !signatureGrainOptions.some((item) => item.id === grainId)) {
       setGrainId('')
       setFinishId('')
@@ -210,13 +215,12 @@ export default function App() {
     if (effectiveFinishTypes.length && !effectiveFinishTypes.includes(finishTab)) setFinishTab(effectiveFinishTypes[0])
     if (glassId && !availableGlass.some((item) => item.id === glassId)) setGlassId('')
     if (step >= steps.length) setStep(steps.length - 1)
-  }, [styleId, doorLineId, grainId, availableDoorLineIds, selectedDoorLine?.id, needsGrainStep, effectiveFinishTypes, finishTab, glassId, availableGlassIds, step, steps.length])
+  }, [styleId, doorLineId, grainId, availableDoorLineIds, isSignatureDoorLine, selectedDoorLineLineIdsKey, needsGrainStep, effectiveFinishTypes, finishTab, glassId, availableGlassIds, step, steps.length])
 
   useEffect(() => {
     if (screen !== 'builder') return
 
     requestAnimationFrame(() => {
-      builderPanelRef.current?.scrollIntoView({ block: 'start' })
       const selectedCard = builderOptionsRef.current?.querySelector<HTMLElement>('.option-card.selected, .glass-choice-card.selected, .hardware-option-card.selected')
 
       if (selectedCard) {
@@ -224,9 +228,7 @@ export default function App() {
         return
       }
 
-      window.scrollTo({ top: 0, behavior: 'auto' })
-      builderPanelRef.current?.scrollTo({ top: 0, behavior: 'auto' })
-      builderOptionsRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+      builderOptionsRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
     })
   }, [screen, currentStep, styleId, doorLineId, grainId, finishId, glassId, hardwareId, doorSwingId])
 
@@ -281,10 +283,7 @@ export default function App() {
     goTo(0)
   }
 
-  const goTo = (next: number) => {
-    setStep(next)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  const goTo = (next: number) => setStep(next)
 
   const canVisitStep = (target: number) => {
     const targetStep = steps[target]
@@ -298,7 +297,7 @@ export default function App() {
     if (targetStep === 'Glass') return !needsGrainStep || Boolean(selectedGrain)
     if (targetStep === 'Hardware') return !needsGrainStep || Boolean(selectedGrain)
     if (targetStep !== 'Review & Quote') return true
-    return Boolean(selectedDoorLine && selectedFinish && selectedHardware && selectedDoorSwing && (!steps.includes('Glass') || glass))
+    return Boolean(selectedDoorLine && selectedFinish && selectedHardware && selectedDoorSwing && (!steps.includes('Glass') || selectedGlass))
   }
 
   const showScreen = (next: 'home' | 'builder') => {
@@ -317,21 +316,21 @@ export default function App() {
   }
 
   const selectDoorLine = (nextDoorLineId: string) => {
-    const nextIsSignature = nextDoorLineId === signatureSeriesId
-    const nextGrain = nextIsSignature ? undefined : autoGrainForDoorLine(style, nextDoorLineId)
-    const nextFinishes = finishesForStyle(style, finishes, nextDoorLineId, nextGrain)
+    const nextNeedsGrain = nextDoorLineId === signatureSeriesId
+    const nextGrain = nextNeedsGrain ? undefined : autoGrainForDoorLine(style, nextDoorLineId)
+    const nextFinishes = nextNeedsGrain ? [] : finishesForStyle(style, finishes, nextDoorLineId, nextGrain)
     const nextMaterialTypes = finishTypesForDoorLine(style, nextDoorLineId)
     const nextTypes = (['paint', 'stain'] as const).filter((type) =>
-      nextMaterialTypes.includes(type) && nextFinishes.some((item) => item.finishType === type),
+      nextMaterialTypes.includes(type) && (nextNeedsGrain || nextFinishes.some((item) => item.finishType === type)),
     )
     setDoorLineId(nextDoorLineId)
     setGrainId('')
     setFinishId('')
-    setFinishTab(nextTypes[0] ?? 'paint')
+    setFinishTab(nextTypes[0] ?? nextMaterialTypes[0] ?? 'paint')
   }
 
   const selectGrain = (nextGrain: string) => {
-    const nextFinishes = finishesForStyle(style, finishes, doorLineId, undefined)
+    const nextFinishes = finishesForStyle(style, finishes, doorLineId, nextGrain)
     const nextMaterialTypes = finishTypesForDoorLine(style, doorLineId)
     const nextTypes = (['paint', 'stain'] as const).filter((type) =>
       nextMaterialTypes.includes(type) && nextFinishes.some((item) => item.finishType === type),
@@ -402,7 +401,7 @@ export default function App() {
           </div>
           <div className="home-hero-visual">
             <div className="home-entryway-demo" aria-label="Animated examples of configurable entry doors">
-              <img className="home-entryway-image" src="/assets/home/entryway-demo.png?v=2" alt="Modern home entryway with a customizable door preview" />
+              <img className="home-entryway-image" src="/assets/hero/hero-door.png" alt="Modern home entryway with a customizable door preview" />
               <div className="home-entryway-door-slot" aria-hidden="true">
                 {homeDemoConfigurations.map((demo, index) => (
                   <div className={`home-demo-door-layer ${index === homeDemoIndex % homeDemoConfigurations.length ? 'active' : ''}`} key={`${demo.style.code}-${demo.finish.id}-${demo.glass?.id ?? 'glass'}-${demo.hardware.id}`}>
@@ -491,7 +490,7 @@ export default function App() {
             <button onClick={downloadPdf}><Download size={17} /> Download Your Summary</button>
           </div>}
 
-          {currentStep !== 'Review & Quote' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Back</button><button className="next" disabled={(currentStep === 'Door Style' && !selectedStyle) || (currentStep === 'Door Line' && !selectedDoorLine) || (currentStep === 'Grain' && !selectedGrain) || (currentStep === 'Finish' && !selectedFinish) || (currentStep === 'Glass' && !glass) || (currentStep === 'Hardware' && (!selectedFinish || (steps.includes('Glass') && !glass) || !selectedHardware || !selectedDoorSwing))} onClick={() => goTo(step + 1)}>{currentStep === 'Door Style' && !selectedStyle ? 'Select a Door Style' : currentStep === 'Door Line' && !selectedDoorLine ? 'Select a Door Line' : currentStep === 'Grain' && !selectedGrain ? 'Select a Grain' : currentStep === 'Finish' && !selectedFinish ? 'Select a Finish' : currentStep === 'Glass' && !glass ? 'Select Glass' : currentStep === 'Hardware' && !selectedFinish ? 'Select Finish' : currentStep === 'Hardware' && steps.includes('Glass') && !glass ? 'Select Glass' : currentStep === 'Hardware' && !selectedHardware ? 'Select Hardware' : currentStep === 'Hardware' && !selectedDoorSwing ? 'Select Door Swing' : `Continue to ${steps[step + 1]}`} <ArrowRight size={17} /></button></div>}
+          {currentStep !== 'Review & Quote' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Back</button><button className="next" disabled={(currentStep === 'Door Style' && !selectedStyle) || (currentStep === 'Door Line' && !selectedDoorLine) || (currentStep === 'Grain' && !selectedGrain) || (currentStep === 'Finish' && !selectedFinish) || (currentStep === 'Glass' && !selectedGlass) || (currentStep === 'Hardware' && (!selectedHardware || !selectedDoorSwing))} onClick={() => goTo(step + 1)}>{currentStep === 'Door Style' && !selectedStyle ? 'Select a Door Style' : currentStep === 'Door Line' && !selectedDoorLine ? 'Select a Door Line' : currentStep === 'Grain' && !selectedGrain ? 'Select a Grain' : currentStep === 'Finish' && !selectedFinish ? 'Select a Finish' : currentStep === 'Glass' && !selectedGlass ? 'Select Glass' : currentStep === 'Hardware' && !selectedHardware ? 'Select Hardware' : currentStep === 'Hardware' && !selectedDoorSwing ? 'Select Door Swing' : `Continue to ${steps[step + 1]}`} <ArrowRight size={17} /></button></div>}
         </section>
 
         {!submitted && <aside>

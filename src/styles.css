@@ -89,7 +89,7 @@
   .option-visual .finish-swatch,.option-visual .glass-swatch,.option-visual .hardware-swatch{flex:none;max-width:90%;max-height:140px}
   .option-card .check{top:9px;right:9px;z-index:3}
 }
-  .door-style-image{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:contain;background:#fff}.hardware{z-index:3}
+  .door-style-image{position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:contain;background:transparent;mix-blend-mode:luminosity;opacity:1}.door-style-image-stain{opacity:1}.door-finish-layer{position:absolute;inset:0;z-index:2;background:var(--door);background-color:var(--door);mix-blend-mode:color;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;pointer-events:none}.door-finish-layer-stain{opacity:1;mix-blend-mode:color}.hardware{z-index:5}
   @media(max-width:560px){
   :root{--mobile-header-height:72px;--mobile-progress-height:52px;--mobile-preview-height:175px}
   .home-return{width:38px;height:38px;padding:0;border:0;border-radius:50%;font-size:0;justify-content:center;background:#ffffff12}
@@ -142,11 +142,14 @@
 .preview-glow{display:none}
 .door-frame{background:transparent;border:0;box-shadow:none}
 .door-frame:before{display:none}
-.door{background:transparent;box-shadow:none;padding:0}
+.door{background:transparent;box-shadow:none;padding:0;isolation:isolate}
 .door>.glass,.door>.panels{display:none}
-.door-style-image{background:transparent;filter:drop-shadow(0 18px 22px rgba(5,4,11,.22))}
-.door-glass-overlay{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:contain;pointer-events:none}
-.door-glass-overlay.under-door-image{z-index:1}
+.door-style-image{background:transparent;filter:drop-shadow(0 18px 22px rgba(5,4,11,.22));mix-blend-mode:luminosity;opacity:1}
+.door-style-image-stain{opacity:1}
+.door-finish-layer{position:absolute;inset:0;z-index:2;background:var(--door);background-color:var(--door);mix-blend-mode:color;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;pointer-events:none}
+.door-finish-layer-stain{opacity:1;mix-blend-mode:color}
+.door-glass-overlay{position:absolute;inset:0;z-index:4;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.door-glass-overlay.under-door-image{z-index:4}
 .preview-scene.compact .door-style-image{filter:drop-shadow(0 8px 10px rgba(5,4,11,.2))}
 .door-style-thumbnail{display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:12px;overflow:hidden}
 .door-style-thumbnail img{display:block;max-width:85%;max-height:90%;width:auto;height:auto;object-fit:contain}
@@ -157,7 +160,7 @@
 @media(min-width:901px){.app:not(.home-app) aside .door-frame{transform:scale(1.15)}}
 @media(min-width:561px) and (max-width:900px){.mobile-live-preview .door-frame{transform:scale(.45)}}
 @media(max-width:560px){.mobile-live-preview .door-frame{transform:scale(.4)}}
-.hardware{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none}.hardware img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:3}
+.hardware{position:absolute;inset:0;width:100%;height:100%;z-index:5;pointer-events:none}.hardware img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:5}
 
 /* Hardware cards must display the complete source PNG, including transparent padding. */
 .option-visual:has(.hardware-card-image){display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0}
@@ -220,14 +223,17 @@
 }
 .door-line-card-image{
   display:block;
-  width:112px;
-  height:112px;
-  border-radius:10px;
+  width:100%;
+  height:100%;
+  max-width:none;
+  max-height:none;
+  border-radius:0;
   object-fit:cover;
-  box-shadow:0 3px 12px #0002;
+  object-position:center;
+  mix-blend-mode:multiply;
 }
 .option-card.selected .door-line-card-image{
-  box-shadow:0 0 0 4px #fff,0 0 0 3px var(--gold),0 3px 12px #0002;
+  mix-blend-mode:multiply;
 }
 .door-swing-grid{
   grid-template-columns:repeat(4,minmax(0,1fr));
@@ -343,24 +349,35 @@
   position:relative;
   z-index:1;
   width:min(100%,760px);
-  aspect-ratio:1080/700;
+  aspect-ratio:2500/1500;
   overflow:hidden;
   border-radius:12px;
-  background:#dfe7e7;
+  background:linear-gradient(135deg,#f7f1df 0%,#d8e4db 52%,#152018 100%);
   box-shadow:0 28px 55px #05040b30,0 0 0 1px #ffffff70;
+}
+.home-entryway-demo:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg,rgba(9,18,17,.46) 0%,rgba(9,18,17,.12) 22%,rgba(9,18,17,0) 44%,rgba(9,18,17,.2) 100%),
+    linear-gradient(180deg,rgba(255,246,218,.18) 0%,rgba(255,246,218,0) 45%,rgba(5,4,11,.26) 100%);
 }
 .home-entryway-image{
   display:block;
   width:100%;
-  height:100%;
-  object-fit:fill;
+  height:auto;
+  object-fit:contain;
+  object-position:center center;
 }
 .home-entryway-door-slot{
   position:absolute;
-  left:42.6%;
-  top:22.7%;
-  width:13.7%;
-  height:45.3%;
+  left:44.85%;
+  top:49.85%;
+  width:9.25%;
+  height:38.1%;
   z-index:2;
   pointer-events:none;
   overflow:visible;
@@ -464,38 +481,51 @@
 }
 .home-app .home-hero-visual{
   padding:0;
-  align-items:stretch;
-  justify-content:stretch;
-  background:#dfe8e8;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,#f7f1df 0%,#d8e4db 52%,#152018 100%);
 }
 .home-entryway-demo{
-  width:100%;
-  height:100%;
+  width:min(2500px,100%);
+  height:auto;
   max-width:none;
-  min-height:560px;
-  aspect-ratio:auto;
+  min-height:0;
+  aspect-ratio:2500/1500;
   border-radius:0;
-  background:#dfe8e8;
+  background:linear-gradient(135deg,#f7f1df 0%,#d8e4db 52%,#152018 100%);
   box-shadow:none;
 }
-.home-entryway-scene{
+.home-entryway-demo:after{
+  content:"";
   position:absolute;
   inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg,rgba(5,4,11,.34) 0%,rgba(5,4,11,.08) 23%,rgba(5,4,11,0) 46%,rgba(5,4,11,.2) 100%),
+    linear-gradient(180deg,rgba(255,242,202,.22) 0%,rgba(255,242,202,0) 38%,rgba(5,4,11,.32) 100%);
+}
+.home-entryway-image{
+  position:relative;
+  z-index:0;
   display:block;
   width:100%;
-  height:100%;
+  height:auto;
+  max-width:none;
+  object-fit:contain;
+  object-position:center center;
 }
 .home-entryway-door-slot{
   position:absolute;
-  left:42.7%;
-  top:29.2%;
-  width:16.7%;
-  height:45.4%;
+  left:44.85%;
+  top:49.85%;
+  width:9.25%;
+  height:38.1%;
   z-index:2;
   transform:none;
 }
 .home-entryway-door-slot .mapped-preview-door{
-  transform:scale(2.08)!important;
+  transform:none!important;
   transform-origin:center center!important;
 }
 .home-entryway-door-slot .door-style-image,
@@ -511,11 +541,12 @@
     grid-template-columns:1fr;
   }
   .home-entryway-demo{
-    min-height:460px;
+    min-height:0;
+    width:100%;
   }
 }
 @media(max-width:560px){
   .home-entryway-demo{
-    min-height:360px;
+    min-height:0;
   }
 }

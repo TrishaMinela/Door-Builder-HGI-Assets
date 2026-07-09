@@ -12,7 +12,7 @@ const finishColors: Record<string, string> = {
 }
 
 const schlageAssets: HardwareAsset[] = schlageHardware.flatMap((option) => (['Left', 'Right'] as const).flatMap((handing) => [
-  { manufacturer: option.manufacturer, style: option.style, finish: option.finish, handing, view: 'Exterior' as const, asset: option.cardImage },
+  ...(option.exteriorPreviewImage ? [{ manufacturer: option.manufacturer, style: option.style, finish: option.finish, handing, view: 'Exterior' as const, asset: option.exteriorPreviewImage }] : []),
   ...(option.interiorPreviewImage ? [{ manufacturer: option.manufacturer, style: option.style, finish: option.finish, handing, view: 'Interior' as const, asset: option.interiorPreviewImage }] : []),
 ]))
 

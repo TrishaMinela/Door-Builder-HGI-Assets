@@ -202,10 +202,10 @@ function candidateCodes(style: DoorStyle) {
 }
 
 function signaturePaintPreviewByGrain(grain?: string | null) {
-  if (grain === 'Cherry') return signatureCherryPaintDoorPreviewAssets
-  if (grain === 'Fir') return signatureFirPaintDoorPreviewAssets
-  if (grain === 'Mahogany') return signatureMahoganyPaintDoorPreviewAssets
-  if (grain === 'Oak') return signatureOakPaintDoorPreviewAssets
+  if (grain?.toLowerCase() === 'cherry') return signatureCherryPaintDoorPreviewAssets
+  if (grain?.toLowerCase() === 'fir') return signatureFirPaintDoorPreviewAssets
+  if (grain?.toLowerCase() === 'mahogany') return signatureMahoganyPaintDoorPreviewAssets
+  if (grain?.toLowerCase() === 'oak') return signatureOakPaintDoorPreviewAssets
   return null
 }
 
@@ -219,42 +219,41 @@ function usesSmoothPaintPreview(product?: ResolvedDoorProduct | null) {
   ) ?? false
 }
 
-function mappedPreview(style: DoorStyle, finishType?: Finish['finishType'], product?: ResolvedDoorProduct | null, grain?: string | null) {
-  if (finishType === 'paint') {
-    const signatureGrainAssets = signaturePaintPreviewByGrain(grain)
-    const signatureGrainPreview = signatureGrainAssets
-      ? candidateCodes(style)
-        .map((code) => signatureGrainAssets[code])
-        .find(Boolean)
-      : undefined
-    if (signatureGrainPreview) return signatureGrainPreview
-  }
-
-  if (finishType === 'paint' && usesTexturedPaintPreview(product)) {
-    const texturedPaintPreview = candidateCodes(style)
-      .map((code) => texturedPaintDoorPreviewAssets[code])
-      .find(Boolean)
-    if (texturedPaintPreview) return texturedPaintPreview
-  }
-
-  if (finishType === 'paint' && usesSmoothPaintPreview(product)) {
-    const smoothPaintPreview = candidateCodes(style)
-      .map((code) => smoothPaintDoorPreviewAssets[code])
-      .find(Boolean)
-    if (smoothPaintPreview) return smoothPaintPreview
-  }
-
-  const assets = finishType === 'stain' ? stainDoorPreviewAssets : doorPreviewAssets
-  return candidateCodes(style).map((code) => assets[code] ?? doorPreviewAssets[code]).find(Boolean)
+function usesSignaturePreview(product?: ResolvedDoorProduct | null) {
+  return product?.matchingVariants.some((variant) => variant.lineId.startsWith('signature-')) ?? false
 }
 
-export function hasDoorPreviewAsset(style: DoorStyle) {
-  return Boolean(mappedPreview(style))
+function previewFromMap(style: DoorStyle, assets: Record<string, string>) {
+  return candidateCodes(style)
+    .map((code) => assets[code])
+    .find(Boolean)
+}
+
+function mappedPreview(style: DoorStyle, _finishType?: Finish['finishType'], product?: ResolvedDoorProduct | null, grain?: string | null) {
+  if (usesSignaturePreview(product)) {
+    const signatureGrainAssets = signaturePaintPreviewByGrain(grain)
+    return signatureGrainAssets ? previewFromMap(style, signatureGrainAssets) : undefined
+  }
+
+  if (usesTexturedPaintPreview(product)) return previewFromMap(style, texturedPaintDoorPreviewAssets)
+
+  if (usesSmoothPaintPreview(product)) return previewFromMap(style, smoothPaintDoorPreviewAssets)
+
+  return undefined
+}
+
+export function hasDoorPreviewAsset(
+  style: DoorStyle,
+  grain?: string | null,
+  finishType?: Finish['finishType'],
+  product?: ResolvedDoorProduct | null,
+) {
+  return Boolean(mappedPreview(style, finishType, product, grain))
 }
 
 const previewGlassCodes = new Set([
   '3LT', '3STEP', '4LT', '5LT', 'CA', 'CR14', 'CR14PL', 'F', 'F2', 'F3', 'F4', 'F48', 'F482', 'F764', 'F848',
-  'FO', 'HRT', 'N',
+  'FO', 'FRT', 'HRT', 'N',
   'QA', 'S', 'S2', 'S3', 'S4', 'S836', 'SAT', 'SO', 'SO2', 'SW',
 ])
 
@@ -271,6 +270,7 @@ const previewGlassMasks = {
 } as const
 
 const previewTintMasks = {
+  CA: '/assets/doors/previews/masks/tint-ca.svg',
   CR14: '/assets/doors/previews/masks/tint-cr14.svg?v=2',
   F: '/assets/doors/previews/masks/tint-f.svg',
   F482: '/assets/doors/previews/masks/tint-f482.svg',
@@ -314,20 +314,37 @@ export function previewAssetGlassOverlay(style: DoorStyle, finishType?: Finish['
     .find(Boolean)
 }
 
-export function hasPaintPreviewAsset(style: DoorStyle) {
-  return hasDoorPreviewAsset(style)
+export function hasPaintPreviewAsset(style: DoorStyle, grain?: string | null, product?: ResolvedDoorProduct | null) {
+  return hasDoorPreviewAsset(style, grain, 'paint', product)
 }
 
-export function hasStainPreviewAsset(style: DoorStyle) {
-  return hasDoorPreviewAsset(style)
+export function hasStainPreviewAsset(style: DoorStyle, grain?: string | null, product?: ResolvedDoorProduct | null) {
+  return hasDoorPreviewAsset(style, grain, 'stain', product)
 }
 
-export function finishTypesForPreviewAssets(style: DoorStyle): Finish['finishType'][] {
-  return hasDoorPreviewAsset(style) ? ['paint', 'stain'] : []
+export function finishTypesForPreviewAssets(style: DoorStyle, grain?: string | null, product?: ResolvedDoorProduct | null): Finish['finishType'][] {
+  return hasDoorPreviewAsset(style, grain, undefined, product) ? ['paint', 'stain'] : []
 }
 
 export function resolveAutomaticPreviewGrain(_style: DoorStyle) {
   return undefined
+}
+
+const missingPreviewWarnings = new Set<string>()
+
+function warnMissingPreview(style: DoorStyle, grain?: string | null, finishType?: Finish['finishType'], product?: ResolvedDoorProduct | null) {
+  if (!import.meta.env.DEV) return
+  const productKey = product?.doorTypes.join('|') ?? 'none'
+  const key = `${style.code}:${grain ?? 'none'}:${finishType ?? 'any'}:${productKey}`
+  if (missingPreviewWarnings.has(key)) return
+  missingPreviewWarnings.add(key)
+  console.warn('[door-preview:missing-slab-asset]', {
+    style: style.name,
+    code: style.code,
+    grain,
+    finishType,
+    doorTypes: product?.doorTypes,
+  })
 }
 
 export function resolveDoorPreviewAsset(
@@ -336,5 +353,8 @@ export function resolveDoorPreviewAsset(
   finishType?: Finish['finishType'],
   product?: ResolvedDoorProduct | null,
 ) {
-  return mappedPreview(style, finishType, product, grain) ?? style.image
+  const preview = mappedPreview(style, finishType, product, grain)
+  if (preview) return preview
+  warnMissingPreview(style, grain, finishType, product)
+  return ''
 }
