@@ -207,14 +207,6 @@ export function previewAssetHasGlass(style: DoorStyle) {
   return candidateCodes(style).some((code) => previewGlassCodes.has(code))
 }
 
-const previewGlassMasks = {
-  CR14: 'craftsman-lite',
-  F: 'full-lite',
-  F482: 'three-quarter-lite',
-  S: 'half-lite',
-  SO2: 'small-oval',
-} as const
-
 const previewTintMasks: Record<string, string> = {}
 
 const previewGlassOverlays = {
@@ -225,12 +217,6 @@ const previewGlassOverlays = {
 export function previewAssetTintMask(style: DoorStyle) {
   return candidateCodes(style)
     .map((code) => previewTintMasks[code as keyof typeof previewTintMasks])
-    .find(Boolean)
-}
-
-export function previewAssetGlassMask(style: DoorStyle) {
-  return candidateCodes(style)
-    .map((code) => previewGlassMasks[code as keyof typeof previewGlassMasks])
     .find(Boolean)
 }
 

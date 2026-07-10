@@ -31,42 +31,56 @@ const FINISH_RENDERING = {
   stainGlossStrength: 0.72,
 } as const
 
-const SLAB_MASK_WHITE_THRESHOLD = 253
+const GLASS_MASK_CODES = new Set([
+  '3LT', '3STEP', '4LT', '5LT', 'CR14', 'CR14PL', 'F', 'F2', 'F3', 'F4', 'F48', 'F482',
+  'F764', 'F848', 'FO', 'FRT', 'HRT', 'N', 'QA', 'S', 'S2', 'S3', 'S4', 'SAT', 'SO', 'SO2', 'SW',
+])
 
-function buildSlabMask(slab: HTMLImageElement) {
+function buildFinishMask(mask: HTMLImageElement) {
   const canvas = document.createElement('canvas')
-  canvas.width = slab.naturalWidth
-  canvas.height = slab.naturalHeight
+  canvas.width = mask.naturalWidth
+  canvas.height = mask.naturalHeight
   const context = canvas.getContext('2d', { willReadFrequently: true })
   if (!context) return null
 
-  context.drawImage(slab, 0, 0)
+  context.drawImage(mask, 0, 0)
   const maskPixels = context.getImageData(0, 0, canvas.width, canvas.height)
   for (let index = 0; index < maskPixels.data.length; index += 4) {
-    const red = maskPixels.data[index]
-    const green = maskPixels.data[index + 1]
-    const blue = maskPixels.data[index + 2]
-    const alpha = maskPixels.data[index + 3]
-    const protectedPixel = alpha === 0 || (red > SLAB_MASK_WHITE_THRESHOLD && green > SLAB_MASK_WHITE_THRESHOLD && blue > SLAB_MASK_WHITE_THRESHOLD)
+    const luminance = Math.round((maskPixels.data[index] + maskPixels.data[index + 1] + maskPixels.data[index + 2]) / 3)
+    const sourceAlpha = maskPixels.data[index + 3] / 255
     maskPixels.data[index] = 255
     maskPixels.data[index + 1] = 255
     maskPixels.data[index + 2] = 255
-    maskPixels.data[index + 3] = protectedPixel ? 0 : alpha
+    maskPixels.data[index + 3] = Math.round(luminance * sourceAlpha)
   }
   context.putImageData(maskPixels, 0, 0)
+  return canvas.toDataURL('image/png')
+}
+
+function buildSolidSlabMask(slab: HTMLImageElement) {
+  const canvas = document.createElement('canvas')
+  canvas.width = slab.naturalWidth
+  canvas.height = slab.naturalHeight
+  const context = canvas.getContext('2d')
+  if (!context) return null
+  context.fillStyle = '#fff'
+  context.fillRect(0, 0, canvas.width, canvas.height)
   return canvas.toDataURL('image/png')
 }
 
 export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true }: Props) {
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
   const previewCandidatesKey = previewCandidates.join('|')
+  const styleCodes = [...new Set([...(product?.styleCodes ?? []), style.code, ...style.variants.map((variant) => variant.code)])]
+  const maskCode = styleCodes.find((code) => GLASS_MASK_CODES.has(code))
+  const maskAsset = maskCode ? `/assets/hgi-assets/masks/${maskCode}.png` : null
+  const maskKey = maskCode ?? (style.hasGlass ? 'missing-glass-mask' : 'solid-slab')
   const [previewImage, setPreviewImage] = useState(previewCandidates[0] ?? '')
   const hasMappedPreview = Boolean(previewCandidates.length)
   const finishColor = tintColor ?? finish.color
   const [processedMask, setProcessedMask] = useState<{ source: string; url: string } | null>(null)
   const finishMask = previewImage && processedMask?.source === previewImage ? processedMask.url : undefined
-  const glassStyleCodes = [...new Set([...(product?.styleCodes ?? []), style.code, ...style.variants.map((variant) => variant.code)])]
-  const glassOverlay = glass ? glassStyleCodes.map((code) => glass.overlaysByDoorStyle[code]).find(Boolean) : undefined
+  const glassOverlay = glass ? styleCodes.map((code) => glass.overlaysByDoorStyle[code]).find(Boolean) : undefined
 
   useEffect(() => {
     let cancelled = false
@@ -78,9 +92,27 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
       const slab = new Image()
       slab.onload = () => {
         if (cancelled) return
-        const maskUrl = buildSlabMask(slab)
-        setProcessedMask(maskUrl ? { source: candidate, url: maskUrl } : null)
-        setPreviewImage(candidate)
+        if (!maskAsset) {
+          const maskUrl = style.hasGlass ? null : buildSolidSlabMask(slab)
+          setProcessedMask(maskUrl ? { source: candidate, url: maskUrl } : null)
+          setPreviewImage(candidate)
+          return
+        }
+
+        const suppliedMask = new Image()
+        suppliedMask.onload = () => {
+          if (cancelled) return
+          const maskUrl = buildFinishMask(suppliedMask)
+          setProcessedMask(maskUrl ? { source: candidate, url: maskUrl } : null)
+          setPreviewImage(candidate)
+        }
+        suppliedMask.onerror = () => {
+          if (cancelled) return
+          console.warn('[door-preview:missing-finish-mask]', maskAsset)
+          setProcessedMask(null)
+          setPreviewImage(candidate)
+        }
+        suppliedMask.src = maskAsset
       }
       slab.onerror = tryNextCandidate
       slab.src = candidate
@@ -88,7 +120,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
 
     tryNextCandidate()
     return () => { cancelled = true }
-  }, [previewCandidatesKey])
+  }, [previewCandidatesKey, maskKey, maskAsset, style.hasGlass])
 
   const finishLayerStyle = useMemo(() => {
     if (!applyFinish || !hasMappedPreview || !finishMask || !finishColor) return undefined
@@ -153,7 +185,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           </div>
           {previewImage && <img className={`door-style-image door-style-image-${finish.finishType}`} src={previewImage} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {finishLayerStyle && <div className={`door-finish-layer door-finish-layer-${finish.finishType}`} style={finishLayerStyle} />}
-          {previewImage && finishLayerStyle && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+          {previewImage && applyFinish && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {stainHighlightStyle && <div className="door-stain-highlight" style={stainHighlightStyle} />}
           {glassOverlay && <img className="door-glass-overlay" src={glassOverlay} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {hardwareImage && <div className={`hardware hardware-${hardware.type}`} style={{ '--metal': hardware.color } as React.CSSProperties}>
