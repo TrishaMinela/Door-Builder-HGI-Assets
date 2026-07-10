@@ -476,23 +476,66 @@
 
 /* Permanent homepage architectural stage: scalable house scene with one exact door anchor. */
 .home-app .home-hero{
-  grid-template-columns:minmax(0,1fr) minmax(46vw,1fr);
-  background:#f7faff;
+  position:relative;
+  grid-template-columns:minmax(420px,46%) minmax(0,54%);
+  align-items:stretch;
+  overflow:hidden;
+  background:#f3f6f6;
+}
+.home-app .home-hero:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  background:linear-gradient(90deg,#f3f6f6 0%,#f3f6f6 42%,rgba(243,246,246,.18) 47%,rgba(243,246,246,.05) 50.5%,rgba(243,246,246,0) 53.5%);
+}
+.home-app .home-hero-copy{
+  position:relative;
+  z-index:3;
+  height:100%;
+  padding:clamp(56px,6vw,96px) clamp(32px,4vw,72px) clamp(56px,6vw,96px) clamp(48px,6vw,110px);
+  justify-content:center;
+  background:#f3f6f6;
+  box-sizing:border-box;
+}
+.home-app .home-hero h2{
+  margin:0 0 12px;
+  max-width:600px;
+  color:var(--peacock);
+  letter-spacing:.08em;
+}
+.home-app .home-hero h1{
+  margin:0 0 16px;
+  max-width:700px;
+  font-size:clamp(56px,5.5vw,88px);
+  line-height:1;
+  font-weight:900;
+  letter-spacing:-.035em;
+  overflow-wrap:normal;
+  text-wrap:balance;
+}
+.home-app .home-hero-copy>p{
+  margin:0 0 24px;
+  max-width:560px;
 }
 .home-app .home-hero-visual{
+  position:relative;
+  z-index:1;
   padding:0;
-  align-items:center;
-  justify-content:center;
-  background:linear-gradient(135deg,#f7f1df 0%,#d8e4db 52%,#152018 100%);
+  align-items:stretch;
+  justify-content:stretch;
+  overflow:hidden;
+  background:#f3f6f6;
 }
 .home-entryway-demo{
-  width:min(2500px,100%);
-  height:auto;
+  width:100%;
+  height:100%;
   max-width:none;
   min-height:0;
-  aspect-ratio:2500/1500;
+  aspect-ratio:auto;
   border-radius:0;
-  background:linear-gradient(135deg,#f7f1df 0%,#d8e4db 52%,#152018 100%);
+  background:#f3f6f6;
   box-shadow:none;
 }
 .home-entryway-demo:after{
@@ -501,32 +544,34 @@
   inset:0;
   z-index:1;
   pointer-events:none;
-  background:
-    linear-gradient(90deg,rgba(5,4,11,.34) 0%,rgba(5,4,11,.08) 23%,rgba(5,4,11,0) 46%,rgba(5,4,11,.2) 100%),
-    linear-gradient(180deg,rgba(255,242,202,.22) 0%,rgba(255,242,202,0) 38%,rgba(5,4,11,.32) 100%);
+  background:none;
 }
 .home-entryway-image{
   position:relative;
   z-index:0;
   display:block;
   width:100%;
-  height:auto;
+  height:100%;
   max-width:none;
-  object-fit:contain;
-  object-position:center center;
+  object-fit:cover;
+  object-position:65% center;
 }
 .home-entryway-door-slot{
   position:absolute;
-  left:44.85%;
-  top:49.85%;
-  width:9.25%;
-  height:38.1%;
+  left:33.25%;
+  top:48.65%;
+  width:14.05%;
+  height:36.85%;
   z-index:2;
   transform:none;
 }
 .home-entryway-door-slot .mapped-preview-door{
   transform:none!important;
   transform-origin:center center!important;
+}
+.home-entryway-door-slot .door-style-image{
+  object-fit:fill!important;
+  object-position:center center!important;
 }
 .home-entryway-door-slot .door-style-image,
 .home-entryway-door-slot .door-glass-overlay,
@@ -540,12 +585,34 @@
   .home-app .home-hero{
     grid-template-columns:1fr;
   }
+  .home-app .home-hero:after{
+    display:none;
+  }
+  .home-app .home-hero-copy{
+    height:auto;
+    padding:clamp(42px,8vw,70px) clamp(22px,7vw,52px);
+  }
+  .home-app .home-hero-visual{
+    height:min(62vh,560px);
+    min-height:420px;
+  }
   .home-entryway-demo{
-    min-height:0;
     width:100%;
+    height:100%;
+    min-height:0;
+  }
+  .home-entryway-demo:after{
+    background:linear-gradient(180deg,#f3f6f6 0%,rgba(243,246,246,.68) 18%,rgba(243,246,246,0) 42%);
   }
 }
 @media(max-width:560px){
+  .home-app .home-hero h1{
+    font-size:clamp(40px,12vw,56px);
+  }
+  .home-app .home-hero-visual{
+    height:48vh;
+    min-height:360px;
+  }
   .home-entryway-demo{
     min-height:0;
   }

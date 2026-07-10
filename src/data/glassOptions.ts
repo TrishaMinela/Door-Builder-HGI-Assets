@@ -662,96 +662,96 @@ export const glassOptions: GlassOption[] = [
   const swOverlay = swOverlays[option.id]
 
   if (cr14Overlay) {
-    overlaysByDoorStyle.CR14 = `/assets/glass/overlays/CR14/${cr14Overlay}?v=3`
+    overlaysByDoorStyle.CR14 = `/assets/hgi-assets/Glass/CR14/${cr14Overlay}`
   }
 
   if (cr14plOverlay) {
-    overlaysByDoorStyle.CR14PL = `/assets/glass/overlays/CR14PL/${cr14plOverlay}?v=1`
+    overlaysByDoorStyle.CR14PL = `/assets/hgi-assets/Glass/CR14PL/${cr14plOverlay}`
   }
 
   if (f848Overlay) {
-    overlaysByDoorStyle.F848 = `/assets/glass/overlays/F848/${f848Overlay}?v=1`
+    overlaysByDoorStyle.F848 = `/assets/hgi-assets/Glass/F848/${f848Overlay}`
   }
 
   if (foOverlay) {
-    overlaysByDoorStyle.FO = `/assets/glass/overlays/FO/${foOverlay}?v=1`
+    overlaysByDoorStyle.FO = `/assets/hgi-assets/Glass/FO/${foOverlay}`
   }
 
   if (qaOverlay) {
-    overlaysByDoorStyle.QA = `/assets/glass/overlays/QA/${qaOverlay}?v=1`
+    overlaysByDoorStyle.QA = `/assets/hgi-assets/Glass/QA/${qaOverlay}`
   }
 
   if (caOverlay) {
-    overlaysByDoorStyle.CA = `/assets/glass/overlays/CA/${caOverlay}?v=2`
+    overlaysByDoorStyle.CA = `/assets/hgi-assets/Glass/CA/${caOverlay}`
   }
 
   if (threeLtOverlay) {
-    overlaysByDoorStyle['3LT'] = `/assets/glass/overlays/3LT/${threeLtOverlay}?v=1`
+    overlaysByDoorStyle['3LT'] = `/assets/hgi-assets/Glass/3LT/${threeLtOverlay}`
   }
 
   if (threeStepOverlay) {
-    overlaysByDoorStyle['3STEP'] = `/assets/glass/overlays/3STEP/${threeStepOverlay}?v=1`
+    overlaysByDoorStyle['3STEP'] = `/assets/hgi-assets/Glass/3STEP/${threeStepOverlay}`
   }
 
   if (fourLtOverlay) {
-    overlaysByDoorStyle['4LT'] = `/assets/glass/overlays/4LT/${fourLtOverlay}?v=1`
+    overlaysByDoorStyle['4LT'] = `/assets/hgi-assets/Glass/4LT/${fourLtOverlay}`
   }
 
   if (fiveLtOverlay) {
-    overlaysByDoorStyle['5LT'] = `/assets/glass/overlays/5LT/${fiveLtOverlay}?v=1`
+    overlaysByDoorStyle['5LT'] = `/assets/hgi-assets/Glass/5LT/${fiveLtOverlay}`
   }
 
   if (f2Overlay) {
-    overlaysByDoorStyle.F2 = `/glass-options/${f2Overlay}?v=1`
+    overlaysByDoorStyle.F2 = `/assets/hgi-assets/Glass/F2/${f2Overlay}`
   }
 
   if (f3Overlay) {
-    overlaysByDoorStyle.F3 = `/glass-options/${f3Overlay}?v=1`
+    overlaysByDoorStyle.F3 = `/assets/hgi-assets/Glass/F3/${f3Overlay}`
   }
 
   if (f4Overlay) {
-    overlaysByDoorStyle.F4 = `/glass-options/${f4Overlay}?v=1`
+    overlaysByDoorStyle.F4 = `/assets/hgi-assets/Glass/F4/${f4Overlay}`
   }
 
   if (f764Overlay) {
-    overlaysByDoorStyle.F764 = `/assets/glass/overlays/F764/${f764Overlay}?v=1`
+    overlaysByDoorStyle.F764 = `/assets/hgi-assets/Glass/F764/${f764Overlay}`
   }
 
   if (hrtOverlay) {
-    overlaysByDoorStyle.HRT = `/assets/glass/overlays/HRT/${hrtOverlay}?v=1`
+    overlaysByDoorStyle.HRT = `/assets/hgi-assets/Glass/HRT/${hrtOverlay}`
   }
 
   if (satOverlay) {
-    overlaysByDoorStyle.SAT = `/assets/glass/overlays/SAT/${satOverlay}?v=1`
+    overlaysByDoorStyle.SAT = `/assets/hgi-assets/Glass/SAT/${satOverlay}`
   }
 
   if (soOverlay) {
-    overlaysByDoorStyle.SO = `/assets/glass/overlays/SO/${soOverlay}?v=1`
-    overlaysByDoorStyle.SO2 = `/assets/glass/overlays/SO/${soOverlay}?v=1`
+    overlaysByDoorStyle.SO = `/assets/hgi-assets/Glass/SO/${soOverlay}`
+    overlaysByDoorStyle.SO2 = `/assets/hgi-assets/Glass/SO/${soOverlay}`
   }
 
   if (sOverlay) {
-    overlaysByDoorStyle.S = `/assets/glass/overlays/S/${sOverlay}?v=1`
+    overlaysByDoorStyle.S = `/assets/hgi-assets/Glass/S/${sOverlay}`
   }
 
   if (fOverlay) {
-    overlaysByDoorStyle.F = `/assets/glass/overlays/F/${fOverlay}?v=1`
+    overlaysByDoorStyle.F = `/assets/hgi-assets/Glass/F/${fOverlay}`
   }
 
   if (f48Overlay) {
-    overlaysByDoorStyle.F48 = `/assets/glass/overlays/F48/${f48Overlay}?v=1`
+    overlaysByDoorStyle.F48 = `/assets/hgi-assets/Glass/F48/${f48Overlay}`
   }
 
   if (f482Overlay) {
-    overlaysByDoorStyle.F482 = `/assets/glass/overlays/F482/${f482Overlay}?v=1`
+    overlaysByDoorStyle.F482 = `/assets/hgi-assets/Glass/F482/${f482Overlay}`
   }
 
   if (s836Overlay) {
-    overlaysByDoorStyle.S836 = `/assets/glass/overlays/S836/${s836Overlay}?v=1`
+    overlaysByDoorStyle.S836 = `/assets/hgi-assets/Glass/S836/${s836Overlay}`
   }
 
   if (swOverlay) {
-    overlaysByDoorStyle.SW = `/assets/glass/overlays/SW/${swOverlay}?v=1`
+    overlaysByDoorStyle.SW = `/assets/hgi-assets/Glass/SW/${swOverlay}`
   }
 
   return {

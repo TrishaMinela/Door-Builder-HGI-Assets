@@ -130,7 +130,7 @@ const swingPreviewSuffix = (doorSwing?: DoorSwing | null) => {
 
 const sidePreviewSuffix = (doorSwing?: DoorSwing | null) => doorSwing?.id.startsWith('L') ? 'L' : 'R'
 
-const hardwarePreviewOverlayUrl = (folder: HardwarePreviewConfig['folder'], fileName: string) => `/assets/hardware/previews/${folder}/${fileName}?v=7`
+const hardwarePreviewOverlayUrl = (folder: HardwarePreviewConfig['folder'], fileName: string) => `/assets/hgi-assets/Preview%20Hardware/${fileName}`
 
 const logMissingHardwarePreview = (hardware: PreviewHardware, view: HardwareView, doorSwing?: DoorSwing | null) => {
   console.warn('[hardware-preview:missing]', {
