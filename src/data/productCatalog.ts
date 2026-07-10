@@ -8,32 +8,32 @@ const noGlassCodes = new Set([
 
 const parseStyles = (rows: string[]) => rows.map((row) => {
   const [code, name] = row.split('|')
-  return { code, name, hasGlass: !noGlassCodes.has(code) && !name.includes('No Glass') }
+  return { code, name: `${code} - ${name.toUpperCase()}`, hasGlass: !noGlassCodes.has(code) && !name.toLowerCase().includes('no glass') }
 })
 
 const signatureStyles = {
-  Cherry: parseStyles(['2PNGSS|2 Panel No Glass', '2PPLSS|2 Panel Plank No Glass', 'CA|Fiberglass Center Arch 8 Panel', 'CANGSS|Center Arch No Glass', 'F|Full Lite', 'F482|3/4 Lite 2 Panel', 'S|Half Lite', 'S1NGSS|S1 6-Panel No Glass', 'SO2|Small Oval 2 Panel']),
-  Fir: parseStyles(['CR14|Craftsman 1/4 Rectangle', 'CR14PL|Craftsman 1/4 Rectangle Plank', 'F|Full Lite']),
-  Mahogany: parseStyles(['3PNGSS|3 Panel No Glass', 'F|Full Lite', 'F48|3/4 Lite', 'S|Half Lite', 'S1NGSS|S1 6-Panel No Glass']),
-  Oak: parseStyles(['F|Full Lite', 'S|Half Lite', 'S1NGSS|S1 6-Panel No Glass']),
+  Cherry: parseStyles(['2PNGSS|2 Panel No Glass', '2PPLSS|2 Panel Plank No Glass', 'CA|Fiberglass Center Arch 8 Panel', 'CANGSS|Center Arch No Glass', 'F|Full Lite', 'F482|3/4 Lite 2 Panel', 'S|Half Lite', 'S1NGSS|S1 6-Pnl No Glass', 'SO2|Small Oval 2 Panel']),
+  Fir: parseStyles(['CR14|Craftsman 1/4 Rectangle', 'F|Full Lite']),
+  Mahogany: parseStyles(['3PNGSS|3 Panel No Glass', 'F|Full Lite', 'F48|3/4 Lite', 'S|Half Lite', 'S1NGSS|S1 6-Pnl No Glass']),
+  Oak: parseStyles(['F|Full Lite', 'S|Half Lite', 'S1NGSS|S1 6-Pnl No Glass']),
 }
 
 const signatureLineIds = Object.keys(signatureStyles).map((grain) => `signature-${grain.toLowerCase()}`)
 
 const steel20 = parseStyles([
-  '2PHD|2P HD Flat Top', '3LT|Stacked 3 Lite', '3PNG|3 Panel No Glass', '3STEP|Three Lite Stepping Down From Lock Side', '4LT|Stacked 4 Lite', '5LT|Five Lite Stack', 'CR14|Craftsman 1/4 Rectangle', 'E1|Eight Panel No Glass', 'F|Full Lite', 'F1|Flush No Glass', 'F2|Diamond', 'F3|Square', 'F4|Three Lites Stepping Down From Lock Side', 'F48|3/4 Lite', 'F482|3/4 Lite 2 Panel', 'F764|Full Twin Lite', 'F848|Two 8" x 48" Lites, 3/4 Lite', 'FO|Full Oval', 'FRT|Full Round Top Glass Cut Out', 'HDAT1|HD Arch Top', 'HRT|Half Round Top Glass Cut Out', 'N|N Panel', 'N1|Nine Panel No Glass', 'QA|648 Quarter Height Eye Brow', 'S|Half Lite', 'S2|Two Lights Top of 6 Panel Door', 'S3|Four Lite Rectangle', 'S4|Four Lites Together Each With An Arch At Top', 'S836|Two 8" x 36" Lites', 'SAT|Half Arch Top', 'SHAK1|1-Panel Shaker', 'SHAK2|2-Panel Shaker', 'SHAK3|3-Panel Shaker', 'SO|Small Oval 3 Panel', 'SW|Wagon Wheel',
+  '2PHD|2P HD Flat Top', '3LT|Stacked 3 Lite', '3PNG|3 Panel No Glass', '3STEP|Three Lite Stepping Down From Lock Side', '4LT|Stacked 4 Lite', '5LT|Five Lite Stack', 'CR14|Craftsman 1/4 Rectangle', 'CR14PL|Craftsman 1/4 Cottage', 'E1|Eight Panel No Glass', 'F|Full Lite', 'F1|Flush No Glass', 'F2|Diamond', 'F3|Square', 'F4|Three Lites Stepping Up From Lock Side', 'F48|3/4 Lite', 'F482|3/4 Lite 2 Panel', 'F764|Full Twin Lite', 'F848|Two 8" x 48" Lites (3/4 Lite)', 'FO|Full Oval', 'FRT|Full Round Top Glass Cut Out', 'HDAT1|HD Arch Top', 'HRT|Half Round Top Glass Cut Out', 'N|N Panel', 'N1|Nine Panel No Glass', 'QA|648 Quarter Height Eye Brow', 'S|Half Lite', 'S1|Six Panel No Glass', 'S2|Two Lights Top of 6 Panel Door', 'S3|Four Lite Rectangle', 'S4|Four Lites Together Each With An Arch At Top', 'S836|Two 8" x 36" Lites', 'SAT|Half Arch Top', 'SHAK1|1-Panel Shaker', 'SHAK2|2-Panel Shaker', 'SHAK3|3-Panel Shaker', 'SO|Small Oval 3 Panel', 'SW|Wagon Wheel',
 ])
 
 const steel22 = parseStyles([
-  '2PHD|2P HD Flat Top', '3LT|Stacked 3 Lite', '3PNG|3 Panel No Glass', '3STEP|Three Lite Stepping Down From Lock Side', '4LT|Stacked 4 Lite', '5LT|Five Lite Stack', 'CR14|Craftsman 1/4 Rectangle', 'E1|Eight Panel No Glass', 'F|Full Lite', 'F1|Flush No Glass', 'F2|Diamond', 'F3|Square', 'F4|Three Lites Stepping Down From Lock Side', 'F48|3/4 Lite', 'F764|Full Twin Lite', 'F848|Two 8" x 48" Lites, 3/4 Lite', 'FO|Full Oval', 'FRT|Full Round Top Glass Cut Out', 'HDAT1|HD Arch Top', 'HRT|Half Round Top Glass Cut Out', 'QA|648 Quarter Height Eye Brow', 'S|Half Lite', 'S2|Two Lights Top of 6 Panel Door', 'S3|Four Lite Rectangle', 'S4|Four Lites Together Each With An Arch At Top', 'S836|Two 8" x 36" Lites', 'SAT|Half Arch Top', 'SHAK1|1-Panel Shaker', 'SHAK2|2-Panel Shaker', 'SHAK3|3-Panel Shaker', 'SO|Small Oval 3 Panel', 'SW|Wagon Wheel',
+  '2PHD|2P HD Flat Top', '3LT|Stacked 3 Lite', '3PNG|3 Panel No Glass', '3STEP|Three Lite Stepping Down From Lock Side', '4LT|Stacked 4 Lite', '5LT|Five Lite Stack', 'CR14|Craftsman 1/4 Rectangle', 'E1|Eight Panel No Glass', 'F|Full Lite', 'F1|Flush No Glass', 'F2|Diamond', 'F3|Square', 'F4|Three Lites Stepping Up From Lock Side', 'F48|3/4 Lite', 'F764|Full Twin Lite', 'F848|Two 8" x 48" Lites (3/4 Lite)', 'FO|Full Oval', 'FRT|Full Round Top Glass Cut Out', 'HDAT1|HD Arch Top', 'HRT|Half Round Top Glass Cut Out', 'QA|648 Quarter Height Eye Brow', 'S|Half Lite', 'S1|Six Panel No Glass', 'S2|Two Lights Top of 6 Panel Door', 'S3|Four Lite Rectangle', 'S4|Four Lites Together Each With An Arch At Top', 'S836|Two 8" x 36" Lites', 'SAT|Half Arch Top', 'SHAK1|1-Panel Shaker', 'SHAK2|2-Panel Shaker', 'SHAK3|3-Panel Shaker', 'SO|Small Oval 3 Panel', 'SW|Wagon Wheel',
 ])
 
 const brushed = parseStyles([
-  '2PHD|2P HD Flat Top', '3LT|Stacked 3 Lite', '4LT|Stacked 4 Lite', '5LT|Five Lite Stack', 'F|Full Lite', 'F1|Flush No Glass', 'F2|Diamond', 'F3|Square', 'F4|Three Lites Stepping Down From Lock Side', 'F482|3/4 Lite 2 Panel', 'F764|Full Twin Lite', 'FO|Full Oval', 'FRT|Full Round Top Glass Cut Out', 'HRT|Half Round Top Glass Cut Out', 'QA|648 Quarter Height Eye Brow', 'S|Half Lite', 'S2|Two Lights Top of 6 Panel Door', 'S3|Four Lite Rectangle', 'S4|Four Lites Together Each With An Arch At Top', 'S836|Two 8" x 36" Lites', 'SAT|Half Arch Top', 'SHAK3|3-Panel Shaker', 'SW|Wagon Wheel',
+  '2PHD|2P HD Flat Top', '3LT|Stacked 3 Lite', '4LT|Stacked 4 Lite', '5LT|Five Lite Stack', 'F|Full Lite', 'F1|Flush No Glass', 'F2|Diamond', 'F3|Square', 'F4|Three Lites Stepping Up From Lock Side', 'F482|3/4 Lite 2 Panel', 'F764|Full Twin Lite', 'FO|Full Oval', 'FRT|Full Round Top Glass Cut Out', 'HRT|Half Round Top Glass Cut Out', 'QA|648 Quarter Height Eye Brow', 'S|Half Lite', 'S1|Six Panel No Glass', 'S2|Two Lights Top of 6 Panel Door', 'S3|Four Lite Rectangle', 'S4|Four Lites Together Each With An Arch At Top', 'S836|Two 8" x 36" Lites', 'SAT|Half Arch Top', 'SHAK3|3-Panel Shaker', 'SW|Wagon Wheel',
 ])
 
 const textured = parseStyles([
-  'F|Full Lite', 'F48|3/4 Lite', 'F848|Two 8" x 48" Lites, 3/4 Lite', 'HRT|Half Round Top Glass Cut Out', 'N|N Panel', 'N1|Nine Panel No Glass', 'QA|648 Quarter Height Eye Brow', 'S|Half Lite', 'S2|Two Lights Top of 6 Panel Door', 'S3|Four Lite Rectangle', 'S4|Four Lites Together Each With An Arch At Top', 'SAT|Half Arch Top', 'SW|Wagon Wheel',
+  'F|Full Lite', 'F48|3/4 Lite', 'F848|Two 8" x 48" Lites (3/4 Lite)', 'HRT|Half Round Top Glass Cut Out', 'N|N Panel', 'N1|Nine Panel No Glass', 'QA|648 Quarter Height Eye Brow', 'S|Half Lite', 'S1|Six Panel No Glass', 'S2|Two Lights Top of 6 Panel Door', 'S3|Four Lite Rectangle', 'S4|Four Lites Together Each With An Arch At Top', 'SAT|Half Arch Top', 'SW|Wagon Wheel',
 ])
 
 export const productCatalog: DoorLine[] = [

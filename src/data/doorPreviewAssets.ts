@@ -12,11 +12,19 @@ const smoothPaintDoorPreviewAssets: Record<string, string> = {
   '3STEP': slabUrl('Smooth', 'Three Lite Stepping Down From Lock Side - Smooth.png'),
   '4LT': slabUrl('Smooth', 'Stacked 4 Lite - Smooth.png'),
   '5LT': slabUrl('Smooth', 'Five Lite Stack - Smooth.png'),
-  CR14: slabUrl('Smooth', 'Craftsman 1_4 Rectangle - Smooth.png'),
+  CR14: slabUrl('Smooth', 'Craftsman 14 Rectangle - Smooth.png'),
+  CR14PL: slabUrl('Smooth', 'CR14PL - Smooth.png'),
   E1: slabUrl('Smooth', 'Eight Panel No Glass - Smooth.png'),
   F: slabUrl('Smooth', 'Full Lite - Smooth.png'),
   F1: slabUrl('Smooth', 'Flush No Glass - Smooth.png'),
-  F48: slabUrl('Smooth', '3_4 Lite - Smooth.png'),
+  F2: slabUrl('Smooth', 'Diamond - Smooth.png'),
+  F3: slabUrl('Smooth', 'Square - Smooth.png'),
+  F4: slabUrl('Smooth', 'Three Lites Stepping Up From Lock Side - Smooth.png'),
+  F48: slabUrl('Smooth', '34 Lite - Smooth.png'),
+  F482: slabUrl('Smooth', '34 Lite 2 Panel - Smooth.png'),
+  F764: slabUrl('Smooth', 'Full Twin Lite - Smooth.png'),
+  F848: slabUrl('Smooth', 'Two 8 x 48 Lites, 34 Lite - Smooth.png'),
+  FRT: slabUrl('Smooth', 'Full Round Top - Smooth.png'),
   FO: slabUrl('Smooth', 'Full Oval - Smooth.png'),
   HDAT1: slabUrl('Smooth', 'HD Arch Top - Smooth.png'),
   HRT: slabUrl('Smooth', 'Half Round Top Glass - Smooth.png'),
@@ -24,10 +32,13 @@ const smoothPaintDoorPreviewAssets: Record<string, string> = {
   N1: slabUrl('Smooth', 'Nine Panel No Glass - Smooth.png'),
   QA: slabUrl('Smooth', '648 Quarter Height Eye Brow - Smooth.png'),
   S: slabUrl('Smooth', 'Half Lite - Smooth.png'),
+  S1: slabUrl('Smooth', 'S1 6-Panel No Glass - Smooth.png'),
+  SAT: slabUrl('Smooth', 'Half Round Top - Smooth.png'),
   S1NGSS: slabUrl('Smooth', 'S1 6-Panel No Glass - Smooth.png'),
-  S2: slabUrl('Smooth', 'Two 8_ x 36_ Lites - Smooth.png'),
-  S3: slabUrl('Smooth', 'Two 8_ x 48_ Lites, 3_4 Lite - Smooth.png'),
-  S4: slabUrl('Smooth', 'Full Twin Lite - Smooth.png'),
+  S2: slabUrl('Smooth', 'Two Lights Top of 6 Panel Door - Smooth.png'),
+  S3: slabUrl('Smooth', 'Four Lite Rectangle - Smooth.png'),
+  S4: slabUrl('Smooth', 'Four Lites Together Each With An Arch At Top - Smooth.png'),
+  S836: slabUrl('Smooth', 'Two 8 x 36 Lites - Smooth.png'),
   SHAK1: slabUrl('Smooth', '1 Panel Shaker - Smooth.png'),
   SHAK2: slabUrl('Smooth', '2 Panel Shaker - Smooth.png'),
   SHAK3: slabUrl('Smooth', '3 Panel Shaker - Smooth.png'),
@@ -50,6 +61,7 @@ const texturedPaintDoorPreviewAssets: Record<string, string> = {
   F: slabUrl('Textured', 'Full Lite - Textured.png'),
   F1: slabUrl('Textured', 'Flush No Glass - Textured.png'),
   F48: slabUrl('Textured', '3_4 Lite - Textured.png'),
+  F764: slabUrl('Textured', 'Full Twin Lite - Textured.png'),
   HDAT1: slabUrl('Textured', 'HD Arch Top - Textured.png'),
   HRT: slabUrl('Textured', 'Half Round Top Glass - Textured.png'),
   N: slabUrl('Textured', 'N Panel - Textured.png'),
@@ -73,13 +85,15 @@ const signatureCherryPaintDoorPreviewAssets: Record<string, string> = {
   CA: slabUrl('Cherry', 'Fiberglass Center Arch 8 Panel - Cherry.png'),
   F: slabUrl('Cherry', 'Full Lite - Cherry.png'),
   F48: slabUrl('Cherry', '3_4 Lite - Cherry.png'),
-  S: slabUrl('Cherry', 'Half Lite - Smooth.png'),
-  S1NGSS: slabUrl('Cherry', 'S1 6-Panel No Glass - Smooth.png'),
+  F482: slabUrl('Cherry', '34 Lite 2 Panel - Cherry.png'),
+  S: slabUrl('Cherry', 'Half Lite - Cherry.png'),
+  S1NGSS: slabUrl('Cherry', 'S1 6-Panel No Glass - Cherry.png'),
   '3PNGSS': slabUrl('Cherry', '3 Panel No Glass - Cherry.png'),
 }
 
 const signatureFirPaintDoorPreviewAssets: Record<string, string> = {
   CR14: slabUrl('Fir', 'CR14 - Fir.png'),
+  CR14PL: slabUrl('Smooth', 'CR14PL - Smooth.png'),
   F: slabUrl('Fir', 'Full Lite - Fir.png'),
 }
 
@@ -147,28 +161,34 @@ function doorStyleThumbnailPreview(style: DoorStyle) {
     .find(Boolean)
 }
 
-function mappedPreview(style: DoorStyle, _finishType?: Finish['finishType'], product?: ResolvedDoorProduct | null, grain?: string | null) {
+export function resolveDoorPreviewCandidates(style: DoorStyle, _finishType?: Finish['finishType'], product?: ResolvedDoorProduct | null, grain?: string | null) {
+  const candidates: (string | undefined)[] = []
   const signatureGrainAssets = usesSignaturePreview(product) ? signaturePaintPreviewByGrain(grain) : null
-  const grainPreview = signatureGrainAssets ? previewFromMap(style, signatureGrainAssets) : undefined
-  if (grainPreview) return grainPreview
+  if (signatureGrainAssets) candidates.push(previewFromMap(style, signatureGrainAssets))
 
   if (usesSignaturePreview(product)) {
-    const linePreview = firstMappedPreview(style, signaturePreviewMaps)
-    if (linePreview) return linePreview
+    candidates.push(...signaturePreviewMaps.map((assets) => previewFromMap(style, assets)))
   }
 
   if (usesTexturedPaintPreview(product)) {
-    const linePreview = previewFromMap(style, texturedPaintDoorPreviewAssets)
-    if (linePreview) return linePreview
+    candidates.push(previewFromMap(style, texturedPaintDoorPreviewAssets))
   }
   if (usesSmoothPaintPreview(product)) {
-    const linePreview = previewFromMap(style, smoothPaintDoorPreviewAssets)
-    if (linePreview) return linePreview
+    candidates.push(previewFromMap(style, smoothPaintDoorPreviewAssets))
   }
 
-  return previewFromMap(style, doorPreviewAssets)
-    ?? firstMappedPreview(style, [texturedPaintDoorPreviewAssets, ...signaturePreviewMaps])
-    ?? doorStyleThumbnailPreview(style)
+  candidates.push(
+    previewFromMap(style, doorPreviewAssets),
+    previewFromMap(style, texturedPaintDoorPreviewAssets),
+    ...signaturePreviewMaps.map((assets) => previewFromMap(style, assets)),
+    doorStyleThumbnailPreview(style),
+  )
+
+  return [...new Set(candidates.filter((candidate): candidate is string => Boolean(candidate)))]
+}
+
+function mappedPreview(style: DoorStyle, finishType?: Finish['finishType'], product?: ResolvedDoorProduct | null, grain?: string | null) {
+  return resolveDoorPreviewCandidates(style, finishType, product, grain)[0]
 }
 
 export function hasDoorPreviewAsset(

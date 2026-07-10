@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { DoorStyle, DoorSwing, Finish, GlassOption, HardwareView, PreviewHardware, ResolvedDoorProduct } from '../types'
 import { hardwarePreviewAssetUrl } from '../data/hardware'
-import { hasDoorPreviewAsset, previewAssetGlassOverlay, previewAssetTintMask, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
+import { hasDoorPreviewAsset, previewAssetGlassOverlay, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
 
 type Props = {
   style: DoorStyle
@@ -31,14 +31,54 @@ const FINISH_RENDERING = {
   stainGlossStrength: 0.72,
 } as const
 
+const SLAB_MASK_WHITE_THRESHOLD = 240
+
 export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true }: Props) {
   const previewImage = resolveDoorPreviewAsset(style, grain, finish.finishType, product)
   const hasMappedPreview = hasDoorPreviewAsset(style, grain, finish.finishType, product)
   const finishColor = tintColor ?? finish.color
-  const finishMask = previewAssetTintMask(style) ?? previewImage
+  const [processedMask, setProcessedMask] = useState<{ source: string; url: string } | null>(null)
+  const finishMask = previewImage && processedMask?.source === previewImage ? processedMask.url : undefined
   const glassOverlay = glass?.overlaysByDoorStyle[style.code]
-  const showFixedGlassBeforeFinish = ['5LT', 'F764', 'FRT', 'HRT', 'SAT'].some((code) => style.code === code || style.variants.some((variant) => variant.code === code))
-  const fixedGlassOverlay = !glassOverlay && (tintColor || showFixedGlassBeforeFinish) ? previewAssetGlassOverlay(style, finish.finishType) : undefined
+  const fixedGlassOverlay = glass && !glassOverlay ? previewAssetGlassOverlay(style, finish.finishType) : undefined
+
+  useEffect(() => {
+    if (!previewImage) {
+      setProcessedMask(null)
+      return
+    }
+
+    let cancelled = false
+    const slab = new Image()
+    slab.onload = () => {
+      if (cancelled) return
+      const canvas = document.createElement('canvas')
+      canvas.width = slab.naturalWidth
+      canvas.height = slab.naturalHeight
+      const context = canvas.getContext('2d', { willReadFrequently: true })
+      if (!context) return
+
+      context.drawImage(slab, 0, 0)
+      const maskPixels = context.getImageData(0, 0, canvas.width, canvas.height)
+      for (let index = 0; index < maskPixels.data.length; index += 4) {
+        const red = maskPixels.data[index]
+        const green = maskPixels.data[index + 1]
+        const blue = maskPixels.data[index + 2]
+        const alpha = maskPixels.data[index + 3]
+        const protectedPixel = alpha === 0 || (red > SLAB_MASK_WHITE_THRESHOLD && green > SLAB_MASK_WHITE_THRESHOLD && blue > SLAB_MASK_WHITE_THRESHOLD)
+        maskPixels.data[index] = 255
+        maskPixels.data[index + 1] = 255
+        maskPixels.data[index + 2] = 255
+        maskPixels.data[index + 3] = protectedPixel ? 0 : alpha
+      }
+      context.putImageData(maskPixels, 0, 0)
+      if (!cancelled) setProcessedMask({ source: previewImage, url: canvas.toDataURL('image/png') })
+    }
+    slab.onerror = () => { if (!cancelled) setProcessedMask(null) }
+    slab.src = previewImage
+    return () => { cancelled = true }
+  }, [previewImage])
+
   const finishLayerStyle = useMemo(() => {
     if (!applyFinish || !hasMappedPreview || !finishMask || !finishColor) return undefined
     return {
