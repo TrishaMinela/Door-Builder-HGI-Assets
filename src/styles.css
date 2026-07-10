@@ -135,6 +135,7 @@
 @media(max-width:560px){.glass-choice-card{display:grid;grid-template-columns:140px minmax(0,1fr);min-height:190px}.glass-card-main{display:contents}.glass-card-main .option-visual{grid-row:1/3;height:100%;min-height:190px;padding:8px}.glass-choice-card .option-copy{align-self:center;min-height:auto;padding:14px}.glass-caming-options{align-content:center;border-top:1px solid #e3e7ea;padding:10px}.glass-caming-options button{min-width:52px}.glass-caming-options span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 .section-heading .grain-availability{margin-top:12px;color:#596166;font-size:11px}.grain-availability strong{color:#0d666c}
 .step-0 .option-card{height:260px;min-height:260px}.step-0 .option-visual{position:relative}.step-0 .option-copy{height:115px;padding:12px 18px 14px;overflow:hidden}.step-0 .option-visual>.option-badge{position:absolute;z-index:3;left:50%;top:10px;width:123px;max-width:calc(100% - 24px);margin:0;opacity:.76;pointer-events:none;transform:translateX(-50%)}.step-0 .door-style-thumbnail{padding:42px 12px 10px}.step-0 .option-badge img{display:block;width:100%;height:auto;object-fit:contain}
+.option-card{box-sizing:border-box;align-self:start}.option-card.selected{border:1px solid transparent;box-shadow:inset 0 0 0 3px var(--gold),inset 5px 0 0 var(--peacock),0 10px 28px #0d666c20}.option-card .check{display:grid;visibility:hidden}.option-card.selected .check{visibility:visible}.step-1{align-items:start}.step-1 .option-card{height:260px;min-height:260px;max-height:260px}
 @media(max-width:900px){.step-0 .option-card{height:275px;min-height:275px}.step-0 .option-visual>.option-badge{left:50%;top:9px;width:114px;max-width:calc(100% - 22px)}.step-0 .door-style-thumbnail{padding-top:39px}}
 @media(max-width:560px){.step-0 .option-card{height:180px;min-height:180px}.step-0 .option-visual{height:100%;min-height:100%}.step-0 .option-copy{height:180px;padding:12px 14px}.step-0 .option-visual>.option-badge{left:50%;top:8px;width:102px;max-width:calc(100% - 20px)}.step-0 .door-style-thumbnail{padding:36px 10px 8px}}
 
@@ -153,6 +154,7 @@
 .door-style-image-stain{opacity:1}
 .door-finish-layer{position:absolute;inset:0;z-index:2;background:var(--door);background-color:var(--door);-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;pointer-events:none}
 .door-detail-image{position:absolute;inset:0;z-index:3;width:100%;height:100%;object-fit:contain;filter:grayscale(1) contrast(1.12);pointer-events:none}
+.door-stain-highlight{position:absolute;inset:0;z-index:3;background:linear-gradient(112deg,transparent 12%,rgba(255,255,255,var(--stain-gloss-strength)) 38%,transparent 62%);mix-blend-mode:soft-light;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;pointer-events:none}
 .door-glass-overlay{position:absolute;inset:0;z-index:4;width:100%;height:100%;object-fit:contain;pointer-events:none}
 .door-glass-overlay.under-door-image{z-index:4}
 .preview-scene.compact .door-style-image{filter:grayscale(1) contrast(1.08) drop-shadow(0 8px 10px rgba(5,4,11,.2))}
@@ -228,18 +230,16 @@
 }
 .door-line-card-image{
   display:block;
-  width:104px;
-  height:104px;
-  max-width:104px;
-  max-height:104px;
-  border-radius:8px;
-  object-fit:cover;
-  object-position:center;
-  mix-blend-mode:multiply;
+  width:100%;
+  height:100%;
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
 }
 .option-card.selected .door-line-card-image{
-  mix-blend-mode:multiply;
+  background-size:cover;
 }
+.finish-type-card{display:block;width:104px;height:104px;border-radius:8px;box-shadow:0 3px 12px #0002}.finish-type-card-paint{background:linear-gradient(135deg,#f7f7f4,#dce7e8)}.finish-type-card-stain{background:linear-gradient(135deg,#d0a16d,#69452f)}
 .door-swing-grid{
   grid-template-columns:repeat(4,minmax(0,1fr));
   max-width:980px;
