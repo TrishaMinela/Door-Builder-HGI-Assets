@@ -239,7 +239,6 @@
 .option-card.selected .door-line-card-image{
   background-size:cover;
 }
-.finish-type-card{display:block;width:104px;height:104px;border-radius:8px;box-shadow:0 3px 12px #0002}.finish-type-card-paint{background:linear-gradient(135deg,#f7f7f4,#dce7e8)}.finish-type-card-stain{background:linear-gradient(135deg,#d0a16d,#69452f)}
 .door-swing-grid{
   grid-template-columns:repeat(4,minmax(0,1fr));
   max-width:980px;
