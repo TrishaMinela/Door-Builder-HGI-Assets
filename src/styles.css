@@ -434,7 +434,8 @@
   overflow:visible;
 }
 .home-entryway-door-slot .mapped-preview-door{
-  transform:none!important;
+  transform:translateY(8%) scale(1.28)!important;
+  transform-origin:center bottom!important;
 }
 .home-entryway-door-slot .glass,
 .home-entryway-door-slot .panels{
@@ -564,8 +565,8 @@
   overflow:hidden;
 }
 .home-entryway-door-slot .mapped-preview-door{
-  transform:none!important;
-  transform-origin:center center!important;
+  transform:translateY(8%) scale(1.28)!important;
+  transform-origin:center bottom!important;
 }
 .home-entryway-door-slot .door-style-image,
 .home-entryway-door-slot .door-detail-image,

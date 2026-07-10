@@ -33,6 +33,30 @@ const FINISH_RENDERING = {
 
 const SLAB_MASK_WHITE_THRESHOLD = 248
 
+function buildSlabMask(slab: HTMLImageElement) {
+  const canvas = document.createElement('canvas')
+  canvas.width = slab.naturalWidth
+  canvas.height = slab.naturalHeight
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+  if (!context) return null
+
+  context.drawImage(slab, 0, 0)
+  const maskPixels = context.getImageData(0, 0, canvas.width, canvas.height)
+  for (let index = 0; index < maskPixels.data.length; index += 4) {
+    const red = maskPixels.data[index]
+    const green = maskPixels.data[index + 1]
+    const blue = maskPixels.data[index + 2]
+    const alpha = maskPixels.data[index + 3]
+    const protectedPixel = alpha === 0 || (red > SLAB_MASK_WHITE_THRESHOLD && green > SLAB_MASK_WHITE_THRESHOLD && blue > SLAB_MASK_WHITE_THRESHOLD)
+    maskPixels.data[index] = 255
+    maskPixels.data[index + 1] = 255
+    maskPixels.data[index + 2] = 255
+    maskPixels.data[index + 3] = protectedPixel ? 0 : alpha
+  }
+  context.putImageData(maskPixels, 0, 0)
+  return canvas.toDataURL('image/png')
+}
+
 export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true }: Props) {
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
   const previewCandidatesKey = previewCandidates.join('|')
@@ -52,7 +76,12 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
       const candidate = previewCandidates[candidateIndex++]
       if (!candidate || cancelled) return
       const slab = new Image()
-      slab.onload = () => { if (!cancelled) setPreviewImage(candidate) }
+      slab.onload = () => {
+        if (cancelled) return
+        const maskUrl = buildSlabMask(slab)
+        setProcessedMask(maskUrl ? { source: candidate, url: maskUrl } : null)
+        setPreviewImage(candidate)
+      }
       slab.onerror = tryNextCandidate
       slab.src = candidate
     }
@@ -60,43 +89,6 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     tryNextCandidate()
     return () => { cancelled = true }
   }, [previewCandidatesKey])
-
-  useEffect(() => {
-    if (!previewImage) {
-      setProcessedMask(null)
-      return
-    }
-
-    let cancelled = false
-    const slab = new Image()
-    slab.onload = () => {
-      if (cancelled) return
-      const canvas = document.createElement('canvas')
-      canvas.width = slab.naturalWidth
-      canvas.height = slab.naturalHeight
-      const context = canvas.getContext('2d', { willReadFrequently: true })
-      if (!context) return
-
-      context.drawImage(slab, 0, 0)
-      const maskPixels = context.getImageData(0, 0, canvas.width, canvas.height)
-      for (let index = 0; index < maskPixels.data.length; index += 4) {
-        const red = maskPixels.data[index]
-        const green = maskPixels.data[index + 1]
-        const blue = maskPixels.data[index + 2]
-        const alpha = maskPixels.data[index + 3]
-        const protectedPixel = alpha === 0 || (red > SLAB_MASK_WHITE_THRESHOLD && green > SLAB_MASK_WHITE_THRESHOLD && blue > SLAB_MASK_WHITE_THRESHOLD)
-        maskPixels.data[index] = 255
-        maskPixels.data[index + 1] = 255
-        maskPixels.data[index + 2] = 255
-        maskPixels.data[index + 3] = protectedPixel ? 0 : alpha
-      }
-      context.putImageData(maskPixels, 0, 0)
-      if (!cancelled) setProcessedMask({ source: previewImage, url: canvas.toDataURL('image/png') })
-    }
-    slab.onerror = () => { if (!cancelled) setProcessedMask(null) }
-    slab.src = previewImage
-    return () => { cancelled = true }
-  }, [previewImage])
 
   const finishLayerStyle = useMemo(() => {
     if (!applyFinish || !hasMappedPreview || !finishMask || !finishColor) return undefined
