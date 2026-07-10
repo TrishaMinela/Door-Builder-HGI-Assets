@@ -6,8 +6,8 @@ export type FinishColor = {
 
 export const paintColors: FinishColor[] = [
   { id: 'terratone', name: 'Terratone', hex: '#3E3013' },
-  { id: 'black', name: 'Black', hex: '#151515' },
-  { id: 'brown', name: 'Brown', hex: '#230C00' },
+  { id: 'black', name: 'Black', hex: '#242424' },
+  { id: 'brown', name: 'Brown', hex: '#3A1B0C' },
   { id: 'coastal-plain', name: 'Coastal Plain', hex: '#9FA694' },
   { id: 'cozy-cottage', name: 'Cozy Cottage', hex: '#FBEDD3' },
   { id: 'clay', name: 'Clay', hex: '#8E8063' },
@@ -36,7 +36,7 @@ export const paintColors: FinishColor[] = [
 export const stainColors: FinishColor[] = [
   { id: 'auburn', name: 'Auburn', hex: '#492519' },
   { id: 'autumn-moss', name: 'Autumn Moss', hex: '#8C9890' },
-  { id: 'black-cherry', name: 'Black Cherry', hex: '#280D0E' },
+  { id: 'black-cherry', name: 'Black Cherry', hex: '#3A1718' },
   { id: 'cinnamon', name: 'Cinnamon', hex: '#3D1A14' },
   { id: 'dusty-shale', name: 'Dusty Shale', hex: '#CDBDAF' },
   { id: 'driftwood', name: 'Driftwood', hex: '#8C8272' },
@@ -45,7 +45,7 @@ export const stainColors: FinishColor[] = [
   { id: 'glacier-bay', name: 'Glacier Bay', hex: '#98A8B5' },
   { id: 'grey-ghost', name: 'Grey Ghost', hex: '#DFE4E6' },
   { id: 'graphite', name: 'Graphite', hex: '#45454A' },
-  { id: 'harvest-wheat', name: 'Harvest Wheat', hex: '#AC7541' },
+  { id: 'harvest-wheat', name: 'Harvest Wheat', hex: '#BC8550' },
   { id: 'midnight-blue', name: 'Midnight Blue', hex: '#292627' },
   { id: 'natural-gold', name: 'Natural Gold', hex: '#F0BA7C' },
   { id: 'nutmeg', name: 'Nutmeg', hex: '#8F5A33' },

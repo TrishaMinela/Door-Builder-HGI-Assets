@@ -20,9 +20,9 @@ const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '
 const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
 const signatureSeriesId = 'signature-series'
 const HERO_DOOR_OPENING = {
-  leftPct: 44.85,
+  leftPct: 44.42,
   topPct: 49.85,
-  widthPct: 9.25,
+  widthPct: 10.1,
   heightPct: 38.1,
 } as const
 const heroDoorOpeningStyle = {
@@ -154,7 +154,7 @@ export default function App() {
   const availableGlass = selectedStyle && compatibilitySupportsGlass
     ? glassOptions.filter((option) => selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])))
     : []
-  const supportsGlass = Boolean(compatibilitySupportsGlass && availableGlass.length)
+  const supportsGlass = Boolean(compatibilitySupportsGlass)
   const steps = supportsGlass ? glassSteps : noGlassSteps
   const selectedGlass = supportsGlass ? glass : null
   const previewGlass = supportsGlass ? glass : null
@@ -261,7 +261,7 @@ export default function App() {
 
       builderOptionsRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
     })
-  }, [screen, currentStep, styleId, doorLineId, grainId, finishId, glassId, hardwareId, doorSwingId])
+  }, [screen, currentPage])
 
   useEffect(() => {
     if (screen !== 'home') return
@@ -530,7 +530,7 @@ export default function App() {
             <button onClick={downloadPdf}><Download size={17} /> Download Your Summary</button>
           </div>}
 
-          {currentPage !== 'review' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Previous</button><button className="next" disabled={(currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'finish' && !visibleSelectedFinish) || (currentPage === 'glass' && !selectedGlass) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>Next <ArrowRight size={17} /></button></div>}
+          {currentPage !== 'review' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Previous</button><button className="next" disabled={(currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'finish' && !visibleSelectedFinish) || (currentPage === 'glass' && availableGlass.length > 0 && !selectedGlass) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>Next <ArrowRight size={17} /></button></div>}
         </section>
 
         {!submitted && <aside>

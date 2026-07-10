@@ -1,14 +1,15 @@
 import type { DoorLine, DoorLineChoice, DoorStyle, DoorTypeOption, Finish, ResolvedDoorProduct } from '../types'
 import { getDoorStyleThumbnailAsset } from './doorStyleThumbnailAssets'
 
-const noGlassCodes = new Set([
-  '2PNGSS', '2PPLSS', '2PHD', 'CANGSS', 'S1NGSS', '3PNGSS', '3PNG',
-  'E1', 'F1', 'HDAT1', 'N1', 'S1', 'SHAK1', 'SHAK2', 'SHAK3',
+export const glassDoorCodes = new Set([
+  '3LT', '3STEP', '4LT', '5LT', 'CR14', 'CR14PL', 'F', 'F2', 'F3', 'F4', 'F48', 'F482',
+  'F764', 'F848', 'FO', 'FRT', 'HRT', 'QA', 'S', 'S2', 'S3', 'S4', 'S836', 'SAT',
+  'SO', 'SO2', 'SW',
 ])
 
 const parseStyles = (rows: string[]) => rows.map((row) => {
   const [code, name] = row.split('|')
-  return { code, name: `${code} - ${name.toUpperCase()}`, hasGlass: !noGlassCodes.has(code) && !name.toLowerCase().includes('no glass') }
+  return { code, name: `${code} - ${name.toUpperCase()}`, hasGlass: glassDoorCodes.has(code) }
 })
 
 const signatureStyles = {
@@ -131,7 +132,7 @@ function variantsForDoorLine(style: DoorStyle, doorLineId?: string) {
 
 export function doorStyleSupportsGlass(style: DoorStyle, doorLineId?: string) {
   const variants = variantsForDoorLine(style, doorLineId)
-  return variants.some((variant) => !noGlassCodes.has(variant.code))
+  return variants.some((variant) => glassDoorCodes.has(variant.code))
 }
 
 export function doorLineChoicesForStyle(style: DoorStyle) {
