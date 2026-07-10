@@ -1,81 +1,383 @@
 import type { GlassOption } from '../types'
 
+const glassPreviewAssets: Record<string, string> = {
+  "CR14BAY.png": "/assets/hgi-assets/Glass/CR14/CR14BAY.png",
+  "CR14BLA.png": "/assets/hgi-assets/Glass/CR14/CR14BLA.png",
+  "CR14CEL.png": "/assets/hgi-assets/Glass/CR14/CR14CEL.png",
+  "CR14CHI.png": "/assets/hgi-assets/Glass/CR14/CR14CHI.png",
+  "CR14COB.png": "/assets/hgi-assets/Glass/CR14/CR14COB.png",
+  "CR14COU.png": "/assets/hgi-assets/Glass/CR14/CR14COU.png",
+  "CR14CRO.png": "/assets/hgi-assets/Glass/CR14/CR14CRO.png",
+  "CR14CUM.png": "/assets/hgi-assets/Glass/CR14/CR14CUM.png",
+  "CR14DORNI.png": "/assets/hgi-assets/Glass/CR14/CR14DORNI.png",
+  "CR14DORPA.png": "/assets/hgi-assets/Glass/CR14/CR14DORPA.png",
+  "CR14DUT.png": "/assets/hgi-assets/Glass/CR14/CR14DUT.png",
+  "CR14EDG.png": "/assets/hgi-assets/Glass/CR14/CR14EDG.png",
+  "CR14LAU.png": "/assets/hgi-assets/Glass/CR14/CR14LAU.png",
+  "CR14LEL.png": "/assets/hgi-assets/Glass/CR14/CR14LEL.png",
+  "CR14LIN.png": "/assets/hgi-assets/Glass/CR14/CR14LIN.png",
+  "CR14MAR.png": "/assets/hgi-assets/Glass/CR14/CR14MAR.png",
+  "CR14MIC.png": "/assets/hgi-assets/Glass/CR14/CR14MIC.png",
+  "CR14MIS.png": "/assets/hgi-assets/Glass/CR14/CR14MIS.png",
+  "CR14MONNI.png": "/assets/hgi-assets/Glass/CR14/CR14MONNI.png",
+  "CR14MONPA.png": "/assets/hgi-assets/Glass/CR14/CR14MONPA.png",
+  "CR14OAK.png": "/assets/hgi-assets/Glass/CR14/CR14OAK.png",
+  "CR14PAR.png": "/assets/hgi-assets/Glass/CR14/CR14PAR.png",
+  "CR14PEM.png": "/assets/hgi-assets/Glass/CR14/CR14PEM.png",
+  "CR14RAI.png": "/assets/hgi-assets/Glass/CR14/CR14RAI.png",
+  "CR14RIV.png": "/assets/hgi-assets/Glass/CR14/CR14RIV.png",
+  "CR14STR.png": "/assets/hgi-assets/Glass/CR14/CR14STR.png",
+  "CR14TOP.png": "/assets/hgi-assets/Glass/CR14/CR14TOP.png",
+  "CR14VAP.png": "/assets/hgi-assets/Glass/CR14/CR14VAP.png",
+  "CR14VIL.png": "/assets/hgi-assets/Glass/CR14/CR14VIL.png",
+  "CR14VIN.png": "/assets/hgi-assets/Glass/CR14/CR14VIN.png",
+  "CR14WYN.png": "/assets/hgi-assets/Glass/CR14/CR14WYN.png",
+  "F848BER.png": "/assets/hgi-assets/Glass/F848/F848BER.png",
+  "F848BLA.png": "/assets/hgi-assets/Glass/F848/F848BLA.png",
+  "F848CAD.png": "/assets/hgi-assets/Glass/F848/F848CAD.png",
+  "F848CAL.png": "/assets/hgi-assets/Glass/F848/F848CAL.png",
+  "F848CAR.png": "/assets/hgi-assets/Glass/F848/F848CAR.png",
+  "F848CHI.png": "/assets/hgi-assets/Glass/F848/F848CHI.png",
+  "F848COU.png": "/assets/hgi-assets/Glass/F848/F848COU.png",
+  "F848CRO.png": "/assets/hgi-assets/Glass/F848/F848CRO.png",
+  "F848CUM.png": "/assets/hgi-assets/Glass/F848/F848CUM.png",
+  "F848DORNI.png": "/assets/hgi-assets/Glass/F848/F848DORNI.png",
+  "F848DORPA.png": "/assets/hgi-assets/Glass/F848/F848DORPA.png",
+  "F848ELEBW.png": "/assets/hgi-assets/Glass/F848/F848ELEBW.png",
+  "F848ELENI.png": "/assets/hgi-assets/Glass/F848/F848ELENI.png",
+  "F848ELEPA.png": "/assets/hgi-assets/Glass/F848/F848ELEPA.png",
+  "F848EMP.png": "/assets/hgi-assets/Glass/F848/F848EMP.png",
+  "F848F10.png": "/assets/hgi-assets/Glass/F848/F848F10.png",
+  "F848GEN.png": "/assets/hgi-assets/Glass/F848/F848GEN.png",
+  "F848GRAPA.png": "/assets/hgi-assets/Glass/F848/F848GRAPA.png",
+  "F848HEIBB.png": "/assets/hgi-assets/Glass/F848/F848HEIBB.png",
+  "F848HEINI.png": "/assets/hgi-assets/Glass/F848/F848HEINI.png",
+  "F848HIG.png": "/assets/hgi-assets/Glass/F848/F848HIG.png",
+  "F848JAC.png": "/assets/hgi-assets/Glass/F848/F848JAC.png",
+  "F848LIN.png": "/assets/hgi-assets/Glass/F848/F848LIN.png",
+  "F848MAJNI.png": "/assets/hgi-assets/Glass/F848/F848MAJNI.png",
+  "F848MAR.png": "/assets/hgi-assets/Glass/F848/F848MAR.png",
+  "F848MET.png": "/assets/hgi-assets/Glass/F848/F848MET.png",
+  "F848MIC.png": "/assets/hgi-assets/Glass/F848/F848MIC.png",
+  "F848MIS.png": "/assets/hgi-assets/Glass/F848/F848MIS.png",
+  "F848MONPA.png": "/assets/hgi-assets/Glass/F848/F848MONPA.png",
+  "F848NEO.png": "/assets/hgi-assets/Glass/F848/F848NEO.png",
+  "F848NOUNI.png": "/assets/hgi-assets/Glass/F848/F848NOUNI.png",
+  "F848NOUPA.png": "/assets/hgi-assets/Glass/F848/F848NOUPA.png",
+  "F848OAK.png": "/assets/hgi-assets/Glass/F848/F848OAK.png",
+  "F848PAR.png": "/assets/hgi-assets/Glass/F848/F848PAR.png",
+  "F848PRE.png": "/assets/hgi-assets/Glass/F848/F848PRE.png",
+  "F848RAI.png": "/assets/hgi-assets/Glass/F848/F848RAI.png",
+  "F848TOP.png": "/assets/hgi-assets/Glass/F848/F848TOP.png",
+  "F848VAP.png": "/assets/hgi-assets/Glass/F848/F848VAP.png",
+  "F848VIL.png": "/assets/hgi-assets/Glass/F848/F848VIL.png",
+  "F848WAT.png": "/assets/hgi-assets/Glass/F848/F848WAT.png",
+  "FASH.png": "/assets/hgi-assets/Glass/F/DECO/FASH.png",
+  "FBAY.png": "/assets/hgi-assets/Glass/F/DECO/FBAY.png",
+  "F/FBAY.png": "/assets/hgi-assets/Glass/F/DECO/FBAY.png",
+  "FBLA.png": "/assets/hgi-assets/Glass/F/DECO/FBLA.png",
+  "F/FBLA.png": "/assets/hgi-assets/Glass/F/DECO/FBLA.png",
+  "FBRI.png": "/assets/hgi-assets/Glass/F/DECO/FBRI.png",
+  "F/FBRI.png": "/assets/hgi-assets/Glass/F/DECO/FBRI.png",
+  "FCAD.png": "/assets/hgi-assets/Glass/F/DECO/FCAD.png",
+  "F/FCAD.png": "/assets/hgi-assets/Glass/F/DECO/FCAD.png",
+  "FCAL.png": "/assets/hgi-assets/Glass/F/DECO/FCAL.png",
+  "F/FCAL.png": "/assets/hgi-assets/Glass/F/DECO/FCAL.png",
+  "FCAR.png": "/assets/hgi-assets/Glass/F/DECO/FCAR.png",
+  "F/FCAR.png": "/assets/hgi-assets/Glass/F/DECO/FCAR.png",
+  "FCOB.png": "/assets/hgi-assets/Glass/F/DECO/FCOB.png",
+  "F/FCOB.png": "/assets/hgi-assets/Glass/F/DECO/FCOB.png",
+  "FCOU.png": "/assets/hgi-assets/Glass/F/DECO/FCOU.png",
+  "F/FCOU.png": "/assets/hgi-assets/Glass/F/DECO/FCOU.png",
+  "FCRO.png": "/assets/hgi-assets/Glass/F/DECO/FCRO.png",
+  "F/FCRO.png": "/assets/hgi-assets/Glass/F/DECO/FCRO.png",
+  "FCUM.png": "/assets/hgi-assets/Glass/F/DECO/FCUM.png",
+  "F/FCUM.png": "/assets/hgi-assets/Glass/F/DECO/FCUM.png",
+  "FDORNI.png": "/assets/hgi-assets/Glass/F/DECO/FDORNI.png",
+  "F/FDORNI.png": "/assets/hgi-assets/Glass/F/DECO/FDORNI.png",
+  "FDORPA.png": "/assets/hgi-assets/Glass/F/DECO/FDORPA.png",
+  "F/FDORPA.png": "/assets/hgi-assets/Glass/F/DECO/FDORPA.png",
+  "FDUT.png": "/assets/hgi-assets/Glass/F/DECO/FDUT.png",
+  "F/FDUT.png": "/assets/hgi-assets/Glass/F/DECO/FDUT.png",
+  "FEDG.png": "/assets/hgi-assets/Glass/F/DECO/FEDG.png",
+  "F/FEDG.png": "/assets/hgi-assets/Glass/F/DECO/FEDG.png",
+  "FELEBW.png": "/assets/hgi-assets/Glass/F/DECO/FELEBW.png",
+  "FELEPA.png": "/assets/hgi-assets/Glass/F/DECO/FELEPA.png",
+  "FELEPN.png": "/assets/hgi-assets/Glass/F/DECO/FELEPN.png",
+  "FENT.png": "/assets/hgi-assets/Glass/F/DECO/FENT.png",
+  "FF10.png": "/assets/hgi-assets/Glass/F/CLEAR STOCK/FF10.png",
+  "FF10L.png": "/assets/hgi-assets/Glass/F/CLEAR STOCK/FF10L.png",
+  "FF15WH.png": "/assets/hgi-assets/Glass/F/CLEAR STOCK/FF15WH.png",
+  "FFPRAINT.png": "/assets/hgi-assets/Glass/F/CLEAR STOCK/FFPRAINT.png",
+  "FFRLB15.png": "/assets/hgi-assets/Glass/F/DECO/FFRLB15.png",
+  "FFTEN.png": "/assets/hgi-assets/Glass/F/CLEAR STOCK/FFTEN.png",
+  "FGEN.png": "/assets/hgi-assets/Glass/F/DECO/FGEN.png",
+  "FGRA.png": "/assets/hgi-assets/Glass/F/DECO/FGRA.png",
+  "FHEIBB.png": "/assets/hgi-assets/Glass/F/DECO/FHEIBB.png",
+  "FHEINI.png": "/assets/hgi-assets/Glass/F/DECO/FHEINI.png",
+  "FHIG.png": "/assets/hgi-assets/Glass/F/DECO/FHIG.png",
+  "FJAC.png": "/assets/hgi-assets/Glass/F/DECO/FJAC.png",
+  "FJAM.png": "/assets/hgi-assets/Glass/F/DECO/FJAM.png",
+  "FLAU.png": "/assets/hgi-assets/Glass/F/DECO/FLAU.png",
+  "FLAZ.png": "/assets/hgi-assets/Glass/F/DECO/FLAZ.png",
+  "FLEL.png": "/assets/hgi-assets/Glass/F/DECO/FLEL.png",
+  "FLEX.png": "/assets/hgi-assets/Glass/F/DECO/FLEX.png",
+  "FLIN.png": "/assets/hgi-assets/Glass/F/DECO/FLIN.png",
+  "FLON.png": "/assets/hgi-assets/Glass/F/DECO/FLON.png",
+  "FMAD.png": "/assets/hgi-assets/Glass/F/DECO/FMAD.png",
+  "FMAJ.png": "/assets/hgi-assets/Glass/F/DECO/FMAJ.png",
+  "FMAJNI.png": "/assets/hgi-assets/Glass/F/DECO/FMAJNI.png",
+  "FMIC.png": "/assets/hgi-assets/Glass/F/DECO/FMIC.png",
+  "FMOH.png": "/assets/hgi-assets/Glass/F/DECO/FMOH.png",
+  "FMONPA.png": "/assets/hgi-assets/Glass/F/DECO/FMONPA.png",
+  "FMONSN.png": "/assets/hgi-assets/Glass/F/DECO/FMONSN.png",
+  "FNOUNI.png": "/assets/hgi-assets/Glass/F/DECO/FNOUNI.png",
+  "FNOUPA.png": "/assets/hgi-assets/Glass/F/DECO/FNOUPA.png",
+  "FOAK.png": "/assets/hgi-assets/Glass/F/DECO/FOAK.png",
+  "FOCAD.png": "/assets/hgi-assets/Glass/FO/FOCAD.png",
+  "FOFOCL.png": "/assets/hgi-assets/Glass/FO/FOFOCL.png",
+  "FOGRANI.png": "/assets/hgi-assets/Glass/FO/FOGRANI.png",
+  "FOGRAPA.png": "/assets/hgi-assets/Glass/FO/FOGRAPA.png",
+  "FOHEIBB.png": "/assets/hgi-assets/Glass/FO/FOHEIBB.png",
+  "FOHEINI.png": "/assets/hgi-assets/Glass/FO/FOHEINI.png",
+  "FONOUNI.png": "/assets/hgi-assets/Glass/FO/FONOUNI.png",
+  "FONOUPA.png": "/assets/hgi-assets/Glass/FO/FONOUPA.png",
+  "FOVA.png": "/assets/hgi-assets/Glass/F/DECO/FOVA.png",
+  "FPAR.png": "/assets/hgi-assets/Glass/F/DECO/FPAR.png",
+  "FPEM.png": "/assets/hgi-assets/Glass/F/DECO/FPEM.png",
+  "FPRE.png": "/assets/hgi-assets/Glass/F/DECO/FPRE.png",
+  "FRAI.png": "/assets/hgi-assets/Glass/F/DECO/FRAI.png",
+  "FREN.png": "/assets/hgi-assets/Glass/F/DECO/FREN.png",
+  "FRIV.png": "/assets/hgi-assets/Glass/F/DECO/FRIV.png",
+  "FRLBES.png": "/assets/hgi-assets/Glass/F/DECO/FRLBES.png",
+  "FRLBGR.png": "/assets/hgi-assets/Glass/F/DECO/FRLBGR.png",
+  "FRLBSA.png": "/assets/hgi-assets/Glass/F/DECO/FRLBSA.png",
+  "FRLBSI.png": "/assets/hgi-assets/Glass/F/DECO/FRLBSI.png",
+  "FRLBTA.png": "/assets/hgi-assets/Glass/F/DECO/FRLBTA.png",
+  "FRLBWH.png": "/assets/hgi-assets/Glass/F/DECO/FRLBWH.png",
+  "FSTE.png": "/assets/hgi-assets/Glass/F/DECO/FSTE.png",
+  "FTOP.png": "/assets/hgi-assets/Glass/F/DECO/FTOP.png",
+  "FVAP.png": "/assets/hgi-assets/Glass/F/DECO/FVAP.png",
+  "FVIL.png": "/assets/hgi-assets/Glass/F/DECO/FVIL.png",
+  "FWTS.png": "/assets/hgi-assets/Glass/F/DECO/FWTS.png",
+  "QAGRANI.png": "/assets/hgi-assets/Glass/QA/QAGRANI.png",
+  "QAGRAPA.png": "/assets/hgi-assets/Glass/QA/QAGRAPA.png",
+  "QALON.png": "/assets/hgi-assets/Glass/QA/QALON.png",
+  "QANOUNI.png": "/assets/hgi-assets/Glass/QA/QANOUNI.png",
+  "QANOUPA.png": "/assets/hgi-assets/Glass/QA/QANOUPA.png",
+  "QAPEM.png": "/assets/hgi-assets/Glass/QA/QAPEM.png",
+  "QAQACL.png": "/assets/hgi-assets/Glass/QA/QAQACL.png",
+  "QARIV.png": "/assets/hgi-assets/Glass/QA/QARIV.png",
+  "QAVIN.png": "/assets/hgi-assets/Glass/QA/QAVIN.png",
+  "QAWYN.png": "/assets/hgi-assets/Glass/QA/QAWYN.png",
+  "S836BER.png": "/assets/hgi-assets/Glass/S836/S836BER.png",
+  "S836BLA.png": "/assets/hgi-assets/Glass/S836/S836BLA.png",
+  "S836CHI.png": "/assets/hgi-assets/Glass/S836/S836CHI.png",
+  "S836COU.png": "/assets/hgi-assets/Glass/S836/S836COU.png",
+  "S836CRO.png": "/assets/hgi-assets/Glass/S836/S836CRO.png",
+  "S836CUM.png": "/assets/hgi-assets/Glass/S836/S836CUM.png",
+  "S836DORNI.png": "/assets/hgi-assets/Glass/S836/S836DORNI.png",
+  "S836DORPA.png": "/assets/hgi-assets/Glass/S836/S836DORPA.png",
+  "S836ELEBW.png": "/assets/hgi-assets/Glass/S836/S836ELEBW.png",
+  "S836ELEPA.png": "/assets/hgi-assets/Glass/S836/S836ELEPA.png",
+  "S836ELEPN.png": "/assets/hgi-assets/Glass/S836/S836ELEPN.png",
+  "S836EMP.png": "/assets/hgi-assets/Glass/S836/S836EMP.png",
+  "S836F10.png": "/assets/hgi-assets/Glass/S836/S836F10.png",
+  "S836GRA.png": "/assets/hgi-assets/Glass/S836/S836GRA.png",
+  "S836H8RLB.png": "/assets/hgi-assets/Glass/S836/S836H8RLB.png",
+  "S836HEIBB.png": "/assets/hgi-assets/Glass/S836/S836HEIBB.png",
+  "S836HEINI.png": "/assets/hgi-assets/Glass/S836/S836HEINI.png",
+  "S836LAS.png": "/assets/hgi-assets/Glass/S836/S836LAS.png",
+  "S836LIN.png": "/assets/hgi-assets/Glass/S836/S836LIN.png",
+  "S836MAJPA.png": "/assets/hgi-assets/Glass/S836/S836MAJPA.png",
+  "S836MAR.png": "/assets/hgi-assets/Glass/S836/S836MAR.png",
+  "S836MET.png": "/assets/hgi-assets/Glass/S836/S836MET.png",
+  "S836MIC.png": "/assets/hgi-assets/Glass/S836/S836MIC.png",
+  "S836MOH.png": "/assets/hgi-assets/Glass/S836/S836MOH.png",
+  "S836NEO.png": "/assets/hgi-assets/Glass/S836/S836NEO.png",
+  "S836NOUNI.png": "/assets/hgi-assets/Glass/S836/S836NOUNI.png",
+  "S836NOUPA.png": "/assets/hgi-assets/Glass/S836/S836NOUPA.png",
+  "S836PAR.png": "/assets/hgi-assets/Glass/S836/S836PAR.png",
+  "S836PRE.png": "/assets/hgi-assets/Glass/S836/S836PRE.png",
+  "S836RAI.png": "/assets/hgi-assets/Glass/S836/S836RAI.png",
+  "S836REN.png": "/assets/hgi-assets/Glass/S836/S836REN.png",
+  "S836TOP.png": "/assets/hgi-assets/Glass/S836/S836TOP.png",
+  "S836VAP.png": "/assets/hgi-assets/Glass/S836/S836VAP.png",
+  "S836VIL.png": "/assets/hgi-assets/Glass/S836/S836VIL.png",
+  "S836WAT.png": "/assets/hgi-assets/Glass/S836/S836WAT.png",
+  "SBER.png": "/assets/hgi-assets/Glass/S/DECO/SBER.png",
+  "SBLA.png": "/assets/hgi-assets/Glass/S/DECO/SBLA.png",
+  "SBRI.png": "/assets/hgi-assets/Glass/S/DECO/SBRI.png",
+  "SCHI.png": "/assets/hgi-assets/Glass/S/DECO/SCHI.png",
+  "SCOB.png": "/assets/hgi-assets/Glass/S/DECO/SCOB.png",
+  "SCOU.png": "/assets/hgi-assets/Glass/S/DECO/SCOU.png",
+  "SCRO.png": "/assets/hgi-assets/Glass/S/DECO/SCRO.png",
+  "SCUM.png": "/assets/hgi-assets/Glass/S/DECO/SCUM.png",
+  "SDORNI.png": "/assets/hgi-assets/Glass/S/DECO/SDORNI.png",
+  "SDORPA.png": "/assets/hgi-assets/Glass/S/DECO/SDORPA.png",
+  "SDUT.png": "/assets/hgi-assets/Glass/S/DECO/SDUT.png",
+  "SEDG.png": "/assets/hgi-assets/Glass/S/DECO/SEDG.png",
+  "SELEBW.png": "/assets/hgi-assets/Glass/S/DECO/SELEBW.png",
+  "SELENI.png": "/assets/hgi-assets/Glass/S/DECO/SELENI.png",
+  "SELEPA.png": "/assets/hgi-assets/Glass/S/DECO/SELEPA.png",
+  "SEMP.png": "/assets/hgi-assets/Glass/S/DECO/SEMP.png",
+  "SF10.png": "/assets/hgi-assets/Glass/S/DECO/SF10.png",
+  "SF5.png": "/assets/hgi-assets/Glass/S/DECO/SF5.png",
+  "SF5L.png": "/assets/hgi-assets/Glass/S/DECO/SF5L.png",
+  "SGRA.png": "/assets/hgi-assets/Glass/S/DECO/SGRA.png",
+  "SHEIBB.png": "/assets/hgi-assets/Glass/S/DECO/SHEIBB.png",
+  "SHEINI.png": "/assets/hgi-assets/Glass/S/DECO/SHEINI.png",
+  "SJAC.png": "/assets/hgi-assets/Glass/S/DECO/SJAC.png",
+  "SJAM.png": "/assets/hgi-assets/Glass/S/DECO/SJAM.png",
+  "SLAU.png": "/assets/hgi-assets/Glass/S/DECO/SLAU.png",
+  "SLAZ.png": "/assets/hgi-assets/Glass/S/DECO/SLAZ.png",
+  "SLEL.png": "/assets/hgi-assets/Glass/S/DECO/SLEL.png",
+  "SLEX.png": "/assets/hgi-assets/Glass/S/DECO/SLEX.png",
+  "SLIN.png": "/assets/hgi-assets/Glass/S/DECO/SLIN.png",
+  "SLON.png": "/assets/hgi-assets/Glass/S/DECO/SLON.png",
+  "SMAJ.png": "/assets/hgi-assets/Glass/S/DECO/SMAJ.png",
+  "SMAR.png": "/assets/hgi-assets/Glass/S/DECO/SMAR.png",
+  "SMET.png": "/assets/hgi-assets/Glass/S/DECO/SMET.png",
+  "SMIC.png": "/assets/hgi-assets/Glass/S/DECO/SMIC.png",
+  "SMOH.png": "/assets/hgi-assets/Glass/S/DECO/SMOH.png",
+  "SMONNI.png": "/assets/hgi-assets/Glass/S/DECO/SMONNI.png",
+  "SMONPA.png": "/assets/hgi-assets/Glass/S/DECO/SMONPA.png",
+  "SNEO.png": "/assets/hgi-assets/Glass/S/DECO/SNEO.png",
+  "SNOUNI.png": "/assets/hgi-assets/Glass/S/DECO/SNOUNI.png",
+  "SNOUPA.png": "/assets/hgi-assets/Glass/S/DECO/SNOUPA.png",
+  "SOAK.png": "/assets/hgi-assets/Glass/S/DECO/SOAK.png",
+  "SOBRI.png": "/assets/hgi-assets/Glass/SO/SOBRI.png",
+  "SOCAD.png": "/assets/hgi-assets/Glass/SO/SOCAD.png",
+  "SOCAR.png": "/assets/hgi-assets/Glass/SO/SOCAR.png",
+  "SOELENI.png": "/assets/hgi-assets/Glass/SO/SOELENI.png",
+  "SOELEPA.png": "/assets/hgi-assets/Glass/SO/SOELEPA.png",
+  "SOGRC.png": "/assets/hgi-assets/Glass/SO/SOGRC.png",
+  "SOHEIBB.png": "/assets/hgi-assets/Glass/SO/SOHEIBB.png",
+  "SOHEINI.png": "/assets/hgi-assets/Glass/SO/SOHEINI.png",
+  "SOJAM.png": "/assets/hgi-assets/Glass/S/DECO/SOJAM.png",
+  "S/SOJAM.png": "/assets/hgi-assets/Glass/S/DECO/SOJAM.png",
+  "SO/SOJAM.png": "/assets/hgi-assets/Glass/SO/SOJAM.png",
+  "SOLAU.png": "/assets/hgi-assets/Glass/S/DECO/SOLAU.png",
+  "S/SOLAU.png": "/assets/hgi-assets/Glass/S/DECO/SOLAU.png",
+  "SO/SOLAU.png": "/assets/hgi-assets/Glass/SO/SOLAU.png",
+  "SONOUNI.png": "/assets/hgi-assets/Glass/SO/SONOUNI.png",
+  "SONOUPA.png": "/assets/hgi-assets/Glass/SO/SONOUPA.png",
+  "SOOVA.png": "/assets/hgi-assets/Glass/SO/SOOVA.png",
+  "SORAI.png": "/assets/hgi-assets/Glass/SO/SORAI.png",
+  "SOREN.png": "/assets/hgi-assets/Glass/SO/SOREN.png",
+  "SPAR.png": "/assets/hgi-assets/Glass/S/DECO/SPAR.png",
+  "SPEM.png": "/assets/hgi-assets/Glass/S/DECO/SPEM.png",
+  "SPRE.png": "/assets/hgi-assets/Glass/S/DECO/SPRE.png",
+  "SRAI.png": "/assets/hgi-assets/Glass/S/DECO/SRAI.png",
+  "SREN.png": "/assets/hgi-assets/Glass/S/DECO/SREN.png",
+  "SRIV.png": "/assets/hgi-assets/Glass/S/DECO/SRIV.png",
+  "SRLBES.png": "/assets/hgi-assets/Glass/S/DECO/SRLBES.png",
+  "SRLBGR.png": "/assets/hgi-assets/Glass/S/DECO/SRLBGR.png",
+  "SRLBSA.png": "/assets/hgi-assets/Glass/S/DECO/SRLBSA.png",
+  "SRLBSI.png": "/assets/hgi-assets/Glass/S/DECO/SRLBSI.png",
+  "SRLBTA.png": "/assets/hgi-assets/Glass/S/DECO/SRLBTA.png",
+  "SRLBWH.png": "/assets/hgi-assets/Glass/S/DECO/SRLBWH.png",
+  "SS5L.png": "/assets/hgi-assets/Glass/S/DECO/SS5L.png",
+  "SS9INT.png": "/assets/hgi-assets/Glass/S/DECO/SS9INT.png",
+  "SS9INTL.png": "/assets/hgi-assets/Glass/S/DECO/SS9INTL.png",
+  "SSRLB9.png": "/assets/hgi-assets/Glass/S/DECO/SSRLB9.png",
+  "SSV9.png": "/assets/hgi-assets/Glass/S/DECO/SSV9.png",
+  "STOP.png": "/assets/hgi-assets/Glass/S/DECO/STOP.png",
+  "SVAP.png": "/assets/hgi-assets/Glass/S/DECO/SVAP.png",
+  "SVIL.png": "/assets/hgi-assets/Glass/S/DECO/SVIL.png",
+  "SWGRAPA.png": "/assets/hgi-assets/Glass/SW/SWGRAPA.png",
+  "SWGRC.png": "/assets/hgi-assets/Glass/SW/SWGRC.png",
+  "SWGWH.png": "/assets/hgi-assets/Glass/SW/SWGWH.png",
+  "SWHEIBB.png": "/assets/hgi-assets/Glass/SW/SWHEIBB.png",
+  "SWHEINI.png": "/assets/hgi-assets/Glass/SW/SWHEINI.png",
+  "SWMIC.png": "/assets/hgi-assets/Glass/SW/SWMIC.png",
+  "SWNOUNI.png": "/assets/hgi-assets/Glass/SW/SWNOUNI.png",
+  "SWNOUPA.png": "/assets/hgi-assets/Glass/SW/SWNOUPA.png",
+  "SWREN.png": "/assets/hgi-assets/Glass/SW/SWREN.png",
+  "SWTS.png": "/assets/hgi-assets/Glass/S/DECO/SWTS.png",
+}
+
+const glassOverlayAssetUrl = (folder: string, fileName: string) =>
+  fileName.startsWith('/assets/hgi-assets/')
+    ? fileName
+    : glassPreviewAssets[`${folder}/${fileName}`] ?? glassPreviewAssets[fileName] ?? ''
+
 const glassThumbnailOptions = [
-  { id: 'ashbury', name: 'Ashbury', image: '/assets/glass/ASHBURY.jpg' },
-  { id: 'bay-point', name: 'Bay Point', image: '/assets/glass/BAYPOINT.jpg' },
-  { id: 'berkley', name: 'Berkley', image: '/assets/glass/BERKLEY.jpg' },
-  { id: 'blanca', name: 'Blanca', image: '/assets/glass/BLANCA.jpg' },
-  { id: 'blinds', name: 'Blinds', image: '/assets/glass/Blinds.png' },
-  { id: 'briselle', name: 'Briselle', image: '/assets/glass/Decorative.png' },
-  { id: 'bristol', name: 'Bristol', image: '/assets/glass/Bristol.png' },
-  { id: 'cadence', name: 'Cadence', image: '/assets/glass/Cadence.png' },
-  { id: 'calandra', name: 'Calandra', image: '/assets/glass/CALANDRA.jpg' },
-  { id: 'carrollton', name: 'Carrollton', image: '/assets/glass/CARROLLTON.jpg' },
-  { id: 'catalina', name: 'Catalina', image: '/assets/glass/CATALINA.jpg' },
-  { id: 'chinchilla', name: 'Chinchilla', image: '/assets/glass/Chinchilla.png' },
-  { id: 'clear', name: 'Clear', image: '/assets/glass/Clear.png' },
-  { id: 'clic', name: 'CLIC', image: '/assets/glass/CLIC.png' },
-  { id: 'cobblestone', name: 'Cobblestone', image: '/assets/glass/Cobblestone.png' },
-  { id: 'contg', name: 'CONTG', image: '/assets/glass/CONTG.png' },
-  { id: 'crosswalk', name: 'Crosswalk', image: '/assets/glass/CROSSWALK.jpg' },
-  { id: 'cubed', name: 'Cubed', image: '/assets/glass/Decorative.png' },
-  { id: 'cumulus', name: 'Cumulus', image: '/assets/glass/Cumulus.png' },
-  { id: 'cyndi', name: 'Cyndi', image: '/assets/glass/Decorative.png' },
-  { id: 'decorative', name: 'Decorative', image: '/assets/glass/Decorative.png' },
-  { id: 'dorian', name: 'Dorian', image: '/assets/glass/DORIAN.png' },
-  { id: 'dutchcraft', name: 'Dutchcraft', image: '/assets/glass/Dutchcraft.png' },
-  { id: 'edgewood', name: 'Edgewood', image: '/assets/glass/EDGEWOOD.jpg' },
-  { id: 'elegant', name: 'Elegant', image: '/assets/glass/ELEGANT.jpg' },
-  { id: 'empire', name: 'Empire', image: '/assets/glass/EMPIRE.jpg' },
-  { id: 'entropy', name: 'Entropy', image: '/assets/glass/Entropy.png' },
-  { id: 'extg', name: 'EXTG', image: '/assets/glass/EXTG.png' },
-  { id: 'flatg', name: 'FLATG', image: '/assets/glass/FLATG.png' },
-  { id: 'fragrance', name: 'Fragrance', image: '/assets/glass/Decorative.png' },
-  { id: 'frosted', name: 'Frosted', image: '/assets/glass/Privacy.png' },
-  { id: 'garrison', name: 'Garrison', image: '/assets/glass/Decorative.png' },
-  { id: 'geneva', name: 'Geneva', image: '/assets/glass/GENEVA.jpg' },
-  { id: 'grace', name: 'Grace', image: '/assets/glass/Grace.png' },
-  { id: 'heirlooms', name: 'Heirlooms', image: '/assets/glass/Heirlooms.png' },
-  { id: 'high-point', name: 'High Point', image: '/assets/glass/HIGH POINT.jpg' },
-  { id: 'jacinto', name: 'Jacinto', image: '/assets/glass/JACINTO.jpg' },
-  { id: 'jameston', name: 'Jameston', image: '/assets/glass/JAMESTON.jpg' },
-  { id: 'laurel', name: 'Laurel', image: '/assets/glass/LAUREL.jpg' },
-  { id: 'lazarus', name: 'Lazarus', image: '/assets/glass/Lazarus.png' },
-  { id: 'leland', name: 'Leland', image: '/assets/glass/Leland.png' },
-  { id: 'lexington', name: 'Lexington', image: '/assets/glass/Lexington.png' },
-  { id: 'linen', name: 'Linen', image: '/assets/glass/Linen.png' },
-  { id: 'london', name: 'London', image: '/assets/glass/LONDON.jpg' },
-  { id: 'low-e', name: 'Low-E', image: '/assets/glass/LowE.png' },
-  { id: 'low-e-plus', name: 'Low-E+', image: '/assets/glass/LowE+.png' },
-  { id: 'low-e-366', name: 'Low-E 366', image: '/assets/glass/LowE366.png' },
-  { id: 'majestic', name: 'Majestic', image: '/assets/glass/Majestic.png' },
-  { id: 'margate', name: 'Margate', image: '/assets/glass/MARGATE.jpg' },
-  { id: 'metro', name: 'Metro', image: '/assets/glass/METRO.jpg' },
-  { id: 'micro-granite', name: 'Micro Granite', image: '/assets/glass/MicroGranite.png' },
-  { id: 'mistify', name: 'Mistify', image: '/assets/glass/Mistify.png' },
-  { id: 'mohave', name: 'Mohave', image: '/assets/glass/Mohave.png' },
-  { id: 'monterey', name: 'Monterey', image: '/assets/glass/MONTEREY.jpg' },
-  { id: 'neo', name: 'Neo', image: '/assets/glass/NEO.jpg' },
-  { id: 'nouveau', name: 'Nouveau', image: '/assets/glass/Nouveau.png' },
-  { id: 'oak-park', name: 'Oak Park', image: '/assets/glass/Oak Park.png' },
-  { id: 'ocean-caming', name: 'Ocean Caming', image: '/assets/glass/Ocean Caming.png' },
-  { id: 'ovation', name: 'Ovation', image: '/assets/glass/Ovation.png' },
-  { id: 'pembrook', name: 'Pembrook', image: '/assets/glass/PEMBROOK.jpg' },
-  { id: 'prestige', name: 'Prestige', image: '/assets/glass/PRESTIGE.jpg' },
-  { id: 'privacy', name: 'Privacy', image: '/assets/glass/Privacy.png' },
-  { id: 'rain', name: 'Rain', image: '/assets/glass/Rain.png' },
-  { id: 'renewed-impressions', name: 'Renewed Impressions', image: '/assets/glass/Renewed Impressions.png' },
-  { id: 'retro', name: 'Retro', image: '/assets/glass/Retro.png' },
-  { id: 'rill', name: 'Rill', image: '/assets/glass/Decorative.png' },
-  { id: 'riverwood', name: 'Riverwood', image: '/assets/glass/RIVERWOOD.jpg' },
-  { id: 'steamed', name: 'Steamed', image: '/assets/glass/STEAMED.jpg' },
-  { id: 'sterling', name: 'Sterling', image: '/assets/glass/Sterling.png' },
-  { id: 'topaz', name: 'Topaz', image: '/assets/glass/Topaz.png' },
-  { id: 'vapor', name: 'Vapor', image: '/assets/glass/Vapor.png' },
-  { id: 'vilano', name: 'Vilano', image: '/assets/glass/VILANO.jpg' },
-  { id: 'vincraft', name: 'Vincraft', image: '/assets/glass/VINCRAFT.jpg' },
-  { id: 'waterside', name: 'Waterside', image: '/assets/glass/WATERSIDE.jpg' },
-  { id: 'wyngate', name: 'Wyngate', image: '/assets/glass/WYNGATE.jpg' },
+  { id: 'ashbury', name: 'Ashbury', image: '/assets/glass/thumbnails/ASHBURY.jpg' },
+  { id: 'bay-point', name: 'Bay Point', image: '/assets/glass/thumbnails/BAYPOINT.jpg' },
+  { id: 'berkley', name: 'Berkley', image: '/assets/glass/thumbnails/BERKLEY.jpg' },
+  { id: 'blanca', name: 'Blanca', image: '/assets/glass/thumbnails/BLANCA.jpg' },
+  { id: 'blinds', name: 'Blinds', image: '/assets/glass/thumbnails/Blinds.png' },
+  { id: 'briselle', name: 'Briselle', image: '/assets/glass/thumbnails/Decorative.png' },
+  { id: 'bristol', name: 'Bristol', image: '/assets/glass/thumbnails/Bristol.png' },
+  { id: 'cadence', name: 'Cadence', image: '/assets/glass/thumbnails/Cadence.png' },
+  { id: 'calandra', name: 'Calandra', image: '/assets/glass/thumbnails/CALANDRA.jpg' },
+  { id: 'carrollton', name: 'Carrollton', image: '/assets/glass/thumbnails/CARROLLTON.jpg' },
+  { id: 'catalina', name: 'Catalina', image: '/assets/glass/thumbnails/CATALINA.jpg' },
+  { id: 'chinchilla', name: 'Chinchilla', image: '/assets/glass/thumbnails/Chinchilla.png' },
+  { id: 'clear', name: 'Clear', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 'clic', name: 'CLIC', image: '/assets/glass/thumbnails/CLIC.png' },
+  { id: 'cobblestone', name: 'Cobblestone', image: '/assets/glass/thumbnails/Cobblestone.png' },
+  { id: 'contg', name: 'CONTG', image: '/assets/glass/thumbnails/CONTG.png' },
+  { id: 'crosswalk', name: 'Crosswalk', image: '/assets/glass/thumbnails/CROSSWALK.jpg' },
+  { id: 'cubed', name: 'Cubed', image: '/assets/glass/thumbnails/Decorative.png' },
+  { id: 'cumulus', name: 'Cumulus', image: '/assets/glass/thumbnails/Cumulus.png' },
+  { id: 'cyndi', name: 'Cyndi', image: '/assets/glass/thumbnails/Decorative.png' },
+  { id: 'decorative', name: 'Decorative', image: '/assets/glass/thumbnails/Decorative.png' },
+  { id: 'dorian', name: 'Dorian', image: '/assets/glass/thumbnails/DORIAN.png' },
+  { id: 'dutchcraft', name: 'Dutchcraft', image: '/assets/glass/thumbnails/Dutchcraft.png' },
+  { id: 'edgewood', name: 'Edgewood', image: '/assets/glass/thumbnails/EDGEWOOD.jpg' },
+  { id: 'elegant', name: 'Elegant', image: '/assets/glass/thumbnails/ELEGANT.jpg' },
+  { id: 'empire', name: 'Empire', image: '/assets/glass/thumbnails/EMPIRE.jpg' },
+  { id: 'entropy', name: 'Entropy', image: '/assets/glass/thumbnails/Entropy.png' },
+  { id: 'extg', name: 'EXTG', image: '/assets/glass/thumbnails/EXTG.png' },
+  { id: 'flatg', name: 'FLATG', image: '/assets/glass/thumbnails/FLATG.png' },
+  { id: 'fragrance', name: 'Fragrance', image: '/assets/glass/thumbnails/Decorative.png' },
+  { id: 'frosted', name: 'Frosted', image: '/assets/glass/thumbnails/Privacy.png' },
+  { id: 'garrison', name: 'Garrison', image: '/assets/glass/thumbnails/Decorative.png' },
+  { id: 'geneva', name: 'Geneva', image: '/assets/glass/thumbnails/GENEVA.jpg' },
+  { id: 'grace', name: 'Grace', image: '/assets/glass/thumbnails/Grace.png' },
+  { id: 'heirlooms', name: 'Heirlooms', image: '/assets/glass/thumbnails/Heirlooms.png' },
+  { id: 'high-point', name: 'High Point', image: '/assets/glass/thumbnails/HIGH POINT.jpg' },
+  { id: 'jacinto', name: 'Jacinto', image: '/assets/glass/thumbnails/JACINTO.jpg' },
+  { id: 'jameston', name: 'Jameston', image: '/assets/glass/thumbnails/JAMESTON.jpg' },
+  { id: 'laurel', name: 'Laurel', image: '/assets/glass/thumbnails/LAUREL.jpg' },
+  { id: 'lazarus', name: 'Lazarus', image: '/assets/glass/thumbnails/Lazarus.png' },
+  { id: 'leland', name: 'Leland', image: '/assets/glass/thumbnails/Leland.png' },
+  { id: 'lexington', name: 'Lexington', image: '/assets/glass/thumbnails/Lexington.png' },
+  { id: 'linen', name: 'Linen', image: '/assets/glass/thumbnails/Linen.png' },
+  { id: 'london', name: 'London', image: '/assets/glass/thumbnails/LONDON.jpg' },
+  { id: 'low-e', name: 'Low-E', image: '/assets/glass/thumbnails/LowE.png' },
+  { id: 'low-e-plus', name: 'Low-E+', image: '/assets/glass/thumbnails/LowE+.png' },
+  { id: 'low-e-366', name: 'Low-E 366', image: '/assets/glass/thumbnails/LowE366.png' },
+  { id: 'majestic', name: 'Majestic', image: '/assets/glass/thumbnails/Majestic.png' },
+  { id: 'margate', name: 'Margate', image: '/assets/glass/thumbnails/MARGATE.jpg' },
+  { id: 'metro', name: 'Metro', image: '/assets/glass/thumbnails/METRO.jpg' },
+  { id: 'micro-granite', name: 'Micro Granite', image: '/assets/glass/thumbnails/MicroGranite.png' },
+  { id: 'mistify', name: 'Mistify', image: '/assets/glass/thumbnails/Mistify.png' },
+  { id: 'mohave', name: 'Mohave', image: '/assets/glass/thumbnails/Mohave.png' },
+  { id: 'monterey', name: 'Monterey', image: '/assets/glass/thumbnails/MONTEREY.jpg' },
+  { id: 'neo', name: 'Neo', image: '/assets/glass/thumbnails/NEO.jpg' },
+  { id: 'nouveau', name: 'Nouveau', image: '/assets/glass/thumbnails/Nouveau.png' },
+  { id: 'oak-park', name: 'Oak Park', image: '/assets/glass/thumbnails/Oak Park.png' },
+  { id: 'ocean-caming', name: 'Ocean Caming', image: '/assets/glass/thumbnails/Ocean Caming.png' },
+  { id: 'ovation', name: 'Ovation', image: '/assets/glass/thumbnails/Ovation.png' },
+  { id: 'pembrook', name: 'Pembrook', image: '/assets/glass/thumbnails/PEMBROOK.jpg' },
+  { id: 'prestige', name: 'Prestige', image: '/assets/glass/thumbnails/PRESTIGE.jpg' },
+  { id: 'privacy', name: 'Privacy', image: '/assets/glass/thumbnails/Privacy.png' },
+  { id: 'rain', name: 'Rain', image: '/assets/glass/thumbnails/Rain.png' },
+  { id: 'renewed-impressions', name: 'Renewed Impressions', image: '/assets/glass/thumbnails/Renewed Impressions.png' },
+  { id: 'retro', name: 'Retro', image: '/assets/glass/thumbnails/Retro.png' },
+  { id: 'rill', name: 'Rill', image: '/assets/glass/thumbnails/Decorative.png' },
+  { id: 'riverwood', name: 'Riverwood', image: '/assets/glass/thumbnails/RIVERWOOD.jpg' },
+  { id: 'steamed', name: 'Steamed', image: '/assets/glass/thumbnails/STEAMED.jpg' },
+  { id: 'sterling', name: 'Sterling', image: '/assets/glass/thumbnails/Sterling.png' },
+  { id: 'topaz', name: 'Topaz', image: '/assets/glass/thumbnails/Topaz.png' },
+  { id: 'vapor', name: 'Vapor', image: '/assets/glass/thumbnails/Vapor.png' },
+  { id: 'vilano', name: 'Vilano', image: '/assets/glass/thumbnails/VILANO.jpg' },
+  { id: 'vincraft', name: 'Vincraft', image: '/assets/glass/thumbnails/VINCRAFT.jpg' },
+  { id: 'waterside', name: 'Waterside', image: '/assets/glass/thumbnails/WATERSIDE.jpg' },
+  { id: 'wyngate', name: 'Wyngate', image: '/assets/glass/thumbnails/WYNGATE.jpg' },
 ]
 
 const cr14Overlays: Record<string, string> = {
@@ -221,62 +523,56 @@ const caOverlays: Record<string, string> = {
 }
 
 const threeLtOverlays: Record<string, string> = {
-  chinchilla: '3LTCHIN.png',
-  clear: '3LTCLEAR.png',
-  'low-e': '3LTCLEARLE.png',
-  cubed: '3LTCUBED.png',
-  frosted: '3LTFROSTED.png',
-  rain: '3LTRAIN.png',
+  chinchilla: '/assets/hgi-assets/Glass/RETRO/3LTCHI.png',
+  clear: '/assets/hgi-assets/Glass/RETRO/3LTCLE.png',
+  cubed: '/assets/hgi-assets/Glass/RETRO/3LTCUB.png',
+  frosted: '/assets/hgi-assets/Glass/RETRO/3LTFRO.png',
+  rain: '/assets/hgi-assets/Glass/RETRO/3LTRAI.png',
 }
 
 const threeStepOverlays: Record<string, string> = {
-  chinchilla: '3STEPCHINCHILLA.png',
-  clear: '3STEPCLEAR.png',
-  'low-e': '3STEPCLEARLE.png',
-  cubed: '3STEPCUBED.png',
-  frosted: '3STEPFROSTED.png',
-  rain: '3STEPRAIN.png',
+  chinchilla: '/assets/hgi-assets/Glass/RETRO/3STEPCHI.png',
+  clear: '/assets/hgi-assets/Glass/RETRO/3STEPCLE.png',
+  cubed: '/assets/hgi-assets/Glass/RETRO/3STEPCUB.png',
+  frosted: '/assets/hgi-assets/Glass/RETRO/3STEPFRO.png',
+  rain: '/assets/hgi-assets/Glass/RETRO/3STEPRAI.png',
 }
 
 const fourLtOverlays: Record<string, string> = {
-  chinchilla: '4LTCHINCHILLA.png',
-  clear: '4LTCLEAR.png',
-  'low-e': '4LTCLEARLE.png',
-  cubed: '4LTCUBED.png',
-  frosted: '4LTFROSTED.png',
-  rain: '4LTRAIN.png',
+  chinchilla: '/assets/hgi-assets/Glass/RETRO/4LTCHI.png',
+  clear: '/assets/hgi-assets/Glass/RETRO/4LTCLE.png',
+  cubed: '/assets/hgi-assets/Glass/RETRO/4LTCUB.png',
+  frosted: '/assets/hgi-assets/Glass/RETRO/4LTFRO.png',
+  rain: '/assets/hgi-assets/Glass/RETRO/4LTRAI.png',
 }
 
 const fiveLtOverlays: Record<string, string> = {
-  chinchilla: '5LTCHINCHILLA.png',
-  clear: '5LTCLEAR.png',
-  'low-e': '5LTCLEARLE.png',
-  cubed: '5LTCUBED.png',
-  frosted: '5LTFROSTED.png',
-  rain: '5LTRAIN.png',
+  chinchilla: '/assets/hgi-assets/Glass/RETRO/5LTCHI.png',
+  clear: '/assets/hgi-assets/Glass/RETRO/5LTCLE.png',
+  cubed: '/assets/hgi-assets/Glass/RETRO/5LTCUB.png',
+  frosted: '/assets/hgi-assets/Glass/RETRO/5LTFRO.png',
+  rain: '/assets/hgi-assets/Glass/RETRO/5LTRAI.png',
 }
 
 const f2Overlays: Record<string, string> = {
-  clear: 'F2Clear.png',
-  frosted: 'F2Frosted.png',
+  clear: '/assets/hgi-assets/Glass/F2/F2.png',
+  frosted: '/assets/hgi-assets/Glass/F2/F2FRO.png',
 }
 
 const f3Overlays: Record<string, string> = {
-  clear: 'F3Clear.png',
-  frosted: 'F3Frosted.png',
+  clear: '/assets/hgi-assets/Glass/F3/F3.png',
+  frosted: '/assets/hgi-assets/Glass/F3/F3FRO.png',
 }
 
 const f4Overlays: Record<string, string> = {
-  clear: 'F4Clear.png',
 }
 
 const f764Overlays: Record<string, string> = {
-  chinchilla: 'F764Chinchilla.png',
-  clear: 'F764Clear.png',
-  'low-e': 'F764ClearLowE.png',
-  cubed: 'F764Cubed.png',
-  frosted: 'F764Frosted.png',
-  rain: 'F764Rain.png',
+  chinchilla: '/assets/hgi-assets/Glass/RETRO/F764CHI.png',
+  clear: '/assets/hgi-assets/Glass/RETRO/F764CLE.png',
+  cubed: '/assets/hgi-assets/Glass/RETRO/F764CUB.png',
+  frosted: '/assets/hgi-assets/Glass/RETRO/F764FRO.png',
+  rain: '/assets/hgi-assets/Glass/RETRO/F764RAI.png',
 }
 
 const hrtOverlays: Record<string, string> = {
@@ -592,42 +888,42 @@ const swOverlays: Record<string, string> = {
 }
 
 const variantThumbnailOptions = [
-  { id: 'dorian-nickel', name: 'Dorian - Nickel', image: '/assets/glass/DORIAN.png' },
-  { id: 'dorian-patina', name: 'Dorian - Patina', image: '/assets/glass/DORIAN.png' },
-  { id: 'elegant-black-white', name: 'Elegant - Black/White', image: '/assets/glass/ELEGANT.jpg' },
-  { id: 'elegant-nickel', name: 'Elegant - Nickel', image: '/assets/glass/ELEGANT.jpg' },
-  { id: 'elegant-patina', name: 'Elegant - Patina', image: '/assets/glass/ELEGANT.jpg' },
-  { id: 'grace-nickel', name: 'Grace - Nickel', image: '/assets/glass/Grace.png' },
-  { id: 'grace-patina', name: 'Grace - Patina', image: '/assets/glass/Grace.png' },
-  { id: 'heirlooms-brass', name: 'Heirlooms - Brass', image: '/assets/glass/Heirlooms.png' },
-  { id: 'heirlooms-nickel', name: 'Heirlooms - Nickel', image: '/assets/glass/Heirlooms.png' },
-  { id: 'majestic-nickel', name: 'Majestic - Nickel', image: '/assets/glass/Majestic.png' },
-  { id: 'majestic-patina', name: 'Majestic - Patina', image: '/assets/glass/Majestic.png' },
-  { id: 'monterey-nickel', name: 'Monterey - Nickel', image: '/assets/glass/MONTEREY.jpg' },
-  { id: 'monterey-patina', name: 'Monterey - Patina', image: '/assets/glass/MONTEREY.jpg' },
-  { id: 'nouveau-nickel', name: 'Nouveau - Nickel', image: '/assets/glass/Nouveau.png' },
-  { id: 'nouveau-patina', name: 'Nouveau - Patina', image: '/assets/glass/Nouveau.png' },
-  { id: 'celestial', name: 'Celestial', image: '/assets/glass/Ocean Caming.png' },
-  { id: 'courtyard', name: 'Courtyard', image: '/assets/glass/Decorative.png' },
-  { id: 'paris', name: 'Paris', image: '/assets/glass/Heirlooms.png' },
-  { id: 'blinds-espresso', name: 'Blinds - Espresso', image: '/assets/glass/Blinds.png' },
-  { id: 'blinds-gray', name: 'Blinds - Gray', image: '/assets/glass/Blinds.png' },
-  { id: 'blinds-sand', name: 'Blinds - Sand', image: '/assets/glass/Blinds.png' },
-  { id: 'blinds-silver', name: 'Blinds - Silver', image: '/assets/glass/Blinds.png' },
-  { id: 'blinds-tan', name: 'Blinds - Tan', image: '/assets/glass/Blinds.png' },
-  { id: 'blinds-white', name: 'Blinds - White', image: '/assets/glass/Blinds.png' },
-  { id: 'f-f10l', name: 'F10L', image: '/assets/glass/Clear.png' },
-  { id: 'f-f15wh', name: 'F15 White Grid', image: '/assets/glass/Clear.png' },
-  { id: 'f-prairie-internal', name: 'Prairie Internal', image: '/assets/glass/Clear.png' },
-  { id: 'f-blinds-15', name: 'Blinds - 15 Lite', image: '/assets/glass/Blinds.png' },
-  { id: 'f-ten-lite', name: 'Ten Lite', image: '/assets/glass/Clear.png' },
-  { id: 'f-madison', name: 'Madison', image: '/assets/glass/Decorative.png' },
-  { id: 's-f5', name: 'F5', image: '/assets/glass/Clear.png' },
-  { id: 's-f5l', name: 'F5L', image: '/assets/glass/Clear.png' },
-  { id: 's-s5l', name: 'S5L', image: '/assets/glass/Clear.png' },
-  { id: 's-s9int', name: 'S9 Internal', image: '/assets/glass/Clear.png' },
-  { id: 's-s9intl', name: 'S9 Internal Lite', image: '/assets/glass/Clear.png' },
-  { id: 's-sv9', name: 'SV9', image: '/assets/glass/Clear.png' },
+  { id: 'dorian-nickel', name: 'Dorian - Nickel', image: '/assets/glass/thumbnails/DORIAN.png' },
+  { id: 'dorian-patina', name: 'Dorian - Patina', image: '/assets/glass/thumbnails/DORIAN.png' },
+  { id: 'elegant-black-white', name: 'Elegant - Black/White', image: '/assets/glass/thumbnails/ELEGANT.jpg' },
+  { id: 'elegant-nickel', name: 'Elegant - Nickel', image: '/assets/glass/thumbnails/ELEGANT.jpg' },
+  { id: 'elegant-patina', name: 'Elegant - Patina', image: '/assets/glass/thumbnails/ELEGANT.jpg' },
+  { id: 'grace-nickel', name: 'Grace - Nickel', image: '/assets/glass/thumbnails/Grace.png' },
+  { id: 'grace-patina', name: 'Grace - Patina', image: '/assets/glass/thumbnails/Grace.png' },
+  { id: 'heirlooms-brass', name: 'Heirlooms - Brass', image: '/assets/glass/thumbnails/Heirlooms.png' },
+  { id: 'heirlooms-nickel', name: 'Heirlooms - Nickel', image: '/assets/glass/thumbnails/Heirlooms.png' },
+  { id: 'majestic-nickel', name: 'Majestic - Nickel', image: '/assets/glass/thumbnails/Majestic.png' },
+  { id: 'majestic-patina', name: 'Majestic - Patina', image: '/assets/glass/thumbnails/Majestic.png' },
+  { id: 'monterey-nickel', name: 'Monterey - Nickel', image: '/assets/glass/thumbnails/MONTEREY.jpg' },
+  { id: 'monterey-patina', name: 'Monterey - Patina', image: '/assets/glass/thumbnails/MONTEREY.jpg' },
+  { id: 'nouveau-nickel', name: 'Nouveau - Nickel', image: '/assets/glass/thumbnails/Nouveau.png' },
+  { id: 'nouveau-patina', name: 'Nouveau - Patina', image: '/assets/glass/thumbnails/Nouveau.png' },
+  { id: 'celestial', name: 'Celestial', image: '/assets/glass/thumbnails/Ocean Caming.png' },
+  { id: 'courtyard', name: 'Courtyard', image: '/assets/glass/thumbnails/Decorative.png' },
+  { id: 'paris', name: 'Paris', image: '/assets/glass/thumbnails/Heirlooms.png' },
+  { id: 'blinds-espresso', name: 'Blinds - Espresso', image: '/assets/glass/thumbnails/Blinds.png' },
+  { id: 'blinds-gray', name: 'Blinds - Gray', image: '/assets/glass/thumbnails/Blinds.png' },
+  { id: 'blinds-sand', name: 'Blinds - Sand', image: '/assets/glass/thumbnails/Blinds.png' },
+  { id: 'blinds-silver', name: 'Blinds - Silver', image: '/assets/glass/thumbnails/Blinds.png' },
+  { id: 'blinds-tan', name: 'Blinds - Tan', image: '/assets/glass/thumbnails/Blinds.png' },
+  { id: 'blinds-white', name: 'Blinds - White', image: '/assets/glass/thumbnails/Blinds.png' },
+  { id: 'f-f10l', name: 'F10L', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 'f-f15wh', name: 'F15 White Grid', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 'f-prairie-internal', name: 'Prairie Internal', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 'f-blinds-15', name: 'Blinds - 15 Lite', image: '/assets/glass/thumbnails/Blinds.png' },
+  { id: 'f-ten-lite', name: 'Ten Lite', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 'f-madison', name: 'Madison', image: '/assets/glass/thumbnails/Decorative.png' },
+  { id: 's-f5', name: 'F5', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 's-f5l', name: 'F5L', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 's-s5l', name: 'S5L', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 's-s9int', name: 'S9 Internal', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 's-s9intl', name: 'S9 Internal Lite', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 's-sv9', name: 'SV9', image: '/assets/glass/thumbnails/Clear.png' },
 ]
 
 export const glassOptions: GlassOption[] = [
@@ -662,101 +958,101 @@ export const glassOptions: GlassOption[] = [
   const swOverlay = swOverlays[option.id]
 
   if (cr14Overlay) {
-    overlaysByDoorStyle.CR14 = `/assets/hgi-assets/Glass/CR14/${cr14Overlay}`
+    overlaysByDoorStyle.CR14 = glassOverlayAssetUrl('CR14', cr14Overlay)
   }
 
   if (cr14plOverlay) {
-    overlaysByDoorStyle.CR14PL = `/assets/hgi-assets/Glass/CR14PL/${cr14plOverlay}`
+    overlaysByDoorStyle.CR14PL = glassOverlayAssetUrl('CR14PL', cr14plOverlay)
   }
 
   if (f848Overlay) {
-    overlaysByDoorStyle.F848 = `/assets/hgi-assets/Glass/F848/${f848Overlay}`
+    overlaysByDoorStyle.F848 = glassOverlayAssetUrl('F848', f848Overlay)
   }
 
   if (foOverlay) {
-    overlaysByDoorStyle.FO = `/assets/hgi-assets/Glass/FO/${foOverlay}`
+    overlaysByDoorStyle.FO = glassOverlayAssetUrl('FO', foOverlay)
   }
 
   if (qaOverlay) {
-    overlaysByDoorStyle.QA = `/assets/hgi-assets/Glass/QA/${qaOverlay}`
+    overlaysByDoorStyle.QA = glassOverlayAssetUrl('QA', qaOverlay)
   }
 
   if (caOverlay) {
-    overlaysByDoorStyle.CA = `/assets/hgi-assets/Glass/CA/${caOverlay}`
+    overlaysByDoorStyle.CA = glassOverlayAssetUrl('CA', caOverlay)
   }
 
   if (threeLtOverlay) {
-    overlaysByDoorStyle['3LT'] = `/assets/hgi-assets/Glass/3LT/${threeLtOverlay}`
+    overlaysByDoorStyle['3LT'] = glassOverlayAssetUrl('RETRO', threeLtOverlay)
   }
 
   if (threeStepOverlay) {
-    overlaysByDoorStyle['3STEP'] = `/assets/hgi-assets/Glass/3STEP/${threeStepOverlay}`
+    overlaysByDoorStyle['3STEP'] = glassOverlayAssetUrl('RETRO', threeStepOverlay)
   }
 
   if (fourLtOverlay) {
-    overlaysByDoorStyle['4LT'] = `/assets/hgi-assets/Glass/4LT/${fourLtOverlay}`
+    overlaysByDoorStyle['4LT'] = glassOverlayAssetUrl('RETRO', fourLtOverlay)
   }
 
   if (fiveLtOverlay) {
-    overlaysByDoorStyle['5LT'] = `/assets/hgi-assets/Glass/5LT/${fiveLtOverlay}`
+    overlaysByDoorStyle['5LT'] = glassOverlayAssetUrl('RETRO', fiveLtOverlay)
   }
 
   if (f2Overlay) {
-    overlaysByDoorStyle.F2 = `/assets/hgi-assets/Glass/F2/${f2Overlay}`
+    overlaysByDoorStyle.F2 = glassOverlayAssetUrl('F2', f2Overlay)
   }
 
   if (f3Overlay) {
-    overlaysByDoorStyle.F3 = `/assets/hgi-assets/Glass/F3/${f3Overlay}`
+    overlaysByDoorStyle.F3 = glassOverlayAssetUrl('F3', f3Overlay)
   }
 
   if (f4Overlay) {
-    overlaysByDoorStyle.F4 = `/assets/hgi-assets/Glass/F4/${f4Overlay}`
+    overlaysByDoorStyle.F4 = glassOverlayAssetUrl('F4', f4Overlay)
   }
 
   if (f764Overlay) {
-    overlaysByDoorStyle.F764 = `/assets/hgi-assets/Glass/F764/${f764Overlay}`
+    overlaysByDoorStyle.F764 = glassOverlayAssetUrl('RETRO', f764Overlay)
   }
 
   if (hrtOverlay) {
-    overlaysByDoorStyle.HRT = `/assets/hgi-assets/Glass/HRT/${hrtOverlay}`
+    overlaysByDoorStyle.HRT = glassOverlayAssetUrl('HRT', hrtOverlay)
   }
 
   if (satOverlay) {
-    overlaysByDoorStyle.SAT = `/assets/hgi-assets/Glass/SAT/${satOverlay}`
+    overlaysByDoorStyle.SAT = glassOverlayAssetUrl('SAT', satOverlay)
   }
 
   if (soOverlay) {
-    overlaysByDoorStyle.SO = `/assets/hgi-assets/Glass/SO/${soOverlay}`
-    overlaysByDoorStyle.SO2 = `/assets/hgi-assets/Glass/SO/${soOverlay}`
+    overlaysByDoorStyle.SO = glassOverlayAssetUrl('SO', soOverlay)
+    overlaysByDoorStyle.SO2 = glassOverlayAssetUrl('SO', soOverlay)
   }
 
   if (sOverlay) {
-    overlaysByDoorStyle.S = `/assets/hgi-assets/Glass/S/${sOverlay}`
+    overlaysByDoorStyle.S = glassOverlayAssetUrl('S', sOverlay)
   }
 
   if (fOverlay) {
-    overlaysByDoorStyle.F = `/assets/hgi-assets/Glass/F/${fOverlay}`
+    overlaysByDoorStyle.F = glassOverlayAssetUrl('F', fOverlay)
   }
 
   if (f48Overlay) {
-    overlaysByDoorStyle.F48 = `/assets/hgi-assets/Glass/F48/${f48Overlay}`
+    overlaysByDoorStyle.F48 = glassOverlayAssetUrl('F48', f48Overlay)
   }
 
   if (f482Overlay) {
-    overlaysByDoorStyle.F482 = `/assets/hgi-assets/Glass/F482/${f482Overlay}`
+    overlaysByDoorStyle.F482 = glassOverlayAssetUrl('F482', f482Overlay)
   }
 
   if (s836Overlay) {
-    overlaysByDoorStyle.S836 = `/assets/hgi-assets/Glass/S836/${s836Overlay}`
+    overlaysByDoorStyle.S836 = glassOverlayAssetUrl('S836', s836Overlay)
   }
 
   if (swOverlay) {
-    overlaysByDoorStyle.SW = `/assets/hgi-assets/Glass/SW/${swOverlay}`
+    overlaysByDoorStyle.SW = glassOverlayAssetUrl('SW', swOverlay)
   }
 
   return {
     ...option,
-    thumbnailPath: image.replace('/assets/glass/', '/assets/glass/thumbnails/'),
+    thumbnailPath: image,
     overlaysByDoorStyle,
   }
 })

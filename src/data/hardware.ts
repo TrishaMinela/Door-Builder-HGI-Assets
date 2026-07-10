@@ -74,63 +74,47 @@ export function hardwareCardAssetUrl(hardware: HardwareOption) {
   return `/assets/hardware/cards/${hardware.asset}`
 }
 
-type HardwarePreviewMode = 'side2' | 'swing4'
-
 type HardwarePreviewConfig = {
-  folder: 'baldwin' | 'schlage'
-  exteriorBase?: string
-  interiorBase?: string
-  exteriorMode?: HardwarePreviewMode
-  interiorMode?: HardwarePreviewMode
+  exterior?: string
+  interior?: string
 }
 
 const hardwarePreviewKey = (manufacturer: HardwareManufacturer, style: HardwareStyleName, finish: HardwareFinishName) => `${manufacturer}|${style}|${finish}`
+const previewHardwareUrl = (fileName: string) => `/assets/hgi-assets/Preview Hardware/${fileName}`
 
 const hardwarePreviewAssets: Record<string, HardwarePreviewConfig> = {
-  [hardwarePreviewKey('Baldwin', 'Adirondack', 'Dark Bronze')]: { folder: 'baldwin', exteriorBase: 'BALADIRDBZ', interiorBase: 'BALADIRDBZ', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Baldwin', 'La Jolla', 'Matte Black')]: { folder: 'baldwin', exteriorBase: 'BALDLAJMB', interiorBase: 'BALDLAJMB', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Baldwin', 'La Jolla', 'Satin Nickel')]: { folder: 'baldwin', exteriorBase: 'BALDLAJSN', interiorBase: 'BALDLAJSN', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Baldwin', 'La Jolla', 'Venetian Bronze')]: { folder: 'baldwin', exteriorBase: 'BALDLAJVBZ', interiorBase: 'BALDLAJVBZ', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Baldwin', 'Longview', 'Dark Bronze')]: { folder: 'baldwin', exteriorBase: 'BALDLONGDBZ', interiorBase: 'BALDLONGDBZ', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Baldwin', 'Napa', 'Satin Nickel')]: { folder: 'baldwin', exteriorBase: 'BALDNAPSN', interiorBase: 'BALDNAPSN', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Baldwin', 'Napa', 'Venetian Bronze')]: { folder: 'baldwin', exteriorBase: 'BALDNAPVBZ', interiorBase: 'BALDNAPVBZ', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Baldwin', 'Santa Cruz', 'Matte Black')]: { folder: 'baldwin', exteriorBase: 'BALDSANMB', interiorBase: 'BALDSANMB', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Baldwin', 'Santa Cruz', 'Satin Nickel')]: { folder: 'baldwin', exteriorBase: 'BALDSANSN', interiorBase: 'BALDSANSN', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Baldwin', 'Santa Cruz', 'Venetian Bronze')]: { folder: 'baldwin', exteriorBase: 'BALDSANVBZ', interiorBase: 'BALDSANVBZ', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Baldwin', 'Seattle', 'Matte Black')]: { folder: 'baldwin', exteriorBase: 'BALDSEAMB', interiorBase: 'BALDSEAMB', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Baldwin', 'Seattle', 'Satin Nickel')]: { folder: 'baldwin', exteriorBase: 'BALDSEASN', interiorBase: 'BALDSEASN', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Baldwin', 'Seattle', 'Venetian Bronze')]: { folder: 'baldwin', exteriorBase: 'BALDSEAVBZ', interiorBase: 'BALDSEAVBZ', exteriorMode: 'swing4', interiorMode: 'swing4' },
-  [hardwarePreviewKey('Schlage', 'Accent Lever with Deadbolt', 'Bright Brass')]: { folder: 'schlage', exteriorBase: 'ACLDBB', interiorBase: 'ACLIBB', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Accent Lever with Deadbolt', 'Matte Black')]: { folder: 'schlage', exteriorBase: 'ACLDMB', interiorBase: 'ACLIMB', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Accent Lever with Deadbolt', 'Satin Nickel')]: { folder: 'schlage', exteriorBase: 'ACLDSN', interiorBase: 'ACLISN', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Bowery Knob with Deadbolt', 'Matte Black')]: { folder: 'schlage', exteriorBase: 'BOCDMB', interiorBase: 'BOWIMB', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Bowery Knob with Deadbolt', 'Satin Nickel')]: { folder: 'schlage', exteriorBase: 'BOCDSN', interiorBase: 'BOWISN', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Camelot Handleset', 'Bright Brass')]: { folder: 'schlage', exteriorBase: 'CAHSBB', exteriorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Camelot Handleset', 'Matte Black')]: { folder: 'schlage', exteriorBase: 'CAHSMB', exteriorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Camelot Handleset', 'Satin Nickel')]: { folder: 'schlage', exteriorBase: 'CAHSSN', exteriorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Camelot Trim with Georgian Knob', 'Satin Nickel')]: { folder: 'schlage', exteriorBase: 'GECDSN', interiorBase: 'GEOISN', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Century Handleset', 'Matte Black')]: { folder: 'schlage', exteriorBase: 'CEHSMB', exteriorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Century Handleset', 'Satin Nickel')]: { folder: 'schlage', exteriorBase: 'CEHSSN', exteriorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Century Trim with Latitude Lever', 'Matte Black')]: { folder: 'schlage', exteriorBase: 'LACDMB', interiorBase: 'LATIMB', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Century Trim with Latitude Lever', 'Satin Nickel')]: { folder: 'schlage', exteriorBase: 'LACDSN', interiorBase: 'LATISN', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Georgian Knob with Deadbolt', 'Bright Brass')]: { folder: 'schlage', exteriorBase: 'GECDBB', interiorBase: 'GEOIBB', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Georgian Knob with Deadbolt', 'Matte Black')]: { folder: 'schlage', exteriorBase: 'GECDMB', interiorBase: 'GEOIMB', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Georgian Knob with Deadbolt', 'Satin Nickel')]: { folder: 'schlage', exteriorBase: 'GECDSN', interiorBase: 'GEOISN', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Latitude Lever with Deadbolt', 'Matte Black')]: { folder: 'schlage', exteriorBase: 'LACDMB', interiorBase: 'LATIMB', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Latitude Lever with Deadbolt', 'Satin Nickel')]: { folder: 'schlage', exteriorBase: 'LACDSN', interiorBase: 'LATISN', exteriorMode: 'side2', interiorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Plymouth Handleset', 'Bright Brass')]: { folder: 'schlage', exteriorBase: 'PLHSBB', exteriorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Plymouth Handleset', 'Matte Black')]: { folder: 'schlage', exteriorBase: 'PLHSMB', exteriorMode: 'side2' },
-  [hardwarePreviewKey('Schlage', 'Plymouth Handleset', 'Satin Nickel')]: { folder: 'schlage', exteriorBase: 'PLHSSN', exteriorMode: 'side2' },
+  [hardwarePreviewKey('Baldwin', 'Adirondack', 'Dark Bronze')]: { exterior: 'Preview - Baldwin - Adirondack - Dark Bronze.png', interior: 'Preview - Baldwin - Interior - Adirondack - Dark Bronze - Interior.png' },
+  [hardwarePreviewKey('Baldwin', 'La Jolla', 'Matte Black')]: { exterior: 'Preview - Baldwin - La Jolla - Matte Black.png', interior: 'Preview - Baldwin - La Jolla - Matte Black - Interior.png' },
+  [hardwarePreviewKey('Baldwin', 'La Jolla', 'Satin Nickel')]: { exterior: 'Preview - Baldwin - La Jolla - Satin Nickel.png', interior: 'Preview - Baldwin - La Jolla - Satin Nickel - Interior.png' },
+  [hardwarePreviewKey('Baldwin', 'La Jolla', 'Venetian Bronze')]: { exterior: 'Preview - Baldwin - La Jolla - Venetian Bronze.png', interior: 'Preview - Baldwin - La Jolla - Venetian Bronze - Interior.png' },
+  [hardwarePreviewKey('Baldwin', 'Longview', 'Dark Bronze')]: { exterior: 'Preview - Baldwin - Long View - Dark Bronze.png', interior: 'Preview - Baldwin - Long View - Dark Bronze - Interior.png' },
+  [hardwarePreviewKey('Baldwin', 'Napa', 'Satin Nickel')]: { exterior: 'Preview - Baldwin - Napa - Satin Nickel.png', interior: 'Preview - Baldwin - Napa - Satin Nickel - Interior.png' },
+  [hardwarePreviewKey('Baldwin', 'Napa', 'Venetian Bronze')]: { exterior: 'Preview - Baldwin - Napa - Venetian Bronze.png', interior: 'Preview - Baldwin - Napa - Venetian Bronze - Interior.png' },
+  [hardwarePreviewKey('Baldwin', 'Santa Cruz', 'Matte Black')]: { exterior: 'Preview - Baldwin - Santa Cruz - Matte Black.png', interior: 'Preview - Baldwin - Santa Cruz - Matte Black - Interior.png' },
+  [hardwarePreviewKey('Baldwin', 'Santa Cruz', 'Satin Nickel')]: { exterior: 'Preview - Baldwin - Santa Cruz - Satin Nickel.png', interior: 'Preview - Baldwin - Santa Cruz - Satin Nickel - Interior.png' },
+  [hardwarePreviewKey('Baldwin', 'Santa Cruz', 'Venetian Bronze')]: { exterior: 'Preview - Baldwin - Santa Cruz - Venetian Bronze.png', interior: 'Preview - Baldwin - Santa Cruz - Venetian Bronze - Interior.png' },
+  [hardwarePreviewKey('Baldwin', 'Seattle', 'Matte Black')]: { exterior: 'Preview - Baldwin - Seattle - Matte Black.png', interior: 'Preview - Baldwin - Seattle - Matte Black - Interior.png' },
+  [hardwarePreviewKey('Baldwin', 'Seattle', 'Satin Nickel')]: { exterior: 'Preview - Baldwin - Seattle - Satin Nickel.png', interior: 'Preview - Baldwin - Seattle - Satin Nickel - Interior.png' },
+  [hardwarePreviewKey('Baldwin', 'Seattle', 'Venetian Bronze')]: { exterior: 'Preview - Baldwin - Seattle - Venetian Bronze.png', interior: 'Preview - Baldwin - Seattle - Venetian Bronze - Interior.png' },
+  [hardwarePreviewKey('Schlage', 'Accent Lever with Deadbolt', 'Bright Brass')]: { exterior: 'Preview - Schlage - Exterior - Accent - Bright Brass.png', interior: 'Preview - Schlage - Interior - Accent -  Bright Brass.png' },
+  [hardwarePreviewKey('Schlage', 'Accent Lever with Deadbolt', 'Matte Black')]: { exterior: 'Preview - Schlage - Exterior - Accent - Matte Black.png', interior: 'Preview - Schlage - Interior - Accent -  Matte Black.png' },
+  [hardwarePreviewKey('Schlage', 'Accent Lever with Deadbolt', 'Satin Nickel')]: { exterior: 'Preview - Schlage - Exterior - Accent - Satin Nickel.png', interior: 'Preview - Schlage - Interior - Accent -  Satin Nickel.png' },
+  [hardwarePreviewKey('Schlage', 'Bowery Knob with Deadbolt', 'Matte Black')]: { exterior: 'Preview - Schlage - Exterior - Bowery - Matte Black.png', interior: 'Preview - Schlage - Interior - Bowery - Matte Black.png' },
+  [hardwarePreviewKey('Schlage', 'Bowery Knob with Deadbolt', 'Satin Nickel')]: { exterior: 'Preview - Schlage - Exterior - Bowery - Satin Nickel.png', interior: 'Preview - Schlage - Interior - Bowery -  Satin Nickel.png' },
+  [hardwarePreviewKey('Schlage', 'Century Handleset', 'Matte Black')]: { exterior: 'Preview - Schlage - Exterior - Century - Matte Black.png', interior: 'Preview - Schlage - Interior - Century - Matte Black.png' },
+  [hardwarePreviewKey('Schlage', 'Century Handleset', 'Satin Nickel')]: { exterior: 'Preview - Schlage - Exterior - Century - Satin Nickel.png', interior: 'Preview - Schlage - Interior - Century - Satin Nickel.png' },
+  [hardwarePreviewKey('Schlage', 'Century Trim with Latitude Lever', 'Matte Black')]: { exterior: 'Preview - Schlage - Exterior - Century Trim with Latitude Lever - Matte Black.png', interior: 'Preview - Schlage - Interior - Century Trim with Latitude Lever - Matte Black.png' },
+  [hardwarePreviewKey('Schlage', 'Century Trim with Latitude Lever', 'Satin Nickel')]: { exterior: 'Preview - Schlage - Exterior - Century Trim with Latitude Lever - Satin Nickel.png', interior: 'Preview - Schlage - Interior - Century Trim with Latitude Lever - Satin Nickel.png' },
+  [hardwarePreviewKey('Schlage', 'Georgian Knob with Deadbolt', 'Bright Brass')]: { exterior: 'Preview - Schlage - Exterior - Georgian - Brightbrass.png', interior: 'Preview - Schlage - Interior - Georgian - Brightbrass.png' },
+  [hardwarePreviewKey('Schlage', 'Georgian Knob with Deadbolt', 'Matte Black')]: { exterior: 'Preview - Schlage - Exterior - Georgian - Matte Black.png', interior: 'Preview - Schlage - Interior - Georgian - Matte Black.png' },
+  [hardwarePreviewKey('Schlage', 'Georgian Knob with Deadbolt', 'Satin Nickel')]: { exterior: 'Preview - Schlage - Exterior - Georgian - Satin Nickel.png', interior: 'Preview - Schlage - Interior - Georgian - Satin Nickel.png' },
+  [hardwarePreviewKey('Schlage', 'Latitude Lever with Deadbolt', 'Bright Brass')]: { exterior: 'Preview - Schlage - Exterior - Latitude - Bright Brass.png', interior: 'Preview - Schlage - Interior - Latitude -  Bright Brass.png' },
+  [hardwarePreviewKey('Schlage', 'Latitude Lever with Deadbolt', 'Matte Black')]: { exterior: 'Preview - Schlage - Exterior - Latitude - Matte Black.png', interior: 'Preview - Schlage - Interior - Latitude - Matte Black.png' },
+  [hardwarePreviewKey('Schlage', 'Latitude Lever with Deadbolt', 'Satin Nickel')]: { exterior: 'Preview - Schlage - Exterior - Latitude - Satin Nickel.png', interior: 'Preview - Schlage - Interior - Latitude -  Satin Nickel.png' },
+  [hardwarePreviewKey('Schlage', 'Plymouth Handleset', 'Bright Brass')]: { exterior: 'Preview - Schlage - Exterior - Plymouth - Bright Brass.png', interior: 'Preview - Schlage - Interior - Plymouth - Bright Brass.png' },
+  [hardwarePreviewKey('Schlage', 'Plymouth Handleset', 'Matte Black')]: { exterior: 'Preview - Schlage - Exterior - Plymouth - Matte Black.png', interior: 'Preview - Schlage - Interior - Plymouth - Matte Black.png' },
+  [hardwarePreviewKey('Schlage', 'Plymouth Handleset', 'Satin Nickel')]: { exterior: 'Preview - Schlage - Exterior - Plymouth - Satin Nickel.png', interior: 'Preview - Schlage - Interior - Plymouth - Satin Nickel.png' },
 }
-
-const swingPreviewSuffix = (doorSwing?: DoorSwing | null) => {
-  if (!doorSwing) return 'RO'
-  return ({ LHI: 'LI', LHO: 'LO', RHI: 'RI', RHO: 'RO' } as const)[doorSwing.id]
-}
-
-const sidePreviewSuffix = (doorSwing?: DoorSwing | null) => doorSwing?.id.startsWith('L') ? 'L' : 'R'
-
-const hardwarePreviewOverlayUrl = (folder: HardwarePreviewConfig['folder'], fileName: string) => `/assets/hgi-assets/Preview%20Hardware/${fileName}`
 
 const logMissingHardwarePreview = (hardware: PreviewHardware, view: HardwareView, doorSwing?: DoorSwing | null) => {
   console.warn('[hardware-preview:missing]', {
@@ -151,13 +135,11 @@ export function hardwarePreviewAssetUrl(hardware: PreviewHardware, view: Hardwar
     return ''
   }
 
-  const base = view === 'Interior' ? config.interiorBase : config.exteriorBase
-  const mode = view === 'Interior' ? config.interiorMode : config.exteriorMode
-  if (!base || !mode) {
+  const fileName = view === 'Interior' ? config.interior : config.exterior
+  if (!fileName) {
     logMissingHardwarePreview(hardware, view, doorSwing)
     return ''
   }
 
-  const suffix = mode === 'swing4' ? swingPreviewSuffix(doorSwing) : sidePreviewSuffix(doorSwing)
-  return hardwarePreviewOverlayUrl(config.folder, `${base}${suffix}.png`)
+  return previewHardwareUrl(fileName)
 }
