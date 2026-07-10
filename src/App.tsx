@@ -20,10 +20,10 @@ const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '
 const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
 const signatureSeriesId = 'signature-series'
 const HERO_DOOR_OPENING = {
-  leftPct: 44.42,
-  topPct: 49.85,
-  widthPct: 10.1,
-  heightPct: 38.1,
+  leftPct: 36.4,
+  topPct: 21.55,
+  widthPct: 27.2,
+  heightPct: 59.4,
 } as const
 const heroDoorOpeningStyle = {
   left: `${HERO_DOOR_OPENING.leftPct}%`,
@@ -31,6 +31,23 @@ const heroDoorOpeningStyle = {
   width: `${HERO_DOOR_OPENING.widthPct}%`,
   height: `${HERO_DOOR_OPENING.heightPct}%`,
 } as CSSProperties
+const HERO_DOOR_PRESETS = [
+  ['F482', 'signature-series', 'paint-positive-red', 'grace-nickel', 'Century Trim with Latitude Lever', 'Matte Black'],
+  ['F', 'signature-series', 'stain-toasted-caramel', 'heirlooms-nickel', 'Camelot Handleset', 'Satin Nickel'],
+  ['CR14', 'signature-series', 'stain-natural-gold', 'oak-park', 'Plymouth Handleset', 'Bright Brass'],
+  ['S', 'signature-series', 'stain-black-cherry', 'rain', 'Camelot Handleset', 'Matte Black'],
+  ['F48', 'signature-series', 'stain-auburn', 'linen', 'Plymouth Handleset', 'Satin Nickel'],
+  ['5LT', '22-gauge-steel', 'stain-french-roast', 'chinchilla', 'Latitude Lever with Deadbolt', 'Satin Nickel'],
+  ['F848', 'textured-fiberglass', 'stain-nutmeg', 'berkley', 'Century Handleset', 'Matte Black'],
+  ['FO', '20-gauge-smooth-steel', 'paint-black', 'cadence', 'Camelot Handleset', 'Satin Nickel'],
+  ['S836', '20-gauge-smooth-steel', 'paint-white', 'rain', 'Plymouth Handleset', 'Matte Black'],
+  ['CR14PL', '20-gauge-smooth-steel', 'paint-navy', 'topaz', 'Century Trim with Latitude Lever', 'Satin Nickel'],
+  ['F2', 'brushed-smooth-fiberglass', 'paint-iron-ore', 'frosted', 'Latitude Lever with Deadbolt', 'Matte Black'],
+  ['4LT', '20-gauge-smooth-steel', 'paint-coastal-plain', 'clear', 'Camelot Handleset', 'Bright Brass'],
+  ['SW', 'textured-fiberglass', 'stain-harvest-wheat', 'renewed-impressions', 'Plymouth Handleset', 'Satin Nickel'],
+  ['2PNGSS', 'signature-series', 'stain-french-roast', null, 'Camelot Handleset', 'Matte Black'],
+  ['S1', '20-gauge-smooth-steel', 'paint-desert-tan', null, 'Century Trim with Latitude Lever', 'Satin Nickel'],
+] as const
 const grainThumbnails: Record<string, string> = {
   Cherry: '/assets/door-lines/grains/cherry.png',
   Fir: '/assets/door-lines/grains/fir.png',
@@ -203,27 +220,34 @@ export default function App() {
     hardwareOptions.find((item) => item.manufacturer === 'Schlage' && item.style === styleName && item.finish === finishName)
     ?? hardwareOptions.find((item) => item.manufacturer === 'Schlage')
     ?? hardwareOptions[0]
-  const buildHomeDemo = (styleCode: string, doorLineChoiceId: string, finishChoiceId: string, glassChoiceId: string, hardwareStyle: string, hardwareFinish: string) => {
+  const buildHomeDemo = (styleCode: string, doorLineChoiceId: string, finishChoiceId: string, glassChoiceId: string | null, hardwareStyle: string, hardwareFinish: string) => {
     const demoStyle = demoStyleByCode(styleCode)
-    const demoFinish = demoFinishById(finishChoiceId)
     const demoDoorLine = doorLineChoicesForStyle(demoStyle).find((item) => item.id === doorLineChoiceId) ?? doorLineChoicesForStyle(demoStyle)[0]
     const demoGrain = demoDoorLine ? autoGrainForDoorLine(demoStyle, demoDoorLine.id) : null
+    const compatibleFinishes = demoDoorLine ? finishesForStyle(demoStyle, finishes, demoDoorLine.id, demoGrain) : finishes
+    const requestedFinish = demoFinishById(finishChoiceId)
+    const demoFinish = compatibleFinishes.find((item) => item.id === requestedFinish.id)
+      ?? compatibleFinishes.find((item) => item.finishType === requestedFinish.finishType)
+      ?? compatibleFinishes[0]
+      ?? requestedFinish
     const demoProduct = resolveDoorProduct(demoStyle, demoFinish, demoGrain ?? undefined, demoDoorLine?.id)
+    const compatibleGlass = glassOptions.filter((option) => demoProduct.styleCodes.some((code) => option.overlaysByDoorStyle[code]))
+    const requestedGlass = glassChoiceId ? demoGlassById(glassChoiceId) : null
+    const demoGlass = requestedGlass && compatibleGlass.some((option) => option.id === requestedGlass.id)
+      ? requestedGlass
+      : compatibleGlass.find((option) => option.id === 'clear') ?? compatibleGlass[0] ?? null
     return {
       style: demoStyle,
       finish: demoFinish,
-      glass: demoGlassById(glassChoiceId),
+      glass: demoGlass,
       hardware: demoHardwareBySelection(hardwareStyle, hardwareFinish),
       grain: demoGrain,
       product: demoProduct,
     }
   }
-  const homeDemoConfigurations = [
-    buildHomeDemo('F482', 'signature-series', 'paint-positive-red', 'grace-nickel', 'Century Trim with Latitude Lever', 'Matte Black'),
-    buildHomeDemo('5LT', '22-gauge-steel', 'paint-navy', 'rain', 'Latitude Lever with Deadbolt', 'Satin Nickel'),
-    buildHomeDemo('CR14PL', 'signature-series', 'stain-natural-gold', 'oak-park', 'Plymouth Handleset', 'Bright Brass'),
-    buildHomeDemo('CA', 'signature-series', 'stain-toasted-caramel', 'heirlooms-nickel', 'Camelot Handleset', 'Satin Nickel'),
-  ]
+  const homeDemoConfigurations = HERO_DOOR_PRESETS.map(([styleCode, doorLineId, finishId, glassId, hardwareStyle, hardwareFinish]) =>
+    buildHomeDemo(styleCode, doorLineId, finishId, glassId, hardwareStyle, hardwareFinish),
+  )
   const activeHomeDemo = homeDemoConfigurations[homeDemoIndex % homeDemoConfigurations.length]
 
   useEffect(() => {
@@ -443,7 +467,7 @@ export default function App() {
           </div>
           <div className="home-hero-visual">
             <div className="home-entryway-demo" aria-label="Animated examples of configurable entry doors">
-              <img className="home-entryway-image" src="/assets/hero/hero-door.png" alt="Modern home entryway with a customizable door preview" />
+              <img className="home-entryway-image" src="/assets/hero/hero-entryway.png" alt="Welcoming home entryway with a customizable door preview" />
               <div className="home-entryway-overlay" aria-hidden="true">
                 <div className="home-entryway-door-slot" style={heroDoorOpeningStyle}>
                   {homeDemoConfigurations.map((demo, index) => (

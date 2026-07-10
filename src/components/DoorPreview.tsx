@@ -90,7 +90,10 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     ? glass
     : compatibleGlass.find((option) => option.id === 'clear') ?? compatibleGlass[0]
   const glassOverlay = previewGlass ? styleCodes.map((code) => previewGlass.overlaysByDoorStyle[code]).find(Boolean) : undefined
-  const previewHardware: PreviewHardware = hardware.manufacturer && hardware.style && hardware.finish ? hardware : hardwareOptions[0] ?? hardware
+  const [previewView, setPreviewView] = useState<HardwareView>('Exterior')
+  const selectedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView, doorSwing)
+  const defaultHardware = hardwareOptions.find((option) => Boolean(hardwarePreviewAssetUrl(option, previewView, doorSwing)))
+  const previewHardware: PreviewHardware = selectedHardwareImage ? hardware : defaultHardware ?? hardware
 
   useEffect(() => {
     let cancelled = false
@@ -140,10 +143,10 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
       WebkitMaskImage: `url("${finishMask}")`,
       maskImage: `url("${finishMask}")`,
       mixBlendMode: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorBlendMode : FINISH_RENDERING.stainColorBlendMode,
-      opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorOpacity : FINISH_RENDERING.stainColorOpacity,
+      opacity: compact ? 1 : finish.finishType === 'paint' ? FINISH_RENDERING.paintColorOpacity : FINISH_RENDERING.stainColorOpacity,
       ...(finish.finishType === 'stain' ? { filter: `saturate(${FINISH_RENDERING.stainSaturation})` } : {}),
     } as React.CSSProperties
-  }, [applyFinish, finish.finishType, finishColor, finishMask, hasMappedPreview])
+  }, [applyFinish, compact, finish.finishType, finishColor, finishMask, hasMappedPreview])
   const detailLayerStyle = {
     WebkitMaskImage: finishMask ? `url("${finishMask}")` : undefined,
     maskImage: finishMask ? `url("${finishMask}")` : undefined,
@@ -157,8 +160,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     maskImage: `url("${finishMask}")`,
     opacity: FINISH_RENDERING.stainHighlightOpacity,
   } as React.CSSProperties : undefined
-  const [previewView, setPreviewView] = useState<HardwareView>('Exterior')
-  const requestedHardwareImage = hardwarePreviewAssetUrl(previewHardware, previewView, doorSwing)
+  const requestedHardwareImage = selectedHardwareImage || hardwarePreviewAssetUrl(previewHardware, previewView, doorSwing)
   const [hardwareImage, setHardwareImage] = useState(requestedHardwareImage)
 
   useEffect(() => {
@@ -195,14 +197,14 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           <div className="panels">
             {Array.from({ length: style.panel === 'classic' ? 6 : style.panel === 'craftsman' ? 3 : 4 }).map((_, index) => <span key={index} />)}
           </div>
-          {previewImage && <img className={`door-style-image door-style-image-${finish.finishType}`} src={previewImage} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+          {previewImage && <img className={`door-style-image door-style-image-${finish.finishType}`} src={previewImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {finishLayerStyle && <div className={`door-finish-layer door-finish-layer-${finish.finishType}`} style={finishLayerStyle} />}
-          {previewImage && finishLayerStyle && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+          {previewImage && finishLayerStyle && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {stainHighlightStyle && <div className="door-stain-highlight" style={stainHighlightStyle} />}
-          {glassOverlay && <img className="door-glass-overlay" src={glassOverlay} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+          {glassOverlay && <img className="door-glass-overlay" src={glassOverlay} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {!glassOverlay && isGlassCapable && glassMask && <div className="door-default-glass-overlay" style={{ WebkitMaskImage: `url("${glassMask}")`, maskImage: `url("${glassMask}")` }} />}
           {hardwareImage && <div className={`hardware hardware-${previewHardware.type}`} style={{ '--metal': previewHardware.color } as React.CSSProperties}>
-            <img src={hardwareImage} alt="" decoding="async" onError={(event) => {
+            <img src={hardwareImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => {
               console.warn('[door-preview:failed-hardware-overlay]', {
                 manufacturer: previewHardware.manufacturer,
                 style: previewHardware.style,
