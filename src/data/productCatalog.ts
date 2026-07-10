@@ -129,6 +129,11 @@ function variantsForDoorLine(style: DoorStyle, doorLineId?: string) {
   return style.variants.filter((variant) => doorLine.lineIds.includes(variant.lineId))
 }
 
+export function doorStyleSupportsGlass(style: DoorStyle, doorLineId?: string) {
+  const variants = variantsForDoorLine(style, doorLineId)
+  return variants.some((variant) => !noGlassCodes.has(variant.code))
+}
+
 export function doorLineChoicesForStyle(style: DoorStyle) {
   return doorLineChoices.filter((doorLine) =>
     style.variants.some((variant) => doorLine.lineIds.includes(variant.lineId)),

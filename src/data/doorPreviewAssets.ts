@@ -1,4 +1,5 @@
 import type { DoorStyle, Finish, ResolvedDoorProduct } from '../types'
+import { doorStyleThumbnailAssets } from './doorStyleThumbnailAssets'
 
 // Preview slabs are separate from door-style thumbnails and are loaded by URL.
 const slabUrl = (folder: string, fileName: string) => `/assets/hgi-assets/Preview Slabs/${folder}/${fileName}`
@@ -129,15 +130,45 @@ function previewFromMap(style: DoorStyle, assets: Record<string, string>) {
     .find(Boolean)
 }
 
+const signaturePreviewMaps = [
+  signatureCherryPaintDoorPreviewAssets,
+  signatureFirPaintDoorPreviewAssets,
+  signatureMahoganyPaintDoorPreviewAssets,
+  signatureOakPaintDoorPreviewAssets,
+]
+
+function firstMappedPreview(style: DoorStyle, assets: Record<string, string>[]) {
+  return assets.map((assetMap) => previewFromMap(style, assetMap)).find(Boolean)
+}
+
+function doorStyleThumbnailPreview(style: DoorStyle) {
+  return candidateCodes(style)
+    .map((code) => doorStyleThumbnailAssets[code]?.image)
+    .find(Boolean)
+}
+
 function mappedPreview(style: DoorStyle, _finishType?: Finish['finishType'], product?: ResolvedDoorProduct | null, grain?: string | null) {
+  const signatureGrainAssets = usesSignaturePreview(product) ? signaturePaintPreviewByGrain(grain) : null
+  const grainPreview = signatureGrainAssets ? previewFromMap(style, signatureGrainAssets) : undefined
+  if (grainPreview) return grainPreview
+
   if (usesSignaturePreview(product)) {
-    const signatureGrainAssets = signaturePaintPreviewByGrain(grain)
-    return signatureGrainAssets ? previewFromMap(style, signatureGrainAssets) : undefined
+    const linePreview = firstMappedPreview(style, signaturePreviewMaps)
+    if (linePreview) return linePreview
   }
 
-  if (usesTexturedPaintPreview(product)) return previewFromMap(style, texturedPaintDoorPreviewAssets)
-  if (usesSmoothPaintPreview(product)) return previewFromMap(style, smoothPaintDoorPreviewAssets)
-  return undefined
+  if (usesTexturedPaintPreview(product)) {
+    const linePreview = previewFromMap(style, texturedPaintDoorPreviewAssets)
+    if (linePreview) return linePreview
+  }
+  if (usesSmoothPaintPreview(product)) {
+    const linePreview = previewFromMap(style, smoothPaintDoorPreviewAssets)
+    if (linePreview) return linePreview
+  }
+
+  return previewFromMap(style, doorPreviewAssets)
+    ?? firstMappedPreview(style, [texturedPaintDoorPreviewAssets, ...signaturePreviewMaps])
+    ?? doorStyleThumbnailPreview(style)
 }
 
 export function hasDoorPreviewAsset(

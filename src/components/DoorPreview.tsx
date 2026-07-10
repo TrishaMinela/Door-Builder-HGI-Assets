@@ -15,6 +15,15 @@ type Props = {
   doorSwing?: DoorSwing | null
 }
 
+const finishBlendConfig = {
+  paintBlendMode: 'color',
+  paintOpacity: 1,
+  stainBlendMode: 'multiply',
+  stainOpacity: 0.9,
+  detailBlendMode: 'luminosity',
+  detailOpacity: 0.78,
+} as const
+
 export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null }: Props) {
   const previewImage = resolveDoorPreviewAsset(style, grain, finish.finishType, product)
   const hasMappedPreview = hasDoorPreviewAsset(style, grain, finish.finishType, product)
@@ -30,8 +39,14 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
       backgroundColor: finishColor,
       WebkitMaskImage: `url("${finishMask}")`,
       maskImage: `url("${finishMask}")`,
+      mixBlendMode: finish.finishType === 'paint' ? finishBlendConfig.paintBlendMode : finishBlendConfig.stainBlendMode,
+      opacity: finish.finishType === 'paint' ? finishBlendConfig.paintOpacity : finishBlendConfig.stainOpacity,
     } as React.CSSProperties
-  }, [finishColor, finishMask, hasMappedPreview])
+  }, [finish.finishType, finishColor, finishMask, hasMappedPreview])
+  const detailLayerStyle = {
+    mixBlendMode: finishBlendConfig.detailBlendMode,
+    opacity: finishBlendConfig.detailOpacity,
+  } as React.CSSProperties
   const [previewView, setPreviewView] = useState<HardwareView>('Exterior')
   const requestedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView, doorSwing)
   const [hardwareImage, setHardwareImage] = useState(requestedHardwareImage)
@@ -72,6 +87,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           </div>
           {previewImage && <img className={`door-style-image door-style-image-${finish.finishType}`} src={previewImage} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {finishLayerStyle && <div className={`door-finish-layer door-finish-layer-${finish.finishType}`} style={finishLayerStyle} />}
+          {previewImage && finishLayerStyle && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {fixedGlassOverlay && <img className="door-glass-overlay fixed-glass-overlay" src={fixedGlassOverlay} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {glassOverlay && <img className="door-glass-overlay" src={glassOverlay} alt="" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {hardwareImage && <div className={`hardware hardware-${hardware.type}`} style={{ '--metal': hardware.color } as React.CSSProperties}>

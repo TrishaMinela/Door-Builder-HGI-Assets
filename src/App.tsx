@@ -8,15 +8,28 @@ import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
-import { autoGrainForDoorLine, doorLineChoicesForStyle, finishesForStyle, finishTypesForDoorLine, resolveDoorProduct } from './data/productCatalog'
+import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, resolveDoorProduct } from './data/productCatalog'
 import type { ContactForm, DoorSwing, GlassOption, PreviewHardware } from './types'
 import { configurationPdfName } from './utils/pdfConfig'
 import { submitQuote, type SubmissionResult } from './utils/submission'
 
-const steps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
+const glassSteps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
+const noGlassSteps = ['Door Style', 'Finish', 'Hardware', 'Review & Quote']
 const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '' }
 const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
 const signatureSeriesId = 'signature-series'
+const HERO_DOOR_OPENING = {
+  leftPct: 44.85,
+  topPct: 49.85,
+  widthPct: 9.25,
+  heightPct: 38.1,
+} as const
+const heroDoorOpeningStyle = {
+  left: `${HERO_DOOR_OPENING.leftPct}%`,
+  top: `${HERO_DOOR_OPENING.topPct}%`,
+  width: `${HERO_DOOR_OPENING.widthPct}%`,
+  height: `${HERO_DOOR_OPENING.heightPct}%`,
+} as CSSProperties
 const grainThumbnails: Record<string, string> = {
   Cherry: '/assets/door-lines/grains/cherry.jpg',
   Fir: '/assets/door-lines/grains/fir.jpg',
@@ -102,6 +115,10 @@ export default function App() {
   const availableDoorLines = selectedStyle ? doorLineChoicesForStyle(style) : []
   const availableDoorLineIds = availableDoorLines.map((item) => item.id).join('|')
   const selectedDoorLine = availableDoorLines.find((item) => item.id === doorLineId)
+  const supportsGlass = selectedStyle && selectedDoorLine
+    ? doorStyleSupportsGlass(selectedStyle, selectedDoorLine.id)
+    : Boolean(selectedStyle?.hasGlass)
+  const steps = supportsGlass && glassOptions.length ? glassSteps : noGlassSteps
   const isSignatureDoorLine = selectedDoorLine?.id === signatureSeriesId
   const selectedDoorLineLineIds = selectedDoorLine?.lineIds ?? []
   const selectedDoorLineLineIdsKey = selectedDoorLineLineIds.join('|')
@@ -133,9 +150,9 @@ export default function App() {
   const selectedDoorSwing = doorSwingOptions.find((item) => item.id === doorSwingId)
   const selectedStyleCodes = selectedStyle ? styleCodesForGlass(selectedStyle) : []
   const hasFixedGlassPreview = selectedStyleCodes.some((code) => fixedGlassPreviewCodes.has(code))
-  const selectedGlass = hasFixedGlassPreview ? includedGlassOption : glass
+  const selectedGlass = supportsGlass ? hasFixedGlassPreview ? includedGlassOption : glass : null
   // Overlay mappings control the door preview, not whether an option is selectable.
-  const availableGlass = selectedStyle ? glassOptions : []
+  const availableGlass = selectedStyle && supportsGlass ? glassOptions : []
   const glassOptionGroups = [...availableGlass.reduce((groups, option) => {
     const key = glassGroupKey(option)
     const group = groups.get(key) ?? { key, title: glassGroupTitle(option), options: [] }
@@ -340,7 +357,7 @@ export default function App() {
     if (nextFinishId === finishId || !visibleFinishes.some((item) => item.id === nextFinishId)) return
     setFinishId(nextFinishId)
     setFinishTab(nextFinishType)
-    advanceAfterSelection(steps.indexOf('Glass'))
+    advanceAfterSelection(steps.indexOf('Glass') >= 0 ? steps.indexOf('Glass') : steps.indexOf('Hardware'))
   }
 
   const selectGlass = (nextGlassId: string) => {
@@ -423,12 +440,14 @@ export default function App() {
           <div className="home-hero-visual">
             <div className="home-entryway-demo" aria-label="Animated examples of configurable entry doors">
               <img className="home-entryway-image" src="/assets/hero/hero-door.png" alt="Modern home entryway with a customizable door preview" />
-              <div className="home-entryway-door-slot" aria-hidden="true">
-                {homeDemoConfigurations.map((demo, index) => (
-                  <div className={`home-demo-door-layer ${index === homeDemoIndex % homeDemoConfigurations.length ? 'active' : ''}`} key={`${demo.style.code}-${demo.finish.id}-${demo.glass?.id ?? 'glass'}-${demo.hardware.id}`}>
-                    <DoorPreview style={demo.style} finish={demo.finish} glass={demo.glass} hardware={demo.hardware} grain={demo.grain} product={demo.product} tintColor={demo.finish.color} compact />
-                  </div>
-                ))}
+              <div className="home-entryway-overlay" aria-hidden="true">
+                <div className="home-entryway-door-slot" style={heroDoorOpeningStyle}>
+                  {homeDemoConfigurations.map((demo, index) => (
+                    <div className={`home-demo-door-layer ${index === homeDemoIndex % homeDemoConfigurations.length ? 'active' : ''}`} key={`${demo.style.code}-${demo.finish.id}-${demo.glass?.id ?? 'glass'}-${demo.hardware.id}`}>
+                      <DoorPreview style={demo.style} finish={demo.finish} glass={demo.glass} hardware={demo.hardware} grain={demo.grain} product={demo.product} tintColor={demo.finish.color} compact />
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="home-preview-label">
                 <span>Preview as you build</span>
