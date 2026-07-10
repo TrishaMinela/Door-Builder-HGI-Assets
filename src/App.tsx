@@ -48,13 +48,6 @@ const doorSwingOptions: DoorSwing[] = [
   { id: 'RHI', name: 'Right Hand Inswing', image: '/assets/door-swing/rhi.png' },
   { id: 'RHO', name: 'Right Hand Outswing', image: '/assets/door-swing/rho.png' },
 ]
-const fixedGlassPreviewCodes = new Set(['5LT', 'F764', 'FRT', 'HRT', 'N', 'S2', 'S3', 'S4', 'SAT'])
-const includedGlassOption: GlassOption = {
-  id: 'included-glass',
-  name: 'Included clear glass',
-  thumbnailPath: '',
-  overlaysByDoorStyle: {},
-}
 const hardwareStyleGroups = [...hardwareOptions.reduce((groups, option) => {
   const key = `${option.manufacturer}|${option.style}`
   const options = groups.get(key) ?? []
@@ -116,10 +109,9 @@ export default function App() {
   const availableDoorLines = selectedStyle ? doorLineChoicesForStyle(style) : []
   const availableDoorLineIds = availableDoorLines.map((item) => item.id).join('|')
   const selectedDoorLine = availableDoorLines.find((item) => item.id === doorLineId)
-  const supportsGlass = selectedStyle && selectedDoorLine
+  const compatibilitySupportsGlass = selectedStyle && selectedDoorLine
     ? doorStyleSupportsGlass(selectedStyle, selectedDoorLine.id)
     : Boolean(selectedStyle?.hasGlass)
-  const steps = supportsGlass && glassOptions.length ? glassSteps : noGlassSteps
   const isSignatureDoorLine = selectedDoorLine?.id === signatureSeriesId
   const selectedDoorLineLineIds = selectedDoorLine?.lineIds ?? []
   const selectedDoorLineLineIdsKey = selectedDoorLineLineIds.join('|')
@@ -154,12 +146,18 @@ export default function App() {
   const selectedHardware = hardwareOptions.find((item) => item.id === hardwareId)
   const hardware = selectedHardware ?? emptyPreviewHardware
   const selectedDoorSwing = doorSwingOptions.find((item) => item.id === doorSwingId)
-  const selectedStyleCodes = selectedStyle ? styleCodesForGlass(selectedStyle) : []
-  const hasFixedGlassPreview = selectedStyleCodes.some((code) => fixedGlassPreviewCodes.has(code))
-  const selectedGlass = supportsGlass ? hasFixedGlassPreview ? includedGlassOption : glass : null
+  const selectedStyleCodes = selectedStyle
+    ? selectedDoorLine
+      ? selectedStyle.variants.filter((variant) => selectedDoorLine.lineIds.includes(variant.lineId)).map((variant) => variant.code)
+      : styleCodesForGlass(selectedStyle)
+    : []
+  const availableGlass = selectedStyle && compatibilitySupportsGlass
+    ? glassOptions.filter((option) => selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])))
+    : []
+  const supportsGlass = Boolean(compatibilitySupportsGlass && availableGlass.length)
+  const steps = supportsGlass ? glassSteps : noGlassSteps
+  const selectedGlass = supportsGlass ? glass : null
   const previewGlass = supportsGlass ? glass : null
-  // Overlay mappings control the door preview, not whether an option is selectable.
-  const availableGlass = selectedStyle && supportsGlass ? glassOptions : []
   const glassOptionGroups = [...availableGlass.reduce((groups, option) => {
     const key = glassGroupKey(option)
     const group = groups.get(key) ?? { key, title: glassGroupTitle(option), options: [] }
@@ -173,7 +171,7 @@ export default function App() {
     'door-line',
     ...(needsGrainStep ? ['door-grain' as const] : []),
     'finish',
-    ...(supportsGlass && glassOptions.length ? ['glass' as const] : []),
+    ...(supportsGlass ? ['glass' as const] : []),
     'hardware',
     'door-swing',
     'review',

@@ -985,19 +985,19 @@ export const glassOptions: GlassOption[] = [
   }
 
   if (threeLtOverlay) {
-    overlaysByDoorStyle['3LT'] = glassOverlayAssetUrl('RETRO', threeLtOverlay)
+    overlaysByDoorStyle['3LT'] = glassOverlayAssetUrl('3LT', threeLtOverlay)
   }
 
   if (threeStepOverlay) {
-    overlaysByDoorStyle['3STEP'] = glassOverlayAssetUrl('RETRO', threeStepOverlay)
+    overlaysByDoorStyle['3STEP'] = glassOverlayAssetUrl('3STEP', threeStepOverlay)
   }
 
   if (fourLtOverlay) {
-    overlaysByDoorStyle['4LT'] = glassOverlayAssetUrl('RETRO', fourLtOverlay)
+    overlaysByDoorStyle['4LT'] = glassOverlayAssetUrl('4LT', fourLtOverlay)
   }
 
   if (fiveLtOverlay) {
-    overlaysByDoorStyle['5LT'] = glassOverlayAssetUrl('RETRO', fiveLtOverlay)
+    overlaysByDoorStyle['5LT'] = glassOverlayAssetUrl('5LT', fiveLtOverlay)
   }
 
   if (f2Overlay) {
@@ -1013,7 +1013,7 @@ export const glassOptions: GlassOption[] = [
   }
 
   if (f764Overlay) {
-    overlaysByDoorStyle.F764 = glassOverlayAssetUrl('RETRO', f764Overlay)
+    overlaysByDoorStyle.F764 = glassOverlayAssetUrl('F764', f764Overlay)
   }
 
   if (hrtOverlay) {
