@@ -31,7 +31,7 @@ const FINISH_RENDERING = {
   stainGlossStrength: 0.72,
 } as const
 
-const SLAB_MASK_WHITE_THRESHOLD = 248
+const SLAB_MASK_WHITE_THRESHOLD = 253
 
 function buildSlabMask(slab: HTMLImageElement) {
   const canvas = document.createElement('canvas')
