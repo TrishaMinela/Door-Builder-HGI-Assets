@@ -151,10 +151,6 @@ const signaturePreviewMaps = [
   signatureOakPaintDoorPreviewAssets,
 ]
 
-function firstMappedPreview(style: DoorStyle, assets: Record<string, string>[]) {
-  return assets.map((assetMap) => previewFromMap(style, assetMap)).find(Boolean)
-}
-
 function doorStyleThumbnailPreview(style: DoorStyle) {
   return candidateCodes(style)
     .map((code) => doorStyleThumbnailAssets[code]?.image)
@@ -163,17 +159,18 @@ function doorStyleThumbnailPreview(style: DoorStyle) {
 
 export function resolveDoorPreviewCandidates(style: DoorStyle, _finishType?: Finish['finishType'], product?: ResolvedDoorProduct | null, grain?: string | null) {
   const candidates: (string | undefined)[] = []
-  const signatureGrainAssets = usesSignaturePreview(product) ? signaturePaintPreviewByGrain(grain) : null
+  const hasExactDoorLine = product?.doorTypes.length === 1
+  const signatureGrainAssets = hasExactDoorLine && usesSignaturePreview(product) ? signaturePaintPreviewByGrain(grain) : null
   if (signatureGrainAssets) candidates.push(previewFromMap(style, signatureGrainAssets))
 
-  if (usesSignaturePreview(product)) {
+  if (hasExactDoorLine && usesSignaturePreview(product)) {
     candidates.push(...signaturePreviewMaps.map((assets) => previewFromMap(style, assets)))
   }
 
-  if (usesTexturedPaintPreview(product)) {
+  if (hasExactDoorLine && usesTexturedPaintPreview(product)) {
     candidates.push(previewFromMap(style, texturedPaintDoorPreviewAssets))
   }
-  if (usesSmoothPaintPreview(product)) {
+  if (hasExactDoorLine && usesSmoothPaintPreview(product)) {
     candidates.push(previewFromMap(style, smoothPaintDoorPreviewAssets))
   }
 

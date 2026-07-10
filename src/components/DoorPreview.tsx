@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { DoorStyle, DoorSwing, Finish, GlassOption, HardwareView, PreviewHardware, ResolvedDoorProduct } from '../types'
 import { hardwarePreviewAssetUrl } from '../data/hardware'
-import { hasDoorPreviewAsset, previewAssetGlassOverlay, resolveDoorPreviewAsset } from '../data/doorPreviewAssets'
+import { previewAssetGlassOverlay, resolveDoorPreviewCandidates } from '../data/doorPreviewAssets'
 
 type Props = {
   style: DoorStyle
@@ -31,16 +31,35 @@ const FINISH_RENDERING = {
   stainGlossStrength: 0.72,
 } as const
 
-const SLAB_MASK_WHITE_THRESHOLD = 240
+const SLAB_MASK_WHITE_THRESHOLD = 248
 
 export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true }: Props) {
-  const previewImage = resolveDoorPreviewAsset(style, grain, finish.finishType, product)
-  const hasMappedPreview = hasDoorPreviewAsset(style, grain, finish.finishType, product)
+  const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
+  const previewCandidatesKey = previewCandidates.join('|')
+  const [previewImage, setPreviewImage] = useState(previewCandidates[0] ?? '')
+  const hasMappedPreview = Boolean(previewCandidates.length)
   const finishColor = tintColor ?? finish.color
   const [processedMask, setProcessedMask] = useState<{ source: string; url: string } | null>(null)
   const finishMask = previewImage && processedMask?.source === previewImage ? processedMask.url : undefined
   const glassOverlay = glass?.overlaysByDoorStyle[style.code]
   const fixedGlassOverlay = glass && !glassOverlay ? previewAssetGlassOverlay(style, finish.finishType) : undefined
+
+  useEffect(() => {
+    let cancelled = false
+    let candidateIndex = 0
+
+    const tryNextCandidate = () => {
+      const candidate = previewCandidates[candidateIndex++]
+      if (!candidate || cancelled) return
+      const slab = new Image()
+      slab.onload = () => { if (!cancelled) setPreviewImage(candidate) }
+      slab.onerror = tryNextCandidate
+      slab.src = candidate
+    }
+
+    tryNextCandidate()
+    return () => { cancelled = true }
+  }, [previewCandidatesKey])
 
   useEffect(() => {
     if (!previewImage) {

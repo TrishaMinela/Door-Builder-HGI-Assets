@@ -928,7 +928,10 @@ const variantThumbnailOptions = [
 
 export const glassOptions: GlassOption[] = [
   ...glassThumbnailOptions.filter(
-    ({ id }) => !['dorian', 'elegant', 'grace', 'heirlooms', 'majestic', 'monterey', 'nouveau'].includes(id),
+    ({ id }) => !['dorian', 'elegant', 'grace', 'heirlooms', 'majestic', 'monterey', 'nouveau', 'clic'].includes(id)
+      && !id.startsWith('blinds')
+      && id !== 'f-blinds-15'
+      && !id.startsWith('low-e'),
   ),
   ...variantThumbnailOptions,
 ].map(({ image, ...option }) => {

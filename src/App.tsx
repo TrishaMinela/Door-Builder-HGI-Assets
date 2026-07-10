@@ -145,7 +145,10 @@ export default function App() {
   const activeFinishType = selectedFinishType || effectiveFinishTypes[0] || 'paint'
   const finishId = selectedFinishType === 'paint' ? selectedPaint : selectedFinishType === 'stain' ? selectedStain : ''
   const visibleFinishes = availableFinishes.filter((item) => item.finishType === activeFinishType)
-  const selectedFinish = visibleFinishes.find((item) => item.id === finishId)
+  const selectedFinish = finishes.find((item) => item.id === finishId)
+  const visibleSelectedFinish = visibleFinishes.find((item) => item.id === finishId)
+  const availableFinishIds = availableFinishes.map((item) => item.id).join('|')
+  const previewFinish = selectedFinish && (!selectedDoorLine || (materialFinishTypes.includes(selectedFinish.finishType) && (!availableFinishes.length || availableFinishes.some((item) => item.id === selectedFinish.id)))) ? selectedFinish : null
   const finish = selectedFinish ?? visibleFinishes[0] ?? availableFinishes[0] ?? finishes[0]
   const glass = glassOptions.find((item) => item.id === glassId) ?? null
   const selectedHardware = hardwareOptions.find((item) => item.id === hardwareId)
@@ -187,7 +190,14 @@ export default function App() {
           : 'Review & Quote'
   const activeMainStepIndex = steps.indexOf(currentStep)
   const product = resolveDoorProduct(style, finish, selectedGrain ?? undefined, selectedDoorLine?.id)
-  const previewTintColor = selectedFinish ? finish.color : null
+  const previewConfig = {
+    finish,
+    tintColor: previewFinish?.color ?? null,
+    applyFinish: Boolean(previewFinish),
+    glass: previewGlass,
+    hardware,
+    doorSwing: selectedDoorSwing,
+  }
   const demoStyleByCode = (code: string) => doorStyles.find((item) => item.code === code || item.variants.some((variant) => variant.code === code)) ?? doorStyles[0]
   const demoFinishById = (id: string) => finishes.find((item) => item.id === id) ?? finishes[0]
   const demoGlassById = (id: string) => glassOptions.find((item) => item.id === id) ?? null
@@ -222,24 +232,23 @@ export default function App() {
     if (doorLineId && !availableDoorLines.some((item) => item.id === doorLineId)) {
       setDoorLineId('')
       setGrainId('')
-      setSelectedFinishType('')
-      setSelectedPaint('')
-      setSelectedStain('')
     }
     if (grainId && !isSignatureDoorLine) setGrainId('')
     if (grainId && needsGrainStep && !signatureGrainOptions.some((item) => item.id === grainId)) {
       setGrainId('')
-      setSelectedPaint('')
-      setSelectedStain('')
     }
     if (effectiveFinishTypes.length && !effectiveFinishTypes.includes(selectedFinishType as 'paint' | 'stain')) {
       setSelectedFinishType(effectiveFinishTypes[0])
       setSelectedPaint('')
       setSelectedStain('')
     }
+    if (finishId && selectedDoorLine && availableFinishes.length && !availableFinishes.some((item) => item.id === finishId)) {
+      if (selectedFinishType === 'paint') setSelectedPaint('')
+      if (selectedFinishType === 'stain') setSelectedStain('')
+    }
     if (glassId && !availableGlass.some((item) => item.id === glassId)) setGlassId('')
     if (step >= pages.length) setStep(pages.length - 1)
-  }, [styleId, doorLineId, grainId, availableDoorLineIds, isSignatureDoorLine, selectedDoorLineLineIdsKey, needsGrainStep, effectiveFinishTypes, selectedFinishType, glassId, availableGlassIds, step, pages.length])
+  }, [styleId, doorLineId, grainId, availableDoorLineIds, isSignatureDoorLine, selectedDoorLineLineIdsKey, needsGrainStep, effectiveFinishTypes, selectedFinishType, finishId, availableFinishIds, glassId, availableGlassIds, step, pages.length])
 
   useEffect(() => {
     if (screen !== 'builder') return
@@ -283,12 +292,6 @@ export default function App() {
     setStyleId(nextStyleId)
     setDoorLineId('')
     setGrainId('')
-    setSelectedFinishType('')
-    setSelectedPaint('')
-    setSelectedStain('')
-    setGlassId('')
-    setHardwareId('')
-    setDoorSwingId('')
   }
 
   const resetFinish = () => {
@@ -347,54 +350,33 @@ export default function App() {
     setSelectedFinishType(nextTab)
     setSelectedPaint('')
     setSelectedStain('')
-    setGlassId('')
-    setHardwareId('')
-    setDoorSwingId('')
   }
 
   const selectDoorLine = (nextDoorLineId: string) => {
     if (nextDoorLineId === doorLineId || !availableDoorLines.some((item) => item.id === nextDoorLineId)) return
     setDoorLineId(nextDoorLineId)
     setGrainId('')
-    setSelectedFinishType('')
-    setSelectedPaint('')
-    setSelectedStain('')
-    setGlassId('')
-    setHardwareId('')
-    setDoorSwingId('')
   }
 
   const selectGrain = (nextGrain: string) => {
     if (nextGrain === grainId || !signatureGrainOptions.some((item) => item.id === nextGrain)) return
     setGrainId(nextGrain)
-    setSelectedFinishType('')
-    setSelectedPaint('')
-    setSelectedStain('')
-    setGlassId('')
-    setHardwareId('')
-    setDoorSwingId('')
   }
 
   const selectFinish = (nextFinishId: string, nextFinishType: 'paint' | 'stain') => {
     if (nextFinishId === finishId || !visibleFinishes.some((item) => item.id === nextFinishId)) return
     if (nextFinishType === 'paint') setSelectedPaint(nextFinishId)
     else setSelectedStain(nextFinishId)
-    setGlassId('')
-    setHardwareId('')
-    setDoorSwingId('')
   }
 
   const selectGlass = (nextGlassId: string) => {
     if (nextGlassId === glassId || !availableGlass.some((item) => item.id === nextGlassId)) return
     setGlassId(nextGlassId)
-    setHardwareId('')
-    setDoorSwingId('')
   }
 
   const selectHardware = (nextHardwareId: string) => {
     if (nextHardwareId === hardwareId || !hardwareOptions.some((item) => item.id === nextHardwareId)) return
     setHardwareId(nextHardwareId)
-    setDoorSwingId('')
   }
 
   const selectDoorSwing = (nextDoorSwingId: string) => {
@@ -489,7 +471,7 @@ export default function App() {
         })}
       </nav>
       <main>
-        {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">{selectedStyle ? <DoorPreview style={style} finish={finish} glass={previewGlass} hardware={hardware} product={product} tintColor={previewTintColor} doorSwing={selectedDoorSwing} applyFinish={Boolean(selectedFinish)} /> : <EmptyDoorPreview />}</div>}
+        {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">{selectedStyle ? <DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} /> : <EmptyDoorPreview />}</div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
           {currentStep !== 'Review & Quote' && <>
             <div className="section-heading">
@@ -524,7 +506,7 @@ export default function App() {
 
           {currentStep === 'Review & Quote' && !submitted && <>
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
-            <div className="mobile-review-preview"><DoorPreview style={style} finish={finish} glass={previewGlass} hardware={hardware} product={product} tintColor={previewTintColor} doorSwing={selectedDoorSwing} applyFinish={Boolean(selectedFinish)} /></div>
+            <div className="mobile-review-preview"><DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} /></div>
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
               {[['Door style', style.name, pages.indexOf('door-style')], ['Door line / material', selectedDoorLine?.name ?? product.doorType, pages.indexOf('door-line')], ...(selectedGrain ? [['Grain', selectedGrain, pages.indexOf('door-grain')]] : []), ['Finish type', selectedFinishType === 'stain' ? 'Stain' : 'Paint', pages.indexOf('finish')], [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name, pages.indexOf('finish')], ...(supportsGlass ? [['Glass', selectedGlass?.name ?? 'Not selected', pages.indexOf('glass')]] : []), ['Hardware', hardwareDisplayName(selectedHardware!), pages.indexOf('hardware')], ['Door swing', selectedDoorSwing?.name ?? 'Not selected', pages.indexOf('door-swing')]].map(([label, value, target]) => <div className="summary-row" key={String(label)}><span>{label}<strong>{value}</strong></span>{Number(target) >= 0 && <button onClick={() => goTo(Number(target))}>Edit</button>}</div>)}
@@ -550,12 +532,12 @@ export default function App() {
             <button onClick={downloadPdf}><Download size={17} /> Download Your Summary</button>
           </div>}
 
-          {currentPage !== 'review' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Previous</button><button className="next" disabled={(currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'finish' && !selectedFinish) || (currentPage === 'glass' && !selectedGlass) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>Next <ArrowRight size={17} /></button></div>}
+          {currentPage !== 'review' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Previous</button><button className="next" disabled={(currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'finish' && !visibleSelectedFinish) || (currentPage === 'glass' && !selectedGlass) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>Next <ArrowRight size={17} /></button></div>}
         </section>
 
         {!submitted && <aside>
           <div className="aside-top"><span>Your design</span></div>
-          {selectedStyle ? <DoorPreview style={style} finish={finish} glass={previewGlass} hardware={hardware} product={product} tintColor={previewTintColor} doorSwing={selectedDoorSwing} applyFinish={Boolean(selectedFinish)} /> : <EmptyDoorPreview />}
+          {selectedStyle ? <DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} /> : <EmptyDoorPreview />}
           <div className="mini-summary"><strong>{selectedStyle?.name ?? 'Select a door style'}</strong><span>{selectedDoorLine ? `Material: ${selectedDoorLine.name}${selectedGrain ? ` / Grain: ${selectedGrain}` : ''}` : 'Material: Select in Finish step'}</span><span>{selectedStyle ? `${activeFinishType === 'paint' ? 'Paint' : 'Stain'}: ${selectedFinish?.name ?? ''}${supportsGlass && selectedGlass ? ` / ${selectedGlass.name}` : ''}` : 'Finish: Select a style first'}</span><span>Hardware: {selectedHardware ? hardwareDisplayName(selectedHardware) : ''}</span><span>Door swing: {selectedDoorSwing?.name ?? ''}</span></div>
         </aside>}
       </main>
