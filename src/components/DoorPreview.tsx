@@ -15,13 +15,15 @@ type Props = {
   doorSwing?: DoorSwing | null
 }
 
-const finishBlendConfig = {
-  paintBlendMode: 'color',
-  paintOpacity: 1,
-  stainBlendMode: 'multiply',
-  stainOpacity: 0.9,
-  detailBlendMode: 'luminosity',
-  detailOpacity: 0.78,
+const FINISH_RENDERING = {
+  paintColorBlendMode: 'normal',
+  paintColorOpacity: 1,
+  paintDetailBlendMode: 'multiply',
+  paintDetailOpacity: 0.25,
+  stainColorBlendMode: 'color',
+  stainColorOpacity: 0.92,
+  stainDetailBlendMode: 'multiply',
+  stainDetailOpacity: 0.45,
 } as const
 
 export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null }: Props) {
@@ -39,13 +41,13 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
       backgroundColor: finishColor,
       WebkitMaskImage: `url("${finishMask}")`,
       maskImage: `url("${finishMask}")`,
-      mixBlendMode: finish.finishType === 'paint' ? finishBlendConfig.paintBlendMode : finishBlendConfig.stainBlendMode,
-      opacity: finish.finishType === 'paint' ? finishBlendConfig.paintOpacity : finishBlendConfig.stainOpacity,
+      mixBlendMode: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorBlendMode : FINISH_RENDERING.stainColorBlendMode,
+      opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorOpacity : FINISH_RENDERING.stainColorOpacity,
     } as React.CSSProperties
   }, [finish.finishType, finishColor, finishMask, hasMappedPreview])
   const detailLayerStyle = {
-    mixBlendMode: finishBlendConfig.detailBlendMode,
-    opacity: finishBlendConfig.detailOpacity,
+    mixBlendMode: finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailBlendMode : FINISH_RENDERING.stainDetailBlendMode,
+    opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity,
   } as React.CSSProperties
   const [previewView, setPreviewView] = useState<HardwareView>('Exterior')
   const requestedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView, doorSwing)
