@@ -172,7 +172,7 @@ export default function App() {
   const availableGlass = selectedStyle && compatibilitySupportsGlass
     ? glassOptions.filter((option) => selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])))
     : []
-  const supportsGlass = Boolean(compatibilitySupportsGlass)
+  const supportsGlass = Boolean(compatibilitySupportsGlass && availableGlass.some((option) => option.id !== 'clear'))
   const steps = supportsGlass ? glassSteps : noGlassSteps
   const selectedGlass = supportsGlass ? glass : null
   const previewGlass = supportsGlass ? glass : null
@@ -269,9 +269,9 @@ export default function App() {
       if (selectedFinishType === 'paint') setSelectedPaint('')
       if (selectedFinishType === 'stain') setSelectedStain('')
     }
-    if (glassId && !availableGlass.some((item) => item.id === glassId)) setGlassId('')
+    if (glassId && (!supportsGlass || !availableGlass.some((item) => item.id === glassId))) setGlassId('')
     if (step >= pages.length) setStep(pages.length - 1)
-  }, [styleId, doorLineId, grainId, availableDoorLineIds, isSignatureDoorLine, selectedDoorLineLineIdsKey, needsGrainStep, effectiveFinishTypes, selectedFinishType, finishId, availableFinishIds, glassId, availableGlassIds, step, pages.length])
+  }, [styleId, doorLineId, grainId, availableDoorLineIds, isSignatureDoorLine, selectedDoorLineLineIdsKey, needsGrainStep, effectiveFinishTypes, selectedFinishType, finishId, availableFinishIds, glassId, availableGlassIds, supportsGlass, step, pages.length])
 
   useEffect(() => {
     if (screen !== 'builder') return
@@ -300,29 +300,11 @@ export default function App() {
     if (next >= 0 && next < pages.length) setStep(next)
   }
 
-  const resetStyle = () => {
-    setStyleId('')
-    setDoorLineId('')
-    setGrainId('')
-    setSelectedFinishType('')
-    setSelectedPaint('')
-    setSelectedStain('')
-    goTo(0)
-  }
-
   const selectDoorStyle = (nextStyleId: string) => {
     if (nextStyleId === styleId || !doorStyles.some((item) => item.id === nextStyleId)) return
     setStyleId(nextStyleId)
     setDoorLineId('')
     setGrainId('')
-  }
-
-  const resetFinish = () => {
-    setDoorLineId('')
-    setGrainId('')
-    setSelectedFinishType('')
-    setSelectedPaint('')
-    setSelectedStain('')
   }
 
   const startOver = () => {
@@ -343,6 +325,12 @@ export default function App() {
     setSubmissionResult(null)
     setScreen('builder')
     goTo(0)
+  }
+
+  const resetDesign = () => {
+    if (!window.confirm('Reset your door design? All current selections will be cleared.')) return
+    setBuilderPreviewView('Exterior')
+    startOver()
   }
 
   const canVisitStep = (target: number) => {
@@ -507,9 +495,7 @@ export default function App() {
                 <div className="step-title-row">
                   <h1>{currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'finish' ? 'Choose Your Finish' : currentPage === 'glass' ? 'Choose Your Glass' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>
                   <div className="section-resets">
-                    {currentStep === 'Door Style' && selectedStyle && <button aria-label="Reset selections" title="Reset selections" onClick={resetStyle}><RotateCcw size={22} /></button>}
-                    {currentStep === 'Finish' && selectedFinish && <button aria-label="Reset selections" title="Reset selections" onClick={resetFinish}><RotateCcw size={22} /></button>}
-                    {currentStep === 'Hardware' && selectedHardware && <button aria-label="Reset selections" title="Reset selections" onClick={() => setHardwareId('')}><RotateCcw size={22} /></button>}
+                    {currentPage === 'door-style' && <button type="button" aria-label="Reset Design" onClick={resetDesign}><RotateCcw size={20} /><span>Reset Design</span></button>}
                   </div>
                 </div>
                 <p>{currentPage === 'door-style' ? 'Browse all available door styles and choose the one that feels right for your home.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'finish' ? 'Pick from the valid paint or stain finishes.' : currentPage === 'glass' ? 'Balance natural light, privacy, and personality.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
