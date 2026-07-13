@@ -689,10 +689,11 @@
 }
 
 /* Final landing-stage overrides keep the intrinsic house and door coordinate space together. */
-.home-app .home-hero-visual{position:relative;padding:0;overflow:hidden;background:transparent}
-.home-app .home-entryway-demo{position:relative;width:100%;max-width:100%;height:auto;min-height:0;aspect-ratio:1254/1254;overflow:hidden;border:0;border-radius:0;background:transparent;box-shadow:none}
-.home-app .home-entryway-image{position:relative;inset:auto;display:block;width:100%;height:auto;object-fit:contain;object-position:center}
-.home-app .home-entryway-overlay{position:absolute;inset:0}
+.home-app .home-hero{grid-template-rows:minmax(0,1fr)}
+.home-app .home-hero-visual{position:relative;align-self:stretch;height:100%;min-height:0;padding:0;margin:0;overflow:hidden;background:transparent}
+.home-app .home-entryway-demo{position:absolute;inset:0;width:100%;max-width:none;height:100%;min-height:0;margin:0;padding:0;line-height:0;aspect-ratio:auto;transform:none;overflow:hidden;border:0;border-radius:0;background:transparent;box-shadow:none}
+.home-app .home-entryway-image{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;padding:0;object-fit:cover;object-position:center}
+.home-app .home-entryway-overlay{position:absolute;inset:auto 0;width:100%;height:auto;aspect-ratio:1254/1254;top:50%;transform:translateY(-50%)}
 .home-app .hero-door-overlay{position:absolute;overflow:hidden;background:transparent;transform:none;transform-origin:center}
 .home-app .home-entryway-door-slot .mapped-preview-door{transform:none!important;transform-origin:center bottom!important}
 .home-app .home-entryway-door-slot .door,.home-app .home-entryway-door-slot .door-style-image,.home-app .home-entryway-door-slot .door-finish-layer,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-stain-highlight,.home-app .home-entryway-door-slot .door-glass-overlay,.home-app .home-entryway-door-slot .door-default-glass-overlay,.home-app .home-entryway-door-slot .hardware{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;transform:none!important;transform-origin:center!important}
