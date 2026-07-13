@@ -705,6 +705,24 @@
 .option-card,.glass-choice-card,.hardware-option-card{box-sizing:border-box;position:relative}
 .glass-choice-card.selected,.hardware-option-card.selected{border:1px solid transparent;outline:3px solid var(--gold);outline-offset:-3px;box-shadow:0 10px 28px #0d666c20}
 .glass-choice-card .check,.hardware-option-card .check{position:absolute;top:14px;right:14px;z-index:10}
+
+/* Keep every option in a grid row uniformly sized without changing the grid itself. */
+.options-grid{align-items:stretch}
+.options-grid>.option-card,.options-grid>.glass-choice-card,.options-grid>.hardware-option-card{height:100%;align-self:stretch}
+.option-card{display:flex;flex-direction:column}
+.option-card .option-visual{flex:none;width:100%}
+.option-card .option-copy{flex:1;width:100%;display:flex;flex-direction:column;overflow:hidden}
+.option-copy strong{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.option-copy>span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.glass-choice-card,.hardware-option-card{display:flex;flex-direction:column}
+.glass-card-main,.hardware-card-main{flex:1;display:flex;flex-direction:column}
+.glass-card-main .option-copy,.hardware-card-main .option-copy{flex:1}
+.glass-caming-options,.hardware-finish-options{margin-top:auto}
+@media(max-width:560px){
+  .option-card,.glass-choice-card,.hardware-option-card{display:grid}
+  .option-card .option-copy{width:auto}
+  .glass-card-main,.hardware-card-main{display:contents}
+}
 .glass-caming-options button.selected,.hardware-finish-options button.selected{border-width:1px;outline:1px solid var(--gold);outline-offset:-1px}
 
 /* Desktop builder: one viewport, internally scrolling options, fixed preview composition. */
