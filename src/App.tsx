@@ -8,7 +8,7 @@ import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
-import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, resolveDoorProduct } from './data/productCatalog'
+import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
 import type { ContactForm, DoorSwing, GlassOption, PreviewHardware } from './types'
 import { configurationPdfName } from './utils/pdfConfig'
 import { submitQuote, type SubmissionResult } from './utils/submission'
@@ -32,21 +32,25 @@ const heroDoorOpeningStyle = {
   height: `${HERO_DOOR_OPENING.heightPct}%`,
 } as CSSProperties
 const HERO_DOOR_PRESETS = [
-  ['F482', 'signature-series', 'paint-positive-red', 'grace-nickel', 'Century Trim with Latitude Lever', 'Matte Black'],
+  ['S', 'signature-series', 'paint-positive-red', 'grace-nickel', 'Century Trim with Latitude Lever', 'Matte Black'],
   ['F', 'signature-series', 'stain-toasted-caramel', 'heirlooms-nickel', 'Camelot Handleset', 'Satin Nickel'],
   ['CR14', 'signature-series', 'stain-natural-gold', 'oak-park', 'Plymouth Handleset', 'Bright Brass'],
   ['S', 'signature-series', 'stain-black-cherry', 'rain', 'Camelot Handleset', 'Matte Black'],
-  ['F48', 'signature-series', 'stain-auburn', 'linen', 'Plymouth Handleset', 'Satin Nickel'],
+  ['F', 'signature-series', 'stain-auburn', 'linen', 'Plymouth Handleset', 'Satin Nickel'],
   ['5LT', '22-gauge-steel', 'stain-french-roast', 'chinchilla', 'Latitude Lever with Deadbolt', 'Satin Nickel'],
   ['F848', 'textured-fiberglass', 'stain-nutmeg', 'berkley', 'Century Handleset', 'Matte Black'],
   ['FO', '20-gauge-smooth-steel', 'paint-black', 'cadence', 'Camelot Handleset', 'Satin Nickel'],
   ['S836', '20-gauge-smooth-steel', 'paint-white', 'rain', 'Plymouth Handleset', 'Matte Black'],
-  ['CR14PL', '20-gauge-smooth-steel', 'paint-navy', 'topaz', 'Century Trim with Latitude Lever', 'Satin Nickel'],
-  ['F3', 'brushed-smooth-fiberglass', 'paint-iron-ore', 'frosted', 'Latitude Lever with Deadbolt', 'Matte Black'],
+  ['3LT', '20-gauge-smooth-steel', 'paint-navy', 'frosted', 'Century Trim with Latitude Lever', 'Satin Nickel'],
   ['4LT', '20-gauge-smooth-steel', 'paint-coastal-plain', 'clear', 'Camelot Handleset', 'Bright Brass'],
   ['SW', 'textured-fiberglass', 'stain-harvest-wheat', 'renewed-impressions', 'Plymouth Handleset', 'Satin Nickel'],
   ['2PNGSS', 'signature-series', 'stain-french-roast', null, 'Camelot Handleset', 'Matte Black'],
   ['S1', '20-gauge-smooth-steel', 'paint-desert-tan', null, 'Century Trim with Latitude Lever', 'Satin Nickel'],
+  ['F', 'signature-series', 'stain-french-roast', 'rain', 'Latitude Lever with Deadbolt', 'Satin Nickel'],
+  ['S', 'signature-series', 'stain-natural-gold', 'clear', 'Camelot Handleset', 'Bright Brass'],
+  ['CR14', 'signature-series', 'stain-toasted-caramel', 'linen', 'Century Trim with Latitude Lever', 'Matte Black'],
+  ['F848', 'textured-fiberglass', 'stain-auburn', 'clear', 'Plymouth Handleset', 'Satin Nickel'],
+  ['S1', 'textured-fiberglass', 'stain-nutmeg', null, 'Century Handleset', 'Satin Nickel'],
 ] as const
 const grainThumbnails: Record<string, string> = {
   Cherry: '/assets/door-lines/grains/cherry.png',
@@ -235,18 +239,34 @@ export default function App() {
       ?? compatibleFinishes[0]
       ?? requestedFinish
     const demoProduct = resolveDoorProduct(demoStyle, demoFinish, demoGrain ?? undefined, demoDoorLine?.id)
+    const isGlassCapable = demoProduct.styleCodes.some((code) => glassDoorCodes.has(code))
     const compatibleGlass = glassOptions.filter((option) => demoProduct.styleCodes.some((code) => option.overlaysByDoorStyle[code]))
     const requestedGlass = glassChoiceId ? demoGlassById(glassChoiceId) : null
-    const demoGlass = requestedGlass && compatibleGlass.some((option) => option.id === requestedGlass.id)
-      ? requestedGlass
-      : compatibleGlass.find((option) => option.id === 'clear') ?? compatibleGlass[0] ?? null
+    const demoGlass = isGlassCapable
+      ? requestedGlass && compatibleGlass.some((option) => option.id === requestedGlass.id)
+        ? requestedGlass
+        : compatibleGlass.find((option) => option.id === 'clear') ?? compatibleGlass[0] ?? null
+      : null
+    const demoHardware = demoHardwareBySelection(hardwareStyle, hardwareFinish)
+
+    if (import.meta.env.DEV && (!demoFinish?.color || !demoHardware || (isGlassCapable && !demoGlass))) {
+      console.warn('[hero-door-preset:incomplete]', {
+        styleCode,
+        doorLineChoiceId,
+        finish: demoFinish?.id,
+        hardware: demoHardware?.id,
+        glass: demoGlass?.id,
+        isGlassCapable,
+      })
+    }
     return {
       style: demoStyle,
       finish: demoFinish,
       glass: demoGlass,
-      hardware: demoHardwareBySelection(hardwareStyle, hardwareFinish),
+      hardware: demoHardware,
       grain: demoGrain,
       product: demoProduct,
+      isGlassCapable,
     }
   }
   const homeDemoConfigurations = HERO_DOOR_PRESETS.map(([styleCode, doorLineId, finishId, glassId, hardwareStyle, hardwareFinish]) =>
@@ -466,14 +486,14 @@ export default function App() {
                 <div className="home-entryway-door-slot hero-door-stack entryway-door-stack hero-door-overlay" style={heroDoorOpeningStyle}>
                   {homeDemoConfigurations.map((demo, index) => (
                     <div className={`home-demo-door-layer ${index === homeDemoIndex % homeDemoConfigurations.length ? 'active' : ''}`} key={`${demo.style.code}-${demo.finish.id}-${demo.glass?.id ?? 'glass'}-${demo.hardware.id}`}>
-                      <DoorPreview style={demo.style} finish={demo.finish} glass={demo.glass} hardware={demo.hardware} grain={demo.grain} product={demo.product} tintColor={demo.finish.color} compact />
+                      <DoorPreview style={demo.style} finish={demo.finish} glass={demo.glass} hardware={demo.hardware} grain={demo.grain} product={demo.product} tintColor={demo.finish.color} applyFinish compact />
                     </div>
                   ))}
                 </div>
               </div>
               <div className="home-preview-label">
                 <span>Preview as you build</span>
-                <small>{activeHomeDemo.style.name} · {activeHomeDemo.finish.name} · {activeHomeDemo.glass?.name ?? 'Clear glass'}</small>
+                <small>{activeHomeDemo.style.name} · {activeHomeDemo.finish.name} · {activeHomeDemo.glass?.name ?? 'No glass'} · {hardwareDisplayName(activeHomeDemo.hardware)}</small>
               </div>
             </div>
           </div>
