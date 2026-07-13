@@ -175,7 +175,10 @@ export default function App() {
   const supportsGlass = Boolean(compatibilitySupportsGlass && availableGlass.some((option) => option.id !== 'clear'))
   const steps = supportsGlass ? glassSteps : noGlassSteps
   const selectedGlass = supportsGlass ? glass : null
-  const previewGlass = supportsGlass ? glass : null
+  const clearOnlyGlass = !supportsGlass && compatibilitySupportsGlass
+    ? availableGlass.find((option) => option.id === 'clear') ?? null
+    : null
+  const previewGlass = supportsGlass ? glass : selectedHardware ? clearOnlyGlass : null
   const glassOptionGroups = [...availableGlass.reduce((groups, option) => {
     const key = glassGroupKey(option)
     const group = groups.get(key) ?? { key, title: glassGroupTitle(option), options: [] }
