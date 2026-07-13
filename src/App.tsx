@@ -524,25 +524,27 @@ export default function App() {
             </div>
           </>}
 
-          {currentStep === 'Review & Quote' && !submitted && <>
+          {currentPage === 'review' && !submitted && <>
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
             <div className="mobile-review-preview"><DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} /></div>
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
               {[['Door style', style.name, pages.indexOf('door-style')], ['Door line / material', selectedDoorLine?.name ?? product.doorType, pages.indexOf('door-line')], ...(selectedGrain ? [['Grain', selectedGrain, pages.indexOf('door-grain')]] : []), ['Finish type', selectedFinishType === 'stain' ? 'Stain' : 'Paint', pages.indexOf('finish')], [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name, pages.indexOf('finish')], ...(supportsGlass ? [['Glass', selectedGlass?.name ?? 'Not selected', pages.indexOf('glass')]] : []), ['Hardware', hardwareDisplayName(selectedHardware!), pages.indexOf('hardware')], ['Door swing', selectedDoorSwing?.name ?? 'Not selected', pages.indexOf('door-swing')]].map(([label, value, target]) => <div className="summary-row" key={String(label)}><span>{label}<strong>{value}</strong></span>{Number(target) >= 0 && <button onClick={() => goTo(Number(target))}>Edit</button>}</div>)}
             </div>
-            <div className="attachment-card">
-              <span className="attachment-icon"><FileText size={25} /></span>
-              <span className="attachment-copy"><strong>{configurationPdfName}</strong></span>
-              <button onClick={downloadPdf}><Download size={16} /> Download PDF</button>
-            </div>
-            <div className="form-card">
-              <h2>Your Contact Information</h2><p>We’ll use your ZIP code to help connect you with the right Home Guard dealer.</p>
-              <QuoteForm values={contact} errors={errors} onChange={updateContact} />
-              <label className="consent"><input type="checkbox" defaultChecked /> <span>I agree to be contacted about this door configuration.</span></label>
-              {submitError && <p className="submit-error" role="alert">{submitError}</p>}
-              <button className="submit-button" disabled={submitting} onClick={submit}><Send size={18} /> {submitting ? 'Preparing & Sending...' : 'Send My Door Configuration'}</button>
-              <p className="privacy"><ShieldCheck size={15} /> Your information is kept private and never sold.</p>
+            <div className="review-download-form">
+              <div className="attachment-card">
+                <span className="attachment-icon"><FileText size={25} /></span>
+                <span className="attachment-copy"><strong>{configurationPdfName}</strong></span>
+                <button type="button" onClick={downloadPdf}><Download size={16} /> Download PDF</button>
+              </div>
+              <div className="form-card">
+                <h2>Your Contact Information</h2><p>We’ll use your ZIP code to help connect you with the right Home Guard dealer.</p>
+                <QuoteForm values={contact} errors={errors} onChange={updateContact} />
+                <label className="consent"><input type="checkbox" defaultChecked /> <span>I agree to be contacted about this door configuration.</span></label>
+                {submitError && <p className="submit-error" role="alert">{submitError}</p>}
+                <button className="submit-button" type="button" disabled={submitting} onClick={submit}><Send size={18} /> {submitting ? 'Preparing & Sending...' : 'Send My Door Configuration'}</button>
+                <p className="privacy"><ShieldCheck size={15} /> Your information is kept private and never sold.</p>
+              </div>
             </div>
           </>}
 

@@ -17,6 +17,7 @@ export const glassMaskAssets = {
   FO: '/assets/masks/FO.png',
   FRT: '/assets/masks/FRT.png',
   HRT: '/assets/masks/HRT.png',
+  N: '/assets/masks/N.png',
   QA: '/assets/masks/QA.png',
   S: '/assets/masks/S.png',
   S2: '/assets/masks/S2.png',

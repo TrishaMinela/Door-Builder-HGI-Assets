@@ -47,6 +47,13 @@
 
 /* Dealer finder final step */
 .attachment-card{max-width:750px;background:#edf6f6;border:1px solid #b9d5d7;border-left:5px solid var(--gold);border-radius:6px;padding:16px 18px;margin-bottom:18px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;box-shadow:0 5px 18px #05040b09}.attachment-icon{width:48px;height:48px;border-radius:50%;background:var(--peacock);color:var(--white);display:grid;place-items:center}.attachment-copy{min-width:0;display:grid;gap:3px}.attachment-copy small{color:var(--peacock);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.13em}.attachment-copy strong{color:var(--black);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.attachment-copy em{color:#596166;font-size:8px;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.attachment-copy span{color:#5f686c;font-size:8px}.attachment-card button{border:1px solid var(--peacock);border-radius:3px;background:#fff;color:var(--peacock);padding:9px 11px;display:flex;align-items:center;gap:6px;font-size:9px;text-transform:uppercase;white-space:nowrap}.attachment-card button:hover{background:var(--peacock);color:var(--white)}.review-step .quote-fields{grid-template-columns:repeat(2,1fr)}.review-step .field-wide{grid-column:1/-1}
+.review-download-form{display:block;width:100%;max-width:750px}
+@media(min-width:901px){
+  .app:not(.home-app) .builder-panel.review-step{min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding-bottom:40px;scrollbar-width:thin;scrollbar-color:#0d666c55 transparent}
+  .app:not(.home-app) .builder-panel.review-step::-webkit-scrollbar{width:6px}
+  .app:not(.home-app) .builder-panel.review-step::-webkit-scrollbar-track{background:transparent}
+  .app:not(.home-app) .builder-panel.review-step::-webkit-scrollbar-thumb{background:#0d666c55;border-radius:10px}
+}
 @media(max-width:600px){.attachment-card{grid-template-columns:auto 1fr}.attachment-card button{grid-column:1/-1;justify-content:center}.review-step .quote-fields{grid-template-columns:1fr}.review-step .field-wide{grid-column:auto}}
 
 /* Real-device mobile flow */
