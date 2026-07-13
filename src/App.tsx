@@ -20,10 +20,10 @@ const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '
 const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
 const signatureSeriesId = 'signature-series'
 const HERO_DOOR_OPENING = {
-  leftPct: 36.4,
-  topPct: 21.55,
-  widthPct: 27.2,
-  heightPct: 59.4,
+  leftPct: 45.3,
+  topPct: 25.12,
+  widthPct: 17.86,
+  heightPct: 40.51,
 } as const
 const heroDoorOpeningStyle = {
   left: `${HERO_DOOR_OPENING.leftPct}%`,
@@ -42,7 +42,7 @@ const HERO_DOOR_PRESETS = [
   ['FO', '20-gauge-smooth-steel', 'paint-black', 'cadence', 'Camelot Handleset', 'Satin Nickel'],
   ['S836', '20-gauge-smooth-steel', 'paint-white', 'rain', 'Plymouth Handleset', 'Matte Black'],
   ['CR14PL', '20-gauge-smooth-steel', 'paint-navy', 'topaz', 'Century Trim with Latitude Lever', 'Satin Nickel'],
-  ['F2', 'brushed-smooth-fiberglass', 'paint-iron-ore', 'frosted', 'Latitude Lever with Deadbolt', 'Matte Black'],
+  ['F3', 'brushed-smooth-fiberglass', 'paint-iron-ore', 'frosted', 'Latitude Lever with Deadbolt', 'Matte Black'],
   ['4LT', '20-gauge-smooth-steel', 'paint-coastal-plain', 'clear', 'Camelot Handleset', 'Bright Brass'],
   ['SW', 'textured-fiberglass', 'stain-harvest-wheat', 'renewed-impressions', 'Plymouth Handleset', 'Satin Nickel'],
   ['2PNGSS', 'signature-series', 'stain-french-roast', null, 'Camelot Handleset', 'Matte Black'],
@@ -118,6 +118,7 @@ export default function App() {
   const [submitError, setSubmitError] = useState('')
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null)
   const [homeDemoIndex, setHomeDemoIndex] = useState(0)
+  const [builderPreviewView, setBuilderPreviewView] = useState<'Exterior' | 'Interior'>('Exterior')
   const builderPanelRef = useRef<HTMLElement | null>(null)
   const builderOptionsRef = useRef<HTMLDivElement | null>(null)
 
@@ -445,7 +446,9 @@ export default function App() {
     <div className={`app ${screen === 'home' ? 'home-app' : ''}`}>
       <header>
         <div className="brand">
-          <img src="/assets/branding/hgi-logo-black.png" alt="Home Guard Industries Doors and Windows" />
+          <button className="brand-home" type="button" aria-label="Go to home page" onClick={() => showScreen('home')}>
+            <img src="/assets/branding/hgi-logo-black.png" alt="Home Guard Industries Doors and Windows" />
+          </button>
           <span className="app-name"><strong>Home Guard Door Builder</strong><small>Build your door. Download your order. Request a quote.</small></span>
         </div>
         <div className="header-actions">
@@ -469,7 +472,7 @@ export default function App() {
             <div className="home-entryway-demo" aria-label="Animated examples of configurable entry doors">
               <img className="home-entryway-image" src="/assets/hero/hero-entryway.png" alt="Welcoming home entryway with a customizable door preview" />
               <div className="home-entryway-overlay" aria-hidden="true">
-                <div className="home-entryway-door-slot" style={heroDoorOpeningStyle}>
+                <div className="home-entryway-door-slot hero-door-stack entryway-door-stack hero-door-overlay" style={heroDoorOpeningStyle}>
                   {homeDemoConfigurations.map((demo, index) => (
                     <div className={`home-demo-door-layer ${index === homeDemoIndex % homeDemoConfigurations.length ? 'active' : ''}`} key={`${demo.style.code}-${demo.finish.id}-${demo.glass?.id ?? 'glass'}-${demo.hardware.id}`}>
                       <DoorPreview style={demo.style} finish={demo.finish} glass={demo.glass} hardware={demo.hardware} grain={demo.grain} product={demo.product} tintColor={demo.finish.color} compact />
@@ -496,14 +499,20 @@ export default function App() {
         {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">{selectedStyle ? <DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} /> : <EmptyDoorPreview />}</div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
           {currentStep !== 'Review & Quote' && <>
-            <div className="section-heading">
-              <span>Step {activeMainStepIndex + 1} of {steps.length}</span>
-              <h1>{currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'finish' ? 'Choose Your Finish' : currentPage === 'glass' ? 'Choose Your Glass' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>
-              <p>{currentPage === 'door-style' ? 'Browse all available door styles and choose the one that feels right for your home.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'finish' ? 'Pick from the valid paint or stain finishes.' : currentPage === 'glass' ? 'Balance natural light, privacy, and personality.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
-              <div className="section-resets">
-                {currentStep === 'Door Style' && selectedStyle && <button onClick={resetStyle}><RotateCcw size={14} /> Reset Style</button>}
-                {currentStep === 'Finish' && <button onClick={resetFinish}><RotateCcw size={14} /> Reset Finish</button>}
-                {currentStep === 'Hardware' && <button onClick={() => setHardwareId('')}><RotateCcw size={14} /> Reset Hardware</button>}
+            <div className="section-heading step-heading">
+              <div className="step-heading-copy">
+                <div className="step-label-row">
+                  <span>Step {activeMainStepIndex + 1} of {steps.length}</span>
+                </div>
+                <div className="step-title-row">
+                  <h1>{currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'finish' ? 'Choose Your Finish' : currentPage === 'glass' ? 'Choose Your Glass' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>
+                  <div className="section-resets">
+                    {currentStep === 'Door Style' && selectedStyle && <button aria-label="Reset selections" title="Reset selections" onClick={resetStyle}><RotateCcw size={22} /></button>}
+                    {currentStep === 'Finish' && selectedFinish && <button aria-label="Reset selections" title="Reset selections" onClick={resetFinish}><RotateCcw size={22} /></button>}
+                    {currentStep === 'Hardware' && selectedHardware && <button aria-label="Reset selections" title="Reset selections" onClick={() => setHardwareId('')}><RotateCcw size={22} /></button>}
+                  </div>
+                </div>
+                <p>{currentPage === 'door-style' ? 'Browse all available door styles and choose the one that feels right for your home.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'finish' ? 'Pick from the valid paint or stain finishes.' : currentPage === 'glass' ? 'Balance natural light, privacy, and personality.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
               </div>
             </div>
             <div ref={builderOptionsRef} className="builder-options-scroll">
@@ -558,9 +567,24 @@ export default function App() {
         </section>
 
         {!submitted && <aside>
-          <div className="aside-top"><span>Your design</span></div>
-          {selectedStyle ? <DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} /> : <EmptyDoorPreview />}
-          <div className="mini-summary"><strong>{selectedStyle?.name ?? 'Select a door style'}</strong><span>{selectedDoorLine ? `Material: ${selectedDoorLine.name}${selectedGrain ? ` / Grain: ${selectedGrain}` : ''}` : 'Material: Select in Finish step'}</span><span>{selectedStyle ? `${activeFinishType === 'paint' ? 'Paint' : 'Stain'}: ${selectedFinish?.name ?? ''}${supportsGlass && selectedGlass ? ` / ${selectedGlass.name}` : ''}` : 'Finish: Select a style first'}</span><span>Hardware: {selectedHardware ? hardwareDisplayName(selectedHardware) : ''}</span><span>Door swing: {selectedDoorSwing?.name ?? ''}</span></div>
+          <div className="aside-top">
+            <span>Your design</span>
+            {selectedStyle && <div className="preview-view-toggle" role="group" aria-label="Preview view">
+              {(['Exterior', 'Interior'] as const).map((view) => <button type="button" className={builderPreviewView === view ? 'active' : ''} aria-pressed={builderPreviewView === view} key={view} onClick={() => setBuilderPreviewView(view)}>{view}</button>)}
+            </div>}
+          </div>
+          <div className="aside-preview-area">
+            {selectedStyle ? <DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} view={builderPreviewView} onViewChange={setBuilderPreviewView} showViewToggle={false} /> : <EmptyDoorPreview />}
+          </div>
+          <div className="mini-summary">
+            <span><b>Door style</b><strong>{selectedStyle?.name ?? 'Not selected'}</strong></span>
+            <span><b>Door line / material</b><strong>{selectedDoorLine?.name ?? 'Not selected'}</strong></span>
+            {selectedGrain && <span><b>Grain</b><strong>{selectedGrain}</strong></span>}
+            <span><b>Paint or stain</b><strong>{selectedStyle ? (activeFinishType === 'paint' ? 'Paint' : 'Stain') : 'Not selected'}</strong></span>
+            <span><b>Finish</b><strong>{selectedFinish?.name ?? 'Not selected'}</strong></span>
+            <span><b>Hardware</b><strong>{selectedHardware ? hardwareDisplayName(selectedHardware) : 'Not selected'}</strong></span>
+            <span><b>Door swing</b><strong>{selectedDoorSwing?.name ?? 'Not selected'}</strong></span>
+          </div>
         </aside>}
       </main>
       </>}

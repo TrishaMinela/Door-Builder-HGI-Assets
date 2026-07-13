@@ -16,6 +16,9 @@ type Props = {
   tintColor?: string | null
   doorSwing?: DoorSwing | null
   applyFinish?: boolean
+  view?: HardwareView
+  onViewChange?: (view: HardwareView) => void
+  showViewToggle?: boolean
 }
 
 const FINISH_RENDERING = {
@@ -33,14 +36,19 @@ const FINISH_RENDERING = {
   stainGlossStrength: 0.72,
 } as const
 
-function buildPreviewMasks(mask: HTMLImageElement) {
+function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement) {
   const canvas = document.createElement('canvas')
-  canvas.width = mask.naturalWidth
-  canvas.height = mask.naturalHeight
+  canvas.width = slab.naturalWidth
+  canvas.height = slab.naturalHeight
   const context = canvas.getContext('2d', { willReadFrequently: true })
   if (!context) return null
 
-  context.drawImage(mask, 0, 0)
+  // Several supplied masks encode the solid slab as transparent pixels.
+  // Composite over white first so transparency remains finishable material,
+  // while the authored black glass openings stay excluded.
+  context.fillStyle = '#fff'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.drawImage(mask, 0, 0, canvas.width, canvas.height)
   const maskPixels = context.getImageData(0, 0, canvas.width, canvas.height)
   const glassPixels = new ImageData(new Uint8ClampedArray(maskPixels.data), canvas.width, canvas.height)
   for (let index = 0; index < maskPixels.data.length; index += 4) {
@@ -71,7 +79,7 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true }: Props) {
+export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true }: Props) {
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
   const previewCandidatesKey = previewCandidates.join('|')
   const styleCodes = product?.styleCodes.length ? product.styleCodes : [style.code]
@@ -90,7 +98,9 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     ? glass
     : compatibleGlass.find((option) => option.id === 'clear') ?? compatibleGlass[0]
   const glassOverlay = previewGlass ? styleCodes.map((code) => previewGlass.overlaysByDoorStyle[code]).find(Boolean) : undefined
-  const [previewView, setPreviewView] = useState<HardwareView>('Exterior')
+  const [internalPreviewView, setInternalPreviewView] = useState<HardwareView>('Exterior')
+  const previewView = view ?? internalPreviewView
+  const setPreviewView = onViewChange ?? setInternalPreviewView
   const selectedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView, doorSwing)
   const defaultHardware = hardwareOptions.find((option) => Boolean(hardwarePreviewAssetUrl(option, previewView, doorSwing)))
   const previewHardware: PreviewHardware = selectedHardwareImage ? hardware : defaultHardware ?? hardware
@@ -115,7 +125,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
         const suppliedMask = new Image()
         suppliedMask.onload = () => {
           if (cancelled) return
-          const masks = buildPreviewMasks(suppliedMask)
+          const masks = buildPreviewMasks(suppliedMask, slab)
           setProcessedMask(masks ? { source: candidate, ...masks } : null)
           setPreviewImage(candidate)
         }
@@ -143,10 +153,10 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
       WebkitMaskImage: `url("${finishMask}")`,
       maskImage: `url("${finishMask}")`,
       mixBlendMode: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorBlendMode : FINISH_RENDERING.stainColorBlendMode,
-      opacity: compact ? 1 : finish.finishType === 'paint' ? FINISH_RENDERING.paintColorOpacity : FINISH_RENDERING.stainColorOpacity,
+      opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorOpacity : FINISH_RENDERING.stainColorOpacity,
       ...(finish.finishType === 'stain' ? { filter: `saturate(${FINISH_RENDERING.stainSaturation})` } : {}),
     } as React.CSSProperties
-  }, [applyFinish, compact, finish.finishType, finishColor, finishMask, hasMappedPreview])
+  }, [applyFinish, finish.finishType, finishColor, finishMask, hasMappedPreview])
   const detailLayerStyle = {
     WebkitMaskImage: finishMask ? `url("${finishMask}")` : undefined,
     maskImage: finishMask ? `url("${finishMask}")` : undefined,
@@ -218,7 +228,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           </div>}
         </div>
       </div>
-      {!compact && previewHardware.manufacturer && previewHardware.asset && <div className="preview-view-toggle" role="group" aria-label="Preview view">
+      {!compact && showViewToggle && previewHardware.manufacturer && previewHardware.asset && <div className="preview-view-toggle" role="group" aria-label="Preview view">
         {(['Exterior', 'Interior'] as const).map((view) => <button type="button" className={previewView === view ? 'active' : ''} aria-pressed={previewView === view} key={view} onClick={() => setPreviewView(view)}>{view}</button>)}
       </div>}
       {!compact && <p className="preview-caption">Live preview · {previewView} view</p>}

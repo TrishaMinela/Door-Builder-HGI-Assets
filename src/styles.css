@@ -184,7 +184,7 @@
 /* Grouped Step 1: material, optional grain, then compatible style. */
 .start-over{height:34px;padding:0 13px;border:1px solid #ffffff50;border-radius:3px;background:transparent;color:var(--white);display:flex;align-items:center;gap:6px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;transition:.2s}.start-over:hover{border-color:var(--gold);color:var(--gold)}
 .selection-path{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:14px}.selection-path button{border:1px solid #b9ccce;border-radius:999px;background:#edf5f5;color:var(--peacock);padding:6px 11px;font-size:9px;font-weight:700}.selection-path button:hover{border-color:var(--peacock);background:#fff}.selection-path b{color:#879295;font-size:10px}
-.section-resets{display:flex;gap:8px;margin-top:12px}.section-resets:empty{display:none}.section-resets button{border:0;background:transparent;color:#667277;padding:0;display:flex;align-items:center;gap:5px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.section-resets button:hover{color:var(--peacock)}
+.step-heading{display:block}.step-heading-copy{width:100%;min-width:0}.step-label-row{width:100%}.step-label-row>span{color:var(--peacock);text-transform:uppercase;font-weight:700;font-size:10px;letter-spacing:.18em}.step-title-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:20px}.step-title-row h1{min-width:0;margin-bottom:0}.section-resets{display:flex;flex:none;gap:8px}.section-resets:empty{display:none}.section-resets button{width:44px;height:44px;border:0;border-radius:0;background:transparent;color:#526166;padding:0;display:grid;place-items:center;opacity:.45;box-shadow:none;transition:color .2s ease,opacity .2s ease;animation:reset-utility-in .2s ease both}.section-resets button:hover,.section-resets button:focus-visible{background:transparent;color:#0d666c;opacity:1}.section-resets button:focus-visible{outline:2px solid #0d666c;outline-offset:2px;border-radius:3px}@keyframes reset-utility-in{from{opacity:0}to{opacity:.45}}
 .door-type-card-visual{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#f9fbfc,#cbd8da);color:var(--peacock);box-shadow:inset 0 0 0 7px #fff,0 5px 15px #05040b18}.door-type-card-visual.grained{background:repeating-linear-gradient(100deg,#d7bea0 0 6px,#b98b61 7px 10px,#e1c9ab 11px 16px);color:#5b321d}
 .grain-card-image{display:block;width:104px;height:104px;max-width:104px;max-height:104px;border-radius:8px;object-fit:cover;object-position:center}
 @media(max-width:560px){.start-over{width:38px;height:38px;padding:0;border:0;border-radius:50%;justify-content:center;background:#ffffff12}.start-over span{display:none}.selection-path{margin-top:11px}.step-0 .option-card{height:180px;min-height:180px}.door-type-card-visual{width:82px;height:82px}}
@@ -648,13 +648,6 @@
   object-position:center!important;
   transform:none!important;
 }
-.home-entryway-door-slot .door-style-image,
-.home-entryway-door-slot .door-glass-overlay,
-.home-entryway-door-slot .hardware img{
-  filter:drop-shadow(0 6px 6px rgba(5,4,11,.24));
-}
-.home-entryway-door-slot .door-style-image{filter:grayscale(1) contrast(1.08) drop-shadow(0 6px 6px rgba(5,4,11,.24))}
-.home-entryway-door-slot .door-detail-image{filter:grayscale(1) contrast(1.12)}
 .home-entryway-demo .home-preview-label{
   display:none;
 }
@@ -697,16 +690,125 @@
 
 /* Final landing-stage overrides keep the intrinsic house and door coordinate space together. */
 .home-app .home-hero-visual{position:relative;padding:0;overflow:hidden;background:transparent}
-.home-app .home-entryway-demo{position:absolute;top:50%;left:50%;width:auto;min-width:100%;height:100%;min-height:100%;aspect-ratio:1/1;transform:translate(-50%,-50%);overflow:hidden;border:0;border-radius:0;background:transparent;box-shadow:none}
-.home-app .home-entryway-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
+.home-app .home-entryway-demo{position:relative;width:100%;max-width:100%;height:auto;min-height:0;aspect-ratio:1254/1254;overflow:hidden;border:0;border-radius:0;background:transparent;box-shadow:none}
+.home-app .home-entryway-image{position:relative;inset:auto;display:block;width:100%;height:auto;object-fit:contain;object-position:center}
 .home-app .home-entryway-overlay{position:absolute;inset:0}
-.home-app .home-entryway-door-slot{overflow:hidden;background:transparent}
+.home-app .hero-door-overlay{position:absolute;overflow:hidden;background:transparent;transform:none;transform-origin:center}
 .home-app .home-entryway-door-slot .mapped-preview-door{transform:none!important;transform-origin:center bottom!important}
 .home-app .home-entryway-door-slot .door,.home-app .home-entryway-door-slot .door-style-image,.home-app .home-entryway-door-slot .door-finish-layer,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-stain-highlight,.home-app .home-entryway-door-slot .door-glass-overlay,.home-app .home-entryway-door-slot .door-default-glass-overlay,.home-app .home-entryway-door-slot .hardware{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;transform:none!important;transform-origin:center!important}
-.home-app .home-entryway-door-slot .door-style-image,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-glass-overlay,.home-app .home-entryway-door-slot .hardware img{width:100%!important;height:100%!important;object-fit:contain!important;object-position:center bottom!important}
+.home-app .home-entryway-door-slot .door-style-image,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-glass-overlay,.home-app .home-entryway-door-slot .hardware img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important;transform:none!important}
+.home-app .home-entryway-door-slot .door-finish-layer,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-stain-highlight,.home-app .home-entryway-door-slot .door-default-glass-overlay{-webkit-mask-size:contain!important;mask-size:contain!important;-webkit-mask-position:center!important;mask-position:center!important;-webkit-mask-repeat:no-repeat!important;mask-repeat:no-repeat!important}
 
 /* Selection indicators never participate in card or grid measurements. */
 .option-card,.glass-choice-card,.hardware-option-card{box-sizing:border-box;position:relative}
 .glass-choice-card.selected,.hardware-option-card.selected{border:1px solid transparent;outline:3px solid var(--gold);outline-offset:-3px;box-shadow:0 10px 28px #0d666c20}
 .glass-choice-card .check,.hardware-option-card .check{position:absolute;top:14px;right:14px;z-index:10}
 .glass-caming-options button.selected,.hardware-finish-options button.selected{border-width:1px;outline:1px solid var(--gold);outline-offset:-1px}
+
+/* Desktop builder: one viewport, internally scrolling options, fixed preview composition. */
+@media(min-width:901px){
+  .app:not(.home-app) .builder-panel,
+  .app:not(.home-app) .builder-panel.configuration-step{
+    height:100%;
+    min-height:0;
+    overflow:hidden;
+  }
+  .app:not(.home-app) .configuration-step .builder-actions{
+    position:relative;
+    bottom:auto;
+    flex:none;
+  }
+  .app:not(.home-app) aside{
+    display:grid;
+    grid-template-rows:auto minmax(0,1fr) auto;
+    gap:8px;
+    height:100%;
+    min-height:0;
+    padding:12px clamp(18px,2.5vw,38px) 14px;
+    overflow:hidden;
+    align-items:stretch;
+  }
+  .app:not(.home-app) aside .aside-top{
+    position:static;
+    align-self:center;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0;
+  }
+  .app:not(.home-app) aside .aside-top .preview-view-toggle{position:static;flex:none;margin:0;z-index:auto}
+  .app:not(.home-app) .aside-preview-area{
+    position:relative;
+    width:100%;
+    height:100%;
+    max-height:100%;
+    min-height:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  .app:not(.home-app) .aside-preview-area .preview-scene{
+    position:static;
+    width:100%;
+    height:100%;
+    min-height:0;
+    padding:8px 0 12px;
+  }
+  .app:not(.home-app) .aside-preview-area .preview-caption{
+    bottom:0;
+    left:50%;
+    transform:translateX(-50%);
+    white-space:nowrap;
+  }
+  .app:not(.home-app) .aside-preview-area .door-frame{
+    transform:scale(.86);
+    transform-origin:center;
+  }
+  .app:not(.home-app) .mini-summary{
+    width:min(100%,430px);
+    min-height:112px;
+    max-height:146px;
+    margin:0 auto;
+    justify-self:center;
+    padding:9px 12px;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-content:center;
+    gap:5px 12px;
+    overflow:hidden;
+  }
+  .app:not(.home-app) .mini-summary>span{
+    min-width:0;
+    line-height:1.15;
+  }
+  .app:not(.home-app) .mini-summary b,
+  .app:not(.home-app) .mini-summary strong{
+    display:block;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .app:not(.home-app) .mini-summary b{
+    margin-bottom:2px;
+    color:#667277;
+    font-size:7px;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+  .app:not(.home-app) .mini-summary strong{
+    color:var(--black);
+    font-family:"Montserrat",sans-serif;
+    font-size:9px;
+    line-height:1.2;
+  }
+}
+@media(min-width:901px) and (max-height:760px){
+  .app:not(.home-app) .aside-preview-area .door-frame{transform:scale(.72)}
+  .app:not(.home-app) .mini-summary{min-height:104px;max-height:124px;padding:7px 10px;gap:4px 10px}
+}
+
+.brand-home{display:block;flex:none;border:0;background:transparent;padding:0;color:inherit;line-height:0;cursor:pointer}
+.brand-home:focus-visible{outline:2px solid var(--gold);outline-offset:4px;border-radius:2px}
