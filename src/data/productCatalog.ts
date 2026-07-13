@@ -209,7 +209,7 @@ export function resolveDoorProduct(style: DoorStyle, finish: Finish, grain?: str
     ? [`${selectedLabel}${grain ? ` - ${grain}` : ''}`]
     : [...new Set(matchingVariants.map((variant) => grain ? `${variant.lineName} - ${grain}` : variant.lineName))]
   return {
-    doorTypeLabel: doorTypes.length === 1 ? 'Door Type' : 'Available Door Types',
+    doorTypeLabel: 'Door Line',
     doorType: doorTypes.join(' / '),
     doorTypes,
     matchingVariants,

@@ -103,7 +103,7 @@ export type DoorSwing = {
 }
 
 export type ResolvedDoorProduct = {
-  doorTypeLabel: 'Door Type' | 'Available Door Types'
+  doorTypeLabel: 'Door Line'
   doorType: string
   doorTypes: string[]
   matchingVariants: DoorStyleVariant[]

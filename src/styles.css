@@ -708,6 +708,14 @@
 .home-app .home-entryway-door-slot .door-style-image,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-glass-overlay,.home-app .home-entryway-door-slot .hardware img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important;transform:none!important}
 .home-app .home-entryway-door-slot .door-finish-layer,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-stain-highlight,.home-app .home-entryway-door-slot .door-default-glass-overlay{-webkit-mask-size:contain!important;mask-size:contain!important;-webkit-mask-position:center!important;mask-position:center!important;-webkit-mask-repeat:no-repeat!important;mask-repeat:no-repeat!important}
 
+/* Keep the assembled preview layers in one deterministic stacking context. */
+.mapped-preview-door{isolation:isolate}
+.mapped-preview-door>.door-style-image{z-index:1}
+.mapped-preview-door>.door-finish-layer{z-index:2}
+.mapped-preview-door>.door-detail-image,.mapped-preview-door>.door-stain-highlight{z-index:3}
+.mapped-preview-door>.door-glass-overlay,.mapped-preview-door>.door-default-glass-overlay{z-index:4}
+.mapped-preview-door>.hardware{z-index:5}
+
 /* Selection indicators never participate in card or grid measurements. */
 .option-card,.glass-choice-card,.hardware-option-card{box-sizing:border-box;position:relative}
 .glass-choice-card.selected,.hardware-option-card.selected{border:1px solid transparent;outline:3px solid var(--gold);outline-offset:-3px;box-shadow:0 10px 28px #0d666c20}
