@@ -4,6 +4,7 @@ import { hardwareOptions, hardwarePreviewAssetUrl } from '../data/hardware'
 import { glassOptions } from '../data/glassOptions'
 import { resolveDoorPreviewCandidates } from '../data/doorPreviewAssets'
 import { glassDoorCodes } from '../data/productCatalog'
+import { resolveGlassMaskAsset } from '../data/glassMaskAssets'
 
 type Props = {
   style: DoorStyle
@@ -36,35 +37,8 @@ const FINISH_RENDERING = {
   stainGlossStrength: 0.72,
 } as const
 
-const EXPLICIT_GLASS_MASKS = {
-  F2: '/assets/masks/F2.png',
-  F3: '/assets/masks/F3.png',
-  HRT: '/assets/masks/HRT.png',
-} as const
-
-const GLASS_MASK_LOOKUP_KEYS: Record<string, keyof typeof EXPLICIT_GLASS_MASKS> = {
-  f2: 'F2',
-  diamond: 'F2',
-  f3: 'F3',
-  square: 'F3',
-  hrt: 'HRT',
-  halfroundtop: 'HRT',
-}
-
-function normalizeGlassMaskLookup(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, '')
-}
-
-function resolveGlassMaskAsset(doorCode: string | undefined) {
-  if (!doorCode) return null
-  const normalizedKey = normalizeGlassMaskLookup(doorCode)
-  const explicitKey = GLASS_MASK_LOOKUP_KEYS[normalizedKey]
-  const mappingKey = explicitKey ?? doorCode
-  const path = explicitKey ? EXPLICIT_GLASS_MASKS[explicitKey] : `/assets/masks/${doorCode}.png`
-  return { normalizedKey, mappingKey, path }
-}
-
 function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement) {
+  if (mask.naturalWidth !== slab.naturalWidth || mask.naturalHeight !== slab.naturalHeight) return null
   const canvas = document.createElement('canvas')
   canvas.width = slab.naturalWidth
   canvas.height = slab.naturalHeight
@@ -76,17 +50,24 @@ function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement) {
   // while the authored black glass openings stay excluded.
   context.fillStyle = '#fff'
   context.fillRect(0, 0, canvas.width, canvas.height)
-  context.drawImage(mask, 0, 0, canvas.width, canvas.height)
+  context.drawImage(mask, 0, 0)
   const maskPixels = context.getImageData(0, 0, canvas.width, canvas.height)
+  const glassPixels = new ImageData(new Uint8ClampedArray(maskPixels.data), canvas.width, canvas.height)
   for (let index = 0; index < maskPixels.data.length; index += 4) {
     const maskValue = Math.round((maskPixels.data[index] + maskPixels.data[index + 1] + maskPixels.data[index + 2]) / 3)
     maskPixels.data[index] = 255
     maskPixels.data[index + 1] = 255
     maskPixels.data[index + 2] = 255
     maskPixels.data[index + 3] = maskValue >= 128 ? 255 : 0
+    glassPixels.data[index] = 255
+    glassPixels.data[index + 1] = 255
+    glassPixels.data[index + 2] = 255
+    glassPixels.data[index + 3] = maskValue < 128 ? 255 : 0
   }
   context.putImageData(maskPixels, 0, 0)
-  return { finishUrl: canvas.toDataURL('image/png') }
+  const finishUrl = canvas.toDataURL('image/png')
+  context.putImageData(glassPixels, 0, 0)
+  return { finishUrl, glassUrl: canvas.toDataURL('image/png') }
 }
 
 function buildSolidSlabMask(slab: HTMLImageElement) {
@@ -106,14 +87,14 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const styleCodes = product?.styleCodes.length ? product.styleCodes : [style.code]
   const isGlassCapable = styleCodes.some((code) => glassDoorCodes.has(code))
   const maskCode = styleCodes.find((code) => glassDoorCodes.has(code))
-  const maskMapping = resolveGlassMaskAsset(maskCode)
-  const maskAsset = maskMapping?.path ?? null
+  const maskAsset = maskCode ? resolveGlassMaskAsset(maskCode) : null
   const maskKey = maskCode ?? 'solid-slab'
   const [previewImage, setPreviewImage] = useState(previewCandidates[0] ?? '')
   const hasMappedPreview = Boolean(previewCandidates.length)
   const finishColor = tintColor ?? finish.color
-  const [processedMask, setProcessedMask] = useState<{ source: string; finishUrl: string } | null>(null)
+  const [processedMask, setProcessedMask] = useState<{ source: string; finishUrl: string; glassUrl?: string } | null>(null)
   const finishMask = previewImage && processedMask?.source === previewImage ? processedMask.finishUrl : undefined
+  const glassMask = previewImage && processedMask?.source === previewImage ? processedMask.glassUrl : undefined
   const compatibleGlass = isGlassCapable ? glassOptions.filter((option) => styleCodes.some((code) => option.overlaysByDoorStyle[code])) : []
   const previewGlass = glass && compatibleGlass.some((option) => option.id === glass.id)
     ? glass
@@ -146,26 +127,35 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
         const suppliedMask = new Image()
         suppliedMask.onload = () => {
           if (cancelled) return
-          if (maskMapping && ['F2', 'F3', 'HRT'].includes(String(maskMapping.mappingKey))) {
+          if (import.meta.env.DEV) {
             console.info('[door-preview:glass-mask]', {
-              selectedGlassId: glass?.id ?? null,
-              normalizedLookupKey: maskMapping.normalizedKey,
-              resolvedMappingKey: maskMapping.mappingKey,
-              resolvedMaskPath: maskMapping.path,
+              selectedDoorStyleId: maskCode,
+              resolvedMappingKey: maskCode,
+              resolvedMappingPath: maskAsset,
               loaded: true,
+              maskDimensions: `${suppliedMask.naturalWidth}x${suppliedMask.naturalHeight}`,
+              doorPreviewDimensions: `${slab.naturalWidth}x${slab.naturalHeight}`,
             })
           }
           const masks = buildPreviewMasks(suppliedMask, slab)
+          if (!masks) {
+            console.error('[door-preview:glass-mask-dimension-mismatch]', {
+              selectedDoorStyleId: maskCode,
+              resolvedMappingKey: maskCode,
+              resolvedMappingPath: maskAsset,
+              maskDimensions: `${suppliedMask.naturalWidth}x${suppliedMask.naturalHeight}`,
+              doorPreviewDimensions: `${slab.naturalWidth}x${slab.naturalHeight}`,
+            })
+          }
           setProcessedMask(masks ? { source: candidate, ...masks } : null)
           setPreviewImage(candidate)
         }
         suppliedMask.onerror = () => {
           if (cancelled) return
           console.error('[door-preview:missing-finish-mask]', {
-            selectedGlassId: glass?.id ?? null,
-            normalizedLookupKey: maskMapping?.normalizedKey,
-            resolvedMappingKey: maskMapping?.mappingKey ?? maskCode,
-            resolvedMaskPath: maskAsset,
+            selectedDoorStyleId: maskCode,
+            resolvedMappingKey: maskCode,
+            resolvedMappingPath: maskAsset,
             loaded: false,
           })
           setProcessedMask(null)
@@ -179,7 +169,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
 
     tryNextCandidate()
     return () => { cancelled = true }
-  }, [previewCandidatesKey, isGlassCapable, maskKey, maskAsset, maskCode, maskMapping?.mappingKey, maskMapping?.normalizedKey, glass?.id])
+  }, [previewCandidatesKey, isGlassCapable, maskKey, maskAsset, maskCode])
 
   const finishLayerStyle = useMemo(() => {
     if (!applyFinish || !hasMappedPreview || !finishMask || !finishColor) return undefined
@@ -205,6 +195,16 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     WebkitMaskImage: `url("${finishMask}")`,
     maskImage: `url("${finishMask}")`,
     opacity: FINISH_RENDERING.stainHighlightOpacity,
+  } as React.CSSProperties : undefined
+  const glassOverlayStyle = glassMask ? {
+    WebkitMaskImage: `url("${glassMask}")`,
+    maskImage: `url("${glassMask}")`,
+    WebkitMaskSize: 'contain',
+    maskSize: 'contain',
+    WebkitMaskPosition: 'center',
+    maskPosition: 'center',
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
   } as React.CSSProperties : undefined
   const requestedHardwareImage = selectedHardwareImage || hardwarePreviewAssetUrl(previewHardware, previewView, doorSwing)
   const [hardwareImage, setHardwareImage] = useState(requestedHardwareImage)
@@ -247,7 +247,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           {finishLayerStyle && <div className={`door-finish-layer door-finish-layer-${finish.finishType}`} style={finishLayerStyle} />}
           {previewImage && finishLayerStyle && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {stainHighlightStyle && <div className="door-stain-highlight" style={stainHighlightStyle} />}
-          {glassOverlay && <img className="door-glass-overlay" src={glassOverlay} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+          {glassOverlay && <img className="door-glass-overlay" src={glassOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {hardwareImage && <div className={`hardware hardware-${previewHardware.type}`} style={{ '--metal': previewHardware.color } as React.CSSProperties}>
             <img src={hardwareImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => {
               console.warn('[door-preview:failed-hardware-overlay]', {

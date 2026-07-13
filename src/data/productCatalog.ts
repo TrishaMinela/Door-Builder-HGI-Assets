@@ -2,7 +2,7 @@ import type { DoorLine, DoorLineChoice, DoorStyle, DoorTypeOption, Finish, Resol
 import { getDoorStyleThumbnailAsset } from './doorStyleThumbnailAssets'
 
 export const glassDoorCodes = new Set([
-  '3LT', '3STEP', '4LT', '5LT', 'CR14', 'CR14PL', 'F', 'F2', 'F3', 'F4', 'F48', 'F482',
+  '3LT', '3STEP', '4LT', '5LT', 'CA', 'CR14', 'CR14PL', 'F', 'F2', 'F3', 'F4', 'F48', 'F482',
   'F764', 'F848', 'FO', 'FRT', 'HRT', 'QA', 'S', 'S2', 'S3', 'S4', 'S836', 'SAT',
   'SO', 'SO2', 'SW',
 ])
