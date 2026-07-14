@@ -264,7 +264,6 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
       {!compact && showViewToggle && previewHardware.manufacturer && previewHardware.asset && <div className="preview-view-toggle" role="group" aria-label="Preview view">
         {(['Exterior', 'Interior'] as const).map((view) => <button type="button" className={previewView === view ? 'active' : ''} aria-pressed={previewView === view} key={view} onClick={() => setPreviewView(view)}>{view}</button>)}
       </div>}
-      {!compact && <p className="preview-caption">Live preview · {previewView} view</p>}
     </div>
   )
 }

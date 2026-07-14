@@ -493,15 +493,17 @@ export default function App() {
             <span className="home-trust"><ShieldCheck size={15} /> Built for your home. Backed by Home Guard Industries.</span>
           </div>
           <div className="home-hero-visual">
-            <div className="home-entryway-demo" aria-label="Animated examples of configurable entry doors">
-              <img className="home-entryway-image" src="/assets/hero/hero-entryway.png" alt="Welcoming home entryway with a customizable door preview" />
-              <div className="home-entryway-overlay" aria-hidden="true">
-                <div className="home-entryway-door-slot hero-door-stack entryway-door-stack hero-door-overlay" style={heroDoorOpeningStyle}>
-                  {homeDemoConfigurations.map((demo, index) => (
-                    <div className={`home-demo-door-layer ${index === homeDemoIndex % homeDemoConfigurations.length ? 'active' : ''}`} key={`${demo.style.code}-${demo.finish.id}-${demo.glass?.id ?? 'glass'}-${demo.hardware.id}`}>
-                      <DoorPreview style={demo.style} finish={demo.finish} glass={demo.glass} hardware={demo.hardware} grain={demo.grain} product={demo.product} tintColor={demo.finish.color} applyFinish compact />
-                    </div>
-                  ))}
+            <div className="home-entryway-demo hero-composite" aria-label="Animated examples of configurable entry doors">
+              <div className="hero-composite-stage">
+                <img className="home-entryway-image" src="/assets/hero/hero-entryway.png" alt="Welcoming home entryway with a customizable door preview" />
+                <div className="home-entryway-overlay" aria-hidden="true">
+                  <div className="home-entryway-door-slot hero-door-stack entryway-door-stack hero-door-overlay" style={heroDoorOpeningStyle}>
+                    {homeDemoConfigurations.map((demo, index) => (
+                      <div className={`home-demo-door-layer ${index === homeDemoIndex % homeDemoConfigurations.length ? 'active' : ''}`} key={`${demo.style.code}-${demo.finish.id}-${demo.glass?.id ?? 'glass'}-${demo.hardware.id}`}>
+                        <DoorPreview style={demo.style} finish={demo.finish} glass={demo.glass} hardware={demo.hardware} grain={demo.grain} product={demo.product} tintColor={demo.finish.color} applyFinish compact />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="home-preview-label">

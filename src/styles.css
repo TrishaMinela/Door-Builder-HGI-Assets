@@ -300,6 +300,445 @@
     grid-template-columns:repeat(2,minmax(0,1fr));
   }
 }
+
+/* Responsive hero crop: the square source stage carries both house and door. */
+.home-app .hero-composite{
+  position:relative;
+  width:100%;
+  overflow:hidden;
+  margin:0;
+  padding:0;
+  aspect-ratio:1254/1254;
+}
+.home-app .hero-composite-stage{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  aspect-ratio:1254/1254;
+  transform:none;
+}
+.home-app .hero-composite-stage>.home-entryway-image{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  margin:0;
+  padding:0;
+  object-fit:cover;
+  object-position:center center;
+}
+.home-app .hero-composite-stage>.home-entryway-overlay{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  transform:none;
+}
+@media(max-width:980px){
+  .home-app .home-hero-visual{
+    width:100%;
+    height:auto;
+    min-height:0;
+    padding:0;
+    margin:0;
+    overflow:hidden;
+  }
+  .home-app .hero-composite{
+    width:100%;
+    height:auto;
+    min-height:0;
+    aspect-ratio:16/10;
+  }
+  .home-app .hero-composite-stage{
+    inset:auto 0 auto 0;
+    top:50%;
+    width:100%;
+    height:auto;
+    aspect-ratio:1/1;
+    transform:translateY(-50%);
+  }
+}
+@media(max-width:560px){
+  .home-app .hero-composite{aspect-ratio:4/3}
+  .home-app .hero-composite-stage{
+    top:42%;
+    transform:translateY(-42%);
+  }
+  .home-app .hero-composite-stage>.home-entryway-image{object-position:center 42%}
+}
+
+/* Final landing-page height reset: the hero shrink-wraps its two columns. */
+.app.home-app{
+  display:block;
+  width:100%;
+  height:auto;
+  min-height:0;
+  overflow:visible;
+}
+.home-app .home-page{
+  display:block;
+  width:100%;
+  height:auto;
+  min-height:0;
+  flex:none;
+  overflow:visible;
+}
+.home-app .home-hero{
+  display:grid;
+  height:auto;
+  min-height:0;
+  flex:none;
+  grid-template-rows:auto;
+  align-items:start;
+  padding-block:0;
+  overflow:hidden;
+}
+.home-app .home-hero-copy{
+  height:auto;
+  min-height:0;
+  align-self:start;
+  justify-content:flex-start;
+}
+.home-app .home-hero-visual{
+  display:block;
+  height:auto;
+  min-height:0;
+  align-self:start;
+  container-type:normal;
+}
+.home-app .hero-composite{
+  width:100%;
+  height:auto;
+  min-height:0;
+  aspect-ratio:1/1;
+}
+.home-app footer{flex:none}
+@media(max-width:980px) and (min-width:561px){
+  .home-app .home-hero{grid-template-columns:minmax(0,46%) minmax(0,54%)}
+  .home-app .hero-composite{aspect-ratio:16/10}
+}
+@media(max-width:560px){
+  .home-app .home-hero{grid-template-columns:1fr;grid-template-rows:auto auto}
+  .home-app .hero-composite{aspect-ratio:4/3}
+}
+
+/* Root elements also shrink-wrap the landing page instead of extending past its footer. */
+html:has(.home-app),
+body:has(.home-app),
+#root:has(.home-app){
+  height:auto;
+  min-height:0;
+  max-height:none;
+  overflow-x:hidden;
+  overflow-y:visible;
+}
+body:has(.home-app){padding-bottom:0}
+#root:has(>.home-app){display:block}
+
+/* Landing viewport grid: header, exact remaining hero row, footer. */
+html,
+body,
+#root{
+  margin:0;
+  min-height:100%;
+}
+body{overflow:hidden}
+.app.home-app{
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  width:100%;
+  height:100dvh;
+  min-height:100dvh;
+  overflow:hidden;
+}
+.home-app>header,
+.home-app>footer{min-height:0;flex:none}
+.home-app .home-page{
+  display:block;
+  width:100%;
+  height:100%;
+  min-height:0;
+  overflow:hidden;
+}
+.home-app .home-hero{
+  display:grid;
+  width:100%;
+  height:100%;
+  min-height:0;
+  grid-template-columns:minmax(0,46%) minmax(0,54%);
+  grid-template-rows:minmax(0,1fr);
+  align-items:stretch;
+  overflow:hidden;
+}
+.home-app .home-hero-copy,
+.home-app .home-hero-visual{
+  height:100%;
+  min-height:0;
+  align-self:stretch;
+}
+.home-app .home-hero-copy{justify-content:center;overflow:hidden}
+.home-app .home-hero-visual{
+  position:relative;
+  display:block;
+  width:100%;
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  container-type:size;
+}
+.home-app .hero-composite{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  min-height:0;
+  margin:0;
+  aspect-ratio:auto;
+  overflow:hidden;
+}
+.home-app .hero-composite-stage{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:max(100cqw,100cqh);
+  height:max(100cqw,100cqh);
+  aspect-ratio:1/1;
+  transform:translate(-50%,-50%);
+}
+@media(max-width:560px){
+  .home-app .home-hero{
+    grid-template-columns:1fr;
+    grid-template-rows:auto minmax(0,1fr);
+  }
+  .home-app .home-hero-copy{
+    width:100%;
+    height:auto;
+    min-height:0;
+    align-self:start;
+    justify-content:flex-start;
+    padding:28px 22px 22px;
+  }
+  .home-app .home-hero-visual{
+    height:100%;
+    min-height:0;
+    align-self:stretch;
+  }
+  .home-app .hero-composite{height:100%;aspect-ratio:auto}
+  .home-app .hero-composite-stage{
+    left:50%;
+    top:42%;
+    width:max(100cqw,100cqh);
+    height:max(100cqw,100cqh);
+    transform:translate(-50%,-42%);
+  }
+}
+
+/* Smaller desktop and tablet: size the landing hero from its content. */
+@media(max-width:1199px){
+  #root:has(>.home-app){
+    height:auto;
+    min-height:0;
+    overflow:visible;
+  }
+  body:has(.home-app){overflow-x:hidden;overflow-y:auto}
+  .app.home-app{
+    grid-template-rows:auto auto auto;
+    height:auto;
+    min-height:0;
+    align-content:start;
+    overflow:visible;
+  }
+  .home-app .home-page,
+  .home-app .home-hero,
+  .home-app .home-hero-copy,
+  .home-app .home-hero-visual{
+    height:auto;
+    min-height:0;
+  }
+  .home-app .home-page{overflow:visible}
+  .home-app .home-hero{
+    grid-template-rows:auto;
+    align-items:stretch;
+    overflow:hidden;
+  }
+  .home-app .home-hero-copy{
+    align-self:stretch;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+  .home-app .home-hero-visual{
+    align-self:stretch;
+    aspect-ratio:4/3;
+  }
+  .home-app .hero-composite{
+    position:relative;
+    inset:auto;
+    height:auto;
+    min-height:0;
+    aspect-ratio:4/3;
+  }
+}
+
+@media(max-width:560px){
+  .home-app .home-hero{
+    grid-template-rows:auto auto;
+  }
+  .home-app .home-hero-visual,
+  .home-app .hero-composite{
+    aspect-ratio:4/3;
+  }
+}
+
+/* Content-sized tablet/mobile hero: no viewport height or vertical centering. */
+@media(max-width:980px){
+  .home-app,
+  .home-app .home-page{
+    height:auto;
+    min-height:0;
+    overflow:visible;
+  }
+  .home-app .home-page{display:block}
+  .home-app .home-hero{
+    height:auto;
+    min-height:0;
+    padding-block:0;
+    grid-template-columns:minmax(0,46%) minmax(0,54%);
+    grid-template-rows:auto;
+    align-items:stretch;
+    overflow:hidden;
+  }
+  .home-app .home-hero-copy{
+    height:auto;
+    min-height:0;
+    align-self:start;
+    padding:clamp(30px,5vw,48px) clamp(22px,4vw,38px);
+  }
+  .home-app .home-hero-visual{
+    position:relative;
+    display:block;
+    width:100%;
+    height:auto;
+    min-height:0;
+    align-self:stretch;
+    margin:0;
+    padding:0;
+    overflow:hidden;
+    container-type:size;
+  }
+  .home-app .hero-composite{
+    width:100%;
+    height:100%;
+    min-height:0;
+    margin:0;
+    aspect-ratio:auto;
+  }
+  .home-app .hero-composite-stage{
+    inset:auto;
+    left:50%;
+    top:50%;
+    width:max(100cqw,100cqh);
+    height:max(100cqw,100cqh);
+    aspect-ratio:1/1;
+    transform:translate(-50%,-50%);
+  }
+}
+
+/* Landing page follows normal document flow; no viewport-filling flex chain. */
+.app.home-app{
+  display:block;
+  width:100%;
+  height:auto;
+  min-height:0;
+  overflow:visible;
+}
+.home-app .home-page{
+  display:block;
+  width:100%;
+  height:auto;
+  min-height:0;
+  flex:none;
+  overflow:visible;
+}
+.home-app .home-hero{
+  display:grid;
+  height:auto;
+  min-height:0;
+  flex:none;
+  grid-template-rows:auto;
+  align-items:start;
+  padding-block:0;
+  overflow:hidden;
+}
+.home-app .home-hero-copy{
+  height:auto;
+  min-height:0;
+  align-self:start;
+  justify-content:flex-start;
+}
+.home-app .home-hero-visual{
+  display:block;
+  height:auto;
+  min-height:0;
+  align-self:start;
+  container-type:normal;
+}
+.home-app .hero-composite{
+  width:100%;
+  height:auto;
+  min-height:0;
+  aspect-ratio:1/1;
+}
+.home-app footer{flex:none}
+@media(max-width:980px) and (min-width:561px){
+  .home-app .home-hero{grid-template-columns:minmax(0,46%) minmax(0,54%)}
+  .home-app .hero-composite{aspect-ratio:16/10}
+}
+@media(max-width:560px){
+  .home-app .home-hero{grid-template-columns:1fr;grid-template-rows:auto auto}
+  .home-app .hero-composite{aspect-ratio:4/3}
+}
+@media(max-width:560px){
+  .home-app .home-hero{
+    display:grid;
+    grid-template-columns:1fr;
+    grid-template-rows:auto auto;
+    align-items:start;
+  }
+  .home-app .home-hero-copy{
+    width:100%;
+    margin:0;
+    padding:36px 22px 28px;
+  }
+  .home-app .home-hero-visual{
+    display:block;
+    width:100%;
+    height:auto;
+    min-height:0;
+    align-self:start;
+    margin:0;
+    padding:0;
+    container-type:normal;
+  }
+  .home-app .hero-composite{
+    display:block;
+    width:100%;
+    height:auto;
+    min-height:0;
+    margin:0;
+    aspect-ratio:4/3;
+  }
+  .home-app .hero-composite-stage{
+    left:0;
+    top:42%;
+    width:100%;
+    height:auto;
+    aspect-ratio:1/1;
+    transform:translateY(-42%);
+  }
+}
 @media(max-width:560px){
   .door-swing-grid{
     grid-template-columns:1fr;
@@ -708,6 +1147,71 @@
 .home-app .home-entryway-door-slot .door-style-image,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-glass-overlay,.home-app .home-entryway-door-slot .hardware img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important;transform:none!important}
 .home-app .home-entryway-door-slot .door-finish-layer,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-stain-highlight,.home-app .home-entryway-door-slot .door-default-glass-overlay{-webkit-mask-size:contain!important;mask-size:contain!important;-webkit-mask-position:center!important;mask-position:center!important;-webkit-mask-repeat:no-repeat!important;mask-repeat:no-repeat!important}
 
+/* The house and configured door share this single intrinsic 1254×1254 coordinate space. */
+.home-app .home-hero-visual{
+  position:relative;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  min-width:0;
+  padding:0;
+  overflow:hidden;
+}
+.home-app .hero-composite{
+  position:relative;
+  inset:auto;
+  flex:0 0 auto;
+  width:100%;
+  height:auto;
+  min-height:0;
+  aspect-ratio:1254/1254;
+  margin:0;
+  transform:none;
+  overflow:hidden;
+}
+.home-app .hero-composite>.home-entryway-image{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center;
+}
+.home-app .hero-composite>.home-entryway-overlay{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  aspect-ratio:auto;
+  transform:none;
+}
+.home-app .hero-composite .hero-door-overlay{
+  position:absolute;
+  transform:none;
+  transform-origin:center;
+}
+@media(min-width:981px){
+  .home-app .home-hero-visual{container-type:size}
+  .home-app .hero-composite{width:min(100cqw,100cqh)}
+}
+@media(max-width:980px){
+  .home-app .home-hero-visual{
+    height:auto;
+    min-height:0;
+    align-self:auto;
+    overflow:visible;
+  }
+  .home-app .hero-composite{
+    display:block;
+    width:100%;
+    height:auto;
+    min-height:0;
+    visibility:visible;
+  }
+}
+
 /* Keep the assembled preview layers in one deterministic stacking context. */
 .mapped-preview-door{isolation:isolate}
 .mapped-preview-door>.door-style-image{z-index:1}
@@ -847,3 +1351,344 @@
 
 .brand-home{display:block;flex:none;border:0;background:transparent;padding:0;color:inherit;line-height:0;cursor:pointer}
 .brand-home:focus-visible{outline:2px solid var(--gold);outline-offset:4px;border-radius:2px}
+
+/* Final responsive crop for the unified homepage house-and-door composite. */
+.home-app .hero-composite{
+  position:relative;
+  inset:auto;
+  display:block;
+  width:100%;
+  height:auto;
+  min-height:0;
+  margin:0;
+  padding:0;
+  aspect-ratio:1/1;
+  transform:none;
+  overflow:hidden;
+}
+.home-app .hero-composite-stage{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  aspect-ratio:1/1;
+  transform:none;
+}
+.home-app .hero-composite-stage>.home-entryway-image{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  margin:0;
+  padding:0;
+  object-fit:cover;
+  object-position:center center;
+}
+.home-app .hero-composite-stage>.home-entryway-overlay{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  aspect-ratio:auto;
+  transform:none;
+}
+@media(max-width:980px){
+  .home-app .home-hero-visual{
+    width:100%;
+    height:auto;
+    min-height:0;
+    padding:0;
+    margin:0;
+    align-self:auto;
+    overflow:hidden;
+  }
+  .home-app .hero-composite{aspect-ratio:16/10}
+  .home-app .hero-composite-stage{
+    inset:auto 0 auto 0;
+    top:50%;
+    width:100%;
+    height:auto;
+    aspect-ratio:1/1;
+    transform:translateY(-50%);
+  }
+}
+@media(max-width:560px){
+  .home-app .hero-composite{aspect-ratio:4/3}
+  .home-app .hero-composite-stage{
+    top:42%;
+    transform:translateY(-42%);
+  }
+  .home-app .hero-composite-stage>.home-entryway-image{object-position:center 42%}
+}
+
+/* The landing page is content-sized, not viewport-sized. */
+.app.home-app{display:block;width:100%;height:auto;min-height:0;overflow:visible}
+.home-app .home-page{display:block;width:100%;height:auto;min-height:0;flex:none;overflow:visible}
+.home-app .home-hero{display:grid;height:auto;min-height:0;flex:none;grid-template-rows:auto;align-items:start;padding-block:0;overflow:hidden}
+.home-app .home-hero-copy{height:auto;min-height:0;align-self:start;justify-content:flex-start}
+.home-app .home-hero-visual{display:block;height:auto;min-height:0;align-self:start;container-type:normal}
+.home-app .hero-composite{width:100%;height:auto;min-height:0;aspect-ratio:1/1}
+.home-app footer{flex:none}
+@media(max-width:980px) and (min-width:561px){
+  .home-app .home-hero{grid-template-columns:minmax(0,46%) minmax(0,54%)}
+  .home-app .hero-composite{aspect-ratio:16/10}
+}
+@media(max-width:560px){
+  .home-app .home-hero{grid-template-columns:1fr;grid-template-rows:auto auto}
+  .home-app .hero-composite{aspect-ratio:4/3}
+}
+
+/* Landing viewport grid: header, exact remaining hero row, footer. */
+html,
+body,
+#root{
+  margin:0;
+  min-height:100%;
+}
+body:has(.home-app){
+  padding-bottom:0;
+  overflow:hidden;
+}
+#root:has(>.home-app){
+  display:block;
+  height:100dvh;
+  min-height:100%;
+  overflow:hidden;
+}
+.app.home-app{
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  width:100%;
+  height:100dvh;
+  min-height:100dvh;
+  overflow:hidden;
+}
+.home-app>header,
+.home-app>footer{
+  min-height:0;
+  flex:none;
+}
+.home-app .home-page{
+  display:block;
+  width:100%;
+  height:100%;
+  min-height:0;
+  overflow:hidden;
+}
+.home-app .home-hero{
+  display:grid;
+  width:100%;
+  height:100%;
+  min-height:0;
+  grid-template-columns:minmax(0,46%) minmax(0,54%);
+  grid-template-rows:minmax(0,1fr);
+  align-items:stretch;
+  overflow:hidden;
+}
+.home-app .home-hero-copy,
+.home-app .home-hero-visual{
+  height:100%;
+  min-height:0;
+  align-self:stretch;
+}
+.home-app .home-hero-copy{
+  justify-content:center;
+  overflow:hidden;
+}
+.home-app .home-hero-visual{
+  position:relative;
+  display:block;
+  width:100%;
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  container-type:size;
+}
+.home-app .hero-composite{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  min-height:0;
+  margin:0;
+  aspect-ratio:auto;
+  overflow:hidden;
+}
+.home-app .hero-composite-stage{
+  position:absolute;
+  top:0;
+  left:50%;
+  width:max(100cqw,100cqh);
+  height:max(100cqw,100cqh);
+  aspect-ratio:1/1;
+  transform:translateX(-50%);
+}
+@media(max-width:560px){
+  .home-app .home-hero{
+    grid-template-columns:1fr;
+    grid-template-rows:auto minmax(0,1fr);
+  }
+  .home-app .home-hero-copy{
+    width:100%;
+    height:auto;
+    min-height:0;
+    align-self:start;
+    justify-content:flex-start;
+    padding:28px 22px 22px;
+  }
+  .home-app .home-hero-visual{
+    height:100%;
+    min-height:0;
+    align-self:stretch;
+  }
+}
+
+/* Below wide desktop, the hero is content-sized from the cropped visual. */
+@media(max-width:1199px){
+  #root:has(>.home-app){height:auto;min-height:0;overflow:visible}
+  body:has(.home-app){overflow-x:hidden;overflow-y:auto}
+  .app.home-app{
+    grid-template-rows:auto auto auto;
+    height:auto;
+    min-height:0;
+    align-content:start;
+    overflow:visible;
+  }
+  .home-app .home-page,
+  .home-app .home-hero,
+  .home-app .home-hero-copy,
+  .home-app .home-hero-visual{
+    height:auto;
+    min-height:0;
+  }
+  .home-app .home-page{overflow:visible}
+  .home-app .home-hero{
+    grid-template-rows:auto;
+    align-items:stretch;
+    overflow:hidden;
+  }
+  .home-app .home-hero-copy{
+    align-self:stretch;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+  .home-app .home-hero-visual{
+    align-self:stretch;
+    aspect-ratio:4/3;
+  }
+  .home-app .hero-composite{
+    position:relative;
+    inset:auto;
+    height:auto;
+    min-height:0;
+    aspect-ratio:4/3;
+  }
+}
+
+@media(max-width:560px){
+  .home-app .home-hero{grid-template-rows:auto auto}
+  .home-app .home-hero-visual,
+  .home-app .hero-composite{aspect-ratio:4/3}
+}
+
+/* Unified homepage visual: the house and configured door share one crop. */
+.home-app .home-hero-visual{
+  position:relative;
+  min-height:0;
+  margin:0;
+  padding:0;
+  overflow:hidden;
+}
+.home-app .hero-composite{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  min-height:0;
+  margin:0;
+  padding:0;
+  aspect-ratio:auto;
+  overflow:hidden;
+}
+.home-app .hero-composite-stage{
+  position:absolute;
+  top:0;
+  left:50%;
+  width:max(100cqw,100cqh);
+  height:max(100cqw,100cqh);
+  margin:0;
+  transform:translateX(-50%);
+}
+.home-app .hero-composite-stage>.home-entryway-image{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  margin:0;
+  object-fit:cover;
+  object-position:center;
+}
+.home-app .hero-composite-stage>.home-entryway-overlay{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  margin:0;
+}
+
+@media(min-width:561px) and (max-width:1199px){
+  .home-app .home-hero-visual{aspect-ratio:auto}
+}
+
+@media(max-width:560px){
+  /* The stacked visual needs one row-size constraint; the composite itself
+     remains absolute and all internal layers still share the same crop. */
+  .home-app .home-hero-visual{aspect-ratio:4/3}
+  .home-app .hero-composite{aspect-ratio:auto}
+}
+
+/* Tablet/smaller desktop: consume the viewport so no page background is
+   exposed above or below the edge-to-edge hero visual. */
+@media(min-width:561px) and (max-width:1199px){
+  body:has(.home-app){overflow:hidden}
+  #root:has(>.home-app){
+    height:100dvh;
+    min-height:100%;
+    overflow:hidden;
+  }
+  .app.home-app{
+    grid-template-rows:auto minmax(0,1fr) auto;
+    height:100dvh;
+    min-height:100dvh;
+    overflow:hidden;
+  }
+  .home-app .home-page,
+  .home-app .home-hero,
+  .home-app .home-hero-copy,
+  .home-app .home-hero-visual{
+    height:100%;
+    min-height:0;
+  }
+  .home-app .home-page{overflow:hidden}
+  .home-app .home-hero{
+    grid-template-rows:minmax(0,1fr);
+    align-items:stretch;
+  }
+  .home-app .home-hero-copy,
+  .home-app .home-hero-visual{align-self:stretch}
+}
+
+/* Below 1600px, crop the complete house-and-door composition closer so the
+   visual remains fully filled without moving its individual layers. */
+@media(max-width:1599px){
+  .home-app .hero-composite-stage{
+    top:50%;
+    left:50%;
+    width:max(112cqw,112cqh);
+    height:max(112cqw,112cqh);
+    transform:translate(-50%,-50%);
+  }
+}
