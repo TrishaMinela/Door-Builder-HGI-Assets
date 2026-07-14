@@ -27,7 +27,7 @@ export function GlassOptionCard({ group, selectedId, onSelect }: Props) {
     <article className={`glass-choice-card ${selected ? 'selected' : ''}`}>
       <button type="button" className="glass-card-main" onClick={() => onSelect(displayOption)}>
         <span className="option-visual">
-          <img className="glass-option-thumbnail" src={displayOption.thumbnailPath} alt={`${group.title} glass`} loading="lazy" decoding="async" />
+          {displayOption.thumbnailPath && <img className="glass-option-thumbnail" src={displayOption.thumbnailPath} alt={`${group.title} glass`} loading="lazy" decoding="async" />}
         </span>
         <span className="option-copy">
           <strong>{group.title}</strong>

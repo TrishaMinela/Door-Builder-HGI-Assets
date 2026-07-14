@@ -37,6 +37,26 @@ const FINISH_RENDERING = {
   stainGlossStrength: 0.72,
 } as const
 
+type PixelBounds = { x: number; y: number; width: number; height: number }
+
+function pixelBounds(image: ImageData, isVisible: (red: number, green: number, blue: number, alpha: number) => boolean): PixelBounds | null {
+  let left = image.width
+  let top = image.height
+  let right = -1
+  let bottom = -1
+  for (let y = 0; y < image.height; y += 1) {
+    for (let x = 0; x < image.width; x += 1) {
+      const index = (y * image.width + x) * 4
+      if (!isVisible(image.data[index], image.data[index + 1], image.data[index + 2], image.data[index + 3])) continue
+      left = Math.min(left, x)
+      top = Math.min(top, y)
+      right = Math.max(right, x)
+      bottom = Math.max(bottom, y)
+    }
+  }
+  return right < left || bottom < top ? null : { x: left, y: top, width: right - left + 1, height: bottom - top + 1 }
+}
+
 function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement) {
   if (mask.naturalWidth !== slab.naturalWidth || mask.naturalHeight !== slab.naturalHeight) return null
   const canvas = document.createElement('canvas')
@@ -45,9 +65,13 @@ function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement) {
   const context = canvas.getContext('2d', { willReadFrequently: true })
   if (!context) return null
 
+  context.imageSmoothingEnabled = true
+  context.imageSmoothingQuality = 'high'
+
   // Several supplied masks encode the solid slab as transparent pixels.
   // Composite over white first so transparency remains finishable material,
-  // while the authored black glass openings stay excluded.
+  // while the authored black glass openings stay excluded. Preserve every
+  // grayscale edge value so the supplied anti-aliasing remains intact.
   context.fillStyle = '#fff'
   context.fillRect(0, 0, canvas.width, canvas.height)
   context.drawImage(mask, 0, 0)
@@ -58,16 +82,56 @@ function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement) {
     maskPixels.data[index] = 255
     maskPixels.data[index + 1] = 255
     maskPixels.data[index + 2] = 255
-    maskPixels.data[index + 3] = maskValue >= 128 ? 255 : 0
+    maskPixels.data[index + 3] = maskValue
     glassPixels.data[index] = 255
     glassPixels.data[index + 1] = 255
     glassPixels.data[index + 2] = 255
-    glassPixels.data[index + 3] = maskValue < 128 ? 255 : 0
+    glassPixels.data[index + 3] = 255 - maskValue
   }
   context.putImageData(maskPixels, 0, 0)
   const finishUrl = canvas.toDataURL('image/png')
   context.putImageData(glassPixels, 0, 0)
-  return { finishUrl, glassUrl: canvas.toDataURL('image/png') }
+  const glassBounds = pixelBounds(glassPixels, (_red, _green, _blue, alpha) => alpha > 0)
+  return { finishUrl, glassUrl: canvas.toDataURL('image/png'), glassBounds, maskWidth: canvas.width, maskHeight: canvas.height }
+}
+
+function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height: number, maskBounds: PixelBounds) {
+  const sourceCanvas = document.createElement('canvas')
+  sourceCanvas.width = width
+  sourceCanvas.height = height
+  const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently: true })
+  if (!sourceContext) return null
+  sourceContext.imageSmoothingEnabled = true
+  sourceContext.imageSmoothingQuality = 'high'
+
+  const containScale = Math.min(width / overlay.naturalWidth, height / overlay.naturalHeight)
+  const containedWidth = overlay.naturalWidth * containScale
+  const containedHeight = overlay.naturalHeight * containScale
+  sourceContext.drawImage(overlay, (width - containedWidth) / 2, (height - containedHeight) / 2, containedWidth, containedHeight)
+  const sourcePixels = sourceContext.getImageData(0, 0, width, height)
+  const glassBounds = pixelBounds(sourcePixels, (red, green, blue, alpha) => alpha > 0 && red + green + blue > 12)
+  if (!glassBounds) return null
+
+  const scale = Math.max(maskBounds.width / glassBounds.width, maskBounds.height / glassBounds.height)
+  const maskCenterX = maskBounds.x + maskBounds.width / 2
+  const maskCenterY = maskBounds.y + maskBounds.height / 2
+  const glassCenterX = glassBounds.x + glassBounds.width / 2
+  const glassCenterY = glassBounds.y + glassBounds.height / 2
+  const outputCanvas = document.createElement('canvas')
+  outputCanvas.width = width
+  outputCanvas.height = height
+  const outputContext = outputCanvas.getContext('2d')
+  if (!outputContext) return null
+  outputContext.imageSmoothingEnabled = true
+  outputContext.imageSmoothingQuality = 'high'
+  outputContext.drawImage(
+    sourceCanvas,
+    maskCenterX - glassCenterX * scale,
+    maskCenterY - glassCenterY * scale,
+    width * scale,
+    height * scale,
+  )
+  return outputCanvas.toDataURL('image/png')
 }
 
 function buildSolidSlabMask(slab: HTMLImageElement) {
@@ -92,12 +156,13 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const [previewImage, setPreviewImage] = useState(previewCandidates[0] ?? '')
   const hasMappedPreview = Boolean(previewCandidates.length)
   const finishColor = tintColor ?? finish.color
-  const [processedMask, setProcessedMask] = useState<{ source: string; finishUrl: string; glassUrl?: string } | null>(null)
+  const [processedMask, setProcessedMask] = useState<{ source: string; finishUrl: string; glassUrl?: string; glassBounds?: PixelBounds | null; maskWidth?: number; maskHeight?: number } | null>(null)
   const finishMask = previewImage && processedMask?.source === previewImage ? processedMask.finishUrl : undefined
   const glassMask = previewImage && processedMask?.source === previewImage ? processedMask.glassUrl : undefined
   const compatibleGlass = isGlassCapable ? glassOptions.filter((option) => styleCodes.some((code) => option.overlaysByDoorStyle[code])) : []
   const previewGlass = glass && compatibleGlass.some((option) => option.id === glass.id) ? glass : null
   const glassOverlay = previewGlass ? styleCodes.map((code) => previewGlass.overlaysByDoorStyle[code]).find(Boolean) : undefined
+  const [fittedGlassOverlay, setFittedGlassOverlay] = useState<{ source: string; maskSource: string; url: string } | null>(null)
   const [internalPreviewView, setInternalPreviewView] = useState<HardwareView>('Exterior')
   const previewView = view ?? internalPreviewView
   const setPreviewView = onViewChange ?? setInternalPreviewView
@@ -169,6 +234,23 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     return () => { cancelled = true }
   }, [previewCandidatesKey, isGlassCapable, maskKey, maskAsset, maskCode])
 
+  useEffect(() => {
+    let cancelled = false
+    if (!glassOverlay || !previewImage || processedMask?.source !== previewImage || !processedMask.glassBounds || !processedMask.maskWidth || !processedMask.maskHeight) {
+      setFittedGlassOverlay(null)
+      return () => { cancelled = true }
+    }
+    const overlay = new Image()
+    overlay.onload = () => {
+      if (cancelled) return
+      const url = fitGlassOverlayToMask(overlay, processedMask.maskWidth!, processedMask.maskHeight!, processedMask.glassBounds!)
+      setFittedGlassOverlay(url ? { source: glassOverlay, maskSource: previewImage, url } : null)
+    }
+    overlay.onerror = () => { if (!cancelled) setFittedGlassOverlay(null) }
+    overlay.src = glassOverlay
+    return () => { cancelled = true }
+  }, [glassOverlay, previewImage, processedMask])
+
   const finishLayerStyle = useMemo(() => {
     if (!applyFinish || !hasMappedPreview || !finishMask || !finishColor) return undefined
     return {
@@ -195,6 +277,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     opacity: FINISH_RENDERING.stainHighlightOpacity,
   } as React.CSSProperties : undefined
   const glassOverlayStyle = glassMask ? {
+    ...(maskCode === 'CR14' || maskCode === 'CR14PL' ? { backgroundColor: '#eef1f2' } : {}),
     WebkitMaskImage: `url("${glassMask}")`,
     maskImage: `url("${glassMask}")`,
     WebkitMaskSize: 'contain',
@@ -245,7 +328,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           {finishLayerStyle && <div className={`door-finish-layer door-finish-layer-${finish.finishType}`} style={finishLayerStyle} />}
           {previewImage && finishLayerStyle && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {stainHighlightStyle && <div className="door-stain-highlight" style={stainHighlightStyle} />}
-          {glassOverlay && <img className="door-glass-overlay" src={glassOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+          {glassOverlay && <img className="door-glass-overlay" src={fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage ? fittedGlassOverlay.url : glassOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {hardwareImage && <div className={`hardware hardware-${previewHardware.type}`} style={{ '--metal': previewHardware.color } as React.CSSProperties}>
             <img src={hardwareImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => {
               console.warn('[door-preview:failed-hardware-overlay]', {

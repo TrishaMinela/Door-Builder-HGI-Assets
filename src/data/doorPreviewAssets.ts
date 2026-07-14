@@ -98,6 +98,7 @@ const signatureFirPaintDoorPreviewAssets: Record<string, string> = {
 }
 
 const signatureMahoganyPaintDoorPreviewAssets: Record<string, string> = {
+  '3PNG': slabUrl('Mahogany', '3 Panel No Glass - Mahogany.png'),
   '3PNGSS': slabUrl('Mahogany', '3 Panel No Glass - Mahogany.png'),
   F: slabUrl('Mahogany', 'Full Lite - Mahogany.png'),
   F48: slabUrl('Mahogany', '3_4 Lite - Mahogany.png'),

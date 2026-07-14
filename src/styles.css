@@ -1244,6 +1244,10 @@ body{overflow:hidden}
 }
 .glass-caming-options button.selected,.hardware-finish-options button.selected{border-width:1px;outline:1px solid var(--gold);outline-offset:-1px}
 
+/* Glass cards keep one consistent outer height across every grid row,
+   including single-option entries such as CR14DL. */
+.options-grid:has(>.glass-choice-card){grid-auto-rows:1fr}
+
 /* Desktop builder: one viewport, internally scrolling options, fixed preview composition. */
 @media(min-width:901px){
   .app:not(.home-app) .builder-panel,

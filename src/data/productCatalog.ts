@@ -15,7 +15,7 @@ const parseStyles = (rows: string[]) => rows.map((row) => {
 const signatureStyles = {
   Cherry: parseStyles(['2PNGSS|2 Panel No Glass', '2PPLSS|2 Panel Plank No Glass', 'CA|Fiberglass Center Arch 8 Panel', 'CANGSS|Center Arch No Glass', 'F|Full Lite', 'F482|3/4 Lite 2 Panel', 'S|Half Lite', 'S1NGSS|S1 6-Pnl No Glass', 'SO2|Small Oval 2 Panel']),
   Fir: parseStyles(['CR14|Craftsman 1/4 Rectangle', 'F|Full Lite']),
-  Mahogany: parseStyles(['3PNGSS|3 Panel No Glass', 'F|Full Lite', 'F48|3/4 Lite', 'S|Half Lite', 'S1NGSS|S1 6-Pnl No Glass']),
+  Mahogany: parseStyles(['3PNG|3 Panel No Glass', 'F|Full Lite', 'F48|3/4 Lite', 'S|Half Lite', 'S1NGSS|S1 6-Pnl No Glass']),
   Oak: parseStyles(['F|Full Lite', 'S|Half Lite', 'S1NGSS|S1 6-Pnl No Glass']),
 }
 
