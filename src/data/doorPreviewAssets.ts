@@ -56,11 +56,12 @@ const texturedPaintDoorPreviewAssets: Record<string, string> = {
   '3STEP': slabUrl('Textured', 'Three Lite Stepping Down From Lock Side - Textured.png'),
   '4LT': slabUrl('Textured', 'Stacked 4 Lite - Textured.png'),
   '5LT': slabUrl('Textured', 'Five Lite Stack - Textured.png'),
-  CR14: slabUrl('Textured', 'Craftsman 1_4 Rectangle - Textured.png'),
+  CR14: slabUrl('Textured', 'CR14 - Textured.png'),
   E1: slabUrl('Textured', 'Eight Panel No Glass - Textured.png'),
   F: slabUrl('Textured', 'Full Lite - Textured.png'),
   F1: slabUrl('Textured', 'Flush No Glass - Textured.png'),
   F48: slabUrl('Textured', '3_4 Lite - Textured.png'),
+  F848: slabUrl('Textured', '34 Lite - Textured.png'),
   F764: slabUrl('Textured', 'Full Twin Lite - Textured.png'),
   HDAT1: slabUrl('Textured', 'HD Arch Top - Textured.png'),
   HRT: slabUrl('Textured', 'Half Round Top Glass - Textured.png'),
@@ -135,6 +136,10 @@ function usesSmoothPaintPreview(product?: ResolvedDoorProduct | null) {
   ) ?? false
 }
 
+function usesPaintableStainableSteelPreview(product?: ResolvedDoorProduct | null) {
+  return product?.matchingVariants.some((variant) => variant.lineId === '22-gauge-steel') ?? false
+}
+
 function usesSignaturePreview(product?: ResolvedDoorProduct | null) {
   return product?.matchingVariants.some((variant) => variant.lineId.startsWith('signature-')) ?? false
 }
@@ -158,9 +163,10 @@ function doorStyleThumbnailPreview(style: DoorStyle) {
     .find(Boolean)
 }
 
-export function resolveDoorPreviewCandidates(style: DoorStyle, _finishType?: Finish['finishType'], product?: ResolvedDoorProduct | null, grain?: string | null) {
+export function resolveDoorPreviewCandidates(style: DoorStyle, finishType?: Finish['finishType'], product?: ResolvedDoorProduct | null, grain?: string | null) {
   const candidates: (string | undefined)[] = []
   const hasExactDoorLine = product?.doorTypes.length === 1
+  const useStainableSteelTexture = hasExactDoorLine && usesPaintableStainableSteelPreview(product)
   const signatureGrainAssets = hasExactDoorLine && usesSignaturePreview(product) ? signaturePaintPreviewByGrain(grain) : null
   if (signatureGrainAssets) candidates.push(previewFromMap(style, signatureGrainAssets))
 
@@ -169,6 +175,9 @@ export function resolveDoorPreviewCandidates(style: DoorStyle, _finishType?: Fin
   }
 
   if (hasExactDoorLine && usesTexturedPaintPreview(product)) {
+    candidates.push(previewFromMap(style, texturedPaintDoorPreviewAssets))
+  }
+  if (useStainableSteelTexture) {
     candidates.push(previewFromMap(style, texturedPaintDoorPreviewAssets))
   }
   if (hasExactDoorLine && usesSmoothPaintPreview(product)) {
