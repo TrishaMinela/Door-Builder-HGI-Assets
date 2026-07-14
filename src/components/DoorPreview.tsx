@@ -153,6 +153,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const maskCode = styleCodes.find((code) => glassDoorCodes.has(code))
   const maskAsset = maskCode ? resolveGlassMaskAsset(maskCode) : null
   const maskKey = maskCode ?? 'solid-slab'
+  const useNativeGlassOverlay = Boolean(maskCode && maskCode !== 'CR14' && maskCode !== 'F482')
   const [previewImage, setPreviewImage] = useState(previewCandidates[0] ?? '')
   const hasMappedPreview = Boolean(previewCandidates.length)
   const finishColor = tintColor ?? finish.color
@@ -236,7 +237,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
 
   useEffect(() => {
     let cancelled = false
-    if (!glassOverlay || !previewImage || processedMask?.source !== previewImage || !processedMask.glassBounds || !processedMask.maskWidth || !processedMask.maskHeight) {
+    if (useNativeGlassOverlay || !glassOverlay || !previewImage || processedMask?.source !== previewImage || !processedMask.glassBounds || !processedMask.maskWidth || !processedMask.maskHeight) {
       setFittedGlassOverlay(null)
       return () => { cancelled = true }
     }
@@ -249,7 +250,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     overlay.onerror = () => { if (!cancelled) setFittedGlassOverlay(null) }
     overlay.src = glassOverlay
     return () => { cancelled = true }
-  }, [glassOverlay, previewImage, processedMask])
+  }, [glassOverlay, previewImage, processedMask, useNativeGlassOverlay])
 
   const finishLayerStyle = useMemo(() => {
     if (!applyFinish || !hasMappedPreview || !finishMask || !finishColor) return undefined
