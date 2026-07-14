@@ -123,6 +123,45 @@
 }
 
 .hardware-group-heading{grid-column:1/-1;margin:8px 0 0;color:#0d666c;font-size:15px;font-weight:700}
+
+/* Maximize the live door within the space left by the preview controls and summary. */
+@media(min-width:901px){
+  .app:not(.home-app) .aside-preview-area .preview-scene{padding:2px 0}
+  .app:not(.home-app) .aside-preview-area .door-frame{
+    width:auto;
+    height:100%;
+    max-width:100%;
+    max-height:100%;
+    aspect-ratio:230/430;
+    transform:none;
+  }
+}
+
+@media(max-width:900px){
+  :root{--mobile-preview-height:240px}
+  .mobile-live-preview .preview-scene{padding:44px 0 4px}
+  .mobile-live-preview .door-frame{
+    width:auto;
+    height:100%;
+    max-width:100%;
+    aspect-ratio:230/430;
+    transform:none;
+  }
+  .mobile-review-preview{height:340px}
+  .mobile-review-preview .preview-scene{height:340px;padding:44px 0 4px;transform:none}
+  .mobile-review-preview .door-frame{
+    width:auto;
+    height:100%;
+    max-width:100%;
+    aspect-ratio:230/430;
+    transform:none;
+  }
+}
+
+@media(max-width:560px){
+  :root{--mobile-preview-height:220px}
+  .mobile-review-preview,.mobile-review-preview .preview-scene{height:310px}
+}
 .option-visual:has(.hardware-card-image){height:260px;min-height:260px;padding:10px}
 .hardware-card-image{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center}
 @media(max-width:560px){.option-visual:has(.hardware-card-image){height:160px;min-height:160px;padding:6px}}
