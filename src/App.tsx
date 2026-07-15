@@ -51,6 +51,11 @@ const HERO_DOOR_PRESETS = [
   ['CR14', 'signature-series', 'stain-toasted-caramel', 'linen', 'Century Trim with Latitude Lever', 'Matte Black'],
   ['F848', 'textured-fiberglass', 'stain-auburn', 'clear', 'Plymouth Handleset', 'Satin Nickel'],
   ['S1', 'textured-fiberglass', 'stain-nutmeg', null, 'Century Handleset', 'Satin Nickel'],
+  ['SAT', '22-gauge-steel', 'stain-toasted-caramel', 'rain', 'Camelot Handleset', 'Matte Black'],
+  ['N', 'textured-fiberglass', 'stain-nutmeg', 'nouveau-nickel', 'Century Handleset', 'Satin Nickel'],
+  ['SO2', 'signature-series', 'stain-black-cherry', 'cadence', 'Plymouth Handleset', 'Bright Brass'],
+  ['FRT', '22-gauge-steel', 'stain-auburn', 'clear', 'Camelot Handleset', 'Satin Nickel'],
+  ['SHAK2', '22-gauge-steel', 'stain-natural-gold', null, 'Century Trim with Latitude Lever', 'Matte Black'],
 ] as const
 const grainThumbnails: Record<string, string> = {
   Cherry: '/assets/door-lines/grains/cherry.png',
