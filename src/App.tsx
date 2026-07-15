@@ -183,7 +183,10 @@ export default function App() {
     ? availableGlass.find((option) => option.id === 'clear') ?? null
     : null
   const configuredGlass = supportsGlass ? selectedGlass : clearOnlyGlass
-  const previewGlass = supportsGlass ? glass : selectedHardware ? clearOnlyGlass : null
+  const doorStyleDefaultGlass = selectedStyleCodes.includes('HRT')
+    ? availableGlass.find((option) => option.id === 'clear') ?? null
+    : null
+  const previewGlass = supportsGlass ? glass ?? doorStyleDefaultGlass : selectedHardware ? clearOnlyGlass : null
   const glassOptionGroups = [...availableGlass.reduce((groups, option) => {
     const key = glassGroupKey(option)
     const group = groups.get(key) ?? { key, title: glassGroupTitle(option), options: [] }
@@ -325,11 +328,13 @@ export default function App() {
   }
 
   const selectDoorStyle = (nextStyleId: string) => {
-    if (!doorStyles.some((item) => item.id === nextStyleId)) return
+    const nextStyle = doorStyles.find((item) => item.id === nextStyleId)
+    if (!nextStyle) return
     if (nextStyleId !== styleId) {
       setStyleId(nextStyleId)
       setDoorLineId('')
       setGrainId('')
+      if (styleCodesForGlass(nextStyle).includes('SW')) setGlassId('')
     }
     if (doorStyles.length === 1) goTo(step + 1)
   }

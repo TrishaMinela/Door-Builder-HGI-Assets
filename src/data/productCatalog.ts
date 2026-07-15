@@ -9,7 +9,9 @@ export const glassDoorCodes = new Set([
 
 const parseStyles = (rows: string[]) => rows.map((row) => {
   const [code, name] = row.split('|')
-  return { code, name: `${code} - ${name.toUpperCase()}`, hasGlass: glassDoorCodes.has(code) }
+  const displayCode = code === 'S1NGSS' ? 'S1' : code
+  const displayName = code === 'S1NGSS' ? 'Six Panel No Glass' : name
+  return { code, name: `${displayCode} - ${displayName.toUpperCase()}`, hasGlass: glassDoorCodes.has(code) }
 })
 
 const signatureStyles = {

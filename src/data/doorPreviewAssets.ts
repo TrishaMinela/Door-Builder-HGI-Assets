@@ -33,7 +33,7 @@ const smoothPaintDoorPreviewAssets: Record<string, string> = {
   QA: slabUrl('Smooth', '648 Quarter Height Eye Brow - Smooth.png'),
   S: slabUrl('Smooth', 'Half Lite - Smooth.png'),
   S1: slabUrl('Smooth', 'S1 6-Panel No Glass - Smooth.png'),
-  SAT: slabUrl('Smooth', 'Half Round Top - Smooth.png'),
+  SAT: slabUrl('Smooth', 'Half Arch Top - Smooth.png'),
   S1NGSS: slabUrl('Smooth', 'S1 6-Panel No Glass - Smooth.png'),
   S2: slabUrl('Smooth', 'Two Lights Top of 6 Panel Door - Smooth.png'),
   S3: slabUrl('Smooth', 'Four Lite Rectangle - Smooth.png'),
@@ -63,19 +63,23 @@ const texturedPaintDoorPreviewAssets: Record<string, string> = {
   F48: slabUrl('Textured', '3_4 Lite - Textured.png'),
   F848: slabUrl('Textured', '34 Lite - Textured.png'),
   F764: slabUrl('Textured', 'Full Twin Lite - Textured.png'),
+  FRT: slabUrl('Textured', 'FRT - Textured.png'),
+  FO: slabUrl('Textured', 'FO - Textured.png'),
   HDAT1: slabUrl('Textured', 'HD Arch Top - Textured.png'),
   HRT: slabUrl('Textured', 'Half Round Top Glass - Textured.png'),
   N: slabUrl('Textured', 'N Panel - Textured.png'),
   N1: slabUrl('Textured', 'Nine Panel - Textured.png'),
   QA: slabUrl('Textured', '648 Quarter Height Eye Brow - Textured.png'),
   S1NGSS: slabUrl('Textured', 'S1 6-Panel No Glass - Textured.png'),
-  S2: slabUrl('Textured', 'Two 8_ x 36_ Lites - Textured.png'),
-  S3: slabUrl('Textured', 'Two 8_ x 48_ Lites, 3_4 Lite - Textured.png'),
-  S4: slabUrl('Textured', 'Full Twin Lite - Textured.png'),
-  SHAK1: slabUrl('Textured', '1 Panel Shaker - Textured.png'),
-  SHAK2: slabUrl('Textured', '2 Panel Shaker - Textured.png'),
-  SHAK3: slabUrl('Textured', '3 Panel Shaker - Textured.png'),
-  SO: slabUrl('Textured', 'Small Oval 3 Panel - Textured.png'),
+  S2: slabUrl('Textured', 'Two Lights Top of 6 Panel Door - Textured.png'),
+  S3: slabUrl('Textured', 'Four Lite Rectangle - Textured.png'),
+  S4: slabUrl('Textured', 'Four Lites Together Each With An Arch At Top - Textured.png'),
+  S836: slabUrl('Textured', 'S836 - Textured.png'),
+  SAT: slabUrl('Textured', 'SAT - Textured.png'),
+  SHAK1: slabUrl('Textured', 'Shak1 - Textured.png'),
+  SHAK2: slabUrl('Textured', 'Shak2 - Textured.png'),
+  SHAK3: slabUrl('Textured', 'Shak3 - Textured.png'),
+  SO: slabUrl('Textured', 'SO - Textured.png'),
   SW: slabUrl('Textured', 'Wagon Wheel - Textured.png'),
 }
 
@@ -89,6 +93,7 @@ const signatureCherryPaintDoorPreviewAssets: Record<string, string> = {
   F482: slabUrl('Cherry', '3_4 Lite 2 Panel - Cherry.png'),
   S: slabUrl('Cherry', 'Half Lite - Cherry.png'),
   S1NGSS: slabUrl('Cherry', 'S1 6-Panel No Glass - Cherry.png'),
+  SO2: slabUrl('Cherry', 'Small Oval 2 Panel - Cherry.png'),
   '3PNGSS': slabUrl('Cherry', '3 Panel No Glass - Cherry.png'),
 }
 
@@ -105,7 +110,6 @@ const signatureMahoganyPaintDoorPreviewAssets: Record<string, string> = {
   F48: slabUrl('Mahogany', '3_4 Lite - Mahogany.png'),
   S: slabUrl('Mahogany', 'Half Lite - Mahogany.png'),
   S1NGSS: slabUrl('Mahogany', 'S1 6-Panel No Glass - Mahogany.png'),
-  SO2: slabUrl('Mahogany', 'Small Oval 3 Panel - Mahogany.png'),
 }
 
 const signatureOakPaintDoorPreviewAssets: Record<string, string> = {

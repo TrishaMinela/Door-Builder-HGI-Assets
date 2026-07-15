@@ -26,7 +26,7 @@ export const glassMaskAssets = {
   S836: '/assets/masks/S836.png',
   SAT: '/assets/masks/SAT.png',
   SO: '/assets/masks/SO.png',
-  SO2: '/assets/masks/SO2.png',
+  SO2: '/assets/masks/SO.png',
   SW: '/assets/masks/SW.png',
 } as const
 

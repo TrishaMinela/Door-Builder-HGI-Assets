@@ -153,7 +153,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const maskCode = styleCodes.find((code) => glassDoorCodes.has(code))
   const maskAsset = maskCode ? resolveGlassMaskAsset(maskCode) : null
   const maskKey = maskCode ?? 'solid-slab'
-  const useNativeGlassOverlay = Boolean(maskCode && maskCode !== 'CR14' && maskCode !== 'F482')
+  const useNativeGlassOverlay = Boolean(maskCode && maskCode !== 'CR14' && maskCode !== 'F482' && maskCode !== 'FO' && maskCode !== 'N' && maskCode !== 'S2' && maskCode !== 'S3' && maskCode !== 'S4' && maskCode !== 'SAT' && maskCode !== 'SO2')
   const [previewImage, setPreviewImage] = useState(previewCandidates[0] ?? '')
   const hasMappedPreview = Boolean(previewCandidates.length)
   const finishColor = tintColor ?? finish.color

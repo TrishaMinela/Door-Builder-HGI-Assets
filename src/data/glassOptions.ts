@@ -285,6 +285,11 @@ const glassPreviewAssets: Record<string, string> = {
   "STOP.png": "/assets/hgi-assets/Glass/S/DECO/STOP.png",
   "SVAP.png": "/assets/hgi-assets/Glass/S/DECO/SVAP.png",
   "SVIL.png": "/assets/hgi-assets/Glass/S/DECO/SVIL.png",
+  "SAT/SATClear.png": "/assets/hgi-assets/Glass/SAT/SATClear.png",
+  "SAT/SATClearLowE.png": "/assets/hgi-assets/Glass/SAT/SATClearLowE.png",
+  "SAT/SATGraceNickel.png": "/assets/hgi-assets/Glass/SAT/SATGraceNickel.png",
+  "SAT/SATGracePatina.png": "/assets/hgi-assets/Glass/SAT/SATGracePatina.png",
+  "SAT/SATLaurel.png": "/assets/hgi-assets/Glass/SAT/SATLaurel.png",
   "SWGRAPA.png": "/assets/hgi-assets/Glass/SW/SWGRAPA.png",
   "SWGRC.png": "/assets/hgi-assets/Glass/SW/SWGRC.png",
   "SWGWH.png": "/assets/hgi-assets/Glass/SW/SWGWH.png",
@@ -510,13 +515,11 @@ const qaOverlays: Record<string, string> = {
   clear: 'QAQACL.png',
   'grace-nickel': 'QAGRANI.png',
   'grace-patina': 'QAGRAPA.png',
-  london: 'QALON.png',
   'nouveau-nickel': 'QANOUNI.png',
   'nouveau-patina': 'QANOUPA.png',
   pembrook: 'QAPEM.png',
   riverwood: 'QARIV.png',
   vincraft: 'QAVIN.png',
-  wyngate: 'QAWYN.png',
 }
 
 const caOverlays: Record<string, string> = {
@@ -575,6 +578,10 @@ const f3Overlays: Record<string, string> = {
 const f4Overlays: Record<string, string> = {
 }
 
+const frtOverlays: Record<string, string> = {
+  clear: '/assets/hgi-assets/Glass/FRT/FRT Glass.png',
+}
+
 const f764Overlays: Record<string, string> = {
   chinchilla: '/assets/hgi-assets/Glass/RETRO/F764CHI.png',
   clear: '/assets/hgi-assets/Glass/RETRO/F764CLE.png',
@@ -585,17 +592,37 @@ const f764Overlays: Record<string, string> = {
 }
 
 const hrtOverlays: Record<string, string> = {
-  clear: 'HRTClear.png',
+  clear: '/assets/hgi-assets/Glass/HRT/HRT.png',
   'nouveau-nickel': 'HRTNouveaNickel.png',
   'nouveau-patina': 'HRTNouveaPatina.png',
 }
 
+const nOverlays: Record<string, string> = {
+  'heirlooms-brass': '/assets/hgi-assets/Glass/N/NHeirloomsBrass.png',
+  'heirlooms-nickel': '/assets/hgi-assets/Glass/N/NHeirloomsNickel.png',
+  'nouveau-nickel': '/assets/hgi-assets/Glass/N/NNouveaNickel.png',
+  'nouveau-patina': '/assets/hgi-assets/Glass/N/NNouveaPatina.png',
+}
+
 const satOverlays: Record<string, string> = {
   clear: 'SATClear.png',
-  'low-e': 'SATClearLowE.png',
+  'clear-low-e': 'SATClearLowE.png',
   'grace-nickel': 'SATGraceNickel.png',
   'grace-patina': 'SATGracePatina.png',
   laurel: 'SATLaurel.png',
+  rain: '/assets/hgi-assets/Glass/F/DECO/FRAI.png',
+}
+
+const s2Overlays: Record<string, string> = {
+  clear: '/assets/hgi-assets/Glass/F/CLEAR STOCK/FF10.png',
+}
+
+const s3Overlays: Record<string, string> = {
+  clear: '/assets/hgi-assets/Glass/F/CLEAR STOCK/FF10.png',
+}
+
+const s4Overlays: Record<string, string> = {
+  clear: '/assets/hgi-assets/Glass/F/CLEAR STOCK/FF10.png',
 }
 
 const soOverlays: Record<string, string> = {
@@ -975,9 +1002,14 @@ export const glassOptions: GlassOption[] = [
   const f2Overlay = f2Overlays[option.id]
   const f3Overlay = f3Overlays[option.id]
   const f4Overlay = f4Overlays[option.id]
+  const frtOverlay = frtOverlays[option.id]
   const f764Overlay = f764Overlays[option.id]
   const hrtOverlay = hrtOverlays[option.id]
+  const nOverlay = nOverlays[option.id]
   const satOverlay = satOverlays[option.id]
+  const s2Overlay = s2Overlays[option.id]
+  const s3Overlay = s3Overlays[option.id]
+  const s4Overlay = s4Overlays[option.id]
   const soOverlay = soOverlays[option.id]
   const sOverlay = sOverlays[option.id]
   const fOverlay = fOverlays[option.id]
@@ -1038,6 +1070,10 @@ export const glassOptions: GlassOption[] = [
     overlaysByDoorStyle.F4 = glassOverlayAssetUrl('F4', f4Overlay)
   }
 
+  if (frtOverlay) {
+    overlaysByDoorStyle.FRT = glassOverlayAssetUrl('FRT', frtOverlay)
+  }
+
   if (f764Overlay) {
     overlaysByDoorStyle.F764 = glassOverlayAssetUrl('F764', f764Overlay)
   }
@@ -1046,8 +1082,24 @@ export const glassOptions: GlassOption[] = [
     overlaysByDoorStyle.HRT = glassOverlayAssetUrl('HRT', hrtOverlay)
   }
 
+  if (nOverlay) {
+    overlaysByDoorStyle.N = glassOverlayAssetUrl('N', nOverlay)
+  }
+
   if (satOverlay) {
     overlaysByDoorStyle.SAT = glassOverlayAssetUrl('SAT', satOverlay)
+  }
+
+  if (s2Overlay) {
+    overlaysByDoorStyle.S2 = glassOverlayAssetUrl('S2', s2Overlay)
+  }
+
+  if (s3Overlay) {
+    overlaysByDoorStyle.S3 = glassOverlayAssetUrl('S3', s3Overlay)
+  }
+
+  if (s4Overlay) {
+    overlaysByDoorStyle.S4 = glassOverlayAssetUrl('S4', s4Overlay)
   }
 
   if (soOverlay) {
