@@ -50,16 +50,17 @@ export const doorPreviewAssets: Record<string, string> = smoothPaintDoorPreviewA
 
 const texturedPaintDoorPreviewAssets: Record<string, string> = {
   '2PHD': slabUrl('Textured', '2P HD Flat Top - Textured.png'),
-  '3LT': slabUrl('Textured', 'Stacked 3 Lite - Textured.png'),
+  '3LT': slabUrl('Textured', '3LT - Textured.png'),
   '3PNG': slabUrl('Textured', '3 Panel No Glass - Textured.png'),
   '3PNGSS': slabUrl('Textured', '3 Panel No Glass - Textured.png'),
-  '3STEP': slabUrl('Textured', 'Three Lite Stepping Down From Lock Side - Textured.png'),
-  '4LT': slabUrl('Textured', 'Stacked 4 Lite - Textured.png'),
-  '5LT': slabUrl('Textured', 'Five Lite Stack - Textured.png'),
+  '3STEP': slabUrl('Textured', '3STEP - Textured.png'),
+  '4LT': slabUrl('Textured', '4LT - Textured.png'),
+  '5LT': slabUrl('Textured', '5LT - Textured.png'),
   CR14: slabUrl('Textured', 'CR14 - Textured.png'),
   E1: slabUrl('Textured', 'Eight Panel No Glass - Textured.png'),
   F: slabUrl('Textured', 'Full Lite - Textured.png'),
   F1: slabUrl('Textured', 'Flush No Glass - Textured.png'),
+  F4: slabUrl('Textured', 'Three Lite Stepping Down From Lock Side - Textured.png'),
   F48: slabUrl('Textured', '3_4 Lite - Textured.png'),
   F848: slabUrl('Textured', '34 Lite - Textured.png'),
   F764: slabUrl('Textured', 'Full Twin Lite - Textured.png'),
@@ -70,6 +71,7 @@ const texturedPaintDoorPreviewAssets: Record<string, string> = {
   N: slabUrl('Textured', 'N Panel - Textured.png'),
   N1: slabUrl('Textured', 'Nine Panel - Textured.png'),
   QA: slabUrl('Textured', '648 Quarter Height Eye Brow - Textured.png'),
+  S: slabUrl('Textured', 'S - Textured.png'),
   S1NGSS: slabUrl('Textured', 'S1 6-Panel No Glass - Textured.png'),
   S2: slabUrl('Textured', 'Two Lights Top of 6 Panel Door - Textured.png'),
   S3: slabUrl('Textured', 'Four Lite Rectangle - Textured.png'),
@@ -115,6 +117,7 @@ const signatureMahoganyPaintDoorPreviewAssets: Record<string, string> = {
 const signatureOakPaintDoorPreviewAssets: Record<string, string> = {
   F: slabUrl('Oak', 'Full Lite - Mahogany.png'),
   F48: slabUrl('Oak', '3_4 Lite - Mahogany.png'),
+  S: slabUrl('Oak', 'Half Lite - Oak.png'),
   S1NGSS: slabUrl('Oak', 'S1 6-Panel No Glass - Mahogany.png'),
 }
 

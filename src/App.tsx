@@ -15,7 +15,8 @@ import { submitQuote, type SubmissionResult } from './utils/submission'
 
 const glassSteps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
 const noGlassSteps = ['Door Style', 'Finish', 'Hardware', 'Review & Quote']
-type BuilderPage = 'door-style' | 'door-line' | 'door-grain' | 'finish' | 'glass' | 'hardware' | 'door-swing' | 'review'
+type BuilderPage = 'door-style' | 'door-line' | 'door-grain' | 'finish' | 'glass-type' | 'glass' | 'hardware' | 'door-swing' | 'review'
+type GlassCategory = 'clear' | 'decorative' | 'privacy' | 'blinds' | 'clic' | 'retro'
 const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '' }
 const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
 const signatureSeriesId = 'signature-series'
@@ -96,6 +97,29 @@ function glassGroupKey(option: GlassOption) {
   return glassGroupTitle(option).toLowerCase().replace(/[^a-z0-9]+/g, '-')
 }
 
+const glassCategoryChoices: { id: GlassCategory; name: string; description: string; image: string }[] = [
+  { id: 'clear', name: 'Clear Glass', description: 'Clear glass and clear grille options.', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 'decorative', name: 'Decorative Glass', description: 'Decorative glass designs and caming finishes.', image: '/assets/glass/thumbnails/Decorative.png' },
+  { id: 'privacy', name: 'Privacy Glass', description: 'Textured glass designed for added privacy.', image: '/assets/glass/thumbnails/Privacy.png' },
+  { id: 'blinds', name: 'Mini Blinds', description: 'Glass options with integrated mini blinds.', image: '/assets/glass/thumbnails/Blinds.png' },
+  { id: 'clic', name: 'CLiC Glass', description: 'CLiC enclosed-glass options.', image: '/assets/glass/thumbnails/CLIC.png' },
+]
+const retroGlassCategory = { id: 'retro' as const, name: 'Retro', description: 'Explore all available Retro glass options.', image: '/assets/glass/thumbnails/Retro.png' }
+
+const clearGlassIds = new Set(['clear', 'clear-low-e', 'cr14-divided-lites', 'f-f10l', 'f-f15wh', 'f-prairie-internal', 'f-ten-lite', 'f-clear-f10', 'f-clear-f10l', 'f-clear-f15', 'f-clear-f15int', 'f-clear-f15intl', 'f-clear-fpraint', 'f-clear-ften', 'f-clear-nonstock', 'f48-clear-f1248', 'f48-clear-f1248l', 'f48-clear-f648l', 'f48-clear-nonstock', 'frt-clear-f17rt', 'hrt-clear-s11rt', 'n-clear-ncl', 'qa-clear-qacl', 'sat-clear-nonstock', 'so-clear-nonstock', 'so-clear-small-no-coating', 'so-clear-small-low-e', 's-clear-s5', 's-clear-s5l', 's-clear-s9', 's-clear-s9int', 's-clear-s9intl', 's-clear-sv6', 's-clear-nonstock', 'sw-clear-swg'])
+const legacyFullLiteGlassIds = new Set(['clear', 'f-f10l', 'f-f15wh', 'f-prairie-internal', 'f-ten-lite', 'f-blinds-15', 'blinds-espresso', 'blinds-gray', 'blinds-sand', 'blinds-silver', 'blinds-tan', 'blinds-white'])
+const f48GlassOptionIds = new Set(['f48-clear-f1248', 'f48-clear-f1248l', 'f48-clear-f648l', 'f48-clear-nonstock', 'f48-blinds-white', 'f48-clic-nogrid', 'f48-clic-ext-12l', 'ashbury', 'berkley', 'briselle', 'cadence', 'calandra', 'courtyard', 'crosswalk', 'cyndi', 'dorian-nickel', 'dorian-patina', 'edgewood', 'elegant-black-white', 'elegant-nickel', 'elegant-patina', 'empire', 'fragrance', 'garrison', 'grace-nickel', 'grace-patina', 'heirlooms-brass', 'heirlooms-nickel', 'high-point', 'jameston', 'majestic-nickel', 'majestic-patina', 'margate', 'metro', 'mistify', 'mohave', 'monterey-nickel', 'monterey-patina', 'neo', 'nouveau-nickel', 'nouveau-patina', 'oak-park', 'paris', 'pembrook', 'prestige', 'rill', 'riverwood', 'sterling', 'topaz', 'vilano', 'vincraft', 'waterside', 'baroque', 'blanca', 'chinchilla', 'cumulus', 'double-water', 'micro-granite', 'rain', 'streamed', 'vapor', 'wide-reed'])
+const privacyGlassIds = new Set(['baroque', 'blanca', 'chinchilla', 'cumulus', 'double-water', 'frosted', 'karma', 'micro-granite', 'mistify', 'privacy', 'rain', 'streamed', 'vapor', 'wide-reed', 'sw-rain-nogrid', 'sw-rain-5l'])
+
+function glassCategory(option: GlassOption): GlassCategory {
+  const key = `${option.id} ${option.name}`.toLowerCase()
+  if (key.includes('clic')) return 'clic'
+  if (key.includes('blind')) return 'blinds'
+  if (clearGlassIds.has(option.id)) return 'clear'
+  if (privacyGlassIds.has(option.id)) return 'privacy'
+  return 'decorative'
+}
+
 function styleCodesForGlass(style: typeof doorStyles[number]) {
   return [...new Set([style.code, ...style.variants.map((variant) => variant.code)])]
 }
@@ -117,6 +141,7 @@ export default function App() {
   const [selectedFinishType, setSelectedFinishType] = useState<'' | 'paint' | 'stain'>('')
   const [selectedPaint, setSelectedPaint] = useState('')
   const [selectedStain, setSelectedStain] = useState('')
+  const [selectedGlassCategory, setSelectedGlassCategory] = useState<GlassCategory | ''>('')
   const [glassId, setGlassId] = useState('')
   const [hardwareId, setHardwareId] = useState('')
   const [doorSwingId, setDoorSwingId] = useState('')
@@ -179,9 +204,9 @@ export default function App() {
       : styleCodesForGlass(selectedStyle)
     : []
   const availableGlass = selectedStyle && compatibilitySupportsGlass
-    ? glassOptions.filter((option) => selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])))
+    ? glassOptions.filter((option) => selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])) && !(selectedStyleCodes.includes('F') && legacyFullLiteGlassIds.has(option.id)) && (!(selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) || f48GlassOptionIds.has(option.id)))
     : []
-  const supportsGlass = Boolean(compatibilitySupportsGlass && availableGlass.some((option) => option.id !== 'clear'))
+  const supportsGlass = Boolean(compatibilitySupportsGlass && availableGlass.length > 0)
   const steps = supportsGlass ? glassSteps : noGlassSteps
   const selectedGlass = supportsGlass ? glass : null
   const clearOnlyGlass = !supportsGlass && compatibilitySupportsGlass
@@ -192,7 +217,16 @@ export default function App() {
     ? availableGlass.find((option) => option.id === 'clear') ?? null
     : null
   const previewGlass = supportsGlass ? glass ?? doorStyleDefaultGlass : selectedHardware ? clearOnlyGlass : null
-  const glassOptionGroups = [...availableGlass.reduce((groups, option) => {
+  const usesRetroGlassCategory = selectedStyleCodes.some((code) => ['3LT', '3STEP', '4LT', '5LT', 'F764'].includes(code))
+  const availableGlassCategories = usesRetroGlassCategory
+    ? [retroGlassCategory]
+    : glassCategoryChoices.filter((category) => availableGlass.some((option) => glassCategory(option) === category.id))
+  const visibleGlass = selectedGlassCategory
+    ? usesRetroGlassCategory && selectedGlassCategory === 'retro'
+      ? availableGlass
+      : availableGlass.filter((option) => glassCategory(option) === selectedGlassCategory)
+    : []
+  const glassOptionGroups = [...visibleGlass.reduce((groups, option) => {
     const key = glassGroupKey(option)
     const group = groups.get(key) ?? { key, title: glassGroupTitle(option), options: [] }
     group.options.push(option)
@@ -205,7 +239,7 @@ export default function App() {
     'door-line',
     ...(needsGrainStep ? ['door-grain' as const] : []),
     'finish',
-    ...(supportsGlass ? ['glass' as const] : []),
+    ...(supportsGlass ? ['glass-type' as const, 'glass' as const] : []),
     'hardware',
     'door-swing',
     'review',
@@ -215,7 +249,7 @@ export default function App() {
     ? 'Door Style'
     : currentPage === 'finish'
       ? 'Finish'
-      : currentPage === 'glass'
+      : currentPage === 'glass-type' || currentPage === 'glass'
         ? 'Glass'
         : currentPage === 'hardware' || currentPage === 'door-swing'
           ? 'Hardware'
@@ -301,9 +335,14 @@ export default function App() {
       if (selectedFinishType === 'paint') setSelectedPaint('')
       if (selectedFinishType === 'stain') setSelectedStain('')
     }
+    if (selectedGlassCategory && !availableGlassCategories.some((item) => item.id === selectedGlassCategory)) {
+      setSelectedGlassCategory('')
+      setGlassId('')
+    }
+    if (glassId && selectedGlassCategory && !visibleGlass.some((item) => item.id === glassId)) setGlassId('')
     if (glassId && (!supportsGlass || !availableGlass.some((item) => item.id === glassId))) setGlassId('')
     if (step >= pages.length) setStep(pages.length - 1)
-  }, [styleId, doorLineId, grainId, availableDoorLineIds, isSignatureDoorLine, selectedDoorLineLineIdsKey, needsGrainStep, effectiveFinishTypes, selectedFinishType, finishId, availableFinishIds, glassId, availableGlassIds, supportsGlass, step, pages.length])
+  }, [styleId, doorLineId, grainId, availableDoorLineIds, isSignatureDoorLine, selectedDoorLineLineIdsKey, needsGrainStep, effectiveFinishTypes, selectedFinishType, finishId, availableFinishIds, selectedGlassCategory, glassId, availableGlassIds, supportsGlass, step, pages.length])
 
   useEffect(() => {
     if (screen !== 'builder') return
@@ -339,7 +378,8 @@ export default function App() {
       setStyleId(nextStyleId)
       setDoorLineId('')
       setGrainId('')
-      if (styleCodesForGlass(nextStyle).includes('SW')) setGlassId('')
+      setSelectedGlassCategory('')
+      setGlassId('')
     }
     if (doorStyles.length === 1) goTo(step + 1)
   }
@@ -351,6 +391,7 @@ export default function App() {
     setSelectedFinishType('')
     setSelectedPaint('')
     setSelectedStain('')
+    setSelectedGlassCategory('')
     setGlassId('')
     setHardwareId('')
     setDoorSwingId('')
@@ -376,7 +417,7 @@ export default function App() {
     const targetPage = pages.findIndex((page) => (
       targetStep === 'Door Style' ? page === 'door-style'
         : targetStep === 'Finish' ? page === 'finish'
-          : targetStep === 'Glass' ? page === 'glass'
+          : targetStep === 'Glass' ? page === 'glass-type'
             : targetStep === 'Hardware' ? page === 'hardware'
               : page === 'review'
     ))
@@ -405,6 +446,8 @@ export default function App() {
     if (nextDoorLineId !== doorLineId) {
       setDoorLineId(nextDoorLineId)
       setGrainId('')
+      setSelectedGlassCategory('')
+      setGlassId('')
     }
     if (availableDoorLines.length === 1) goTo(step + 1)
   }
@@ -425,9 +468,18 @@ export default function App() {
   }
 
   const selectGlass = (nextGlassId: string) => {
-    if (!availableGlass.some((item) => item.id === nextGlassId)) return
+    if (!visibleGlass.some((item) => item.id === nextGlassId)) return
     if (nextGlassId !== glassId) setGlassId(nextGlassId)
-    if (availableGlass.length === 1) goTo(step + 1)
+    if (visibleGlass.length === 1) goTo(step + 1)
+  }
+
+  const selectGlassCategory = (nextCategory: GlassCategory) => {
+    if (!availableGlassCategories.some((item) => item.id === nextCategory)) return
+    if (nextCategory !== selectedGlassCategory) {
+      setSelectedGlassCategory(nextCategory)
+      setGlassId('')
+    }
+    if (availableGlassCategories.length === 1) goTo(step + 1)
   }
 
   const selectHardware = (nextHardwareId: string) => {
@@ -528,7 +580,7 @@ export default function App() {
       <nav className="stepper" aria-label="Configuration progress">
         {steps.map((label, index) => {
           const isReachable = canVisitStep(index)
-          const targetPage = pages.findIndex((page) => label === 'Door Style' ? page === 'door-style' : label === 'Finish' ? page === 'finish' : label === 'Glass' ? page === 'glass' : label === 'Hardware' ? page === 'hardware' : page === 'review')
+          const targetPage = pages.findIndex((page) => label === 'Door Style' ? page === 'door-style' : label === 'Finish' ? page === 'finish' : label === 'Glass' ? page === 'glass-type' : label === 'Hardware' ? page === 'hardware' : page === 'review')
           return <button key={label} className={`${index === activeMainStepIndex ? 'active' : ''} ${index < activeMainStepIndex ? 'done' : ''}`} disabled={!isReachable} aria-current={index === activeMainStepIndex ? 'step' : undefined} onClick={() => isReachable && goTo(targetPage)}><span>{index < activeMainStepIndex ? <Check size={13} /> : index + 1}</span><em>{label}</em></button>
         })}
       </nav>
@@ -542,12 +594,12 @@ export default function App() {
                   <span>Step {activeMainStepIndex + 1} of {steps.length}</span>
                 </div>
                 <div className="step-title-row">
-                  <h1>{currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'finish' ? 'Choose Your Finish' : currentPage === 'glass' ? 'Choose Your Glass' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>
+                  <h1>{currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'finish' ? 'Choose Your Finish' : currentPage === 'glass-type' ? 'Choose Your Glass Type' : currentPage === 'glass' ? 'Choose Your Glass' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>
                   <div className="section-resets">
                     {currentPage === 'door-style' && <button type="button" aria-label="Reset Design" onClick={resetDesign}><RotateCcw size={20} /><span>Reset Design</span></button>}
                   </div>
                 </div>
-                <p>{currentPage === 'door-style' ? 'Browse all available door styles and choose the one that feels right for your home.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'finish' ? 'Pick from the valid paint or stain finishes.' : currentPage === 'glass' ? 'Balance natural light, privacy, and personality.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
+                <p>{currentPage === 'door-style' ? 'Browse all available door styles and choose the one that feels right for your home.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'finish' ? 'Pick from the valid paint or stain finishes.' : currentPage === 'glass-type' ? 'Choose the kind of glass you want to explore.' : currentPage === 'glass' ? 'Balance natural light, privacy, and personality.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
               </div>
             </div>
             <div ref={builderOptionsRef} className="builder-options-scroll">
@@ -558,11 +610,12 @@ export default function App() {
                   {currentPage === 'finish' && activeFinishType === 'stain' && <img src="/assets/branding/timberstain-logo.png" alt="TimberStain" loading="lazy" decoding="async" />}
                 </div>
               </div>}
-              <div className={`options-grid step-${step} ${currentPage === 'door-style' || currentPage === 'door-grain' || currentPage === 'finish' ? 'door-style-grid' : ''}`}>
+              <div className={`options-grid step-${step} ${currentPage === 'door-style' || currentPage === 'door-grain' || currentPage === 'finish' || currentPage === 'glass-type' ? 'door-style-grid' : ''}`}>
                 {currentPage === 'door-style' && doorStyles.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.eyebrow} selected={styleId === item.id} onClick={() => selectDoorStyle(item.id)} visual={<DoorStyleThumbnail style={item} />} badge={item.variants.some((variant) => variant.lineId.startsWith('signature-')) ? <img src="/assets/branding/signature-series-logo.png" alt="Available in Signature Series" loading="lazy" decoding="async" /> : undefined} />)}
                 {currentPage === 'door-line' && availableDoorLines.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Door Line" selected={doorLineId === item.id} onClick={() => selectDoorLine(item.id)} visual={<span className="door-line-card-image"><img src={item.image} alt="" loading="lazy" decoding="async" /></span>} />)}
                 {currentPage === 'door-grain' && signatureGrainOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Signature grain" selected={selectedGrain === item.id} onClick={() => selectGrain(item.id)} visual={<img className="grain-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'finish' && visibleFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => selectFinish(item.id, item.finishType)} visual={<span className="finish-tile-wrap" style={{ '--fallback-finish': item.color } as CSSProperties}><img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} /></span>} />)}
+                {currentPage === 'glass-type' && availableGlassCategories.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Glass type" selected={selectedGlassCategory === item.id} onClick={() => selectGlassCategory(item.id)} visual={<img className={`glass-option-thumbnail${item.id === 'retro' || item.id === 'clic' ? ' retro-glass-thumbnail' : ''}`} src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'glass' && glassOptionGroups.map((group) => <GlassOptionCard group={group} selectedId={glassId} onSelect={(item) => selectGlass(item.id)} key={group.key} />)}
                 {currentPage === 'hardware' && hardwareStyleGroups.map((options) => <HardwareOptionCard key={`${options[0].manufacturer}-${options[0].style}`} options={options} selectedId={hardwareId} onSelect={(option) => selectHardware(option.id)} />)}
                 {currentPage === 'door-swing' && doorSwingOptions.map((item) => <OptionCard key={item.id} title={`${item.id} – ${item.name}`} eyebrow="Door swing" selected={doorSwingId === item.id} onClick={() => selectDoorSwing(item.id)} visual={<img className="door-swing-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
@@ -575,7 +628,7 @@ export default function App() {
             <div className="mobile-review-preview"><DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} /></div>
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
-              {[['Door style', style.name, pages.indexOf('door-style')], ['Door Line', selectedDoorLine?.name ?? product.doorType, pages.indexOf('door-line')], ...(selectedGrain ? [['Grain', selectedGrain, pages.indexOf('door-grain')]] : []), ['Finish type', selectedFinishType === 'stain' ? 'Stain' : 'Paint', pages.indexOf('finish')], [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name, pages.indexOf('finish')], ...(compatibilitySupportsGlass ? [['Glass', configuredGlass?.name ?? 'Clear', pages.indexOf('glass')]] : []), ['Hardware', hardwareDisplayName(selectedHardware!), pages.indexOf('hardware')], ['Door swing', selectedDoorSwing?.name ?? 'Not selected', pages.indexOf('door-swing')]].map(([label, value, target]) => <div className="summary-row" key={String(label)}><span>{label}<strong>{value}</strong></span>{Number(target) >= 0 && <button onClick={() => goTo(Number(target))}>Edit</button>}</div>)}
+              {[['Door style', style.name, pages.indexOf('door-style')], ['Door Line', selectedDoorLine?.name ?? product.doorType, pages.indexOf('door-line')], ...(selectedGrain ? [['Grain', selectedGrain, pages.indexOf('door-grain')]] : []), ['Finish type', selectedFinishType === 'stain' ? 'Stain' : 'Paint', pages.indexOf('finish')], [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name, pages.indexOf('finish')], ...(compatibilitySupportsGlass ? [['Glass', configuredGlass?.name ?? 'Clear', pages.indexOf('glass-type')]] : []), ['Hardware', hardwareDisplayName(selectedHardware!), pages.indexOf('hardware')], ['Door swing', selectedDoorSwing?.name ?? 'Not selected', pages.indexOf('door-swing')]].map(([label, value, target]) => <div className="summary-row" key={String(label)}><span>{label}<strong>{value}</strong></span>{Number(target) >= 0 && <button onClick={() => goTo(Number(target))}>Edit</button>}</div>)}
             </div>
             <div className="review-download-form">
               <div className="attachment-card">
@@ -600,7 +653,7 @@ export default function App() {
             <button onClick={downloadPdf}><Download size={17} /> Download Your Summary</button>
           </div>}
 
-          {currentPage !== 'review' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Previous</button><button className="next" disabled={(currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'finish' && !visibleSelectedFinish) || (currentPage === 'glass' && availableGlass.length > 0 && !selectedGlass) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>Next <ArrowRight size={17} /></button></div>}
+          {currentPage !== 'review' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Previous</button><button className="next" disabled={(currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'finish' && !visibleSelectedFinish) || (currentPage === 'glass-type' && !selectedGlassCategory) || (currentPage === 'glass' && visibleGlass.length > 0 && !selectedGlass) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>Next <ArrowRight size={17} /></button></div>}
         </section>
 
         {!submitted && <aside>
