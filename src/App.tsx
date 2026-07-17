@@ -32,32 +32,19 @@ const heroDoorOpeningStyle = {
   width: `${HERO_DOOR_OPENING.widthPct}%`,
   height: `${HERO_DOOR_OPENING.heightPct}%`,
 } as CSSProperties
-const HERO_DOOR_PRESETS = [
-  ['S', 'signature-series', 'paint-positive-red', 'grace-nickel', 'Century Trim with Latitude Lever', 'Matte Black'],
-  ['F', 'signature-series', 'stain-toasted-caramel', 'heirlooms-nickel', 'Camelot Handleset', 'Satin Nickel'],
-  ['CR14', 'signature-series', 'stain-natural-gold', 'oak-park', 'Plymouth Handleset', 'Bright Brass'],
-  ['S', 'signature-series', 'stain-black-cherry', 'rain', 'Camelot Handleset', 'Matte Black'],
-  ['F', 'signature-series', 'stain-auburn', 'linen', 'Plymouth Handleset', 'Satin Nickel'],
-  ['5LT', '22-gauge-steel', 'stain-french-roast', 'chinchilla', 'Latitude Lever with Deadbolt', 'Satin Nickel'],
-  ['F848', 'textured-fiberglass', 'stain-nutmeg', 'berkley', 'Century Handleset', 'Matte Black'],
-  ['FO', '20-gauge-smooth-steel', 'paint-black', 'cadence', 'Camelot Handleset', 'Satin Nickel'],
-  ['S836', '20-gauge-smooth-steel', 'paint-white', 'rain', 'Plymouth Handleset', 'Matte Black'],
-  ['3LT', '20-gauge-smooth-steel', 'paint-navy', 'frosted', 'Century Trim with Latitude Lever', 'Satin Nickel'],
-  ['4LT', '20-gauge-smooth-steel', 'paint-coastal-plain', 'clear', 'Camelot Handleset', 'Bright Brass'],
-  ['SW', 'textured-fiberglass', 'stain-harvest-wheat', 'renewed-impressions', 'Plymouth Handleset', 'Satin Nickel'],
-  ['2PNGSS', 'signature-series', 'stain-french-roast', null, 'Camelot Handleset', 'Matte Black'],
-  ['S1', '20-gauge-smooth-steel', 'paint-desert-tan', null, 'Century Trim with Latitude Lever', 'Satin Nickel'],
-  ['F', 'signature-series', 'stain-french-roast', 'rain', 'Latitude Lever with Deadbolt', 'Satin Nickel'],
-  ['S', 'signature-series', 'stain-natural-gold', 'clear', 'Camelot Handleset', 'Bright Brass'],
-  ['CR14', 'signature-series', 'stain-toasted-caramel', 'linen', 'Century Trim with Latitude Lever', 'Matte Black'],
-  ['F848', 'textured-fiberglass', 'stain-auburn', 'clear', 'Plymouth Handleset', 'Satin Nickel'],
-  ['S1', 'textured-fiberglass', 'stain-nutmeg', null, 'Century Handleset', 'Satin Nickel'],
-  ['SAT', '22-gauge-steel', 'stain-toasted-caramel', 'rain', 'Camelot Handleset', 'Matte Black'],
-  ['N', 'textured-fiberglass', 'stain-nutmeg', 'nouveau-nickel', 'Century Handleset', 'Satin Nickel'],
-  ['SO2', 'signature-series', 'stain-black-cherry', 'cadence', 'Plymouth Handleset', 'Bright Brass'],
-  ['FRT', '22-gauge-steel', 'stain-auburn', 'clear', 'Camelot Handleset', 'Satin Nickel'],
-  ['SHAK2', '22-gauge-steel', 'stain-natural-gold', null, 'Century Trim with Latitude Lever', 'Matte Black'],
+// One hero preset per unique slab in the product catalog. Keeping this list to
+// slab codes only lets the preset builder choose valid, non-repeating finishes
+// even as finish and hardware catalogs change.
+const HERO_SLAB_CODES = [
+  '2PNGSS', '2PPLSS', 'CA', 'CANGSS', 'F', 'F482', 'S', 'S1NGSS', 'SO2', 'CR14',
+  '3PNG', 'F48', '2PHD', '3LT', '3STEP', '4LT', '5LT', 'CR14PL', 'E1', 'F1', 'F2',
+  'F3', 'F4', 'F764', 'F848', 'FO', 'FRT', 'HDAT1', 'HRT', 'N', 'N1', 'QA', 'S2',
+  'S3', 'S4', 'S836', 'SAT', 'SHAK1', 'SHAK2', 'SHAK3', 'SO', 'SW',
 ] as const
+const HERO_GLASS_OVERRIDES: Partial<Record<typeof HERO_SLAB_CODES[number], string>> = {
+  FO: 'cadence',
+  SAT: 'laurel',
+}
 const grainThumbnails: Record<string, string> = {
   Cherry: '/assets/door-lines/grains/cherry.png',
   Fir: '/assets/door-lines/grains/fir.png',
@@ -265,37 +252,35 @@ export default function App() {
     doorSwing: selectedDoorSwing,
   }
   const demoStyleByCode = (code: string) => doorStyles.find((item) => item.code === code || item.variants.some((variant) => variant.code === code)) ?? doorStyles[0]
-  const demoFinishById = (id: string) => finishes.find((item) => item.id === id) ?? finishes[0]
-  const demoGlassById = (id: string) => glassOptions.find((item) => item.id === id) ?? null
-  const demoHardwareBySelection = (styleName: string, finishName: string) =>
-    hardwareOptions.find((item) => item.manufacturer === 'Schlage' && item.style === styleName && item.finish === finishName)
-    ?? hardwareOptions.find((item) => item.manufacturer === 'Schlage')
-    ?? hardwareOptions[0]
-  const buildHomeDemo = (styleCode: string, doorLineChoiceId: string, finishChoiceId: string, glassChoiceId: string | null, hardwareStyle: string, hardwareFinish: string) => {
+  const usedHeroFinishes = new Set<string>()
+  const buildHomeDemo = (styleCode: string, presetIndex: number) => {
     const demoStyle = demoStyleByCode(styleCode)
-    const demoDoorLine = doorLineChoicesForStyle(demoStyle).find((item) => item.id === doorLineChoiceId) ?? doorLineChoicesForStyle(demoStyle)[0]
+    const compatibleDoorLines = doorLineChoicesForStyle(demoStyle)
+    const finishCandidates = compatibleDoorLines.flatMap((doorLine) => {
+      const grain = autoGrainForDoorLine(demoStyle, doorLine.id)
+      return finishesForStyle(demoStyle, finishes, doorLine.id, grain).map((finishOption) => ({ doorLine, grain, finishOption }))
+    })
+    const unusedFinish = finishCandidates.find(({ finishOption }) => !usedHeroFinishes.has(finishOption.id))
+    const selectedCombination = unusedFinish ?? finishCandidates[presetIndex % Math.max(finishCandidates.length, 1)]
+    const demoDoorLine = selectedCombination?.doorLine ?? compatibleDoorLines[0]
     const demoGrain = demoDoorLine ? autoGrainForDoorLine(demoStyle, demoDoorLine.id) : null
-    const compatibleFinishes = demoDoorLine ? finishesForStyle(demoStyle, finishes, demoDoorLine.id, demoGrain) : finishes
-    const requestedFinish = demoFinishById(finishChoiceId)
-    const demoFinish = compatibleFinishes.find((item) => item.id === requestedFinish.id)
-      ?? compatibleFinishes.find((item) => item.finishType === requestedFinish.finishType)
-      ?? compatibleFinishes[0]
-      ?? requestedFinish
+    const demoFinish = selectedCombination?.finishOption ?? finishes[presetIndex % finishes.length]
+    usedHeroFinishes.add(demoFinish.id)
     const demoProduct = resolveDoorProduct(demoStyle, demoFinish, demoGrain ?? undefined, demoDoorLine?.id)
     const isGlassCapable = demoProduct.styleCodes.some((code) => glassDoorCodes.has(code))
     const compatibleGlass = glassOptions.filter((option) => demoProduct.styleCodes.some((code) => option.overlaysByDoorStyle[code]))
-    const requestedGlass = glassChoiceId ? demoGlassById(glassChoiceId) : null
+    const preferredGlass = HERO_GLASS_OVERRIDES[styleCode as keyof typeof HERO_GLASS_OVERRIDES]
     const demoGlass = isGlassCapable
-      ? requestedGlass && compatibleGlass.some((option) => option.id === requestedGlass.id)
-        ? requestedGlass
-        : compatibleGlass.find((option) => option.id === 'clear') ?? compatibleGlass[0] ?? null
+      ? compatibleGlass.find((option) => option.id === preferredGlass)
+        ?? compatibleGlass[presetIndex % Math.max(compatibleGlass.length, 1)]
+        ?? null
       : null
-    const demoHardware = demoHardwareBySelection(hardwareStyle, hardwareFinish)
+    const demoHardware = hardwareOptions[presetIndex % hardwareOptions.length]
 
     if (import.meta.env.DEV && (!demoFinish?.color || !demoHardware || (isGlassCapable && !demoGlass))) {
       console.warn('[hero-door-preset:incomplete]', {
         styleCode,
-        doorLineChoiceId,
+        doorLineChoiceId: demoDoorLine?.id,
         finish: demoFinish?.id,
         hardware: demoHardware?.id,
         glass: demoGlass?.id,
@@ -312,9 +297,7 @@ export default function App() {
       isGlassCapable,
     }
   }
-  const homeDemoConfigurations = HERO_DOOR_PRESETS.map(([styleCode, doorLineId, finishId, glassId, hardwareStyle, hardwareFinish]) =>
-    buildHomeDemo(styleCode, doorLineId, finishId, glassId, hardwareStyle, hardwareFinish),
-  )
+  const homeDemoConfigurations = HERO_SLAB_CODES.map(buildHomeDemo)
   const activeHomeDemo = homeDemoConfigurations[homeDemoIndex % homeDemoConfigurations.length]
 
   useEffect(() => {

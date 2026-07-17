@@ -38,6 +38,27 @@ const FINISH_RENDERING = {
 } as const
 
 type PixelBounds = { x: number; y: number; width: number; height: number }
+type HardwareSide = 'left' | 'right'
+
+const hardwarePlacementByDoorSwing: Record<DoorSwing['id'], {
+  hardwareSideExterior: HardwareSide
+  hardwareSideInterior: HardwareSide
+}> = {
+  LHI: { hardwareSideExterior: 'right', hardwareSideInterior: 'left' },
+  LHO: { hardwareSideExterior: 'right', hardwareSideInterior: 'left' },
+  RHI: { hardwareSideExterior: 'left', hardwareSideInterior: 'right' },
+  RHO: { hardwareSideExterior: 'left', hardwareSideInterior: 'right' },
+}
+
+const sourceHardwareSideByView: Record<HardwareView, HardwareSide> = {
+  Exterior: 'right',
+  Interior: 'left',
+}
+
+function preservesReadableHardware(hardware: PreviewHardware) {
+  const label = `${hardware.manufacturer ?? ''} ${hardware.style ?? ''}`.toLowerCase()
+  return /keypad|number|touchscreen|electronic|smart|logo|engraving/.test(label)
+}
 
 function pixelBounds(image: ImageData, isVisible: (red: number, green: number, blue: number, alpha: number) => boolean): PixelBounds | null {
   let left = image.width
@@ -145,6 +166,11 @@ function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height:
   const glassBounds = pixelBounds(sourcePixels, (red, green, blue, alpha) => alpha > 0 && red + green + blue > 12)
   if (!glassBounds) return null
 
+  const sourceRegions = connectedAlphaBounds(sourcePixels)
+    .filter((region) => region.width > 4 && region.height > 4)
+    .sort((a, b) => a.y - b.y)
+  const targetRegions = maskRegions?.slice().sort((a, b) => a.y - b.y)
+
   const glassCenterX = glassBounds.x + glassBounds.width / 2
   const glassCenterY = glassBounds.y + glassBounds.height / 2
   const outputCanvas = document.createElement('canvas')
@@ -154,6 +180,23 @@ function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height:
   if (!outputContext) return null
   outputContext.imageSmoothingEnabled = true
   outputContext.imageSmoothingQuality = 'high'
+  if (targetRegions?.length && sourceRegions.length === targetRegions.length && targetRegions.length > 1) {
+    targetRegions.forEach((target, index) => {
+      const source = sourceRegions[index]
+      outputContext.drawImage(
+        sourceCanvas,
+        source.x,
+        source.y,
+        source.width,
+        source.height,
+        target.x,
+        target.y + offsetY,
+        target.width,
+        target.height,
+      )
+    })
+    return outputCanvas.toDataURL('image/png')
+  }
   for (const target of maskRegions?.length ? maskRegions : [maskBounds]) {
     const scale = Math.max(target.width / glassBounds.width, target.height / glassBounds.height) * overscan
     const targetCenterX = target.x + target.width / 2
@@ -178,6 +221,9 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
   const previewCandidatesKey = previewCandidates.join('|')
   const styleCodes = product?.styleCodes.length ? product.styleCodes : [style.code]
+  // These source slabs already contain their full panel relief. Repeating them
+  // as the compact detail pass makes the hero versions read as stacked slabs.
+  const showDetailImage = !(compact && styleCodes.some((code) => code === 'E1' || code === 'SW'))
   const isGlassCapable = styleCodes.some((code) => glassDoorCodes.has(code))
   const maskCode = styleCodes.find((code) => glassDoorCodes.has(code))
   const maskAsset = maskCode ? resolveGlassMaskAsset(maskCode) : null
@@ -195,7 +241,8 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const fitSharedFallbackOverlay = Boolean(
     maskCode
       && glassOverlay
-      && ((['F48', 'F848'].includes(maskCode) && !glassOverlay.includes(`/Glass/${maskCode}/`))
+      && (maskCode === '3LT'
+        || (['F48', 'F848'].includes(maskCode) && !glassOverlay.includes(`/Glass/${maskCode}/`))
         || (maskCode === 'QA' && previewGlass?.id === 'qa-clear-qacl')
         || (maskCode === 'S' && !glassOverlay.includes('/Glass/S/'))
         || (maskCode === 'S836' && !glassOverlay.includes('/Glass/S836/'))
@@ -206,6 +253,18 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const [internalPreviewView, setInternalPreviewView] = useState<HardwareView>('Exterior')
   const previewView = view ?? internalPreviewView
   const setPreviewView = onViewChange ?? setInternalPreviewView
+  const hardwarePlacement = doorSwing ? hardwarePlacementByDoorSwing[doorSwing.id] : null
+  const hardwareSideExterior = hardwarePlacement?.hardwareSideExterior ?? 'right'
+  const hardwareSideInterior = hardwarePlacement?.hardwareSideInterior ?? 'left'
+  const hardwareSide = previewView === 'Exterior' ? hardwareSideExterior : hardwareSideInterior
+  const hardwareSourceSide = sourceHardwareSideByView[previewView]
+  const hardwareMovesSides = hardwareSide !== hardwareSourceSide
+  const keepHardwareReadable = preservesReadableHardware(hardware)
+  const hardwareImagePlacementClass = hardwareMovesSides
+    ? keepHardwareReadable
+      ? `hardware-image-shift-${hardwareSide}`
+      : 'hardware-image-mirrored'
+    : ''
   const selectedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView, doorSwing)
   const defaultHardware = hardwareOptions.find((option) => Boolean(hardwarePreviewAssetUrl(option, previewView, doorSwing)))
   const previewHardware: PreviewHardware = selectedHardwareImage ? hardware : defaultHardware ?? hardware
@@ -284,7 +343,8 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     overlay.onload = () => {
       if (cancelled) return
       const offsetY = previewGlass?.id === 'f48-clear-f648l' ? processedMask.glassBounds!.height * 0.08 : 0
-      const maskRegions = ((maskCode === 'F848' && previewGlass?.id === 'streamed')
+      const maskRegions = (maskCode === '3LT'
+        || (maskCode === 'F848' && previewGlass?.id === 'streamed')
         || (maskCode === 'S836' && !glassOverlay.includes('/Glass/S836/')))
         ? processedMask.glassRegions
         : undefined
@@ -380,11 +440,11 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           </div>
           {previewImage && <img className={`door-style-image door-style-image-${finish.finishType}`} src={previewImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {finishLayerStyle && <div className={`door-finish-layer door-finish-layer-${finish.finishType}`} style={finishLayerStyle} />}
-          {previewImage && finishLayerStyle && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+          {previewImage && finishLayerStyle && showDetailImage && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {stainHighlightStyle && <div className="door-stain-highlight" style={stainHighlightStyle} />}
           {glassOverlay && <img className="door-glass-overlay" src={fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage ? fittedGlassOverlay.url : glassOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
-          {hardwareImage && <div className={`hardware hardware-${previewHardware.type}`} style={{ '--metal': previewHardware.color } as React.CSSProperties}>
-            <img src={hardwareImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => {
+          {hardwareImage && <div className={`hardware hardware-${previewHardware.type} hardware-side-${hardwareSide}`} data-hardware-side={hardwareSide} data-hardware-side-exterior={hardwareSideExterior} data-hardware-side-interior={hardwareSideInterior} style={{ '--metal': previewHardware.color } as React.CSSProperties}>
+            <img className={hardwareImagePlacementClass} src={hardwareImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => {
               console.warn('[door-preview:failed-hardware-overlay]', {
                 manufacturer: previewHardware.manufacturer,
                 style: previewHardware.style,
