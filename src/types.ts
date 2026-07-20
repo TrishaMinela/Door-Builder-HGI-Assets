@@ -117,8 +117,25 @@ export type DoorConfiguration = {
   grain: string | null
   finish: Finish
   glass: GlassOption | null
+  grid: GridConfiguration | null
   hardware: HardwareOption
   doorSwing: DoorSwing
+}
+
+export type GlassCoating = 'Standard / No Low-E' | 'Low-E Plus' | 'ODL Clear'
+export type GridLocation = 'No Grids' | 'External' | 'Internal' | 'SDL' | 'Arts & Crafts'
+export type GridStyle = 'Contoured' | 'Flat' | 'Prairie'
+export type GridPattern = '4 Lite' | '4 Lite Horizontal' | '6 Lite' | '8 Lite' | '10 Lite' | '12 Lite' | '15 Lite'
+export type GridColor = 'Beige' | 'Black' | 'Bronze' | 'Bronze/White' | 'Champagne' | 'Tan' | 'White'
+export type GridWidth = '5/8"' | '7/8"' | '11/16"'
+
+export type GridConfiguration = {
+  glassCoating: GlassCoating
+  gridLocation?: GridLocation
+  gridStyle?: GridStyle
+  gridPattern?: GridPattern
+  gridColor?: GridColor
+  gridWidth?: GridWidth
 }
 
 export type ContactForm = {

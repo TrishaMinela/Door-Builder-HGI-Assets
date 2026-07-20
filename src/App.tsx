@@ -9,17 +9,52 @@ import { QuoteForm } from './components/QuoteForm'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
 import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
-import type { ContactForm, DoorSwing, GlassOption, PreviewHardware } from './types'
+import type { ContactForm, DoorSwing, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, PreviewHardware } from './types'
 import { configurationPdfName } from './utils/pdfConfig'
 import { submitQuote, type SubmissionResult } from './utils/submission'
 
 const glassSteps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
 const noGlassSteps = ['Door Style', 'Finish', 'Hardware', 'Review & Quote']
-type BuilderPage = 'door-style' | 'door-line' | 'door-grain' | 'finish' | 'glass-type' | 'glass' | 'hardware' | 'door-swing' | 'review'
+type BuilderPage = 'door-style' | 'door-line' | 'door-grain' | 'finish' | 'glass-type' | 'glass' | 'grid-location' | 'grid-style' | 'grid-pattern' | 'grid-color' | 'grid-width' | 'hardware' | 'door-swing' | 'review'
 type GlassCategory = 'clear' | 'decorative' | 'privacy' | 'blinds' | 'clic' | 'retro'
 const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '' }
 const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
 const signatureSeriesId = 'signature-series'
+const FULL_LITE_GRID_GLASS_ID = 'f-clear-grids'
+const gridLocations = [
+  { id: 'standard-external', name: 'External Grids', image: '/assets/hgi-assets/Glass/GLASS THUMBNAILS/EXTG.png' },
+  { id: 'standard-internal', name: 'Internal Grids', image: '/assets/hgi-assets/Glass/GLASS THUMBNAILS/FLATG.png' },
+] as const
+const gridStyles: { id: GridStyle; image: string }[] = [
+  { id: 'Contoured', image: '/assets/hgi-assets/Glass/GLASS THUMBNAILS/CONTG.png' },
+  { id: 'Flat', image: '/assets/hgi-assets/Glass/GLASS THUMBNAILS/FLATG.png' },
+  { id: 'Prairie', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRAWH.png' },
+]
+const flatGridPatterns: { id: GridPattern; image: string }[] = [
+  { id: '4 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT4LBE.png' },
+  { id: '4 Lite Horizontal', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT4LHBE.png' },
+  { id: '6 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT6LBE.png' },
+  { id: '8 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT8LBE.png' },
+  { id: '10 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT10LBE.png' },
+  { id: '12 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT12LBE.png' },
+  { id: '15 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT15LBE.png' },
+]
+const gridColorSwatches: Record<GridColor, string> = {
+  Beige: '#d8c5a4', Black: '#161616', Bronze: '#6f4b32', 'Bronze/White': '#9a775f', Champagne: '#d5bd8e', Tan: '#b18b62', White: '#f4f4ef',
+}
+const flatGridColors: Partial<Record<GridPattern, GridColor[]>> = {
+  '4 Lite': ['Bronze', 'Tan', 'White'],
+  '4 Lite Horizontal': ['Bronze', 'Champagne', 'Tan', 'White'],
+  '6 Lite': ['Bronze', 'Champagne', 'Tan', 'White'],
+  '8 Lite': ['Bronze', 'Champagne', 'Tan', 'White'],
+  '10 Lite': ['Beige', 'Bronze', 'Tan', 'White'],
+  '12 Lite': ['Tan'],
+  '15 Lite': ['Beige', 'Bronze', 'Champagne', 'Tan'],
+}
+const widthOptionsByPath: Record<string, GridWidth[]> = {
+  'Contoured|15 Lite': ['11/16"'],
+  'Flat|15 Lite': ['5/8"', '7/8"'],
+}
 const HERO_DOOR_OPENING = {
   leftPct: 45.3,
   topPct: 25.12,
@@ -93,8 +128,8 @@ const glassCategoryChoices: { id: GlassCategory; name: string; description: stri
 ]
 const retroGlassCategory = { id: 'retro' as const, name: 'Retro', description: 'Explore all available Retro glass options.', image: '/assets/glass/thumbnails/Retro.png' }
 
-const clearGlassIds = new Set(['clear', 'clear-low-e', 'cr14-divided-lites', 'f-f10l', 'f-f15wh', 'f-prairie-internal', 'f-ten-lite', 'f-clear-f10', 'f-clear-f10l', 'f-clear-f15', 'f-clear-f15int', 'f-clear-f15intl', 'f-clear-fpraint', 'f-clear-ften', 'f-clear-nonstock', 'f48-clear-f1248', 'f48-clear-f1248l', 'f48-clear-f648l', 'f48-clear-nonstock', 'frt-clear-f17rt', 'hrt-clear-s11rt', 'n-clear-ncl', 'qa-clear-qacl', 'sat-clear-nonstock', 'so-clear-nonstock', 'so-clear-small-no-coating', 'so-clear-small-low-e', 's-clear-s5', 's-clear-s5l', 's-clear-s9', 's-clear-s9int', 's-clear-s9intl', 's-clear-sv6', 's-clear-nonstock', 'sw-clear-swg'])
-const legacyFullLiteGlassIds = new Set(['clear', 'f-f10l', 'f-f15wh', 'f-prairie-internal', 'f-ten-lite', 'f-blinds-15', 'blinds-espresso', 'blinds-gray', 'blinds-sand', 'blinds-silver', 'blinds-tan', 'blinds-white'])
+const clearGlassIds = new Set(['clear', 'f-clear-no-grids', 'f-clear-grids', 'clear-low-e', 'cr14-divided-lites', 'f-f10l', 'f-f15wh', 'f-prairie-internal', 'f-ten-lite', 'f-clear-f10', 'f-clear-f10l', 'f-clear-f15', 'f-clear-f15int', 'f-clear-f15intl', 'f-clear-fpraint', 'f-clear-ften', 'f-clear-nonstock', 'f48-clear-f1248', 'f48-clear-f1248l', 'f48-clear-f648l', 'f48-clear-nonstock', 'frt-clear-f17rt', 'hrt-clear-s11rt', 'n-clear-ncl', 'qa-clear-qacl', 'sat-clear-nonstock', 'so-clear-nonstock', 'so-clear-small-no-coating', 'so-clear-small-low-e', 's-clear-s5', 's-clear-s5l', 's-clear-s9', 's-clear-s9int', 's-clear-s9intl', 's-clear-sv6', 's-clear-nonstock', 'sw-clear-swg'])
+const legacyFullLiteGlassIds = new Set(['clear', 'f-f10l', 'f-f15wh', 'f-prairie-internal', 'f-ten-lite', 'f-clear-f10', 'f-clear-f10l', 'f-clear-nonstock', 'f-clear-f15', 'f-clear-f15int', 'f-clear-f15intl', 'f-clear-fpraint', 'f-clear-ften', 'f-blinds-15', 'blinds-espresso', 'blinds-gray', 'blinds-sand', 'blinds-silver', 'blinds-tan', 'blinds-white'])
 const f48GlassOptionIds = new Set(['f48-clear-f1248', 'f48-clear-f1248l', 'f48-clear-f648l', 'f48-clear-nonstock', 'f48-blinds-white', 'f48-clic-nogrid', 'f48-clic-ext-12l', 'ashbury', 'berkley', 'briselle', 'cadence', 'calandra', 'courtyard', 'crosswalk', 'cyndi', 'dorian-nickel', 'dorian-patina', 'edgewood', 'elegant-black-white', 'elegant-nickel', 'elegant-patina', 'empire', 'fragrance', 'garrison', 'grace-nickel', 'grace-patina', 'heirlooms-brass', 'heirlooms-nickel', 'high-point', 'jameston', 'majestic-nickel', 'majestic-patina', 'margate', 'metro', 'mistify', 'mohave', 'monterey-nickel', 'monterey-patina', 'neo', 'nouveau-nickel', 'nouveau-patina', 'oak-park', 'paris', 'pembrook', 'prestige', 'rill', 'riverwood', 'sterling', 'topaz', 'vilano', 'vincraft', 'waterside', 'baroque', 'blanca', 'chinchilla', 'cumulus', 'double-water', 'micro-granite', 'rain', 'streamed', 'vapor', 'wide-reed'])
 const privacyGlassIds = new Set(['baroque', 'blanca', 'chinchilla', 'cumulus', 'double-water', 'frosted', 'karma', 'micro-granite', 'mistify', 'privacy', 'rain', 'streamed', 'vapor', 'wide-reed', 'sw-rain-nogrid', 'sw-rain-5l'])
 
@@ -130,6 +165,11 @@ export default function App() {
   const [selectedStain, setSelectedStain] = useState('')
   const [selectedGlassCategory, setSelectedGlassCategory] = useState<GlassCategory | ''>('')
   const [glassId, setGlassId] = useState('')
+  const [gridPathId, setGridPathId] = useState('')
+  const [gridStyle, setGridStyle] = useState<GridStyle | ''>('')
+  const [gridPattern, setGridPattern] = useState<GridPattern | ''>('')
+  const [gridColor, setGridColor] = useState<GridColor | ''>('')
+  const [gridWidth, setGridWidth] = useState<GridWidth | ''>('')
   const [hardwareId, setHardwareId] = useState('')
   const [doorSwingId, setDoorSwingId] = useState('')
   const [contact, setContact] = useState(initialContact)
@@ -200,10 +240,49 @@ export default function App() {
     ? availableGlass.find((option) => option.id === 'clear') ?? null
     : null
   const configuredGlass = supportsGlass ? selectedGlass : clearOnlyGlass
+  const selectedGridLocation = gridLocations.find((location) => location.id === gridPathId)
+  const usesFullLiteGridFlow = selectedStyleCodes.includes('F') && glassId === FULL_LITE_GRID_GLASS_ID
+  const gridConfiguration: GridConfiguration | null = usesFullLiteGridFlow && selectedGridLocation
+    ? {
+      glassCoating: 'Standard / No Low-E',
+      gridLocation: selectedGridLocation.id === 'standard-internal' ? 'Internal' : 'External',
+      ...(gridStyle ? { gridStyle } : {}),
+      ...(gridPattern ? { gridPattern } : {}),
+      ...(gridColor ? { gridColor } : {}),
+      ...(gridWidth ? { gridWidth } : {}),
+    }
+    : null
+  const compatibleGridPatterns = gridPathId === 'standard-external'
+    ? flatGridPatterns.filter((item) => item.id === '8 Lite')
+    : gridStyle === 'Contoured'
+      ? flatGridPatterns.filter((item) => item.id === '15 Lite')
+      : gridStyle === 'Flat'
+        ? flatGridPatterns
+        : []
+  const compatibleGridColors: GridColor[] = gridStyle === 'Contoured'
+    ? ['Champagne']
+    : gridStyle === 'Flat' && gridPattern
+      ? flatGridColors[gridPattern] ?? []
+      : []
+  const compatibleGridWidths = gridStyle && gridPattern ? widthOptionsByPath[`${gridStyle}|${gridPattern}`] ?? [] : []
   const doorStyleDefaultGlass = selectedStyleCodes.includes('HRT')
     ? availableGlass.find((option) => option.id === 'clear') ?? null
     : null
-  const previewGlass = supportsGlass ? glass ?? doorStyleDefaultGlass : selectedHardware ? clearOnlyGlass : null
+  const patternAssetCodes: Partial<Record<GridPattern, string>> = { '4 Lite': '4L', '4 Lite Horizontal': '4LH', '6 Lite': '6L', '8 Lite': '8L', '10 Lite': '10L', '12 Lite': '12L', '15 Lite': '15L' }
+  const colorAssetCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Bronze: 'BZ', Champagne: 'CH', Tan: 'TA', White: 'WH' }
+  const selectedGridOverlay = gridPattern && gridColor && patternAssetCodes[gridPattern] && colorAssetCodes[gridColor]
+    ? `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT${patternAssetCodes[gridPattern]}${colorAssetCodes[gridColor]}.png`
+    : null
+  const defaultInternalGridPreview = glassOptions.find((option) => option.id === 'f-clear-f15int')
+  const externalGridPreview = glassOptions.find((option) => option.id === 'f-clic-ext-8l')
+  const selectedGridPreview = glass && gridPathId === 'standard-external' && externalGridPreview
+    ? { ...externalGridPreview, name: glass.name }
+    : glass && selectedGridOverlay
+    ? { ...glass, overlaysByDoorStyle: { ...glass.overlaysByDoorStyle, F: selectedGridOverlay } }
+    : glass && defaultInternalGridPreview
+      ? { ...defaultInternalGridPreview, name: glass.name }
+      : glass
+  const previewGlass = supportsGlass ? (usesFullLiteGridFlow ? selectedGridPreview : glass) ?? doorStyleDefaultGlass : selectedHardware ? clearOnlyGlass : null
   const usesRetroGlassCategory = selectedStyleCodes.some((code) => ['3LT', '3STEP', '4LT', '5LT', 'F764'].includes(code))
   const availableGlassCategories = usesRetroGlassCategory
     ? [retroGlassCategory]
@@ -227,6 +306,13 @@ export default function App() {
     ...(needsGrainStep ? ['door-grain' as const] : []),
     'finish',
     ...(supportsGlass ? ['glass-type' as const, 'glass' as const] : []),
+    ...(usesFullLiteGridFlow ? [
+      'grid-location' as const,
+      ...(gridPathId === 'standard-internal' ? ['grid-style' as const] : []),
+      ...((gridPathId === 'standard-external' || (gridPathId === 'standard-internal' && gridStyle)) ? ['grid-pattern' as const] : []),
+      ...(gridPathId === 'standard-internal' && gridPattern && compatibleGridColors.length ? ['grid-color' as const] : []),
+      ...(gridPathId === 'standard-internal' && gridColor && compatibleGridWidths.length ? ['grid-width' as const] : []),
+    ] : []),
     'hardware',
     'door-swing',
     'review',
@@ -236,7 +322,7 @@ export default function App() {
     ? 'Door Style'
     : currentPage === 'finish'
       ? 'Finish'
-      : currentPage === 'glass-type' || currentPage === 'glass'
+      : currentPage === 'glass-type' || currentPage === 'glass' || currentPage.startsWith('grid-')
         ? 'Glass'
         : currentPage === 'hardware' || currentPage === 'door-swing'
           ? 'Hardware'
@@ -354,6 +440,14 @@ export default function App() {
     if (next >= 0 && next < pages.length) setStep(next)
   }
 
+  const resetGridOptions = () => {
+    setGridPathId('')
+    setGridStyle('')
+    setGridPattern('')
+    setGridColor('')
+    setGridWidth('')
+  }
+
   const selectDoorStyle = (nextStyleId: string) => {
     const nextStyle = doorStyles.find((item) => item.id === nextStyleId)
     if (!nextStyle) return
@@ -363,6 +457,7 @@ export default function App() {
       setGrainId('')
       setSelectedGlassCategory('')
       setGlassId('')
+      resetGridOptions()
     }
     if (doorStyles.length === 1) goTo(step + 1)
   }
@@ -376,6 +471,7 @@ export default function App() {
     setSelectedStain('')
     setSelectedGlassCategory('')
     setGlassId('')
+    resetGridOptions()
     setHardwareId('')
     setDoorSwingId('')
     setContact(initialContact)
@@ -431,6 +527,7 @@ export default function App() {
       setGrainId('')
       setSelectedGlassCategory('')
       setGlassId('')
+      resetGridOptions()
     }
     if (availableDoorLines.length === 1) goTo(step + 1)
   }
@@ -452,7 +549,10 @@ export default function App() {
 
   const selectGlass = (nextGlassId: string) => {
     if (!visibleGlass.some((item) => item.id === nextGlassId)) return
-    if (nextGlassId !== glassId) setGlassId(nextGlassId)
+    if (nextGlassId !== glassId) {
+      setGlassId(nextGlassId)
+      resetGridOptions()
+    }
     if (visibleGlass.length === 1) goTo(step + 1)
   }
 
@@ -461,8 +561,35 @@ export default function App() {
     if (nextCategory !== selectedGlassCategory) {
       setSelectedGlassCategory(nextCategory)
       setGlassId('')
+      resetGridOptions()
     }
     if (availableGlassCategories.length === 1) goTo(step + 1)
+  }
+
+  const selectGridLocation = (nextLocationId: string) => {
+    setGridPathId(nextLocationId)
+    setGridPattern('')
+    setGridStyle('')
+    setGridColor('')
+    setGridWidth('')
+  }
+
+  const selectGridStyle = (nextStyle: GridStyle) => {
+    setGridStyle(nextStyle)
+    setGridPattern('')
+    setGridColor('')
+    setGridWidth('')
+  }
+
+  const selectGridPattern = (nextPattern: GridPattern) => {
+    setGridPattern(nextPattern)
+    setGridColor('')
+    setGridWidth('')
+  }
+
+  const selectGridColor = (nextColor: GridColor) => {
+    setGridColor(nextColor)
+    setGridWidth('')
   }
 
   const selectHardware = (nextHardwareId: string) => {
@@ -495,8 +622,8 @@ export default function App() {
       if (!selectedHardware) throw new Error('Please select hardware before sending your configuration.')
       if (!selectedDoorSwing) throw new Error('Please select a door swing before sending your configuration.')
       const { generateSummaryAttachment } = await import('./utils/pdf')
-      const attachment = await generateSummaryAttachment(contact, product, style, selectedGrain, finish, configuredGlass, selectedHardware, selectedDoorSwing)
-      const result = await submitQuote({ configuration: { product, style, grain: selectedGrain, finish, glass: configuredGlass, hardware: selectedHardware, doorSwing: selectedDoorSwing }, contact, attachment, submittedAt: new Date().toISOString() })
+      const attachment = await generateSummaryAttachment(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing)
+      const result = await submitQuote({ configuration: { product, style, grain: selectedGrain, finish, glass: configuredGlass, grid: gridConfiguration, hardware: selectedHardware, doorSwing: selectedDoorSwing }, contact, attachment, submittedAt: new Date().toISOString() })
       setSubmissionResult(result)
       setSubmitted(true)
     } catch (error) {
@@ -509,8 +636,27 @@ export default function App() {
   const downloadPdf = async () => {
     if (!selectedHardware || !selectedDoorSwing) return
     const { downloadSummary } = await import('./utils/pdf')
-    await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, selectedHardware, selectedDoorSwing)
+    await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing)
   }
+
+  const configurationSummaryRows: [string, string, number][] = [
+    ['Door style', style.name, pages.indexOf('door-style')],
+    ['Door Line', selectedDoorLine?.name ?? product.doorType, pages.indexOf('door-line')],
+    ...(selectedGrain ? [['Grain', selectedGrain, pages.indexOf('door-grain')] as [string, string, number]] : []),
+    ['Finish type', selectedFinishType === 'stain' ? 'Stain' : 'Paint', pages.indexOf('finish')],
+    [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name, pages.indexOf('finish')],
+    ...(compatibilitySupportsGlass ? [['Glass', configuredGlass?.name ?? 'Clear', pages.indexOf('glass-type')] as [string, string, number]] : []),
+    ...(gridConfiguration ? [
+      ['Glass Coating', gridConfiguration.glassCoating, pages.indexOf('grid-location')],
+      ...(gridConfiguration.gridLocation ? [['Grid Location', gridConfiguration.gridLocation, pages.indexOf('grid-location')] as [string, string, number]] : []),
+      ...(gridConfiguration.gridStyle ? [['Grid Style', gridConfiguration.gridStyle, pages.indexOf('grid-style')] as [string, string, number]] : []),
+      ...(gridConfiguration.gridPattern ? [['Grid Pattern', gridConfiguration.gridPattern, pages.indexOf('grid-pattern')] as [string, string, number]] : []),
+      ...(gridConfiguration.gridColor ? [['Grid Color', gridConfiguration.gridColor, pages.indexOf('grid-color')] as [string, string, number]] : []),
+      ...(gridConfiguration.gridWidth ? [['Grid Width', gridConfiguration.gridWidth, pages.indexOf('grid-width')] as [string, string, number]] : []),
+    ] as [string, string, number][] : []),
+    ['Hardware', selectedHardware ? hardwareDisplayName(selectedHardware) : 'Not selected', pages.indexOf('hardware')],
+    ['Door swing', selectedDoorSwing?.name ?? 'Not selected', pages.indexOf('door-swing')],
+  ]
 
   return (
     <div className={`app ${screen === 'home' ? 'home-app' : ''}`}>
@@ -568,7 +714,7 @@ export default function App() {
         })}
       </nav>
       <main>
-        {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">{selectedStyle ? <DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} /> : <EmptyDoorPreview />}</div>}
+        {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">{selectedStyle ? <DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} grain={selectedGrain} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} /> : <EmptyDoorPreview />}</div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
           {currentStep !== 'Review & Quote' && <>
             <div className="section-heading step-heading">
@@ -577,12 +723,12 @@ export default function App() {
                   <span>Step {activeMainStepIndex + 1} of {steps.length}</span>
                 </div>
                 <div className="step-title-row">
-                  <h1>{currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'finish' ? 'Choose Your Finish' : currentPage === 'glass-type' ? 'Choose Your Glass Type' : currentPage === 'glass' ? 'Choose Your Glass' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>
+                  <h1>{currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'finish' ? 'Choose Your Finish' : currentPage === 'glass-type' ? 'Choose Your Glass Type' : currentPage === 'glass' ? 'Choose Your Glass' : currentPage === 'grid-location' ? 'Choose Grid Location' : currentPage === 'grid-style' ? 'Choose Internal Grid Style' : currentPage === 'grid-pattern' ? 'Choose Grid Pattern' : currentPage === 'grid-color' ? 'Choose Grid Color' : currentPage === 'grid-width' ? 'Choose Grid Width' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>
                   <div className="section-resets">
                     {currentPage === 'door-style' && <button type="button" aria-label="Reset Design" onClick={resetDesign}><RotateCcw size={20} /><span>Reset Design</span></button>}
                   </div>
                 </div>
-                <p>{currentPage === 'door-style' ? 'Browse all available door styles and choose the one that feels right for your home.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'finish' ? 'Pick from the valid paint or stain finishes.' : currentPage === 'glass-type' ? 'Choose the kind of glass you want to explore.' : currentPage === 'glass' ? 'Balance natural light, privacy, and personality.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
+                <p>{currentPage === 'door-style' ? 'Browse all available door styles and choose the one that feels right for your home.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'finish' ? 'Pick from the valid paint or stain finishes.' : currentPage === 'glass-type' ? 'Choose the kind of glass you want to explore.' : currentPage === 'glass' ? 'Balance natural light, privacy, and personality.' : currentPage === 'grid-location' ? 'Choose where the grids are installed.' : currentPage === 'grid-style' ? 'Choose the profile of your internal grids.' : currentPage === 'grid-pattern' ? 'Choose a pattern compatible with your selected grid style.' : currentPage === 'grid-color' ? 'Choose the confirmed color for this grid pattern.' : currentPage === 'grid-width' ? 'Choose the confirmed grid width.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
               </div>
             </div>
             <div ref={builderOptionsRef} className="builder-options-scroll">
@@ -593,25 +739,31 @@ export default function App() {
                   {currentPage === 'finish' && activeFinishType === 'stain' && <img src="/assets/branding/timberstain-logo.png" alt="TimberStain" loading="lazy" decoding="async" />}
                 </div>
               </div>}
-              <div className={`options-grid step-${step} ${currentPage === 'door-style' || currentPage === 'door-grain' || currentPage === 'finish' || currentPage === 'glass-type' ? 'door-style-grid' : ''}`}>
+              <div className={`options-grid step-${step} ${currentPage === 'door-style' || currentPage === 'door-grain' || currentPage === 'finish' || currentPage === 'glass-type' || currentPage.startsWith('grid-') ? 'door-style-grid' : ''}`}>
                 {currentPage === 'door-style' && doorStyles.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.eyebrow} selected={styleId === item.id} onClick={() => selectDoorStyle(item.id)} visual={<DoorStyleThumbnail style={item} />} badge={item.variants.some((variant) => variant.lineId.startsWith('signature-')) ? <img src="/assets/branding/signature-series-logo.png" alt="Available in Signature Series" loading="lazy" decoding="async" /> : undefined} />)}
                 {currentPage === 'door-line' && availableDoorLines.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Door Line" selected={doorLineId === item.id} onClick={() => selectDoorLine(item.id)} visual={<span className="door-line-card-image"><img src={item.image} alt="" loading="lazy" decoding="async" /></span>} />)}
                 {currentPage === 'door-grain' && signatureGrainOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Signature grain" selected={selectedGrain === item.id} onClick={() => selectGrain(item.id)} visual={<img className="grain-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'finish' && visibleFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => selectFinish(item.id, item.finishType)} visual={<span className="finish-tile-wrap" style={{ '--fallback-finish': item.color } as CSSProperties}><img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} /></span>} />)}
                 {currentPage === 'glass-type' && availableGlassCategories.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Glass type" selected={selectedGlassCategory === item.id} onClick={() => selectGlassCategory(item.id)} visual={<img className={`glass-option-thumbnail${item.id === 'retro' || item.id === 'clic' ? ' retro-glass-thumbnail' : ''}`} src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'glass' && glassOptionGroups.map((group) => <GlassOptionCard group={group} selectedId={glassId} onSelect={(item) => selectGlass(item.id)} key={group.key} />)}
+                {currentPage === 'grid-location' && gridLocations.map((item) => <OptionCard key={item.id} title={item.name} selected={gridPathId === item.id} onClick={() => selectGridLocation(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
+                {currentPage === 'grid-style' && gridStyles.map((item) => <OptionCard key={item.id} title={item.id} selected={gridStyle === item.id} onClick={() => selectGridStyle(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
+                {currentPage === 'grid-pattern' && compatibleGridPatterns.map((item) => <OptionCard key={item.id} title={item.id} selected={gridPattern === item.id} onClick={() => selectGridPattern(item.id)} visual={<img className="grid-pattern-thumbnail" src={gridPathId === 'standard-external' ? '/assets/hgi-assets/Glass/SDL/F8LXX.png' : item.image} alt="" loading="lazy" decoding="async" />} />)}
+                {currentPage === 'grid-color' && compatibleGridColors.map((color) => <OptionCard key={color} title={color} selected={gridColor === color} onClick={() => selectGridColor(color)} visual={<span className="grid-color-thumbnail" style={{ backgroundColor: gridColorSwatches[color] }} />} />)}
+                {currentPage === 'grid-width' && compatibleGridWidths.map((width) => <OptionCard key={width} title={width} selected={gridWidth === width} onClick={() => setGridWidth(width)} visual={<img className="grid-option-thumbnail" src={gridStyle === 'Contoured' ? '/assets/hgi-assets/Glass/GLASS THUMBNAILS/CONTG.png' : '/assets/hgi-assets/Glass/GLASS THUMBNAILS/FLATG.png'} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'hardware' && hardwareStyleGroups.map((options) => <HardwareOptionCard key={`${options[0].manufacturer}-${options[0].style}`} options={options} selectedId={hardwareId} onSelect={(option) => selectHardware(option.id)} />)}
                 {currentPage === 'door-swing' && doorSwingOptions.map((item) => <OptionCard key={item.id} title={`${item.id} – ${item.name}`} eyebrow="Door swing" selected={doorSwingId === item.id} onClick={() => selectDoorSwing(item.id)} visual={<img className="door-swing-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
               </div>
+              {currentPage === 'grid-style' && gridStyle === 'Prairie' && <p className="grid-coming-soon" role="status">Prairie grid options coming soon.</p>}
             </div>
           </>}
 
           {currentPage === 'review' && !submitted && <>
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
-            <div className="mobile-review-preview"><DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} /></div>
+            <div className="mobile-review-preview"><DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} grain={selectedGrain} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} /></div>
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
-              {[['Door style', style.name, pages.indexOf('door-style')], ['Door Line', selectedDoorLine?.name ?? product.doorType, pages.indexOf('door-line')], ...(selectedGrain ? [['Grain', selectedGrain, pages.indexOf('door-grain')]] : []), ['Finish type', selectedFinishType === 'stain' ? 'Stain' : 'Paint', pages.indexOf('finish')], [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name, pages.indexOf('finish')], ...(compatibilitySupportsGlass ? [['Glass', configuredGlass?.name ?? 'Clear', pages.indexOf('glass-type')]] : []), ['Hardware', hardwareDisplayName(selectedHardware!), pages.indexOf('hardware')], ['Door swing', selectedDoorSwing?.name ?? 'Not selected', pages.indexOf('door-swing')]].map(([label, value, target]) => <div className="summary-row" key={String(label)}><span>{label}<strong>{value}</strong></span>{Number(target) >= 0 && <button onClick={() => goTo(Number(target))}>Edit</button>}</div>)}
+              {configurationSummaryRows.map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span>{target >= 0 && <button onClick={() => goTo(target)}>Edit</button>}</div>)}
             </div>
             <div className="review-download-form">
               <div className="attachment-card">
@@ -636,7 +788,7 @@ export default function App() {
             <button onClick={downloadPdf}><Download size={17} /> Download Your Summary</button>
           </div>}
 
-          {currentPage !== 'review' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Previous</button><button className="next" disabled={(currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'finish' && !visibleSelectedFinish) || (currentPage === 'glass-type' && !selectedGlassCategory) || (currentPage === 'glass' && visibleGlass.length > 0 && !selectedGlass) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>Next <ArrowRight size={17} /></button></div>}
+          {currentPage !== 'review' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Previous</button><button className="next" disabled={(currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'finish' && !visibleSelectedFinish) || (currentPage === 'glass-type' && !selectedGlassCategory) || (currentPage === 'glass' && visibleGlass.length > 0 && !selectedGlass) || (currentPage === 'grid-location' && !gridPathId) || (currentPage === 'grid-style' && (!gridStyle || gridStyle === 'Prairie')) || (currentPage === 'grid-pattern' && !gridPattern) || (currentPage === 'grid-color' && !gridColor) || (currentPage === 'grid-width' && !gridWidth) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>Next <ArrowRight size={17} /></button></div>}
         </section>
 
         {!submitted && <aside>
@@ -647,7 +799,7 @@ export default function App() {
             </div>}
           </div>
           <div className="aside-preview-area">
-            {selectedStyle ? <DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} view={builderPreviewView} onViewChange={setBuilderPreviewView} showViewToggle={false} /> : <EmptyDoorPreview />}
+            {selectedStyle ? <DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} grain={selectedGrain} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} view={builderPreviewView} onViewChange={setBuilderPreviewView} showViewToggle={false} /> : <EmptyDoorPreview />}
           </div>
           <div className="mini-summary">
             <span><b>Door style</b><strong>{selectedStyle?.name ?? 'Not selected'}</strong></span>
@@ -656,6 +808,7 @@ export default function App() {
             <span><b>Paint or stain</b><strong>{selectedStyle ? (activeFinishType === 'paint' ? 'Paint' : 'Stain') : 'Not selected'}</strong></span>
             <span><b>Finish</b><strong>{selectedFinish?.name ?? 'Not selected'}</strong></span>
             <span><b>Glass</b><strong>{compatibilitySupportsGlass ? (configuredGlass?.name ?? 'Clear') : 'Not applicable'}</strong></span>
+            {gridConfiguration && <>{gridConfiguration.gridLocation && <span><b>Grid location</b><strong>{gridConfiguration.gridLocation}</strong></span>}{gridConfiguration.gridStyle && <span><b>Grid style</b><strong>{gridConfiguration.gridStyle}</strong></span>}{gridConfiguration.gridPattern && <span><b>Grid pattern</b><strong>{gridConfiguration.gridPattern}</strong></span>}{gridConfiguration.gridColor && <span><b>Grid color</b><strong>{gridConfiguration.gridColor}</strong></span>}{gridConfiguration.gridWidth && <span><b>Grid width</b><strong>{gridConfiguration.gridWidth}</strong></span>}</>}
             <span><b>Hardware</b><strong>{selectedHardware ? hardwareDisplayName(selectedHardware) : 'Not selected'}</strong></span>
             <span><b>Door swing</b><strong>{selectedDoorSwing?.name ?? 'Not selected'}</strong></span>
           </div>

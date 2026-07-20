@@ -1,6 +1,6 @@
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
-import type { ContactForm, DoorStyle, DoorSwing, Finish, GlassOption, HardwareOption, ResolvedDoorProduct } from '../types'
+import type { ContactForm, DoorStyle, DoorSwing, Finish, GlassOption, GridConfiguration, HardwareOption, ResolvedDoorProduct } from '../types'
 import { hardwareDisplayName } from '../data/hardware'
 import { configurationPdfName } from './pdfConfig'
 
@@ -148,16 +148,14 @@ function drawRowIcon(pdf: jsPDF, x: number, y: number, index: number, icon?: str
 
 type SummaryRow = { label: string; value: string; swatch?: string; icon?: string }
 
-function drawSummaryRow(pdf: jsPDF, font: string, row: SummaryRow, index: number, y: number) {
+function drawSummaryRow(pdf: jsPDF, font: string, row: SummaryRow, index: number, y: number, rowHeight = 44) {
   const iconX = 52
   const copyX = 76
   const rightX = 345
   const valueX = 188
   const textX = row.swatch ? valueX + 19 : valueX
   const lines = wrapText(pdf, row.value, rightX - textX, 2)
-  const rowHeight = 44
-
-  drawRowIcon(pdf, iconX, y + 15, index, row.icon)
+  drawRowIcon(pdf, iconX, y + Math.min(15, rowHeight / 2), index, row.icon)
   pdf.setFont(font, 'bold')
   pdf.setFontSize(8.2)
   pdf.setTextColor(...COLORS.teal)
@@ -176,7 +174,7 @@ function drawSummaryRow(pdf: jsPDF, font: string, row: SummaryRow, index: number
   pdf.text(lines, textX, y + 16, { lineHeightFactor: 1.2 })
   pdf.setDrawColor(...COLORS.divider)
   pdf.setLineWidth(0.6)
-  pdf.line(copyX, y + 42, rightX, y + 42)
+  pdf.line(copyX, y + rowHeight - 2, rightX, y + rowHeight - 2)
   return y + rowHeight
 }
 
@@ -205,6 +203,7 @@ export async function generateSummaryPdf(
   grain: string | null,
   finish: Finish,
   glass: GlassOption | null,
+  grid: GridConfiguration | null,
   hardware: HardwareOption,
   doorSwing: DoorSwing,
 ) {
@@ -278,11 +277,20 @@ export async function generateSummaryPdf(
     { label: 'FINISH TYPE', value: finish.finishType === 'paint' ? 'Paint' : 'Stain', icon: summaryIcons[2] },
     { label: 'FINISH COLOR', value: finish.name, swatch: finish.color, icon: summaryIcons[3] },
     { label: 'GLASS', value: glass?.name ?? 'No glass', icon: summaryIcons[4] },
+    ...(grid ? [
+      { label: 'GLASS COATING', value: grid.glassCoating },
+      ...(grid.gridLocation ? [{ label: 'GRID LOCATION', value: grid.gridLocation }] : []),
+      ...(grid.gridStyle ? [{ label: 'GRID STYLE', value: grid.gridStyle }] : []),
+      ...(grid.gridPattern ? [{ label: 'GRID PATTERN', value: grid.gridPattern }] : []),
+      ...(grid.gridColor ? [{ label: 'GRID COLOR', value: grid.gridColor }] : []),
+      ...(grid.gridWidth ? [{ label: 'GRID WIDTH', value: grid.gridWidth }] : []),
+    ] : []),
     { label: 'HARDWARE', value: hardwareDisplayName(hardware), icon: summaryIcons[5] },
     { label: 'DOOR SWING', value: doorSwing.name, icon: summaryIcons[6] },
   ]
   let rowY = 221
-  rows.forEach((row, index) => { rowY = drawSummaryRow(pdf, font, row, index, rowY) })
+  const summaryRowHeight = rows.length > 11 ? 26 : rows.length > 8 ? 28 : 44
+  rows.forEach((row, index) => { rowY = drawSummaryRow(pdf, font, row, index, rowY, summaryRowHeight) })
 
   const useDarkPreviewBackground = isLightColor(finish.color)
   pdf.setFillColor(useDarkPreviewBackground ? 5 : 255, useDarkPreviewBackground ? 4 : 255, useDarkPreviewBackground ? 11 : 255)
@@ -374,13 +382,13 @@ export async function generateSummaryPdf(
   return pdf
 }
 
-export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, hardware: HardwareOption, doorSwing: DoorSwing) {
-  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, hardware, doorSwing)
+export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing) {
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing)
   pdf.save(configurationPdfName)
 }
 
-export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, hardware: HardwareOption, doorSwing: DoorSwing) {
-  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, hardware, doorSwing)
+export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing) {
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing)
   const dataUri = pdf.output('datauristring')
   return {
     fileName: configurationPdfName,

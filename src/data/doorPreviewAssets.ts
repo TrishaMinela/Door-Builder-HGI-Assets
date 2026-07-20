@@ -115,7 +115,7 @@ const signatureMahoganyPaintDoorPreviewAssets: Record<string, string> = {
 }
 
 const signatureOakPaintDoorPreviewAssets: Record<string, string> = {
-  F: slabUrl('Oak', 'Full Lite - Mahogany.png'),
+  F: slabUrl('Oak', 'Full Lite - Oak.png'),
   F48: slabUrl('Oak', '3_4 Lite - Mahogany.png'),
   S: slabUrl('Oak', 'Half Lite - Oak.png'),
   S1NGSS: slabUrl('Oak', 'S1 6-Panel No Glass - Mahogany.png'),
