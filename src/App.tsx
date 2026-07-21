@@ -22,6 +22,7 @@ const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
 const signatureSeriesId = 'signature-series'
 const FULL_LITE_GRID_GLASS_ID = 'f-clear-grids'
 const F48_GRID_GLASS_ID = 'f48-clear-grids'
+const S_GRID_GLASS_ID = 's-clear-grids'
 const gridLocations = [
   { id: 'external', name: 'External Grids', image: '/assets/grid-options/External Grids.png' },
   { id: 'internal', name: 'Internal Grids', image: '/assets/grid-options/Internal Grids.png' },
@@ -45,12 +46,20 @@ const flatGridPatterns: { id: GridPattern; image: string }[] = [
   { id: '12 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT12LBE.png' },
   { id: '15 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT15LBE.png' },
 ]
-const allGridPatterns: { id: GridPattern; image: string }[] = [{ id: '3 Lite', image: '/assets/grid-options/All Lites.png' }, ...flatGridPatterns]
-const internalGridPatternCodes: Partial<Record<GridPattern, string>> = { '3 Lite': '3L', '4 Lite': '4L', '4 Lite Horizontal': '4LH', '6 Lite': '6L', '8 Lite': '8L', '10 Lite': '10L', '12 Lite': '12L', '15 Lite': '15L' }
+const allGridPatterns: { id: GridPattern; image: string }[] = [
+  { id: '2 Lite', image: '/assets/grid-options/All Lites.png' },
+  { id: '3 Lite', image: '/assets/grid-options/All Lites.png' },
+  ...flatGridPatterns.slice(0, 4),
+  { id: '9 Lite', image: '/assets/grid-options/All Lites.png' },
+  ...flatGridPatterns.slice(4),
+]
+const internalGridPatternCodes: Partial<Record<GridPattern, string>> = { '2 Lite': '2L', '3 Lite': '3L', '4 Lite': '4L', '4 Lite Horizontal': '4LH', '6 Lite': '6L', '8 Lite': '8L', '9 Lite': '9L', '10 Lite': '10L', '12 Lite': '12L', '15 Lite': '15L' }
 const internalGridColorCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Black: 'BK', Bronze: 'BZ', 'Bronze/White': 'WH', Champagne: 'CH', Tan: 'TA', White: 'WH' }
 const internalGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT${internalGridPatternCodes[pattern]}${internalGridColorCodes[color]}.png`
 const f48GridColorCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Black: 'BL', Bronze: 'BR', 'Bronze/White': 'WH', Champagne: 'CH', Tan: 'TA', White: 'WH' }
 const f48InternalGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Glass/F48/INTERNAL GRIDS/F48INT${internalGridPatternCodes[pattern]}${f48GridColorCodes[color]}.png`
+const sGridColorCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Black: 'BL', Bronze: 'BR', 'Bronze/White': 'WH', Champagne: 'CH', Tan: 'TA', White: 'WH' }
+const sInternalGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Glass/S/INTERNAL GRIDS/SINT${internalGridPatternCodes[pattern]}${sGridColorCodes[color]}.png`
 const contouredGridAssets: Partial<Record<GridPattern, Partial<Record<GridColor, string>>>> = {
   '4 Lite': { White: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT4LWH.png' },
   '10 Lite': {
@@ -116,6 +125,19 @@ const f48StandardContouredRules: Partial<Record<GridPattern, GridWidthRules>> = 
 const f48LowEContouredRules: Partial<Record<GridPattern, GridWidthRules>> = { '4 Lite': { White: ['11/16"'] }, '12 Lite': { Champagne: ['11/16"'], White: ['11/16"'] } }
 const f48StandardPrairieRules: GridWidthRules = { White: ['5/8"', '7/8"', '11/16"'] }
 const f48LowEPrairieRules: GridWidthRules = { Beige: [], Champagne: ['5/8"', '11/16"'], Tan: ['7/8"'], White: ['5/8"', '7/8"', '11/16"'] }
+const sStandardFlatRules: Partial<Record<GridPattern, GridWidthRules>> = {
+  '4 Lite': { Beige: ['5/8"'], Bronze: ['5/8"'], Champagne: ['5/8"'], Tan: ['7/8"'], White: ['5/8"', '7/8"'] },
+  '9 Lite': { Beige: bothFlatWidths, Bronze: ['5/8"'], Champagne: ['5/8"'], Tan: bothFlatWidths, White: ['7/8"'] },
+}
+const sLowEFlatRules: Partial<Record<GridPattern, GridWidthRules>> = {
+  '2 Lite': { Tan: ['7/8"'] },
+  '4 Lite': { Beige: bothFlatWidths, Black: bothFlatWidths, Bronze: ['5/8"'], 'Bronze/White': bothFlatWidths, Champagne: ['5/8"'], Tan: ['7/8"'], White: bothFlatWidths },
+  '9 Lite': { Beige: bothFlatWidths, Black: bothFlatWidths, Bronze: ['5/8"'], 'Bronze/White': bothFlatWidths, Champagne: ['5/8"'], Tan: bothFlatWidths, White: ['7/8"'] },
+}
+const sStandardContouredRules: Partial<Record<GridPattern, GridWidthRules>> = { '9 Lite': { Champagne: ['11/16"'], White: ['11/16"'] } }
+const sLowEContouredRules: Partial<Record<GridPattern, GridWidthRules>> = { '4 Lite': { White: ['11/16"'] }, '9 Lite': { Champagne: ['11/16"'], White: ['11/16"'] } }
+const sStandardPrairieRules: GridWidthRules = { White: ['5/8"', '7/8"', '11/16"'] }
+const sLowEPrairieRules: GridWidthRules = { Beige: [], Champagne: ['5/8"', '11/16"'], Tan: ['7/8"'], White: ['5/8"', '7/8"', '11/16"'] }
 function gridRuleWidths(style: GridStyle | '', pattern: GridPattern | '', color: GridColor | '', lowE: boolean): GridWidth[] | undefined {
   if (!style || !color) return undefined
   if (style === 'Prairie') return (lowE ? lowEPrairieGridRules : prairieGridRules)[color]
@@ -201,8 +223,11 @@ const retroGlassCategory = { id: 'retro' as const, name: 'Retro', description: '
 const clearGlassIds = new Set(['clear', 'f-clear-no-grids', 'f-clear-grids', 'clear-low-e', 'cr14-divided-lites', 'f-f10l', 'f-f15wh', 'f-prairie-internal', 'f-ten-lite', 'f-clear-f10', 'f-clear-f10l', 'f-clear-f15', 'f-clear-f15int', 'f-clear-f15intl', 'f-clear-fpraint', 'f-clear-ften', 'f-clear-nonstock', 'f48-clear-f1248', 'f48-clear-f1248l', 'f48-clear-f648l', 'f48-clear-nonstock', 'frt-clear-f17rt', 'hrt-clear-s11rt', 'n-clear-ncl', 'qa-clear-qacl', 'sat-clear-nonstock', 'so-clear-nonstock', 'so-clear-small-no-coating', 'so-clear-small-low-e', 's-clear-s5', 's-clear-s5l', 's-clear-s9', 's-clear-s9int', 's-clear-s9intl', 's-clear-sv6', 's-clear-nonstock', 'sw-clear-swg'])
 clearGlassIds.add(F48_GRID_GLASS_ID)
 clearGlassIds.add('f48-clear-no-grids')
+clearGlassIds.add(S_GRID_GLASS_ID)
+clearGlassIds.add('s-clear-no-grids')
 const legacyFullLiteGlassIds = new Set(['clear', 'f-f10l', 'f-f15wh', 'f-prairie-internal', 'f-ten-lite', 'f-clear-f10', 'f-clear-f10l', 'f-clear-nonstock', 'f-clear-f15', 'f-clear-f15int', 'f-clear-f15intl', 'f-clear-fpraint', 'f-clear-ften', 'f-blinds-15', 'blinds-espresso', 'blinds-gray', 'blinds-sand', 'blinds-silver', 'blinds-tan', 'blinds-white'])
 const legacyF48ClearGlassIds = new Set(['clear-low-e', 'f48-clear-f1248', 'f48-clear-f1248l', 'f48-clear-f648l', 'f48-clear-nonstock'])
+const legacySHalfLiteClearGlassIds = new Set(['clear', 'clear-low-e', 's-clear-s5', 's-clear-s5l', 's-clear-s9', 's-clear-s9int', 's-clear-s9intl', 's-clear-sv6', 's-clear-nonstock'])
 const f48GlassOptionIds = new Set(['f48-clear-f1248', 'f48-clear-f1248l', 'f48-clear-f648l', 'f48-clear-nonstock', 'f48-blinds-white', 'f48-clic-nogrid', 'f48-clic-ext-12l', 'ashbury', 'berkley', 'briselle', 'cadence', 'calandra', 'courtyard', 'crosswalk', 'cyndi', 'dorian-nickel', 'dorian-patina', 'edgewood', 'elegant-black-white', 'elegant-nickel', 'elegant-patina', 'empire', 'fragrance', 'garrison', 'grace-nickel', 'grace-patina', 'heirlooms-brass', 'heirlooms-nickel', 'high-point', 'jameston', 'majestic-nickel', 'majestic-patina', 'margate', 'metro', 'mistify', 'mohave', 'monterey-nickel', 'monterey-patina', 'neo', 'nouveau-nickel', 'nouveau-patina', 'oak-park', 'paris', 'pembrook', 'prestige', 'rill', 'riverwood', 'sterling', 'topaz', 'vilano', 'vincraft', 'waterside', 'baroque', 'blanca', 'chinchilla', 'cumulus', 'double-water', 'micro-granite', 'rain', 'streamed', 'vapor', 'wide-reed'])
 f48GlassOptionIds.add(F48_GRID_GLASS_ID)
 f48GlassOptionIds.add('f48-clear-no-grids')
@@ -306,7 +331,7 @@ export default function App() {
       : styleCodesForGlass(selectedStyle)
     : []
   const availableGlass = selectedStyle && compatibilitySupportsGlass
-    ? glassOptions.filter((option) => selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])) && !(selectedStyleCodes.includes('F') && legacyFullLiteGlassIds.has(option.id)) && !((selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && legacyF48ClearGlassIds.has(option.id)) && (!(selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) || f48GlassOptionIds.has(option.id)))
+    ? glassOptions.filter((option) => selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])) && !(selectedStyleCodes.includes('F') && legacyFullLiteGlassIds.has(option.id)) && !(selectedStyleCodes.includes('S') && legacySHalfLiteClearGlassIds.has(option.id)) && !((selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && legacyF48ClearGlassIds.has(option.id)) && (!(selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) || f48GlassOptionIds.has(option.id)))
     : []
   const supportsGlass = Boolean(compatibilitySupportsGlass && availableGlass.length > 0)
   const steps = supportsGlass ? glassSteps : noGlassSteps
@@ -318,12 +343,17 @@ export default function App() {
   const selectedGridLocation = gridLocations.find((location) => location.id === gridPathId)
   const usesFullLiteGridFlow = selectedStyleCodes.includes('F') && glassId === FULL_LITE_GRID_GLASS_ID
   const usesF48GridFlow = (selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && glassId === F48_GRID_GLASS_ID
-  const usesGridFlow = usesFullLiteGridFlow || usesF48GridFlow
+  const usesSGridFlow = selectedStyleCodes.includes('S') && glassId === S_GRID_GLASS_ID
+  const usesGridFlow = usesFullLiteGridFlow || usesF48GridFlow || usesSGridFlow
   const selectedGridLocationValue = gridPathId === 'sdl' ? 'SDL' : gridPathId === 'internal' ? 'Internal' : 'External'
-  const standardWidthsForSelection = usesF48GridFlow
+  const standardWidthsForSelection = usesSGridFlow
+    ? !gridColor ? undefined : gridStyle === 'Prairie' ? sStandardPrairieRules[gridColor] : gridPattern ? (gridStyle === 'Contoured' ? sStandardContouredRules : sStandardFlatRules)[gridPattern]?.[gridColor] : undefined
+    : usesF48GridFlow
     ? !gridColor ? undefined : gridStyle === 'Prairie' ? f48StandardPrairieRules[gridColor] : gridPattern ? (gridStyle === 'Contoured' ? f48StandardContouredRules : f48StandardFlatRules)[gridPattern]?.[gridColor] : undefined
     : gridRuleWidths(gridStyle, gridPattern, gridColor, false)
-  const lowEWidthsForSelection = usesF48GridFlow
+  const lowEWidthsForSelection = usesSGridFlow
+    ? !gridColor ? undefined : gridStyle === 'Prairie' ? sLowEPrairieRules[gridColor] : gridPattern ? (gridStyle === 'Arts & Crafts' ? lowEArtsRules : gridStyle === 'Contoured' ? sLowEContouredRules : sLowEFlatRules)[gridPattern]?.[gridColor] : undefined
+    : usesF48GridFlow
     ? !gridColor ? undefined : gridStyle === 'Prairie' ? f48LowEPrairieRules[gridColor] : gridPattern ? (gridStyle === 'Arts & Crafts' ? lowEArtsRules : gridStyle === 'Contoured' ? f48LowEContouredRules : f48LowEFlatRules)[gridPattern]?.[gridColor] : undefined
     : gridRuleWidths(gridStyle, gridPattern, gridColor, true)
   const matchesSelectedWidth = (widths: GridWidth[] | undefined) => widths !== undefined && (widths.length === 0 ? !gridWidth : Boolean(gridWidth && widths.includes(gridWidth)))
@@ -332,7 +362,7 @@ export default function App() {
   const selectedGlassCoating: GlassCoating = gridPathId === 'sdl'
     ? 'Low-E'
     : gridPathId === 'external'
-      ? gridPattern === '8 Lite' ? 'Standard / No Low-E, Low-E or Low-E Plus' : 'Low-E or Low-E Plus'
+      ? usesSGridFlow ? gridPattern === '4 Lite' ? 'Standard / No Low-E or Low-E' : 'Low-E' : gridPattern === '8 Lite' ? 'Standard / No Low-E, Low-E or Low-E Plus' : 'Low-E or Low-E Plus'
       : matchesStandard && matchesLowE ? 'Standard / No Low-E or Low-E' : matchesLowE ? 'Low-E' : 'Standard / No Low-E'
   const gridConfiguration: GridConfiguration | null = usesGridFlow && selectedGridLocation
     ? {
@@ -344,25 +374,29 @@ export default function App() {
       ...(gridWidth ? { gridWidth } : {}),
     }
     : null
-  const standardPatternRules = usesF48GridFlow
+  const standardPatternRules = usesSGridFlow
+    ? gridStyle === 'Contoured' ? sStandardContouredRules : gridStyle === 'Flat' ? sStandardFlatRules : {}
+    : usesF48GridFlow
     ? gridStyle === 'Contoured' ? f48StandardContouredRules : gridStyle === 'Flat' ? f48StandardFlatRules : {}
     : gridStyle === 'Contoured' ? { '15 Lite': { Champagne: ['11/16"' as GridWidth] } } : gridStyle === 'Flat' ? flatGridRules : {}
-  const lowEPatternRules = usesF48GridFlow
+  const lowEPatternRules = usesSGridFlow
+    ? gridStyle === 'Arts & Crafts' ? lowEArtsRules : gridStyle === 'Contoured' ? sLowEContouredRules : gridStyle === 'Flat' ? sLowEFlatRules : {}
+    : usesF48GridFlow
     ? gridStyle === 'Arts & Crafts' ? lowEArtsRules : gridStyle === 'Contoured' ? f48LowEContouredRules : gridStyle === 'Flat' ? f48LowEFlatRules : {}
     : gridStyle === 'Arts & Crafts' ? lowEArtsRules : gridStyle === 'Contoured' ? lowEContouredRules : gridStyle === 'Flat' ? lowEFlatGridRules : {}
   const compatibleGridPatterns = gridPathId === 'external'
-    ? allGridPatterns.filter((item) => ['8 Lite', '10 Lite', '15 Lite'].includes(item.id))
+    ? allGridPatterns.filter((item) => (usesSGridFlow ? ['4 Lite', '9 Lite'] : ['8 Lite', '10 Lite', '15 Lite']).includes(item.id))
     : gridPathId === 'sdl'
-      ? allGridPatterns.filter((item) => (usesF48GridFlow ? ['4 Lite'] : ['6 Lite', '8 Lite', '15 Lite']).includes(item.id))
+      ? allGridPatterns.filter((item) => (usesSGridFlow ? ['9 Lite'] : usesF48GridFlow ? ['4 Lite'] : ['6 Lite', '8 Lite', '15 Lite']).includes(item.id))
       : allGridPatterns.filter((item) => Object.prototype.hasOwnProperty.call(standardPatternRules, item.id) || Object.prototype.hasOwnProperty.call(lowEPatternRules, item.id))
   const compatibleGridColors: GridColor[] = gridStyle === 'Prairie'
-    ? [...new Set([...Object.keys(usesF48GridFlow ? f48StandardPrairieRules : prairieGridRules), ...Object.keys(usesF48GridFlow ? f48LowEPrairieRules : lowEPrairieGridRules)])] as GridColor[]
+    ? [...new Set([...Object.keys(usesSGridFlow ? sStandardPrairieRules : usesF48GridFlow ? f48StandardPrairieRules : prairieGridRules), ...Object.keys(usesSGridFlow ? sLowEPrairieRules : usesF48GridFlow ? f48LowEPrairieRules : lowEPrairieGridRules)])] as GridColor[]
     : gridPattern
       ? [...new Set([...Object.keys(standardPatternRules[gridPattern] ?? {}), ...Object.keys(lowEPatternRules[gridPattern] ?? {})])] as GridColor[]
       : []
   const compatibleGridWidths = gridColor
     ? gridStyle === 'Prairie'
-      ? [...new Set([...((usesF48GridFlow ? f48StandardPrairieRules : prairieGridRules)[gridColor] ?? []), ...((usesF48GridFlow ? f48LowEPrairieRules : lowEPrairieGridRules)[gridColor] ?? [])])]
+      ? [...new Set([...((usesSGridFlow ? sStandardPrairieRules : usesF48GridFlow ? f48StandardPrairieRules : prairieGridRules)[gridColor] ?? []), ...((usesSGridFlow ? sLowEPrairieRules : usesF48GridFlow ? f48LowEPrairieRules : lowEPrairieGridRules)[gridColor] ?? [])])]
       : gridPattern
         ? [...new Set([...(standardPatternRules[gridPattern]?.[gridColor] ?? []), ...(lowEPatternRules[gridPattern]?.[gridColor] ?? [])])]
         : []
@@ -374,27 +408,28 @@ export default function App() {
   const selectedGridOverlay = gridStyle === 'Arts & Crafts' && gridPattern
     ? `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FART${internalGridPatternCodes[gridPattern]}WH.png`
     : gridStyle === 'Contoured' && gridPattern && previewGridColor
-      ? usesF48GridFlow ? f48InternalGridAsset(gridPattern, previewGridColor) : contouredGridAssets[gridPattern]?.[previewGridColor] ?? null
+      ? usesSGridFlow ? sInternalGridAsset(gridPattern, previewGridColor) : usesF48GridFlow ? f48InternalGridAsset(gridPattern, previewGridColor) : contouredGridAssets[gridPattern]?.[previewGridColor] ?? null
     : gridStyle === 'Prairie' && previewGridColor
       ? prairieGridAssets[previewGridColor] ?? null
       : gridPattern && previewGridColor && internalGridPatternCodes[gridPattern] && internalGridColorCodes[previewGridColor]
-        ? usesF48GridFlow ? f48InternalGridAsset(gridPattern, previewGridColor) : internalGridAsset(gridPattern, previewGridColor)
+        ? usesSGridFlow ? sInternalGridAsset(gridPattern, previewGridColor) : usesF48GridFlow ? f48InternalGridAsset(gridPattern, previewGridColor) : internalGridAsset(gridPattern, previewGridColor)
         : null
-  const defaultInternalGridPreview = glassOptions.find((option) => option.id === 'f-clear-f15int')
   const externalPreviewOverlay = gridPattern && internalGridPatternCodes[gridPattern]
-    ? usesF48GridFlow
+    ? usesSGridFlow
+      ? sInternalGridAsset(gridPattern, 'White')
+      : usesF48GridFlow
       ? f48InternalGridAsset(gridPattern, 'White')
       : `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT${internalGridPatternCodes[gridPattern]}WH.png`
-    : gridPathId === 'external'
-      ? '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT8LWH.png'
-      : null
-  const gridPreviewDoorCode = usesF48GridFlow ? selectedStyleCodes.includes('F482') ? 'F482' : 'F48' : 'F'
+    : null
+  const gridPreviewDoorCode = usesSGridFlow ? 'S' : usesF48GridFlow ? selectedStyleCodes.includes('F482') ? 'F482' : 'F48' : 'F'
+  const gridClearGlass = glassOptions.find((option) => option.id === (usesSGridFlow ? 's-clear-no-grids' : usesF48GridFlow ? 'f48-clear-no-grids' : 'f-clear-no-grids'))
+  const gridClearOverlay = gridClearGlass?.overlaysByDoorStyle[gridPreviewDoorCode]
   const selectedGridPreview = glass && selectedGridLocationValue !== 'Internal' && externalPreviewOverlay
     ? { ...glass, overlaysByDoorStyle: { ...glass.overlaysByDoorStyle, [gridPreviewDoorCode]: externalPreviewOverlay } }
     : glass && selectedGridOverlay
     ? { ...glass, overlaysByDoorStyle: { ...glass.overlaysByDoorStyle, [gridPreviewDoorCode]: selectedGridOverlay } }
-    : usesFullLiteGridFlow && glass && defaultInternalGridPreview
-      ? { ...defaultInternalGridPreview, name: glass.name }
+    : glass && gridClearOverlay
+      ? { ...glass, overlaysByDoorStyle: { ...glass.overlaysByDoorStyle, [gridPreviewDoorCode]: gridClearOverlay } }
       : glass
   const previewGlass = supportsGlass ? (usesGridFlow ? selectedGridPreview : glass) ?? doorStyleDefaultGlass : selectedHardware ? clearOnlyGlass : null
   const usesRetroGlassCategory = selectedStyleCodes.some((code) => ['3LT', '3STEP', '4LT', '5LT', 'F764'].includes(code))

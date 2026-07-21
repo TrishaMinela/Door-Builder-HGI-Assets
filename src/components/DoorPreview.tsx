@@ -149,7 +149,7 @@ function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement) {
   return { finishUrl, glassUrl: canvas.toDataURL('image/png'), glassBounds, glassRegions, maskWidth: canvas.width, maskHeight: canvas.height }
 }
 
-function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height: number, maskBounds: PixelBounds, offsetY = 0, maskRegions?: PixelBounds[], overscan = 1, containWithinMask = false, stretchToMaskWidth = false) {
+function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height: number, maskBounds: PixelBounds, offsetY = 0, maskRegions?: PixelBounds[], overscan = 1, containWithinMask = false, stretchToMaskWidth = false, stretchToMaskHeight = false) {
   const sourceCanvas = document.createElement('canvas')
   sourceCanvas.width = width
   sourceCanvas.height = height
@@ -200,7 +200,9 @@ function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height:
   for (const target of maskRegions?.length ? maskRegions : [maskBounds]) {
     if (stretchToMaskWidth) {
       const scaleX = target.width / glassBounds.width
-      const scaleY = Math.min(target.height / glassBounds.height, scaleX)
+      const scaleY = stretchToMaskHeight
+        ? target.height / glassBounds.height
+        : Math.min(target.height / glassBounds.height, scaleX)
       const targetCenterX = target.x + target.width / 2
       const targetCenterY = target.y + target.height / 2
       outputContext.drawImage(sourceCanvas, targetCenterX - glassCenterX * scaleX, targetCenterY - glassCenterY * scaleY + offsetY, width * scaleX, height * scaleY)
@@ -248,8 +250,8 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const compatibleGlass = isGlassCapable ? glassOptions.filter((option) => styleCodes.some((code) => option.overlaysByDoorStyle[code])) : []
   const previewGlass = glass && compatibleGlass.some((option) => option.id === glass.id) ? glass : null
   const glassOverlay = previewGlass ? styleCodes.map((code) => previewGlass.overlaysByDoorStyle[code]).find(Boolean) : undefined
-  const gridGlassUsesClearBase = previewGlass?.id === 'f-clear-grids' || previewGlass?.id === 'f48-clear-grids'
-  const clearNoGridGlass = glassOptions.find((option) => option.id === (maskCode === 'F48' || maskCode === 'F482' ? 'f48-clear-no-grids' : 'f-clear-no-grids'))
+  const gridGlassUsesClearBase = previewGlass?.id === 'f-clear-grids' || previewGlass?.id === 'f48-clear-grids' || previewGlass?.id === 's-clear-grids'
+  const clearNoGridGlass = glassOptions.find((option) => option.id === (maskCode === 'S' ? 's-clear-no-grids' : maskCode === 'F48' || maskCode === 'F482' ? 'f48-clear-no-grids' : 'f-clear-no-grids'))
   const clearNoGridOverlay = gridGlassUsesClearBase && maskCode
     ? clearNoGridGlass?.overlaysByDoorStyle[maskCode]
     : undefined
@@ -359,12 +361,12 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     const overlay = new Image()
     overlay.onload = () => {
       if (cancelled) return
-      const isF48ArtsAndCrafts = Boolean(
-        (maskCode === 'F48' || maskCode === 'F482')
+      const usesAdjustedArtsAndCrafts = Boolean(
+        (maskCode === 'S' || maskCode === 'F48' || maskCode === 'F482')
         && glassOverlay.includes('/FART'),
       )
-      const offsetY = isF48ArtsAndCrafts
-        ? processedMask.glassBounds!.height * 0.2
+      const offsetY = usesAdjustedArtsAndCrafts
+        ? processedMask.glassBounds!.height * (maskCode === 'S' ? 0.4 : 0.2)
         : previewGlass?.id === 'f48-clear-f648l'
           ? processedMask.glassBounds!.height * 0.08
           : 0
@@ -383,11 +385,16 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
         : maskCode === 'HRT' && previewGlass?.id === 'hrt-clear-s11rt'
           ? 1.12
           : 1
-      const containPrairieInF48Mask = Boolean(
-        (maskCode === 'F48' || maskCode === 'F482')
+      const fitPrairieInsideMask = Boolean(
+        (maskCode === 'S' || maskCode === 'F48' || maskCode === 'F482')
         && glassOverlay.includes('/FPRA'),
       )
-      const url = fitGlassOverlayToMask(overlay, processedMask.maskWidth!, processedMask.maskHeight!, processedMask.glassBounds!, offsetY, maskRegions, overscan, containPrairieInF48Mask, containPrairieInF48Mask)
+      const stretchPrairieToMaskWidth = Boolean(
+        (maskCode === 'S' || maskCode === 'F48' || maskCode === 'F482')
+        && glassOverlay.includes('/FPRA'),
+      )
+      const stretchPrairieToMaskHeight = maskCode === 'S' && glassOverlay.includes('/FPRA')
+      const url = fitGlassOverlayToMask(overlay, processedMask.maskWidth!, processedMask.maskHeight!, processedMask.glassBounds!, offsetY, maskRegions, overscan, fitPrairieInsideMask, stretchPrairieToMaskWidth, stretchPrairieToMaskHeight)
       setFittedGlassOverlay(url ? { source: glassOverlay, maskSource: previewImage, url } : null)
     }
     overlay.onerror = () => { if (!cancelled) setFittedGlassOverlay(null) }
