@@ -788,6 +788,8 @@ const fOverlays: Record<string, string> = {
 }
 
 const f482Overlays: Record<string, string> = {
+  'f48-clear-no-grids': '/assets/hgi-assets/Glass/F48/CLEAR STOCK/F48F10.png',
+  'f48-clear-grids': '/assets/hgi-assets/Glass/F48/INTERNAL GRIDS/F48INT12LWH.png',
   'f48-clear-f1248': '/assets/hgi-assets/Glass/F48/CLEAR STOCK/F48F1248WH.png',
   'f48-clear-f1248l': '/assets/hgi-assets/Glass/F48/INTERNAL GRIDS/F48INT12LWH.png',
   'f48-clear-f648l': '/assets/hgi-assets/Glass/SDL/F648LXX.png',
@@ -854,7 +856,9 @@ const f482Overlays: Record<string, string> = {
 
 const f48Overlays: Record<string, string> = {
   clear: '/assets/hgi-assets/Glass/F48/CLEAR STOCK/F48F10.png',
+  'f48-clear-no-grids': '/assets/hgi-assets/Glass/F48/CLEAR STOCK/F48F10.png',
   'clear-low-e': '/assets/hgi-assets/Glass/F48/CLEAR STOCK/F48F10.png',
+  'f48-clear-grids': '/assets/hgi-assets/Glass/F48/INTERNAL GRIDS/F48INT12LWH.png',
   'f48-clear-f1248': '/assets/hgi-assets/Glass/F48/CLEAR STOCK/F48F1248WH.png',
   'f48-clear-f1248l': '/assets/hgi-assets/Glass/F48/INTERNAL GRIDS/F48INT12LWH.png',
   'f48-clear-f648l': '/assets/hgi-assets/Glass/SDL/F648LXX.png',
@@ -1035,6 +1039,8 @@ const variantThumbnailOptions = [
   { id: 'f-clic-ext-10l', name: 'External Grids - 10 Lite', image: '/assets/glass/thumbnails/EXTG.png' },
   { id: 'f-clic-ext-15l', name: 'External Grids - 15 Lite', image: '/assets/glass/thumbnails/EXTG.png' },
   { id: 'f48-clear-f1248', name: 'Clear Glass - F1248 3/4 12 Lite Ext Grids', image: '/assets/glass/thumbnails/CR14PL Craftsman Divided Lites.png' },
+  { id: 'f48-clear-no-grids', name: 'Clear Glass', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 'f48-clear-grids', name: 'Clear Glass with Grids', image: '/assets/glass/thumbnails/CR14PL Craftsman Divided Lites.png' },
   { id: 'f48-clear-f1248l', name: 'Clear Glass - F1248L 3/4 12 Lite Int Grids Low-E', image: '/assets/glass/thumbnails/CR14PL Craftsman Divided Lites.png' },
   { id: 'f48-clear-f648l', name: 'Clear Glass - F648L 3/4 6 Lite Ext Grids Low-E', image: '/assets/glass/thumbnails/CR14PL Craftsman Divided Lites.png' },
   { id: 'f48-clear-nonstock', name: 'NONSTOCKCL – Non-Stock', image: '/assets/glass/thumbnails/Clear.png' },

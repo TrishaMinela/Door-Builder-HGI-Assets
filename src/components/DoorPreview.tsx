@@ -149,7 +149,7 @@ function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement) {
   return { finishUrl, glassUrl: canvas.toDataURL('image/png'), glassBounds, glassRegions, maskWidth: canvas.width, maskHeight: canvas.height }
 }
 
-function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height: number, maskBounds: PixelBounds, offsetY = 0, maskRegions?: PixelBounds[], overscan = 1) {
+function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height: number, maskBounds: PixelBounds, offsetY = 0, maskRegions?: PixelBounds[], overscan = 1, containWithinMask = false, stretchToMaskWidth = false) {
   const sourceCanvas = document.createElement('canvas')
   sourceCanvas.width = width
   sourceCanvas.height = height
@@ -198,7 +198,17 @@ function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height:
     return outputCanvas.toDataURL('image/png')
   }
   for (const target of maskRegions?.length ? maskRegions : [maskBounds]) {
-    const scale = Math.max(target.width / glassBounds.width, target.height / glassBounds.height) * overscan
+    if (stretchToMaskWidth) {
+      const scaleX = target.width / glassBounds.width
+      const scaleY = Math.min(target.height / glassBounds.height, scaleX)
+      const targetCenterX = target.x + target.width / 2
+      const targetCenterY = target.y + target.height / 2
+      outputContext.drawImage(sourceCanvas, targetCenterX - glassCenterX * scaleX, targetCenterY - glassCenterY * scaleY + offsetY, width * scaleX, height * scaleY)
+      continue
+    }
+    const scale = (containWithinMask
+      ? Math.min(target.width / glassBounds.width, target.height / glassBounds.height)
+      : Math.max(target.width / glassBounds.width, target.height / glassBounds.height)) * overscan
     const targetCenterX = target.x + target.width / 2
     const targetCenterY = target.y + target.height / 2
     outputContext.drawImage(sourceCanvas, targetCenterX - glassCenterX * scale, targetCenterY - glassCenterY * scale + offsetY, width * scale, height * scale)
@@ -238,16 +248,17 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const compatibleGlass = isGlassCapable ? glassOptions.filter((option) => styleCodes.some((code) => option.overlaysByDoorStyle[code])) : []
   const previewGlass = glass && compatibleGlass.some((option) => option.id === glass.id) ? glass : null
   const glassOverlay = previewGlass ? styleCodes.map((code) => previewGlass.overlaysByDoorStyle[code]).find(Boolean) : undefined
-  const clearNoGridGlass = glassOptions.find((option) => option.id === 'f-clear-no-grids')
-  const clearNoGridOverlay = maskCode === 'F' && previewGlass?.name === 'Clear Glass with Grids'
-    ? clearNoGridGlass?.overlaysByDoorStyle.F
+  const gridGlassUsesClearBase = previewGlass?.id === 'f-clear-grids' || previewGlass?.id === 'f48-clear-grids'
+  const clearNoGridGlass = glassOptions.find((option) => option.id === (maskCode === 'F48' || maskCode === 'F482' ? 'f48-clear-no-grids' : 'f-clear-no-grids'))
+  const clearNoGridOverlay = gridGlassUsesClearBase && maskCode
+    ? clearNoGridGlass?.overlaysByDoorStyle[maskCode]
     : undefined
   const fitSharedFallbackOverlay = Boolean(
     maskCode
       && glassOverlay
       && (maskCode === '3LT'
         || maskCode === '3STEP'
-        || (['F48', 'F848'].includes(maskCode) && !glassOverlay.includes(`/Glass/${maskCode}/`))
+        || (['F48', 'F482', 'F848'].includes(maskCode) && !glassOverlay.includes(`/Glass/${maskCode}/`))
         || (maskCode === 'QA' && previewGlass?.id === 'qa-clear-qacl')
         || (maskCode === 'S' && !glassOverlay.includes('/Glass/S/'))
         || (maskCode === 'S836' && !glassOverlay.includes('/Glass/S836/'))
@@ -255,6 +266,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
         || (maskCode === 'SW' && !glassOverlay.includes('/Glass/SW/'))),
   )
   const [fittedGlassOverlay, setFittedGlassOverlay] = useState<{ source: string; maskSource: string; url: string } | null>(null)
+  const [fittedClearBase, setFittedClearBase] = useState<{ source: string; maskSource: string; url: string } | null>(null)
   const [internalPreviewView, setInternalPreviewView] = useState<HardwareView>('Exterior')
   const previewView = view ?? internalPreviewView
   const setPreviewView = onViewChange ?? setInternalPreviewView
@@ -347,7 +359,15 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     const overlay = new Image()
     overlay.onload = () => {
       if (cancelled) return
-      const offsetY = previewGlass?.id === 'f48-clear-f648l' ? processedMask.glassBounds!.height * 0.08 : 0
+      const isF48ArtsAndCrafts = Boolean(
+        (maskCode === 'F48' || maskCode === 'F482')
+        && glassOverlay.includes('/FART'),
+      )
+      const offsetY = isF48ArtsAndCrafts
+        ? processedMask.glassBounds!.height * 0.2
+        : previewGlass?.id === 'f48-clear-f648l'
+          ? processedMask.glassBounds!.height * 0.08
+          : 0
       const maskRegions = (maskCode === '3LT'
         || maskCode === '3STEP'
         || (maskCode === 'F848' && previewGlass?.id === 'streamed')
@@ -363,13 +383,41 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
         : maskCode === 'HRT' && previewGlass?.id === 'hrt-clear-s11rt'
           ? 1.12
           : 1
-      const url = fitGlassOverlayToMask(overlay, processedMask.maskWidth!, processedMask.maskHeight!, processedMask.glassBounds!, offsetY, maskRegions, overscan)
+      const containPrairieInF48Mask = Boolean(
+        (maskCode === 'F48' || maskCode === 'F482')
+        && glassOverlay.includes('/FPRA'),
+      )
+      const url = fitGlassOverlayToMask(overlay, processedMask.maskWidth!, processedMask.maskHeight!, processedMask.glassBounds!, offsetY, maskRegions, overscan, containPrairieInF48Mask, containPrairieInF48Mask)
       setFittedGlassOverlay(url ? { source: glassOverlay, maskSource: previewImage, url } : null)
     }
     overlay.onerror = () => { if (!cancelled) setFittedGlassOverlay(null) }
     overlay.src = glassOverlay
     return () => { cancelled = true }
   }, [fitSharedFallbackOverlay, glassOverlay, previewGlass?.id, previewImage, processedMask, useNativeGlassOverlay])
+
+  useEffect(() => {
+    let cancelled = false
+    if (maskCode !== 'F482' || !clearNoGridOverlay || !previewImage || processedMask?.source !== previewImage || !processedMask.glassBounds || !processedMask.maskWidth || !processedMask.maskHeight) {
+      setFittedClearBase(null)
+      return () => { cancelled = true }
+    }
+    const overlay = new Image()
+    overlay.onload = () => {
+      if (cancelled) return
+      const url = fitGlassOverlayToMask(
+        overlay,
+        processedMask.maskWidth!,
+        processedMask.maskHeight!,
+        processedMask.glassBounds!,
+        0,
+        processedMask.glassRegions,
+      )
+      setFittedClearBase(url ? { source: clearNoGridOverlay, maskSource: previewImage, url } : null)
+    }
+    overlay.onerror = () => { if (!cancelled) setFittedClearBase(null) }
+    overlay.src = clearNoGridOverlay
+    return () => { cancelled = true }
+  }, [clearNoGridOverlay, maskCode, previewImage, processedMask])
 
   const finishLayerStyle = useMemo(() => {
     if (!applyFinish || !hasMappedPreview || !finishMask || !finishColor) return undefined
@@ -448,7 +496,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           {finishLayerStyle && <div className={`door-finish-layer door-finish-layer-${finish.finishType}`} style={finishLayerStyle} />}
           {previewImage && finishLayerStyle && showDetailImage && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {stainHighlightStyle && <div className="door-stain-highlight" style={stainHighlightStyle} />}
-          {clearNoGridOverlay && <img className="door-glass-overlay door-clear-glass-base" src={clearNoGridOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+          {clearNoGridOverlay && <img className="door-glass-overlay door-clear-glass-base" src={fittedClearBase?.source === clearNoGridOverlay && fittedClearBase.maskSource === previewImage ? fittedClearBase.url : clearNoGridOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {glassOverlay && <img className="door-glass-overlay" src={fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage ? fittedGlassOverlay.url : glassOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {hardwareImage && <div className={`hardware hardware-${previewHardware.type} hardware-side-${hardwareSide}`} data-hardware-side={hardwareSide} data-hardware-side-exterior={hardwareSideExterior} data-hardware-side-interior={hardwareSideInterior} style={{ '--metal': previewHardware.color } as React.CSSProperties}>
             <img className={hardwareImagePlacementClass} src={hardwareImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => {
