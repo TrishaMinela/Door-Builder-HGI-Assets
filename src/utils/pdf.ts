@@ -278,7 +278,7 @@ export async function generateSummaryPdf(
     { label: 'FINISH COLOR', value: finish.name, swatch: finish.color, icon: summaryIcons[3] },
     { label: 'GLASS', value: glass?.name ?? 'No glass', icon: summaryIcons[4] },
     ...(grid ? [
-      { label: 'GLASS COATING', value: grid.glassCoating },
+      ...(grid.glassCoating !== 'Standard / No Low-E' ? [{ label: 'GLASS COATING', value: grid.glassCoating }] : []),
       ...(grid.gridLocation ? [{ label: 'GRID LOCATION', value: grid.gridLocation }] : []),
       ...(grid.gridStyle ? [{ label: 'GRID STYLE', value: grid.gridStyle }] : []),
       ...(grid.gridPattern ? [{ label: 'GRID PATTERN', value: grid.gridPattern }] : []),

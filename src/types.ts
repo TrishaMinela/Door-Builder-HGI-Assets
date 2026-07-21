@@ -122,10 +122,10 @@ export type DoorConfiguration = {
   doorSwing: DoorSwing
 }
 
-export type GlassCoating = 'Standard / No Low-E' | 'Low-E Plus' | 'ODL Clear'
+export type GlassCoating = 'Standard / No Low-E' | 'Low-E' | 'Low-E Plus' | 'ODL Clear' | 'Standard / No Low-E or Low-E' | 'Low-E or Low-E Plus' | 'Standard / No Low-E, Low-E or Low-E Plus'
 export type GridLocation = 'No Grids' | 'External' | 'Internal' | 'SDL' | 'Arts & Crafts'
-export type GridStyle = 'Contoured' | 'Flat' | 'Prairie'
-export type GridPattern = '4 Lite' | '4 Lite Horizontal' | '6 Lite' | '8 Lite' | '10 Lite' | '12 Lite' | '15 Lite'
+export type GridStyle = 'Arts & Crafts' | 'Contoured' | 'Flat' | 'Prairie'
+export type GridPattern = '3 Lite' | '4 Lite' | '4 Lite Horizontal' | '6 Lite' | '8 Lite' | '10 Lite' | '12 Lite' | '15 Lite'
 export type GridColor = 'Beige' | 'Black' | 'Bronze' | 'Bronze/White' | 'Champagne' | 'Tan' | 'White'
 export type GridWidth = '5/8"' | '7/8"' | '11/16"'
 

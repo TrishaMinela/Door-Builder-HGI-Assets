@@ -9,7 +9,7 @@ import { QuoteForm } from './components/QuoteForm'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
 import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
-import type { ContactForm, DoorSwing, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, PreviewHardware } from './types'
+import type { ContactForm, DoorSwing, GlassCoating, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, PreviewHardware } from './types'
 import { configurationPdfName } from './utils/pdfConfig'
 import { submitQuote, type SubmissionResult } from './utils/submission'
 
@@ -22,13 +22,18 @@ const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
 const signatureSeriesId = 'signature-series'
 const FULL_LITE_GRID_GLASS_ID = 'f-clear-grids'
 const gridLocations = [
-  { id: 'standard-external', name: 'External Grids', image: '/assets/hgi-assets/Glass/GLASS THUMBNAILS/EXTG.png' },
-  { id: 'standard-internal', name: 'Internal Grids', image: '/assets/hgi-assets/Glass/GLASS THUMBNAILS/FLATG.png' },
+  { id: 'external', name: 'External Grids', image: '/assets/grid-options/External Grids.png' },
+  { id: 'internal', name: 'Internal Grids', image: '/assets/grid-options/Internal Grids.png' },
+  { id: 'sdl', name: 'SDL Grids', image: '/assets/grid-options/SDL Grids.png' },
 ] as const
 const gridStyles: { id: GridStyle; image: string }[] = [
-  { id: 'Contoured', image: '/assets/hgi-assets/Glass/GLASS THUMBNAILS/CONTG.png' },
-  { id: 'Flat', image: '/assets/hgi-assets/Glass/GLASS THUMBNAILS/FLATG.png' },
-  { id: 'Prairie', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRAWH.png' },
+  { id: 'Contoured', image: '/assets/grid-options/Contoured Grids.png' },
+  { id: 'Flat', image: '/assets/grid-options/Flat Grids.png' },
+  { id: 'Prairie', image: '/assets/grid-options/Prairie Grids.png' },
+]
+const lowEGridStyles: { id: GridStyle; image: string }[] = [
+  { id: 'Arts & Crafts', image: '/assets/grid-options/Arts & Crafts Grid.png' },
+  ...gridStyles,
 ]
 const flatGridPatterns: { id: GridPattern; image: string }[] = [
   { id: '4 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT4LBE.png' },
@@ -39,21 +44,65 @@ const flatGridPatterns: { id: GridPattern; image: string }[] = [
   { id: '12 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT12LBE.png' },
   { id: '15 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT15LBE.png' },
 ]
-const gridColorSwatches: Record<GridColor, string> = {
-  Beige: '#d8c5a4', Black: '#161616', Bronze: '#6f4b32', 'Bronze/White': '#9a775f', Champagne: '#d5bd8e', Tan: '#b18b62', White: '#f4f4ef',
+const allGridPatterns: { id: GridPattern; image: string }[] = [{ id: '3 Lite', image: '/assets/grid-options/All Lites.png' }, ...flatGridPatterns]
+const internalGridPatternCodes: Partial<Record<GridPattern, string>> = { '3 Lite': '3L', '4 Lite': '4L', '4 Lite Horizontal': '4LH', '6 Lite': '6L', '8 Lite': '8L', '10 Lite': '10L', '12 Lite': '12L', '15 Lite': '15L' }
+const internalGridColorCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Black: 'BK', Bronze: 'BZ', 'Bronze/White': 'WH', Champagne: 'CH', Tan: 'TA', White: 'WH' }
+const internalGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT${internalGridPatternCodes[pattern]}${internalGridColorCodes[color]}.png`
+const contouredGridAssets: Partial<Record<GridPattern, Partial<Record<GridColor, string>>>> = {
+  '4 Lite': { White: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT4LWH.png' },
+  '10 Lite': {
+    Champagne: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT10LCH.png',
+    White: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT10LWH.png',
+  },
+  '15 Lite': { Champagne: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT15LCH.png' },
 }
-const flatGridColors: Partial<Record<GridPattern, GridColor[]>> = {
-  '4 Lite': ['Bronze', 'Tan', 'White'],
-  '4 Lite Horizontal': ['Bronze', 'Champagne', 'Tan', 'White'],
-  '6 Lite': ['Bronze', 'Champagne', 'Tan', 'White'],
-  '8 Lite': ['Bronze', 'Champagne', 'Tan', 'White'],
-  '10 Lite': ['Beige', 'Bronze', 'Tan', 'White'],
-  '12 Lite': ['Tan'],
-  '15 Lite': ['Beige', 'Bronze', 'Champagne', 'Tan'],
+const prairieGridAssets: Partial<Record<GridColor, string>> = {
+  White: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRAWH.png',
+  Champagne: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRACH.png',
+  Beige: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRACHBE.png',
+  Tan: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRACHTA.png',
 }
-const widthOptionsByPath: Record<string, GridWidth[]> = {
-  'Contoured|15 Lite': ['11/16"'],
-  'Flat|15 Lite': ['5/8"', '7/8"'],
+const gridColorValues: Partial<Record<GridColor, string>> = {
+  Beige: '#d8c5a4', Black: '#161616', Bronze: '#6f4b32', 'Bronze/White': 'linear-gradient(90deg,#6f4b32 0 50%,#f4f4ef 50%)', Champagne: '#d5bd8e', Tan: '#b18b62', White: '#f4f4ef',
+}
+type GridWidthRules = Partial<Record<GridColor, GridWidth[]>>
+const flatGridRules: Partial<Record<GridPattern, GridWidthRules>> = {
+  '4 Lite': { Bronze: ['5/8"'], Tan: ['7/8"'], White: ['5/8"', '7/8"'] },
+  '4 Lite Horizontal': { Bronze: ['5/8"'], Champagne: ['5/8"'], Tan: ['7/8"'], White: ['5/8"', '7/8"'] },
+  '6 Lite': { Bronze: ['5/8"'], Champagne: ['5/8"'], Tan: ['7/8"'], White: ['5/8"', '7/8"'] },
+  '8 Lite': { Bronze: ['5/8"'], Champagne: ['5/8"'], Tan: ['7/8"'], White: ['5/8"', '7/8"'] },
+  '10 Lite': { Beige: ['5/8"', '7/8"'], Bronze: ['5/8"'], Tan: ['7/8"'], White: ['5/8"', '7/8"'] },
+  '12 Lite': { Tan: ['7/8"'] },
+  '15 Lite': { Beige: ['5/8"', '7/8"'], Bronze: ['5/8"'], Champagne: ['5/8"', '7/8"'], Tan: ['5/8"', '7/8"'] },
+}
+const prairieGridRules: GridWidthRules = { Beige: [], Tan: ['7/8"'], White: ['7/8"', '11/16"'] }
+const bothFlatWidths: GridWidth[] = ['5/8"', '7/8"']
+const lowEFlatGridRules: Partial<Record<GridPattern, GridWidthRules>> = {
+  '4 Lite': { Beige: bothFlatWidths, Black: bothFlatWidths, Bronze: ['5/8"'], 'Bronze/White': bothFlatWidths, Tan: ['7/8"'], White: bothFlatWidths },
+  '4 Lite Horizontal': { Beige: bothFlatWidths, Black: bothFlatWidths, Bronze: ['5/8"'], 'Bronze/White': bothFlatWidths, Champagne: ['5/8"'], Tan: ['7/8"'], White: bothFlatWidths },
+  '6 Lite': { Black: bothFlatWidths, Bronze: ['5/8"'], 'Bronze/White': bothFlatWidths, Champagne: ['5/8"'], Tan: ['7/8"'], White: bothFlatWidths },
+  '8 Lite': { Beige: bothFlatWidths, Black: bothFlatWidths, Bronze: ['5/8"'], 'Bronze/White': bothFlatWidths, Champagne: ['5/8"'], Tan: ['7/8"'], White: bothFlatWidths },
+  '10 Lite': { Beige: bothFlatWidths, Black: bothFlatWidths, Bronze: ['5/8"'], 'Bronze/White': bothFlatWidths, Champagne: ['5/8"'], Tan: ['7/8"'], White: bothFlatWidths },
+  '12 Lite': { Tan: ['7/8"'] },
+  '15 Lite': { Beige: bothFlatWidths, Black: bothFlatWidths, Bronze: ['5/8"'], 'Bronze/White': bothFlatWidths, Champagne: ['5/8"'], Tan: bothFlatWidths },
+}
+const lowEContouredRules: Partial<Record<GridPattern, GridWidthRules>> = {
+  '4 Lite': { White: ['11/16"'] },
+  '10 Lite': { Champagne: ['11/16"'], White: ['11/16"'] },
+  '15 Lite': { Champagne: ['11/16"'] },
+}
+const lowEArtsRules: Partial<Record<GridPattern, GridWidthRules>> = {
+  '3 Lite': { White: ['5/8"'] }, '4 Lite': { White: ['5/8"'] },
+}
+const lowEPrairieGridRules: GridWidthRules = { Beige: [], Champagne: ['5/8"', '11/16"'], Tan: ['7/8"'], White: ['5/8"', '7/8"', '11/16"'] }
+function gridRuleWidths(style: GridStyle | '', pattern: GridPattern | '', color: GridColor | '', lowE: boolean): GridWidth[] | undefined {
+  if (!style || !color) return undefined
+  if (style === 'Prairie') return (lowE ? lowEPrairieGridRules : prairieGridRules)[color]
+  if (!pattern) return undefined
+  const rules = lowE
+    ? style === 'Arts & Crafts' ? lowEArtsRules : style === 'Contoured' ? lowEContouredRules : lowEFlatGridRules
+    : style === 'Contoured' ? { '15 Lite': { Champagne: ['11/16"' as GridWidth] } } : style === 'Flat' ? flatGridRules : {}
+  return rules[pattern]?.[color]
 }
 const HERO_DOOR_OPENING = {
   leftPct: 45.3,
@@ -242,41 +291,67 @@ export default function App() {
   const configuredGlass = supportsGlass ? selectedGlass : clearOnlyGlass
   const selectedGridLocation = gridLocations.find((location) => location.id === gridPathId)
   const usesFullLiteGridFlow = selectedStyleCodes.includes('F') && glassId === FULL_LITE_GRID_GLASS_ID
+  const selectedGridLocationValue = gridPathId === 'sdl' ? 'SDL' : gridPathId === 'internal' ? 'Internal' : 'External'
+  const standardWidthsForSelection = gridRuleWidths(gridStyle, gridPattern, gridColor, false)
+  const lowEWidthsForSelection = gridRuleWidths(gridStyle, gridPattern, gridColor, true)
+  const matchesSelectedWidth = (widths: GridWidth[] | undefined) => widths !== undefined && (widths.length === 0 ? !gridWidth : Boolean(gridWidth && widths.includes(gridWidth)))
+  const matchesStandard = matchesSelectedWidth(standardWidthsForSelection)
+  const matchesLowE = matchesSelectedWidth(lowEWidthsForSelection)
+  const selectedGlassCoating: GlassCoating = gridPathId === 'sdl'
+    ? 'Low-E'
+    : gridPathId === 'external'
+      ? gridPattern === '8 Lite' ? 'Standard / No Low-E, Low-E or Low-E Plus' : 'Low-E or Low-E Plus'
+      : matchesStandard && matchesLowE ? 'Standard / No Low-E or Low-E' : matchesLowE ? 'Low-E' : 'Standard / No Low-E'
   const gridConfiguration: GridConfiguration | null = usesFullLiteGridFlow && selectedGridLocation
     ? {
-      glassCoating: 'Standard / No Low-E',
-      gridLocation: selectedGridLocation.id === 'standard-internal' ? 'Internal' : 'External',
+      glassCoating: selectedGlassCoating,
+      gridLocation: selectedGridLocationValue,
       ...(gridStyle ? { gridStyle } : {}),
       ...(gridPattern ? { gridPattern } : {}),
       ...(gridColor ? { gridColor } : {}),
       ...(gridWidth ? { gridWidth } : {}),
     }
     : null
-  const compatibleGridPatterns = gridPathId === 'standard-external'
-    ? flatGridPatterns.filter((item) => item.id === '8 Lite')
-    : gridStyle === 'Contoured'
-      ? flatGridPatterns.filter((item) => item.id === '15 Lite')
-      : gridStyle === 'Flat'
-        ? flatGridPatterns
-        : []
-  const compatibleGridColors: GridColor[] = gridStyle === 'Contoured'
-    ? ['Champagne']
-    : gridStyle === 'Flat' && gridPattern
-      ? flatGridColors[gridPattern] ?? []
+  const standardPatternRules = gridStyle === 'Contoured' ? { '15 Lite': { Champagne: ['11/16"' as GridWidth] } } : gridStyle === 'Flat' ? flatGridRules : {}
+  const lowEPatternRules = gridStyle === 'Arts & Crafts' ? lowEArtsRules : gridStyle === 'Contoured' ? lowEContouredRules : gridStyle === 'Flat' ? lowEFlatGridRules : {}
+  const compatibleGridPatterns = gridPathId === 'external'
+    ? allGridPatterns.filter((item) => ['8 Lite', '10 Lite', '15 Lite'].includes(item.id))
+    : gridPathId === 'sdl'
+      ? allGridPatterns.filter((item) => ['6 Lite', '8 Lite', '15 Lite'].includes(item.id))
+      : allGridPatterns.filter((item) => Object.prototype.hasOwnProperty.call(standardPatternRules, item.id) || Object.prototype.hasOwnProperty.call(lowEPatternRules, item.id))
+  const compatibleGridColors: GridColor[] = gridStyle === 'Prairie'
+    ? [...new Set([...Object.keys(prairieGridRules), ...Object.keys(lowEPrairieGridRules)])] as GridColor[]
+    : gridPattern
+      ? [...new Set([...Object.keys(standardPatternRules[gridPattern] ?? {}), ...Object.keys(lowEPatternRules[gridPattern] ?? {})])] as GridColor[]
       : []
-  const compatibleGridWidths = gridStyle && gridPattern ? widthOptionsByPath[`${gridStyle}|${gridPattern}`] ?? [] : []
+  const compatibleGridWidths = gridColor
+    ? gridStyle === 'Prairie'
+      ? [...new Set([...(prairieGridRules[gridColor] ?? []), ...(lowEPrairieGridRules[gridColor] ?? [])])]
+      : gridPattern
+        ? [...new Set([...(standardPatternRules[gridPattern]?.[gridColor] ?? []), ...(lowEPatternRules[gridPattern]?.[gridColor] ?? [])])]
+        : []
+    : []
+  const previewGridColor = gridColor || compatibleGridColors[0]
   const doorStyleDefaultGlass = selectedStyleCodes.includes('HRT')
     ? availableGlass.find((option) => option.id === 'clear') ?? null
     : null
-  const patternAssetCodes: Partial<Record<GridPattern, string>> = { '4 Lite': '4L', '4 Lite Horizontal': '4LH', '6 Lite': '6L', '8 Lite': '8L', '10 Lite': '10L', '12 Lite': '12L', '15 Lite': '15L' }
-  const colorAssetCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Bronze: 'BZ', Champagne: 'CH', Tan: 'TA', White: 'WH' }
-  const selectedGridOverlay = gridPattern && gridColor && patternAssetCodes[gridPattern] && colorAssetCodes[gridColor]
-    ? `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT${patternAssetCodes[gridPattern]}${colorAssetCodes[gridColor]}.png`
-    : null
+  const selectedGridOverlay = gridStyle === 'Arts & Crafts' && gridPattern
+    ? `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FART${internalGridPatternCodes[gridPattern]}WH.png`
+    : gridStyle === 'Contoured' && gridPattern && previewGridColor
+      ? contouredGridAssets[gridPattern]?.[previewGridColor] ?? null
+    : gridStyle === 'Prairie' && previewGridColor
+      ? prairieGridAssets[previewGridColor] ?? null
+      : gridPattern && previewGridColor && internalGridPatternCodes[gridPattern] && internalGridColorCodes[previewGridColor]
+        ? internalGridAsset(gridPattern, previewGridColor)
+        : null
   const defaultInternalGridPreview = glassOptions.find((option) => option.id === 'f-clear-f15int')
-  const externalGridPreview = glassOptions.find((option) => option.id === 'f-clic-ext-8l')
-  const selectedGridPreview = glass && gridPathId === 'standard-external' && externalGridPreview
-    ? { ...externalGridPreview, name: glass.name }
+  const externalPreviewOverlay = gridPattern && internalGridPatternCodes[gridPattern]
+    ? `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT${internalGridPatternCodes[gridPattern]}WH.png`
+    : gridPathId === 'external'
+      ? '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT8LWH.png'
+      : null
+  const selectedGridPreview = glass && selectedGridLocationValue !== 'Internal' && externalPreviewOverlay
+    ? { ...glass, overlaysByDoorStyle: { ...glass.overlaysByDoorStyle, F: externalPreviewOverlay } }
     : glass && selectedGridOverlay
     ? { ...glass, overlaysByDoorStyle: { ...glass.overlaysByDoorStyle, F: selectedGridOverlay } }
     : glass && defaultInternalGridPreview
@@ -308,10 +383,10 @@ export default function App() {
     ...(supportsGlass ? ['glass-type' as const, 'glass' as const] : []),
     ...(usesFullLiteGridFlow ? [
       'grid-location' as const,
-      ...(gridPathId === 'standard-internal' ? ['grid-style' as const] : []),
-      ...((gridPathId === 'standard-external' || (gridPathId === 'standard-internal' && gridStyle)) ? ['grid-pattern' as const] : []),
-      ...(gridPathId === 'standard-internal' && gridPattern && compatibleGridColors.length ? ['grid-color' as const] : []),
-      ...(gridPathId === 'standard-internal' && gridColor && compatibleGridWidths.length ? ['grid-width' as const] : []),
+      ...(selectedGridLocationValue === 'Internal' ? ['grid-style' as const] : []),
+      ...(gridPathId && (selectedGridLocationValue !== 'Internal' || (gridStyle && gridStyle !== 'Prairie')) ? ['grid-pattern' as const] : []),
+      ...(selectedGridLocationValue === 'Internal' && (gridStyle === 'Prairie' || Boolean(gridPattern)) && compatibleGridColors.length ? ['grid-color' as const] : []),
+      ...(selectedGridLocationValue === 'Internal' && gridColor && compatibleGridWidths.length ? ['grid-width' as const] : []),
     ] : []),
     'hardware',
     'door-swing',
@@ -585,11 +660,18 @@ export default function App() {
     setGridPattern(nextPattern)
     setGridColor('')
     setGridWidth('')
+    if (compatibleGridPatterns.length === 1) goTo(step + 1)
   }
 
   const selectGridColor = (nextColor: GridColor) => {
     setGridColor(nextColor)
     setGridWidth('')
+    if (compatibleGridColors.length === 1) goTo(step + 1)
+  }
+
+  const selectGridWidth = (nextWidth: GridWidth) => {
+    setGridWidth(nextWidth)
+    if (compatibleGridWidths.length === 1) goTo(step + 1)
   }
 
   const selectHardware = (nextHardwareId: string) => {
@@ -647,7 +729,7 @@ export default function App() {
     [finish.finishType === 'paint' ? 'Finish color' : 'Stain color', finish.name, pages.indexOf('finish')],
     ...(compatibilitySupportsGlass ? [['Glass', configuredGlass?.name ?? 'Clear', pages.indexOf('glass-type')] as [string, string, number]] : []),
     ...(gridConfiguration ? [
-      ['Glass Coating', gridConfiguration.glassCoating, pages.indexOf('grid-location')],
+      ...(gridConfiguration.glassCoating !== 'Standard / No Low-E' ? [['Glass Coating', gridConfiguration.glassCoating, pages.indexOf('grid-location')] as [string, string, number]] : []),
       ...(gridConfiguration.gridLocation ? [['Grid Location', gridConfiguration.gridLocation, pages.indexOf('grid-location')] as [string, string, number]] : []),
       ...(gridConfiguration.gridStyle ? [['Grid Style', gridConfiguration.gridStyle, pages.indexOf('grid-style')] as [string, string, number]] : []),
       ...(gridConfiguration.gridPattern ? [['Grid Pattern', gridConfiguration.gridPattern, pages.indexOf('grid-pattern')] as [string, string, number]] : []),
@@ -746,15 +828,14 @@ export default function App() {
                 {currentPage === 'finish' && visibleFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => selectFinish(item.id, item.finishType)} visual={<span className="finish-tile-wrap" style={{ '--fallback-finish': item.color } as CSSProperties}><img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} /></span>} />)}
                 {currentPage === 'glass-type' && availableGlassCategories.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Glass type" selected={selectedGlassCategory === item.id} onClick={() => selectGlassCategory(item.id)} visual={<img className={`glass-option-thumbnail${item.id === 'retro' || item.id === 'clic' ? ' retro-glass-thumbnail' : ''}`} src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'glass' && glassOptionGroups.map((group) => <GlassOptionCard group={group} selectedId={glassId} onSelect={(item) => selectGlass(item.id)} key={group.key} />)}
-                {currentPage === 'grid-location' && gridLocations.map((item) => <OptionCard key={item.id} title={item.name} selected={gridPathId === item.id} onClick={() => selectGridLocation(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
-                {currentPage === 'grid-style' && gridStyles.map((item) => <OptionCard key={item.id} title={item.id} selected={gridStyle === item.id} onClick={() => selectGridStyle(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
-                {currentPage === 'grid-pattern' && compatibleGridPatterns.map((item) => <OptionCard key={item.id} title={item.id} selected={gridPattern === item.id} onClick={() => selectGridPattern(item.id)} visual={<img className="grid-pattern-thumbnail" src={gridPathId === 'standard-external' ? '/assets/hgi-assets/Glass/SDL/F8LXX.png' : item.image} alt="" loading="lazy" decoding="async" />} />)}
-                {currentPage === 'grid-color' && compatibleGridColors.map((color) => <OptionCard key={color} title={color} selected={gridColor === color} onClick={() => selectGridColor(color)} visual={<span className="grid-color-thumbnail" style={{ backgroundColor: gridColorSwatches[color] }} />} />)}
-                {currentPage === 'grid-width' && compatibleGridWidths.map((width) => <OptionCard key={width} title={width} selected={gridWidth === width} onClick={() => setGridWidth(width)} visual={<img className="grid-option-thumbnail" src={gridStyle === 'Contoured' ? '/assets/hgi-assets/Glass/GLASS THUMBNAILS/CONTG.png' : '/assets/hgi-assets/Glass/GLASS THUMBNAILS/FLATG.png'} alt="" loading="lazy" decoding="async" />} />)}
+                {currentPage === 'grid-location' && gridLocations.map((item) => <OptionCard key={item.id} title={item.name} selected={gridPathId === item.id} onClick={() => selectGridLocation(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" loading="eager" decoding="async" />} />)}
+                {currentPage === 'grid-style' && lowEGridStyles.map((item) => <OptionCard key={item.id} title={item.id} selected={gridStyle === item.id} onClick={() => selectGridStyle(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" loading="eager" decoding="async" />} />)}
+                {currentPage === 'grid-pattern' && compatibleGridPatterns.map((item) => <OptionCard key={item.id} title={item.id} selected={gridPattern === item.id} onClick={() => selectGridPattern(item.id)} visual={<img className="grid-pattern-thumbnail" src="/assets/grid-options/All Lites.png" alt="" loading="eager" decoding="async" />} />)}
+                {currentPage === 'grid-color' && compatibleGridColors.map((color) => <OptionCard key={color} title={color} eyebrow="Grid color" selected={gridColor === color} onClick={() => selectGridColor(color)} visual={<span className="finish-tile-wrap grid-color-tile" style={{ '--fallback-finish': gridColorValues[color] ?? '#efeee8' } as CSSProperties} />} />)}
+                {currentPage === 'grid-width' && gridColor && compatibleGridWidths.map((width) => <OptionCard key={width} className="bar-size-option-card" title={width} eyebrow="Bar size" selected={gridWidth === width} onClick={() => selectGridWidth(width)} />)}
                 {currentPage === 'hardware' && hardwareStyleGroups.map((options) => <HardwareOptionCard key={`${options[0].manufacturer}-${options[0].style}`} options={options} selectedId={hardwareId} onSelect={(option) => selectHardware(option.id)} />)}
                 {currentPage === 'door-swing' && doorSwingOptions.map((item) => <OptionCard key={item.id} title={`${item.id} – ${item.name}`} eyebrow="Door swing" selected={doorSwingId === item.id} onClick={() => selectDoorSwing(item.id)} visual={<img className="door-swing-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
               </div>
-              {currentPage === 'grid-style' && gridStyle === 'Prairie' && <p className="grid-coming-soon" role="status">Prairie grid options coming soon.</p>}
             </div>
           </>}
 
@@ -788,7 +869,7 @@ export default function App() {
             <button onClick={downloadPdf}><Download size={17} /> Download Your Summary</button>
           </div>}
 
-          {currentPage !== 'review' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Previous</button><button className="next" disabled={(currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'finish' && !visibleSelectedFinish) || (currentPage === 'glass-type' && !selectedGlassCategory) || (currentPage === 'glass' && visibleGlass.length > 0 && !selectedGlass) || (currentPage === 'grid-location' && !gridPathId) || (currentPage === 'grid-style' && (!gridStyle || gridStyle === 'Prairie')) || (currentPage === 'grid-pattern' && !gridPattern) || (currentPage === 'grid-color' && !gridColor) || (currentPage === 'grid-width' && !gridWidth) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>Next <ArrowRight size={17} /></button></div>}
+          {currentPage !== 'review' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Previous</button><button className="next" disabled={(currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'finish' && !visibleSelectedFinish) || (currentPage === 'glass-type' && !selectedGlassCategory) || (currentPage === 'glass' && visibleGlass.length > 0 && !selectedGlass) || (currentPage === 'grid-location' && !gridPathId) || (currentPage === 'grid-style' && !gridStyle) || (currentPage === 'grid-pattern' && !gridPattern) || (currentPage === 'grid-color' && !gridColor) || (currentPage === 'grid-width' && !gridWidth) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>Next <ArrowRight size={17} /></button></div>}
         </section>
 
         {!submitted && <aside>
