@@ -266,6 +266,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
       && glassOverlay
       && (maskCode === '3LT'
         || maskCode === '3STEP'
+        || maskCode === '4LT'
         || (['F48', 'F482', 'F848'].includes(maskCode) && !glassOverlay.includes(`/Glass/${maskCode}/`))
         || (maskCode === 'QA' && previewGlass?.id === 'qa-clear-qacl')
         || (maskCode === 'S' && !glassOverlay.includes('/Glass/S/'))
@@ -412,6 +413,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           : 0
       const maskRegions = (maskCode === '3LT'
         || maskCode === '3STEP'
+        || maskCode === '4LT'
         || (maskCode === 'F848' && previewGlass?.id === 'streamed')
         || (maskCode === 'S836' && !glassOverlay.includes('/Glass/S836/')))
         ? processedMask.glassRegions

@@ -324,6 +324,7 @@ const glassThumbnailOptions = [
   { id: 'clear-low-e', name: 'Clear Glass - Low-E', image: '/assets/glass/thumbnails/Clear.png' },
   { id: 'clic', name: 'CLIC', image: '/assets/glass/thumbnails/CLIC.png' },
   { id: 'cobblestone', name: 'Cobblestone', image: '/assets/glass/thumbnails/Cobblestone.png' },
+  { id: 'courtyard', name: 'Courtyard', image: '/assets/glass/thumbnails/Courtyard.png' },
   { id: 'contg', name: 'CONTG', image: '/assets/glass/thumbnails/CONTG.png' },
   { id: 'crosswalk', name: 'Crosswalk', image: '/assets/glass/thumbnails/CROSSWALK.jpg' },
   { id: 'cubed', name: 'Cubed', image: '/assets/glass/thumbnails/Cubed.png' },
@@ -368,6 +369,7 @@ const glassThumbnailOptions = [
   { id: 'oak-park', name: 'Oak Park', image: '/assets/glass/thumbnails/Oak Park.png' },
   { id: 'ocean-caming', name: 'Ocean Caming', image: '/assets/glass/thumbnails/Ocean Caming.png' },
   { id: 'ovation', name: 'Ovation', image: '/assets/glass/thumbnails/Ovation.png' },
+  { id: 'paris', name: 'Paris', image: '/assets/glass/thumbnails/Paris-option-card.png' },
   { id: 'pembrook', name: 'Pembrook', image: '/assets/glass/thumbnails/PEMBROOK.jpg' },
   { id: 'prestige', name: 'Prestige', image: '/assets/glass/thumbnails/PRESTIGE.jpg' },
   { id: 'privacy', name: 'Privacy', image: '/assets/glass/thumbnails/Privacy.png' },
@@ -385,6 +387,21 @@ const glassThumbnailOptions = [
   { id: 'waterside', name: 'Waterside', image: '/assets/glass/thumbnails/WATERSIDE.jpg' },
   { id: 'wyngate', name: 'Wyngate', image: '/assets/glass/thumbnails/WYNGATE.jpg' },
 ]
+
+const normalizeThumbnailName = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '')
+
+export const glassSelectionThumbnail = (name: string) => {
+  const baseName = name.split(/\s+[–-]\s+/)[0]
+  const normalizedName = normalizeThumbnailName(baseName)
+  const alias = normalizedName.startsWith('miniblinds')
+    ? 'blinds'
+    : normalizedName.startsWith('clic')
+      ? 'clic'
+      : normalizedName
+  return glassThumbnailOptions.find((option) =>
+    normalizeThumbnailName(option.id) === alias || normalizeThumbnailName(option.name) === alias,
+  )?.image
+}
 
 const cr14Overlays: Record<string, string> = {
   clear: 'CR14BLA.png',
@@ -1006,8 +1023,8 @@ const variantThumbnailOptions = [
   { id: 'nouveau-nickel', name: 'Nouveau - Nickel', image: '/assets/glass/thumbnails/Nouveau.png' },
   { id: 'nouveau-patina', name: 'Nouveau - Patina', image: '/assets/glass/thumbnails/Nouveau.png' },
   { id: 'celestial', name: 'Celestial', image: '/assets/glass/thumbnails/Ocean Caming.png' },
-  { id: 'courtyard', name: 'Courtyard', image: '/assets/glass/thumbnails/Decorative.png' },
-  { id: 'paris', name: 'Paris', image: '/assets/glass/thumbnails/Paris.png' },
+  { id: 'courtyard', name: 'Courtyard', image: '/assets/glass/thumbnails/Courtyard.png' },
+  { id: 'paris', name: 'Paris', image: '/assets/glass/thumbnails/Paris-option-card.png' },
   { id: 'blinds-espresso', name: 'Blinds - Espresso', image: '/assets/glass/thumbnails/Blinds.png' },
   { id: 'blinds-gray', name: 'Blinds - Gray', image: '/assets/glass/thumbnails/Blinds.png' },
   { id: 'blinds-sand', name: 'Blinds - Sand', image: '/assets/glass/thumbnails/Blinds.png' },
