@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { DoorStyle, DoorSwing, Finish, GlassOption, HardwareView, PreviewHardware, ResolvedDoorProduct } from '../types'
+import type { DoorStyle, DoorSwing, Finish, GlassOption, HardwareView, PreviewHardware, ResolvedDoorProduct, SideliteConfiguration } from '../types'
 import { hardwareOptions, hardwarePreviewAssetUrl } from '../data/hardware'
 import { glassOptions } from '../data/glassOptions'
 import { resolveDoorPreviewCandidates } from '../data/doorPreviewAssets'
@@ -21,6 +21,7 @@ type Props = {
   view?: HardwareView
   onViewChange?: (view: HardwareView) => void
   showViewToggle?: boolean
+  sidelites?: SideliteConfiguration
 }
 
 const FINISH_RENDERING = {
@@ -230,7 +231,7 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true }: Props) {
+export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none' }: Props) {
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
   const previewCandidatesKey = previewCandidates.join('|')
   const styleCodes = product?.styleCodes.length ? product.styleCodes : [style.code]
@@ -286,6 +287,10 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
       : 'hardware-image-mirrored'
     : ''
   const selectedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView, doorSwing)
+  const hingeSideExterior: HardwareSide = doorSwing?.id.startsWith('R') ? 'right' : 'left'
+  const semanticSideliteSide: HardwareSide | null = sidelites === 'hinge-side' ? hingeSideExterior : sidelites === 'lock-side' ? (hingeSideExterior === 'left' ? 'right' : 'left') : null
+  const visualSideliteSide = previewView === 'Interior' && semanticSideliteSide ? (semanticSideliteSide === 'left' ? 'right' : 'left') : semanticSideliteSide
+  const frameSidelites = compact || sidelites === 'none' ? 'none' : sidelites === 'both-sides' ? 'both' : visualSideliteSide ?? 'none'
   const defaultHardware = hardwareOptions.find((option) => Boolean(hardwarePreviewAssetUrl(option, previewView, doorSwing)))
   const previewHardware: PreviewHardware = selectedHardwareImage ? hardware : defaultHardware ?? hardware
 
@@ -494,7 +499,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   return (
     <div className={`preview-scene ${compact ? 'compact' : ''}`} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
-      <DoorFrame view={previewView} showFrame={!compact} finishColor={applyFinish ? finishColor : '#d9d9d9'} finishType={finish.finishType}>
+      <DoorFrame view={previewView} showFrame={!compact} finishColor={applyFinish ? finishColor : '#d9d9d9'} finishType={finish.finishType} sidelites={frameSidelites}>
         <div className={`door door-${style.panel} ${hasMappedPreview ? 'mapped-preview-door' : ''}`} style={{ '--door': finishColor, '--door-dark': finish.accent } as React.CSSProperties}>
           {style.hasGlass && <div className="glass glass-clear" />}
           <div className="panels">

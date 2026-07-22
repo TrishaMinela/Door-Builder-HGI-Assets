@@ -132,7 +132,7 @@
     height:100%;
     max-width:100%;
     max-height:100%;
-    aspect-ratio:230/430;
+    aspect-ratio:var(--door-frame-aspect);
     transform:none;
   }
 }
@@ -144,7 +144,7 @@
     width:auto;
     height:100%;
     max-width:100%;
-    aspect-ratio:230/430;
+    aspect-ratio:var(--door-frame-aspect);
     transform:none;
   }
   .mobile-review-preview{height:340px}
@@ -153,7 +153,7 @@
     width:auto;
     height:100%;
     max-width:100%;
-    aspect-ratio:230/430;
+    aspect-ratio:var(--door-frame-aspect);
     transform:none;
   }
 }
@@ -258,6 +258,7 @@
 .door-frame-interior .door-frame-openings{filter:saturate(.96) brightness(.98)}
 .door-frame[data-frame=hidden] .door-frame-openings{inset:0}
 .door-frame[data-frame=visible] .door-style-image{filter:grayscale(1) contrast(1.08)}
+.sidelite-option-image{display:block;width:auto;height:auto;max-width:64%;max-height:64%;object-fit:contain}
 
 /* Hardware cards must display the complete source PNG, including transparent padding. */
 .option-visual:has(.hardware-card-image){display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0}

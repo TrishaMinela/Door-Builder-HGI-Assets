@@ -1,6 +1,6 @@
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
-import type { ContactForm, DoorStyle, DoorSwing, Finish, GlassOption, GridConfiguration, HardwareOption, ResolvedDoorProduct } from '../types'
+import type { ContactForm, DoorStyle, DoorSwing, Finish, GlassOption, GridConfiguration, HardwareOption, ResolvedDoorProduct, SideliteConfiguration } from '../types'
 import { hardwareDisplayName } from '../data/hardware'
 import { configurationPdfName } from './pdfConfig'
 
@@ -206,6 +206,7 @@ export async function generateSummaryPdf(
   grid: GridConfiguration | null,
   hardware: HardwareOption,
   doorSwing: DoorSwing,
+  sidelites: SideliteConfiguration,
 ) {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   let font = 'helvetica'
@@ -274,6 +275,7 @@ export async function generateSummaryPdf(
   const rows: SummaryRow[] = [
     { label: 'DOOR LINE', value: grain ? `${material} - ${grain}` : material, icon: summaryIcons[0] },
     { label: 'DOOR STYLE', value: style.name, icon: summaryIcons[1] },
+    { label: 'SIDELITES', value: sidelites === 'none' ? 'No Sidelites' : sidelites === 'hinge-side' ? 'Hinge-Side Sidelite' : sidelites === 'lock-side' ? 'Lock-Side Sidelite' : 'Sidelites on Both Sides' },
     { label: 'FINISH TYPE', value: finish.finishType === 'paint' ? 'Paint' : 'Stain', icon: summaryIcons[2] },
     { label: 'FINISH COLOR', value: finish.name, swatch: finish.color, icon: summaryIcons[3] },
     { label: 'GLASS', value: glass?.name ?? 'No glass', icon: summaryIcons[4] },
@@ -382,13 +384,13 @@ export async function generateSummaryPdf(
   return pdf
 }
 
-export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing) {
-  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing)
+export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration) {
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites)
   pdf.save(configurationPdfName)
 }
 
-export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing) {
-  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing)
+export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration) {
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites)
   const dataUri = pdf.output('datauristring')
   return {
     fileName: configurationPdfName,
