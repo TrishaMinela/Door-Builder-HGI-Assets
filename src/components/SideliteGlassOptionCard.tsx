@@ -16,6 +16,7 @@ export function SideliteGlassOptionCard({ title, options, selectedId, onSelect }
   const displayOption = selectedOption ?? options[0]
   const selected = Boolean(selectedOption)
   const hasVariants = options.length > 1
+  const isClic = title.toLowerCase().startsWith('clic')
   const image = glassSelectionThumbnail(displayOption.name)
     ?? displayOption.asset
     ?? (displayOption.id === 'clear-grids' ? '/assets/grid-options/Internal Grids.png' : '/assets/glass/thumbnails/Clear.png')
@@ -24,7 +25,7 @@ export function SideliteGlassOptionCard({ title, options, selectedId, onSelect }
     <article className={`glass-choice-card ${selected ? 'selected' : ''}`}>
       <button type="button" className="glass-card-main" onClick={() => onSelect(displayOption.id)}>
         <span className="option-visual">
-          <img className="glass-option-thumbnail" src={image} alt={`${title} glass`} loading="lazy" decoding="async" />
+          <img className={`glass-option-thumbnail${isClic ? ' clic-glass-thumbnail' : ''}`} src={image} alt={`${title} glass`} loading="lazy" decoding="async" />
         </span>
         <span className="option-copy">
           <strong>{title}</strong>

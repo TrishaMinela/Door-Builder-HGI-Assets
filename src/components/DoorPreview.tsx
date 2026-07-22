@@ -25,6 +25,7 @@ type Props = {
   sideliteAssetSrc?: string
   sideliteMaskSrc?: string
   sideliteGlassSrc?: string
+  sideliteClearGlassBase?: boolean
 }
 
 const FINISH_RENDERING = {
@@ -234,7 +235,7 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc }: Props) {
+export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false }: Props) {
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
   const previewCandidatesKey = previewCandidates.join('|')
   const styleCodes = product?.styleCodes.length ? product.styleCodes : [style.code]
@@ -557,7 +558,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   return (
     <div className={`preview-scene ${compact ? 'compact' : ''}`} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
-      <DoorFrame view={previewView} showFrame={!compact} finishColor={applyFinish ? finishColor : '#d9d9d9'} finishType={finish.finishType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={sideliteGlassSrc} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteHighlightStyle={sideliteHighlightStyle}>
+      <DoorFrame view={previewView} showFrame={!compact} finishColor={applyFinish ? finishColor : '#d9d9d9'} finishType={finish.finishType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={sideliteGlassSrc} sideliteClearGlassBase={sideliteClearGlassBase} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteHighlightStyle={sideliteHighlightStyle}>
         <div className={`door door-${style.panel} ${hasMappedPreview ? 'mapped-preview-door' : ''}`} style={{ '--door': finishColor, '--door-dark': finish.accent } as React.CSSProperties}>
           {style.hasGlass && <div className="glass glass-clear" />}
           <div className="panels">
