@@ -172,6 +172,13 @@ const HERO_GLASS_OVERRIDES: Partial<Record<typeof HERO_SLAB_CODES[number], strin
   FO: 'cadence',
   SAT: 'laurel',
 }
+const HERO_GRID_PRESETS = [
+  { styleCode: 'F', glassId: 'f-clear-grids' },
+  { styleCode: 'F48', glassId: 'f48-clear-grids' },
+  { styleCode: 'F482', glassId: 'f48-clear-grids' },
+  { styleCode: 'S', glassId: 's-clear-grids' },
+  { styleCode: 'CR14', glassId: 'cr14-divided-lites' },
+] as const
 const grainThumbnails: Record<string, string> = {
   Cherry: '/assets/door-lines/grains/cherry.png',
   Fir: '/assets/door-lines/grains/fir.png',
@@ -488,7 +495,7 @@ export default function App() {
   }
   const demoStyleByCode = (code: string) => doorStyles.find((item) => item.code === code || item.variants.some((variant) => variant.code === code)) ?? doorStyles[0]
   const usedHeroFinishes = new Set<string>()
-  const buildHomeDemo = (styleCode: string, presetIndex: number) => {
+  const buildHomeDemo = (styleCode: string, presetIndex: number, forcedGlassId?: string) => {
     const demoStyle = demoStyleByCode(styleCode)
     const compatibleDoorLines = doorLineChoicesForStyle(demoStyle)
     const finishCandidates = compatibleDoorLines.flatMap((doorLine) => {
@@ -504,7 +511,7 @@ export default function App() {
     const demoProduct = resolveDoorProduct(demoStyle, demoFinish, demoGrain ?? undefined, demoDoorLine?.id)
     const isGlassCapable = demoProduct.styleCodes.some((code) => glassDoorCodes.has(code))
     const compatibleGlass = glassOptions.filter((option) => demoProduct.styleCodes.some((code) => option.overlaysByDoorStyle[code]))
-    const preferredGlass = HERO_GLASS_OVERRIDES[styleCode as keyof typeof HERO_GLASS_OVERRIDES]
+    const preferredGlass = forcedGlassId ?? HERO_GLASS_OVERRIDES[styleCode as keyof typeof HERO_GLASS_OVERRIDES]
     const demoGlass = isGlassCapable
       ? compatibleGlass.find((option) => option.id === preferredGlass)
         ?? compatibleGlass[presetIndex % Math.max(compatibleGlass.length, 1)]
@@ -532,7 +539,10 @@ export default function App() {
       isGlassCapable,
     }
   }
-  const homeDemoConfigurations = HERO_SLAB_CODES.map(buildHomeDemo)
+  const homeDemoConfigurations = [
+    ...HERO_SLAB_CODES.map((styleCode, index) => buildHomeDemo(styleCode, index)),
+    ...HERO_GRID_PRESETS.map((preset, index) => buildHomeDemo(preset.styleCode, HERO_SLAB_CODES.length + index, preset.glassId)),
+  ]
   const activeHomeDemo = homeDemoConfigurations[homeDemoIndex % homeDemoConfigurations.length]
 
   useEffect(() => {

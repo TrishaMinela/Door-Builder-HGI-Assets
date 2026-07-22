@@ -5,6 +5,7 @@ import { glassOptions } from '../data/glassOptions'
 import { resolveDoorPreviewCandidates } from '../data/doorPreviewAssets'
 import { glassDoorCodes } from '../data/productCatalog'
 import { resolveGlassMaskAsset } from '../data/glassMaskAssets'
+import { DoorFrame } from './preview/DoorFrame'
 
 type Props = {
   style: DoorStyle
@@ -493,7 +494,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   return (
     <div className={`preview-scene ${compact ? 'compact' : ''}`} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
-      <div className="door-frame">
+      <DoorFrame view={previewView} showFrame={!compact} finishColor={applyFinish ? finishColor : '#d9d9d9'} finishType={finish.finishType}>
         <div className={`door door-${style.panel} ${hasMappedPreview ? 'mapped-preview-door' : ''}`} style={{ '--door': finishColor, '--door-dark': finish.accent } as React.CSSProperties}>
           {style.hasGlass && <div className="glass glass-clear" />}
           <div className="panels">
@@ -519,7 +520,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
             }} />
           </div>}
         </div>
-      </div>
+      </DoorFrame>
       {!compact && showViewToggle && previewHardware.manufacturer && previewHardware.asset && <div className="preview-view-toggle" role="group" aria-label="Preview view">
         {(['Exterior', 'Interior'] as const).map((view) => <button type="button" className={previewView === view ? 'active' : ''} aria-pressed={previewView === view} key={view} onClick={() => setPreviewView(view)}>{view}</button>)}
       </div>}

@@ -224,6 +224,41 @@
 .hardware img.hardware-image-shift-left{transform:translateX(-82%);transform-origin:center}
 .hardware img.hardware-image-shift-right{transform:translateX(82%);transform-origin:center}
 
+/* Permanent reusable frame, jamb, mullion, and threshold assembly. */
+.door-frame{
+  width:auto;
+  height:430px;
+  aspect-ratio:var(--door-frame-aspect);
+  position:relative;
+  z-index:1;
+  overflow:visible;
+  box-shadow:none;
+}
+.door-frame-openings{
+  position:absolute;
+  left:var(--door-frame-left);
+  right:var(--door-frame-right);
+  top:var(--door-frame-top);
+  bottom:var(--door-frame-bottom);
+  display:grid;
+  grid-template-columns:var(--door-frame-columns);
+  align-items:stretch;
+  z-index:1;
+  overflow:hidden;
+}
+.door-frame-door-slot{position:relative;min-width:0;min-height:0;grid-column:2}
+.door-frame-sidelite-slot{position:relative;min-width:0;min-height:0}
+.door-frame-sidelite-slot-left{grid-column:1}
+.door-frame-sidelite-slot-right{grid-column:3}
+.door-frame-door-slot>.door{position:relative;width:100%;height:100%}
+.door-frame-sidelite{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom}
+.door-frame-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.door-frame-svg-base{z-index:0}
+.door-frame-svg-foreground{z-index:6}
+.door-frame-interior .door-frame-openings{filter:saturate(.96) brightness(.98)}
+.door-frame[data-frame=hidden] .door-frame-openings{inset:0}
+.door-frame[data-frame=visible] .door-style-image{filter:grayscale(1) contrast(1.08)}
+
 /* Hardware cards must display the complete source PNG, including transparent padding. */
 .option-visual:has(.hardware-card-image){display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0}
 .option-visual .hardware-card-image{display:block;width:100%;height:100%;max-width:none;max-height:none;object-fit:contain;object-position:center;transform:none}
