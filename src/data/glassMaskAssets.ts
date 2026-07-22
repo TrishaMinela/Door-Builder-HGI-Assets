@@ -28,6 +28,10 @@ export const glassMaskAssets = {
   SO: '/assets/masks/SO.png',
   SO2: '/assets/masks/SO.png',
   SW: '/assets/masks/SW.png',
+  FSL: '/assets/masks/Sidelites/FSL.png',
+  F48SL: '/assets/masks/Sidelites/F48SL.png',
+  SSL: '/assets/masks/Sidelites/SSL.png',
+  S2SL: '/assets/masks/Sidelites/S2SL.png',
 } as const
 
 export type GlassMaskCode = keyof typeof glassMaskAssets

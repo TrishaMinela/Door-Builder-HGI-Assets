@@ -8,6 +8,11 @@ type DoorFrameProps = {
   sidelites?: DoorFrameSidelites
   leftSideliteSrc?: string
   rightSideliteSrc?: string
+  sideliteMaskSrc?: string
+  sideliteGlassSrc?: string
+  sideliteFinishStyle?: CSSProperties
+  sideliteDetailStyle?: CSSProperties
+  sideliteHighlightStyle?: CSSProperties
   view?: DoorFrameView
   className?: string
   showFrame?: boolean
@@ -15,12 +20,19 @@ type DoorFrameProps = {
   finishType: 'paint' | 'stain'
 }
 
-const DOOR_WIDTH = 242
-const SIDELITE_WIDTH = 78
+// Authored PNG canvas sizes. Every unit is normalized against the shared
+// 549px source height, so widths come from each asset's natural aspect ratio.
+const SOURCE_GEOMETRY = {
+  door: { width: 242, height: 549 },
+  fsl: { width: 80, height: 549 },
+} as const
+const HEIGHT = SOURCE_GEOMETRY.door.height
+const DOOR_WIDTH = HEIGHT * (SOURCE_GEOMETRY.door.width / SOURCE_GEOMETRY.door.height)
+const SIDELITE_WIDTH = HEIGHT * (SOURCE_GEOMETRY.fsl.width / SOURCE_GEOMETRY.fsl.height)
+const MULLION_WIDTH = 10
 const FRAME = 12
-const HEAD = 14
+const HEAD = 12
 const THRESHOLD = 12
-const HEIGHT = 549
 
 function mixHex(color: string, target: '#000000' | '#ffffff', amount: number) {
   const match = color.match(/^#([\da-f]{6})$/i)
@@ -36,6 +48,11 @@ export function DoorFrame({
   sidelites = 'none',
   leftSideliteSrc,
   rightSideliteSrc,
+  sideliteMaskSrc,
+  sideliteGlassSrc,
+  sideliteFinishStyle,
+  sideliteDetailStyle,
+  sideliteHighlightStyle,
   view = 'Exterior',
   className = '',
   showFrame = true,
@@ -47,10 +64,12 @@ export function DoorFrame({
   const hasRight = sidelites === 'right' || sidelites === 'both'
   const leftWidth = hasLeft ? SIDELITE_WIDTH : 0
   const rightWidth = hasRight ? SIDELITE_WIDTH : 0
-  const openingWidth = leftWidth + DOOR_WIDTH + rightWidth
+  const leftMullionWidth = hasLeft ? MULLION_WIDTH : 0
+  const rightMullionWidth = hasRight ? MULLION_WIDTH : 0
+  const openingWidth = leftWidth + leftMullionWidth + DOOR_WIDTH + rightMullionWidth + rightWidth
   const totalWidth = openingWidth + FRAME * 2
   const totalHeight = HEIGHT + HEAD + THRESHOLD
-  const doorLeft = FRAME + leftWidth
+  const doorLeft = FRAME + leftWidth + leftMullionWidth
   const isInterior = view === 'Interior'
   const frameFill = finishColor
   const edgeAmount = finishType === 'stain' ? 0.24 : 0.16
@@ -62,7 +81,7 @@ export function DoorFrame({
 
   const layoutStyle = {
     '--door-frame-aspect': `${totalWidth} / ${totalHeight}`,
-    '--door-frame-columns': `${(leftWidth / openingWidth) * 100}% ${(DOOR_WIDTH / openingWidth) * 100}% ${(rightWidth / openingWidth) * 100}%`,
+    '--door-frame-columns': `${leftWidth}fr ${leftMullionWidth}fr ${DOOR_WIDTH}fr ${rightMullionWidth}fr ${rightWidth}fr`,
     '--door-frame-left': `${(FRAME / totalWidth) * 100}%`,
     '--door-frame-right': `${(FRAME / totalWidth) * 100}%`,
     '--door-frame-top': `${(HEAD / totalHeight) * 100}%`,
@@ -71,13 +90,15 @@ export function DoorFrame({
 
   return (
     <div className={`door-frame door-frame-${view.toLowerCase()} ${className}`.trim()} data-sidelites={sidelites} data-view={view} data-frame={showFrame ? 'visible' : 'hidden'} data-finish-type={finishType} style={layoutStyle}>
-      <div className="door-frame-openings" aria-hidden="true">
+      <div className="door-frame-openings door-unit-canvas" aria-hidden="true">
         <div className="door-frame-sidelite-slot door-frame-sidelite-slot-left">
-          {hasLeft && leftSideliteSrc && <img className="door-frame-sidelite door-frame-sidelite-left" src={leftSideliteSrc} alt="" decoding="async" />}
+          {hasLeft && leftSideliteSrc && <><img className="door-frame-sidelite door-frame-sidelite-left" src={leftSideliteSrc} data-glass-mask={sideliteMaskSrc} alt="" decoding="async" />{sideliteFinishStyle && <div className={`door-frame-sidelite-finish door-frame-sidelite-finish-${finishType}`} style={sideliteFinishStyle} />}{sideliteDetailStyle && <img className="door-frame-sidelite-detail" src={leftSideliteSrc} alt="" decoding="async" style={sideliteDetailStyle} />}{sideliteHighlightStyle && <div className="door-frame-sidelite-highlight" style={sideliteHighlightStyle} />}{sideliteGlassSrc && <img className="door-frame-sidelite-glass" src={sideliteGlassSrc} alt="" decoding="async" style={sideliteMaskSrc ? { WebkitMaskImage: `url("${sideliteMaskSrc}")`, maskImage: `url("${sideliteMaskSrc}")` } : undefined} />}</>}
         </div>
+        {hasLeft && <div className="door-frame-mullion-space door-frame-mullion-space-left" />}
         <div className="door-frame-door-slot">{children}</div>
+        {hasRight && <div className="door-frame-mullion-space door-frame-mullion-space-right" />}
         <div className="door-frame-sidelite-slot door-frame-sidelite-slot-right">
-          {hasRight && rightSideliteSrc && <img className="door-frame-sidelite door-frame-sidelite-right" src={rightSideliteSrc} alt="" decoding="async" />}
+          {hasRight && rightSideliteSrc && <><img className="door-frame-sidelite door-frame-sidelite-right" src={rightSideliteSrc} data-glass-mask={sideliteMaskSrc} alt="" decoding="async" />{sideliteFinishStyle && <div className={`door-frame-sidelite-finish door-frame-sidelite-finish-${finishType}`} style={sideliteFinishStyle} />}{sideliteDetailStyle && <img className="door-frame-sidelite-detail" src={rightSideliteSrc} alt="" decoding="async" style={sideliteDetailStyle} />}{sideliteHighlightStyle && <div className="door-frame-sidelite-highlight" style={sideliteHighlightStyle} />}{sideliteGlassSrc && <img className="door-frame-sidelite-glass" src={sideliteGlassSrc} alt="" decoding="async" style={sideliteMaskSrc ? { WebkitMaskImage: `url("${sideliteMaskSrc}")`, maskImage: `url("${sideliteMaskSrc}")` } : undefined} />}</>}
         </div>
       </div>
       {showFrame && <svg className="door-frame-svg door-frame-svg-base" viewBox={`0 0 ${totalWidth} ${totalHeight}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
@@ -107,8 +128,8 @@ export function DoorFrame({
             <stop offset="1" stopColor={frameEdge} />
           </linearGradient>
         </defs>
-        {hasLeft && <rect x={FRAME + leftWidth - 10} y={HEAD} width="10" height={HEIGHT} fill={`url(#${mullionGradientId})`} stroke={frameEdge} strokeWidth="1" />}
-        {hasRight && <rect x={doorLeft + DOOR_WIDTH} y={HEAD} width="10" height={HEIGHT} fill={`url(#${mullionGradientId})`} stroke={frameEdge} strokeWidth="1" />}
+        {hasLeft && <rect x={FRAME + leftWidth} y={HEAD} width={MULLION_WIDTH} height={HEIGHT} fill={`url(#${mullionGradientId})`} stroke={frameEdge} strokeWidth="1" />}
+        {hasRight && <rect x={doorLeft + DOOR_WIDTH} y={HEAD} width={MULLION_WIDTH} height={HEIGHT} fill={`url(#${mullionGradientId})`} stroke={frameEdge} strokeWidth="1" />}
         <rect x="0" y={totalHeight - THRESHOLD} width={totalWidth} height={THRESHOLD} rx="1" fill="#111211" />
         <path d={`M3 ${totalHeight - THRESHOLD + 2}H${totalWidth - 3}`} stroke="#3c3d3b" strokeWidth="2" />
         {isInterior && <path d={`M${FRAME - 3} ${totalHeight - THRESHOLD}V${HEAD - 3}H${totalWidth - FRAME + 3}V${totalHeight - THRESHOLD}`} fill="none" stroke={frameEdge} strokeWidth="2" />}

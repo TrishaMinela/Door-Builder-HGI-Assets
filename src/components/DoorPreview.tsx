@@ -22,6 +22,9 @@ type Props = {
   onViewChange?: (view: HardwareView) => void
   showViewToggle?: boolean
   sidelites?: SideliteConfiguration
+  sideliteAssetSrc?: string
+  sideliteMaskSrc?: string
+  sideliteGlassSrc?: string
 }
 
 const FINISH_RENDERING = {
@@ -231,7 +234,7 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none' }: Props) {
+export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc }: Props) {
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
   const previewCandidatesKey = previewCandidates.join('|')
   const styleCodes = product?.styleCodes.length ? product.styleCodes : [style.code]
@@ -247,6 +250,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const hasMappedPreview = Boolean(previewCandidates.length)
   const finishColor = tintColor ?? finish.color
   const [processedMask, setProcessedMask] = useState<{ source: string; finishUrl: string; glassUrl?: string; glassBounds?: PixelBounds | null; glassRegions?: PixelBounds[]; maskWidth?: number; maskHeight?: number } | null>(null)
+  const [sideliteFinishMask, setSideliteFinishMask] = useState<{ slab: string; mask: string; url: string } | null>(null)
   const finishMask = previewImage && processedMask?.source === previewImage ? processedMask.finishUrl : undefined
   const glassMask = previewImage && processedMask?.source === previewImage ? processedMask.glassUrl : undefined
   const compatibleGlass = isGlassCapable ? glassOptions.filter((option) => styleCodes.some((code) => option.overlaysByDoorStyle[code])) : []
@@ -360,6 +364,36 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
 
   useEffect(() => {
     let cancelled = false
+    if (!sideliteAssetSrc || !sideliteMaskSrc) {
+      setSideliteFinishMask(null)
+      return () => { cancelled = true }
+    }
+    const slab = new Image()
+    slab.onload = () => {
+      const mask = new Image()
+      mask.onload = () => {
+        if (cancelled) return
+        const processed = buildPreviewMasks(mask, slab)
+        if (!processed) {
+          console.error('[door-preview:sidelite-mask-dimension-mismatch]', {
+            slab: `${slab.naturalWidth}x${slab.naturalHeight}`,
+            mask: `${mask.naturalWidth}x${mask.naturalHeight}`,
+            sideliteAssetSrc,
+            sideliteMaskSrc,
+          })
+        }
+        setSideliteFinishMask(processed ? { slab: sideliteAssetSrc, mask: sideliteMaskSrc, url: processed.finishUrl } : null)
+      }
+      mask.onerror = () => { if (!cancelled) setSideliteFinishMask(null) }
+      mask.src = sideliteMaskSrc
+    }
+    slab.onerror = () => { if (!cancelled) setSideliteFinishMask(null) }
+    slab.src = sideliteAssetSrc
+    return () => { cancelled = true }
+  }, [sideliteAssetSrc, sideliteMaskSrc])
+
+  useEffect(() => {
+    let cancelled = false
     if ((useNativeGlassOverlay && !fitSharedFallbackOverlay) || !glassOverlay || !previewImage || processedMask?.source !== previewImage || !processedMask.glassBounds || !processedMask.maskWidth || !processedMask.maskHeight) {
       setFittedGlassOverlay(null)
       return () => { cancelled = true }
@@ -451,6 +485,28 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity,
     ...(finish.finishType === 'stain' ? { filter: `grayscale(1) contrast(${FINISH_RENDERING.stainContrast})` } : {}),
   } as React.CSSProperties
+  const activeSideliteFinishMask = sideliteFinishMask && sideliteFinishMask.slab === sideliteAssetSrc && sideliteFinishMask.mask === sideliteMaskSrc ? sideliteFinishMask.url : undefined
+  const sideliteFinishStyle = applyFinish && activeSideliteFinishMask ? {
+    backgroundColor: finishColor,
+    WebkitMaskImage: `url("${activeSideliteFinishMask}")`,
+    maskImage: `url("${activeSideliteFinishMask}")`,
+    mixBlendMode: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorBlendMode : FINISH_RENDERING.stainColorBlendMode,
+    opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorOpacity : FINISH_RENDERING.stainColorOpacity,
+    ...(finish.finishType === 'stain' ? { filter: `saturate(${FINISH_RENDERING.stainSaturation})` } : {}),
+  } as React.CSSProperties : undefined
+  const sideliteDetailStyle = applyFinish && activeSideliteFinishMask ? {
+    WebkitMaskImage: `url("${activeSideliteFinishMask}")`,
+    maskImage: `url("${activeSideliteFinishMask}")`,
+    mixBlendMode: finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailBlendMode : FINISH_RENDERING.stainDetailBlendMode,
+    opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity,
+    ...(finish.finishType === 'stain' ? { filter: `grayscale(1) contrast(${FINISH_RENDERING.stainContrast})` } : {}),
+  } as React.CSSProperties : undefined
+  const sideliteHighlightStyle = applyFinish && finish.finishType === 'stain' && activeSideliteFinishMask ? {
+    '--stain-gloss-strength': FINISH_RENDERING.stainGlossStrength,
+    WebkitMaskImage: `url("${activeSideliteFinishMask}")`,
+    maskImage: `url("${activeSideliteFinishMask}")`,
+    opacity: FINISH_RENDERING.stainHighlightOpacity,
+  } as React.CSSProperties : undefined
   const stainHighlightStyle = finish.finishType === 'stain' && finishMask ? {
     '--stain-gloss-strength': FINISH_RENDERING.stainGlossStrength,
     WebkitMaskImage: `url("${finishMask}")`,
@@ -499,7 +555,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   return (
     <div className={`preview-scene ${compact ? 'compact' : ''}`} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
-      <DoorFrame view={previewView} showFrame={!compact} finishColor={applyFinish ? finishColor : '#d9d9d9'} finishType={finish.finishType} sidelites={frameSidelites}>
+      <DoorFrame view={previewView} showFrame={!compact} finishColor={applyFinish ? finishColor : '#d9d9d9'} finishType={finish.finishType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={sideliteGlassSrc} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteHighlightStyle={sideliteHighlightStyle}>
         <div className={`door door-${style.panel} ${hasMappedPreview ? 'mapped-preview-door' : ''}`} style={{ '--door': finishColor, '--door-dark': finish.accent } as React.CSSProperties}>
           {style.hasGlass && <div className="glass glass-clear" />}
           <div className="panels">

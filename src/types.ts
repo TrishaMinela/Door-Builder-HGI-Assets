@@ -117,10 +117,15 @@ export type DoorConfiguration = {
   grain: string | null
   finish: Finish
   glass: GlassOption | null
+  mainDoorGlass?: GlassOption | null
   grid: GridConfiguration | null
   hardware: HardwareOption
   doorSwing: DoorSwing
   sidelites: SideliteConfiguration
+  sidelitePlacement?: SideliteConfiguration
+  sideliteStyle?: string
+  sideliteSlab?: 'fsl'
+  sideliteGlass?: SideliteGlassConfiguration
 }
 
 export type SideliteConfiguration = 'none' | 'hinge-side' | 'lock-side' | 'both-sides'
@@ -128,13 +133,25 @@ export type SideliteConfiguration = 'none' | 'hinge-side' | 'lock-side' | 'both-
 export type GlassCoating = 'Standard / No Low-E' | 'Low-E' | 'Low-E Plus' | 'ODL Clear' | 'Standard / No Low-E or Low-E' | 'Low-E or Low-E Plus' | 'Standard / No Low-E, Low-E or Low-E Plus'
 export type GridLocation = 'No Grids' | 'External' | 'Internal' | 'SDL' | 'Arts & Crafts'
 export type GridStyle = 'Arts & Crafts' | 'Contoured' | 'Flat' | 'Prairie'
-export type GridPattern = '2 Lite' | '3 Lite' | '4 Lite' | '4 Lite Horizontal' | '6 Lite' | '8 Lite' | '9 Lite' | '10 Lite' | '12 Lite' | '15 Lite'
+export type GridPattern = '2 Lite' | '3 Lite' | '4 Lite' | '4 Lite Horizontal' | '5 Lite' | '6 Lite' | '8 Lite' | '9 Lite' | '10 Lite' | '12 Lite' | '15 Lite'
 export type GridColor = 'Beige' | 'Black' | 'Bronze' | 'Bronze/White' | 'Champagne' | 'Tan' | 'White'
 export type GridWidth = '5/8"' | '7/8"' | '11/16"'
 
 export type GridConfiguration = {
   glassCoating: GlassCoating
   gridLocation?: GridLocation
+  gridStyle?: GridStyle
+  gridPattern?: GridPattern
+  gridColor?: GridColor
+  gridWidth?: GridWidth
+}
+
+export type SideliteGlassConfiguration = {
+  glass: string
+  glassCategory: 'Clear Glass' | 'Decorative Glass' | 'Privacy Glass' | 'CLiC Glass' | 'Mini Blinds'
+  glassAsset?: string
+  glassCoating?: 'Standard / No Low-E' | 'Low-E' | 'Standard / No Low-E or Low-E'
+  gridLocation?: 'Internal' | 'SDL'
   gridStyle?: GridStyle
   gridPattern?: GridPattern
   gridColor?: GridColor

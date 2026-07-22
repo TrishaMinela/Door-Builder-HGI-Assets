@@ -246,12 +246,19 @@
   z-index:1;
   overflow:hidden;
 }
-.door-frame-door-slot{position:relative;min-width:0;min-height:0;grid-column:2}
+.door-frame-door-slot{position:relative;min-width:0;min-height:0;grid-column:3}
 .door-frame-sidelite-slot{position:relative;min-width:0;min-height:0}
 .door-frame-sidelite-slot-left{grid-column:1}
-.door-frame-sidelite-slot-right{grid-column:3}
+.door-frame-sidelite-slot-right{grid-column:5}
+.door-frame-mullion-space-left{grid-column:2}
+.door-frame-mullion-space-right{grid-column:4}
 .door-frame-door-slot>.door{position:relative;width:100%;height:100%}
-.door-frame-sidelite{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom}
+.door-frame-door-slot .door-style-image,.door-frame-door-slot .door-detail-image,.door-frame-door-slot .door-glass-overlay{width:100%;height:100%;object-fit:fill;object-position:0 0}
+.door-frame-sidelite{position:absolute;inset:0;display:block;width:100%;height:100%;margin:0;padding:0}
+.door-frame-sidelite-finish{position:absolute;inset:0;z-index:1;pointer-events:none;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0;mask-position:0 0}
+.door-frame-sidelite-detail{position:absolute;inset:0;z-index:2;width:100%;height:100%;pointer-events:none;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0;mask-position:0 0}
+.door-frame-sidelite-highlight{position:absolute;inset:0;z-index:3;pointer-events:none;background:linear-gradient(108deg,transparent 15%,rgba(255,255,255,var(--stain-gloss-strength,.7)) 43%,transparent 64%);-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.door-frame-sidelite-glass{position:absolute;inset:0;z-index:4;width:100%;height:100%;margin:0;padding:0;pointer-events:none;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
 .door-frame-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 .door-frame-svg-base{z-index:0}
 .door-frame-svg-foreground{z-index:6}
@@ -259,6 +266,7 @@
 .door-frame[data-frame=hidden] .door-frame-openings{inset:0}
 .door-frame[data-frame=visible] .door-style-image{filter:grayscale(1) contrast(1.08)}
 .sidelite-option-image{display:block;width:auto;height:auto;max-width:64%;max-height:64%;object-fit:contain}
+.sidelite-style-image{display:block;width:auto;height:auto;max-width:54%;max-height:88%;object-fit:contain}
 
 /* Hardware cards must display the complete source PNG, including transparent padding. */
 .option-visual:has(.hardware-card-image){display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0}
