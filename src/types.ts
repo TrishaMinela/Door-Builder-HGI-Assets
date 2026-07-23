@@ -124,7 +124,7 @@ export type DoorConfiguration = {
   sidelites: SideliteConfiguration
   sidelitePlacement?: SideliteConfiguration
   sideliteStyle?: string
-  sideliteSlab?: 'fsl' | 'f48sl' | 'ssl' | 's2sl'
+  sideliteSlab?: 'fsl' | 'f48sl' | 'ssl' | 's2sl' | 'cr14sl'
   sideliteGlass?: SideliteGlassConfiguration
 }
 

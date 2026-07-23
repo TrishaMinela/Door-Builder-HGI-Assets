@@ -26,6 +26,9 @@ type Props = {
   sideliteMaskSrc?: string
   sideliteGlassSrc?: string
   sideliteClearGlassBase?: boolean
+  gridMatchesFinish?: boolean
+  sideliteGridMatchesFinish?: boolean
+  sharedComparisonCanvas?: boolean
 }
 
 const FINISH_RENDERING = {
@@ -39,8 +42,8 @@ const FINISH_RENDERING = {
   stainDetailOpacity: 0.52,
   stainContrast: 1.35,
   stainSaturation: 1.18,
-  stainHighlightOpacity: 0.18,
-  stainGlossStrength: 0.72,
+  stainHighlightOpacity: 0.76,
+  stainGlossStrength: 1,
 } as const
 
 type PixelBounds = { x: number; y: number; width: number; height: number }
@@ -235,7 +238,7 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false }: Props) {
+export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false }: Props) {
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
   const previewCandidatesKey = previewCandidates.join('|')
   const styleCodes = product?.styleCodes.length ? product.styleCodes : [style.code]
@@ -277,6 +280,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   )
   const [fittedGlassOverlay, setFittedGlassOverlay] = useState<{ source: string; maskSource: string; url: string } | null>(null)
   const [fittedClearBase, setFittedClearBase] = useState<{ source: string; maskSource: string; url: string } | null>(null)
+  const renderedGlassOverlay = glassOverlay && fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage ? fittedGlassOverlay.url : glassOverlay
   const [internalPreviewView, setInternalPreviewView] = useState<HardwareView>('Exterior')
   const previewView = view ?? internalPreviewView
   const setPreviewView = onViewChange ?? setInternalPreviewView
@@ -504,18 +508,6 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity,
     ...(finish.finishType === 'stain' ? { filter: `grayscale(1) contrast(${FINISH_RENDERING.stainContrast})` } : {}),
   } as React.CSSProperties : undefined
-  const sideliteHighlightStyle = applyFinish && finish.finishType === 'stain' && activeSideliteFinishMask ? {
-    '--stain-gloss-strength': FINISH_RENDERING.stainGlossStrength,
-    WebkitMaskImage: `url("${activeSideliteFinishMask}")`,
-    maskImage: `url("${activeSideliteFinishMask}")`,
-    opacity: FINISH_RENDERING.stainHighlightOpacity,
-  } as React.CSSProperties : undefined
-  const stainHighlightStyle = finish.finishType === 'stain' && finishMask ? {
-    '--stain-gloss-strength': FINISH_RENDERING.stainGlossStrength,
-    WebkitMaskImage: `url("${finishMask}")`,
-    maskImage: `url("${finishMask}")`,
-    opacity: FINISH_RENDERING.stainHighlightOpacity,
-  } as React.CSSProperties : undefined
   const glassOverlayStyle = glassMask ? {
     ...(maskCode === 'CR14' || maskCode === 'CR14PL' ? { backgroundColor: '#eef1f2' } : {}),
     WebkitMaskImage: `url("${glassMask}")`,
@@ -558,7 +550,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   return (
     <div className={`preview-scene ${compact ? 'compact' : ''}`} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
-      <DoorFrame view={previewView} showFrame={!compact} finishColor={applyFinish ? finishColor : '#d9d9d9'} finishType={finish.finishType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={sideliteGlassSrc} sideliteClearGlassBase={sideliteClearGlassBase} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteHighlightStyle={sideliteHighlightStyle}>
+      <DoorFrame view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact} finishColor={applyFinish ? finishColor : '#d9d9d9'} finishType={finish.finishType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={sideliteGlassSrc} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle}>
         <div className={`door door-${style.panel} ${hasMappedPreview ? 'mapped-preview-door' : ''}`} style={{ '--door': finishColor, '--door-dark': finish.accent } as React.CSSProperties}>
           {style.hasGlass && <div className="glass glass-clear" />}
           <div className="panels">
@@ -567,9 +559,10 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           {previewImage && <img className={`door-style-image door-style-image-${finish.finishType}`} src={previewImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {finishLayerStyle && <div className={`door-finish-layer door-finish-layer-${finish.finishType}`} style={finishLayerStyle} />}
           {previewImage && finishLayerStyle && showDetailImage && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
-          {stainHighlightStyle && <div className="door-stain-highlight" style={stainHighlightStyle} />}
           {clearNoGridOverlay && <img className="door-glass-overlay door-clear-glass-base" src={fittedClearBase?.source === clearNoGridOverlay && fittedClearBase.maskSource === previewImage ? fittedClearBase.url : clearNoGridOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
-          {glassOverlay && <img className="door-glass-overlay" src={fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage ? fittedGlassOverlay.url : glassOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+          {renderedGlassOverlay && (gridMatchesFinish
+            ? <div className="door-glass-overlay door-grid-finish-overlay" style={{ backgroundColor: applyFinish ? finishColor : '#d9d9d9', WebkitMaskImage: `url("${renderedGlassOverlay}")`, maskImage: `url("${renderedGlassOverlay}")` }} />
+            : <img className="door-glass-overlay" src={renderedGlassOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />)}
           {hardwareImage && <div className={`hardware hardware-${previewHardware.type} hardware-side-${hardwareSide}`} data-hardware-side={hardwareSide} data-hardware-side-exterior={hardwareSideExterior} data-hardware-side-interior={hardwareSideInterior} style={{ '--metal': previewHardware.color } as React.CSSProperties}>
             <img className={hardwareImagePlacementClass} src={hardwareImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => {
               console.warn('[door-preview:failed-hardware-overlay]', {

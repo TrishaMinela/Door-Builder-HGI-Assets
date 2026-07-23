@@ -10,17 +10,20 @@ import { QuoteForm } from './components/QuoteForm'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
 import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
-import type { ContactForm, DoorSwing, GlassCoating, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, PreviewHardware, SideliteConfiguration, SideliteGlassConfiguration } from './types'
+import type { ContactForm, DoorSwing, GlassCoating, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, HardwareView, PreviewHardware, SideliteConfiguration, SideliteGlassConfiguration } from './types'
 import { configurationPdfName } from './utils/pdfConfig'
 import { submitQuote, type SubmissionResult } from './utils/submission'
 import { fslGlassCategories, fslGlassOptions, fslGridAsset, fslLowEStyleRules, fslStandardStyleRules, type SideliteGlassCategory, type SideliteGlassOption } from './data/fslGlass'
 import { f48slGlassCategories, f48slGlassOptions, f48slGridAsset, f48slLowEStyleRules, f48slStandardStyleRules } from './data/f48slGlass'
 import { sslGlassCategories, sslGlassOptions, sslGridAsset, sslLowEStyleRules, sslStandardStyleRules } from './data/sslGlass'
 import { s2slGlassCategories, s2slGlassOptions, s2slStyleRules } from './data/s2slGlass'
+import { cr14slGlassCategories, cr14slGlassOptions, cr14slGridAsset, cr14slStyleRules } from './data/cr14slGlass'
 
 const glassSteps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
 const noGlassSteps = ['Door Style', 'Finish', 'Hardware', 'Review & Quote']
 type BuilderPage = 'door-style' | 'door-line' | 'door-grain' | 'sidelites' | 'sidelite-style' | 'finish' | 'glass-type' | 'glass' | 'grid-location' | 'grid-style' | 'grid-pattern' | 'grid-color' | 'grid-width' | 'sidelite-glass-type' | 'sidelite-glass' | 'sidelite-grid-location' | 'sidelite-grid-style' | 'sidelite-grid-pattern' | 'sidelite-grid-color' | 'sidelite-grid-width' | 'hardware' | 'door-swing' | 'review'
+const mainDoorGlassPages = new Set<BuilderPage>(['glass-type', 'glass', 'grid-location', 'grid-style', 'grid-pattern', 'grid-color', 'grid-width'])
+const sideliteGlassPages = new Set<BuilderPage>(['sidelite-glass-type', 'sidelite-glass', 'sidelite-grid-location', 'sidelite-grid-style', 'sidelite-grid-pattern', 'sidelite-grid-color', 'sidelite-grid-width'])
 type GlassCategory = 'clear' | 'decorative' | 'privacy' | 'blinds' | 'clic' | 'retro'
 const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '' }
 const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
@@ -36,12 +39,14 @@ const sideliteStyleOptions = [
   { id: 'f48sl', name: 'F48SL', image: '/assets/hgi-assets/Sidelites/22 Gauge/options/F48SL.png', mask: '/assets/masks/Sidelites/F48SL.png' },
   { id: 'ssl', name: 'SSL', image: '/assets/hgi-assets/Sidelites/22 Gauge/options/SSL.png', mask: '/assets/masks/Sidelites/SSL.png' },
   { id: 's2sl', name: 'S2SL', image: '/assets/hgi-assets/Sidelites/22 Gauge/options/S2SL.png', mask: '/assets/masks/Sidelites/S2SL.png' },
+  { id: 'cr14sl', name: 'CR14SL', image: '/assets/hgi-assets/Sidelites/Signature/options/CR14SL.png', mask: '/assets/masks/Sidelites/CR14SL.png' },
 ] as const
 const sideliteGlassCatalogs = {
   fsl: { categories: fslGlassCategories, options: fslGlassOptions, standardRules: fslStandardStyleRules, lowERules: fslLowEStyleRules, gridAsset: fslGridAsset, prairiePattern: '5 Lite' as GridPattern, sdlPatterns: ['3 Lite', '4 Lite', '5 Lite'] as GridPattern[] },
   f48sl: { categories: f48slGlassCategories, options: f48slGlassOptions, standardRules: f48slStandardStyleRules, lowERules: f48slLowEStyleRules, gridAsset: f48slGridAsset, prairiePattern: '4 Lite' as GridPattern, sdlPatterns: ['2 Lite', '3 Lite', '4 Lite'] as GridPattern[] },
   ssl: { categories: sslGlassCategories, options: sslGlassOptions, standardRules: sslStandardStyleRules, lowERules: sslLowEStyleRules, gridAsset: sslGridAsset, prairiePattern: '3 Lite' as GridPattern, sdlPatterns: ['3 Lite'] as GridPattern[] },
   s2sl: { categories: s2slGlassCategories, options: s2slGlassOptions, standardRules: s2slStyleRules, lowERules: s2slStyleRules, gridAsset: () => '', prairiePattern: '3 Lite' as GridPattern, sdlPatterns: [] as GridPattern[] },
+  cr14sl: { categories: cr14slGlassCategories, options: cr14slGlassOptions, standardRules: cr14slStyleRules, lowERules: cr14slStyleRules, gridAsset: cr14slGridAsset, prairiePattern: '3 Lite' as GridPattern, sdlPatterns: [] as GridPattern[] },
 }
 const groupSideliteGlassOptions = (options: SideliteGlassOption[]) => [...options.reduce((groups, option) => {
   const title = option.name.split(/\s+[–-]\s+/)[0]
@@ -191,26 +196,53 @@ const heroDoorOpeningStyle = {
   width: `${HERO_DOOR_OPENING.widthPct}%`,
   height: `${HERO_DOOR_OPENING.heightPct}%`,
 } as CSSProperties
-// One hero preset per unique slab in the product catalog. Keeping this list to
-// slab codes only lets the preset builder choose valid, non-repeating finishes
-// even as finish and hardware catalogs change.
-const HERO_SLAB_CODES = [
-  '2PNGSS', '2PPLSS', 'CA', 'CANGSS', 'F', 'F482', 'S', 'S1NGSS', 'SO2', 'CR14',
-  '3PNG', 'F48', '2PHD', '3LT', '3STEP', '4LT', '5LT', 'CR14PL', 'E1', 'F1', 'F2',
-  'F3', 'F4', 'F764', 'F848', 'FO', 'FRT', 'HDAT1', 'HRT', 'N', 'N1', 'QA', 'S2',
-  'S3', 'S4', 'S836', 'SAT', 'SHAK1', 'SHAK2', 'SHAK3', 'SO', 'SW',
-] as const
-const HERO_GLASS_OVERRIDES: Partial<Record<typeof HERO_SLAB_CODES[number], string>> = {
-  FO: 'cadence',
-  SAT: 'laurel',
+type HeroPreset = {
+  styleCode: string
+  finishKey: 'black-paint' | 'white-paint' | 'natural-stain' | 'harvest-stain' | 'nutmeg-stain' | 'toasted-caramel-stain' | 'brown-stain' | 'black-cherry-stain'
+  glassId?: string
+  glassName?: string
 }
-const HERO_GRID_PRESETS = [
-  { styleCode: 'F', glassId: 'f-clear-grids' },
-  { styleCode: 'F48', glassId: 'f48-clear-grids' },
-  { styleCode: 'F482', glassId: 'f48-clear-grids' },
-  { styleCode: 'S', glassId: 's-clear-grids' },
-  { styleCode: 'CR14', glassId: 'cr14-divided-lites' },
-] as const
+const HERO_FINISH_SPECS: Record<HeroPreset['finishKey'], { baseId: string; name: string; colorId?: string }> = {
+  'black-paint': { baseId: 'paint-black', name: 'Black Paint' },
+  'white-paint': { baseId: 'paint-white', name: 'White Paint' },
+  'natural-stain': { baseId: 'stain-natural-gold', name: 'Natural Stain' },
+  'harvest-stain': { baseId: 'stain-harvest-wheat', name: 'Harvest Stain' },
+  'nutmeg-stain': { baseId: 'stain-nutmeg', name: 'Nutmeg Stain' },
+  'toasted-caramel-stain': { baseId: 'stain-toasted-caramel', name: 'Toasted Caramel Stain' },
+  'brown-stain': { baseId: 'stain-cinnamon', colorId: 'paint-brown', name: 'Brown Stain' },
+  'black-cherry-stain': { baseId: 'stain-black-cherry', name: 'Black Cherry Stain' },
+}
+const HERO_PRESETS: HeroPreset[] = [
+  { styleCode: '2PHD', finishKey: 'black-paint' },
+  { styleCode: '2PNGSS', finishKey: 'natural-stain' },
+  { styleCode: '3LT', finishKey: 'white-paint', glassId: 'bristol' },
+  { styleCode: '3STEP', finishKey: 'black-paint', glassId: 'paris' },
+  { styleCode: '4LT', finishKey: 'natural-stain', glassId: 'oak-park' },
+  { styleCode: '5LT', finishKey: 'white-paint', glassId: 'bay-point' },
+  { styleCode: 'CR14', finishKey: 'black-paint', glassId: 'margate' },
+  { styleCode: 'CR14PL', finishKey: 'harvest-stain', glassId: 'lexington' },
+  { styleCode: 'F', finishKey: 'white-paint', glassId: 'vilano' },
+  { styleCode: 'F2', finishKey: 'nutmeg-stain', glassId: 'leland' },
+  { styleCode: 'F3', finishKey: 'black-paint', glassId: 'cobblestone' },
+  { styleCode: 'F4', finishKey: 'natural-stain', glassId: 'ovation' },
+  { styleCode: 'F48', finishKey: 'toasted-caramel-stain', glassId: 'lazarus' },
+  { styleCode: 'F482', finishKey: 'brown-stain', glassId: 'dutchcraft', glassName: 'Dutch Craft' },
+  { styleCode: 'F764', finishKey: 'white-paint', glassId: 'cadence' },
+  { styleCode: 'F848', finishKey: 'black-cherry-stain', glassId: 'majestic-nickel', glassName: 'Majestic Elegance' },
+  { styleCode: 'FO', finishKey: 'black-paint', glassId: 'mistify', glassName: 'Mistify - Black' },
+  { styleCode: 'FRT', finishKey: 'harvest-stain', glassId: 'nouveau-nickel', glassName: 'Nouveau' },
+  { styleCode: 'HDAT1', finishKey: 'white-paint', glassId: 'topaz' },
+  { styleCode: 'HRT', finishKey: 'natural-stain', glassId: 'grace-nickel', glassName: 'Grace' },
+  { styleCode: 'QA', finishKey: 'black-paint', glassId: 'mohave' },
+  { styleCode: 'S', finishKey: 'nutmeg-stain', glassId: 'waterside' },
+  { styleCode: 'S2', finishKey: 'white-paint', glassId: 'entropy' },
+  { styleCode: 'S3', finishKey: 'toasted-caramel-stain', glassId: 'heirlooms-nickel', glassName: 'Heirlooms' },
+  { styleCode: 'S4', finishKey: 'black-paint', glassId: 'renewed-impressions' },
+  { styleCode: 'S836', finishKey: 'brown-stain', glassId: 'privacy', glassName: 'Private Lites' },
+  { styleCode: 'SAT', finishKey: 'white-paint', glassId: 'bristol' },
+  { styleCode: 'SO', finishKey: 'black-cherry-stain', glassId: 'paris' },
+  { styleCode: 'SO2', finishKey: 'black-paint', glassId: 'oak-park' },
+]
 const grainThumbnails: Record<string, string> = {
   Cherry: '/assets/door-lines/grains/cherry.png',
   Fir: '/assets/door-lines/grains/fir.png',
@@ -327,7 +359,7 @@ export default function App() {
   const [submitError, setSubmitError] = useState('')
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null)
   const [homeDemoIndex, setHomeDemoIndex] = useState(0)
-  const [builderPreviewView, setBuilderPreviewView] = useState<'Exterior' | 'Interior'>('Exterior')
+  const [builderPreviewView, setBuilderPreviewView] = useState<'Exterior' | 'Interior' | 'Both'>('Exterior')
   const builderPanelRef = useRef<HTMLElement | null>(null)
   const builderOptionsRef = useRef<HTMLDivElement | null>(null)
 
@@ -382,9 +414,13 @@ export default function App() {
     ? glassOptions.filter((option) => selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])) && !(selectedStyleCodes.includes('F') && legacyFullLiteGlassIds.has(option.id)) && !(selectedStyleCodes.includes('S') && legacySHalfLiteClearGlassIds.has(option.id)) && !((selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && legacyF48ClearGlassIds.has(option.id)) && (!(selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) || f48GlassOptionIds.has(option.id)))
     : []
   const supportsGlass = Boolean(compatibilitySupportsGlass && availableGlass.length > 0)
-  const isSteelLineWithSidelites = selectedDoorLine?.id === '20-gauge-smooth-steel' || selectedDoorLine?.id === '22-gauge-steel'
-  const hasSteelSideliteGlass = isSteelLineWithSidelites && Boolean(sidelites && sidelites !== 'none' && sideliteStyleId)
-  const steps = supportsGlass || hasSteelSideliteGlass ? glassSteps : noGlassSteps
+  const isCherrySignatureSidelite = selectedDoorLine?.id === signatureSeriesId && selectedGrain === 'Cherry'
+  const isFirSignatureSidelite = selectedDoorLine?.id === signatureSeriesId && selectedGrain === 'Fir'
+  const isMahoganySignatureSidelite = selectedDoorLine?.id === signatureSeriesId && selectedGrain === 'Mahogany'
+  const isOakSignatureSidelite = selectedDoorLine?.id === signatureSeriesId && selectedGrain === 'Oak'
+  const supportsSideliteLine = selectedDoorLine?.id === '20-gauge-smooth-steel' || selectedDoorLine?.id === '22-gauge-steel' || selectedDoorLine?.id === 'brushed-smooth-fiberglass' || selectedDoorLine?.id === 'textured-fiberglass' || isCherrySignatureSidelite || isFirSignatureSidelite || isMahoganySignatureSidelite || isOakSignatureSidelite
+  const hasSideliteGlass = supportsSideliteLine && Boolean(sidelites && sidelites !== 'none' && sideliteStyleId)
+  const steps = supportsGlass || hasSideliteGlass ? glassSteps : noGlassSteps
   const selectedGlass = supportsGlass ? glass : null
   const clearOnlyGlass = !supportsGlass && compatibilitySupportsGlass
     ? availableGlass.find((option) => option.id === 'clear') ?? null
@@ -395,10 +431,25 @@ export default function App() {
   const usesF48GridFlow = (selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && glassId === F48_GRID_GLASS_ID
   const usesSGridFlow = selectedStyleCodes.includes('S') && glassId === S_GRID_GLASS_ID
   const usesGridFlow = usesFullLiteGridFlow || usesF48GridFlow || usesSGridFlow
-  const usesSteelSidelites = isSteelLineWithSidelites && Boolean(sidelites && sidelites !== 'none')
+  const usesMappedSidelites = supportsSideliteLine && Boolean(sidelites && sidelites !== 'none')
+  const visibleSideliteStyleOptions = isFirSignatureSidelite
+    ? sideliteStyleOptions.filter((option) => option.id === 'cr14sl' || option.id === 'fsl')
+    : isOakSignatureSidelite
+      ? sideliteStyleOptions.filter((option) => option.id === 'f48sl' || option.id === 'ssl')
+    : selectedDoorLine?.id === 'brushed-smooth-fiberglass' || isCherrySignatureSidelite || isMahoganySignatureSidelite
+    ? sideliteStyleOptions.filter((option) => option.id === 'fsl' || option.id === 'f48sl' || option.id === 'ssl')
+    : sideliteStyleOptions.filter((option) => option.id !== 'cr14sl')
   const selectedSideliteStyle = sideliteStyleOptions.find((option) => option.id === sideliteStyleId)
-  const selectedSidelitePreview = selectedSideliteStyle && isSteelLineWithSidelites
-    ? `/assets/hgi-assets/Sidelites/${selectedDoorLine?.id === '20-gauge-smooth-steel' ? '20 Gauge' : '22 Gauge'}/${selectedSideliteStyle.id.toUpperCase()}.png`
+  const selectedSidelitePreview = selectedSideliteStyle && supportsSideliteLine
+    ? isFirSignatureSidelite
+      ? `/assets/hgi-assets/Sidelites/Signature/Fir/${selectedSideliteStyle.id.toUpperCase()}.png`
+      : isMahoganySignatureSidelite
+        ? `/assets/hgi-assets/Sidelites/Signature/Mahogany/${selectedSideliteStyle.id.toUpperCase()}.png`
+      : isOakSignatureSidelite
+        ? `/assets/hgi-assets/Sidelites/Signature/Oak/${selectedSideliteStyle.id.toUpperCase()}.png`
+      : isCherrySignatureSidelite
+      ? `/assets/hgi-assets/Sidelites/Signature/Cherry/${selectedSideliteStyle.id.toUpperCase()}.png`
+      : `/assets/hgi-assets/Sidelites/${selectedDoorLine?.id === '20-gauge-smooth-steel' || selectedDoorLine?.id === 'textured-fiberglass' ? '20 Gauge' : '22 Gauge'}/${selectedSideliteStyle.id.toUpperCase()}.png`
     : undefined
   const selectedSideliteCatalog = selectedSideliteStyle ? sideliteGlassCatalogs[selectedSideliteStyle.id] : null
   const usesFslGlassFlow = Boolean(selectedSideliteCatalog)
@@ -546,8 +597,8 @@ export default function App() {
     'door-style',
     'door-line',
     ...(needsGrainStep ? ['door-grain' as const] : []),
-    ...(isSteelLineWithSidelites ? ['sidelites' as const] : []),
-    ...(usesSteelSidelites ? ['sidelite-style' as const] : []),
+    ...(supportsSideliteLine ? ['sidelites' as const] : []),
+    ...(usesMappedSidelites ? ['sidelite-style' as const] : []),
     'finish',
     ...(supportsGlass ? ['glass-type' as const, 'glass' as const] : []),
     ...(usesGridFlow ? [
@@ -573,6 +624,7 @@ export default function App() {
     'review',
   ]
   const currentPage = pages[step] ?? pages[pages.length - 1]
+  const glassSelectionTarget = mainDoorGlassPages.has(currentPage) ? 'main-door' : sideliteGlassPages.has(currentPage) ? 'sidelite' : null
   const currentStep = currentPage === 'door-style' || currentPage === 'door-line' || currentPage === 'door-grain' || currentPage === 'sidelites' || currentPage === 'sidelite-style'
     ? 'Door Style'
     : currentPage === 'finish'
@@ -592,29 +644,88 @@ export default function App() {
     hardware,
     doorSwing: selectedDoorSwing,
   }
+  // SDL bars are supplied as white alpha artwork, so both the main door and
+  // sidelite previews tint those bars with the resolved slab finish.
+  const mainDoorSdlMatchesFinish = usesGridFlow && gridPathId === 'sdl'
+  const sideliteSdlMatchesFinish = usesFslGridFlow && sideliteGridLocation === 'sdl'
+  const previewModes = ['Exterior', 'Interior', 'Both'] as const
+  const renderConfiguredDoorPreview = (previewView: HardwareView, sharedComparisonCanvas = false) => <DoorPreview
+    style={style}
+    finish={previewConfig.finish}
+    glass={previewConfig.glass}
+    hardware={previewConfig.hardware}
+    grain={selectedGrain}
+    product={product}
+    tintColor={previewConfig.tintColor}
+    doorSwing={previewConfig.doorSwing}
+    applyFinish={previewConfig.applyFinish}
+    gridMatchesFinish={mainDoorSdlMatchesFinish}
+    view={previewView}
+    showViewToggle={false}
+    sidelites={sidelites || 'none'}
+    sideliteAssetSrc={selectedSidelitePreview}
+    sideliteMaskSrc={selectedSideliteStyle?.mask}
+    sideliteGlassSrc={sideliteGlassPreview}
+    sideliteClearGlassBase={usesFslGridFlow}
+    sideliteGridMatchesFinish={sideliteSdlMatchesFinish}
+    sharedComparisonCanvas={sharedComparisonCanvas}
+  />
+  const renderConfiguredPreviewMode = () => builderPreviewView === 'Both'
+    ? <div className="preview-comparison" aria-label="Exterior and interior door previews">
+        {(['Exterior', 'Interior'] as const).map((previewView) => <div className="preview-comparison-item" key={previewView}>
+          <span className="preview-comparison-label">{previewView}</span>
+          {renderConfiguredDoorPreview(previewView, true)}
+        </div>)}
+      </div>
+    : renderConfiguredDoorPreview(builderPreviewView)
   const demoStyleByCode = (code: string) => doorStyles.find((item) => item.code === code || item.variants.some((variant) => variant.code === code)) ?? doorStyles[0]
-  const usedHeroFinishes = new Set<string>()
-  const buildHomeDemo = (styleCode: string, presetIndex: number, forcedGlassId?: string) => {
+  const buildHomeDemo = (preset: HeroPreset, presetIndex: number) => {
+    const { styleCode } = preset
     const demoStyle = demoStyleByCode(styleCode)
     const compatibleDoorLines = doorLineChoicesForStyle(demoStyle)
+    const finishSpec = HERO_FINISH_SPECS[preset.finishKey]
+    const baseHeroFinish = finishes.find((finishOption) => finishOption.id === finishSpec.baseId) ?? finishes[0]
+    const heroColorFinish = finishes.find((finishOption) => finishOption.id === finishSpec.colorId)
+    const requestedHeroFinish = {
+      ...baseHeroFinish,
+      id: `hero-${preset.finishKey}`,
+      name: finishSpec.name,
+      color: heroColorFinish?.color ?? baseHeroFinish.color,
+      accent: heroColorFinish?.accent ?? baseHeroFinish.accent,
+    }
     const finishCandidates = compatibleDoorLines.flatMap((doorLine) => {
       const grain = autoGrainForDoorLine(demoStyle, doorLine.id)
       return finishesForStyle(demoStyle, finishes, doorLine.id, grain).map((finishOption) => ({ doorLine, grain, finishOption }))
     })
-    const unusedFinish = finishCandidates.find(({ finishOption }) => !usedHeroFinishes.has(finishOption.id))
-    const selectedCombination = unusedFinish ?? finishCandidates[presetIndex % Math.max(finishCandidates.length, 1)]
+    const preferredFinishCandidates = finishCandidates.filter(({ finishOption }) => finishOption.finishType === requestedHeroFinish.finishType)
+    const selectedCombination = preferredFinishCandidates[presetIndex % Math.max(preferredFinishCandidates.length, 1)]
+      ?? finishCandidates[presetIndex % Math.max(finishCandidates.length, 1)]
     const demoDoorLine = selectedCombination?.doorLine ?? compatibleDoorLines[0]
     const demoGrain = demoDoorLine ? autoGrainForDoorLine(demoStyle, demoDoorLine.id) : null
-    const demoFinish = selectedCombination?.finishOption ?? finishes[presetIndex % finishes.length]
-    usedHeroFinishes.add(demoFinish.id)
+    const demoFinish = requestedHeroFinish
     const demoProduct = resolveDoorProduct(demoStyle, demoFinish, demoGrain ?? undefined, demoDoorLine?.id)
     const isGlassCapable = demoProduct.styleCodes.some((code) => glassDoorCodes.has(code))
-    const compatibleGlass = glassOptions.filter((option) => demoProduct.styleCodes.some((code) => option.overlaysByDoorStyle[code]))
-    const preferredGlass = forcedGlassId ?? HERO_GLASS_OVERRIDES[styleCode as keyof typeof HERO_GLASS_OVERRIDES]
-    const demoGlass = isGlassCapable
-      ? compatibleGlass.find((option) => option.id === preferredGlass)
-        ?? compatibleGlass[presetIndex % Math.max(compatibleGlass.length, 1)]
-        ?? null
+    const preferredGlass = preset.glassId
+    const compatibleGlass = glassOptions.filter((option) =>
+      demoProduct.styleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code]))
+      && !(demoProduct.styleCodes.includes('F') && legacyFullLiteGlassIds.has(option.id))
+      && !(demoProduct.styleCodes.includes('S') && legacySHalfLiteClearGlassIds.has(option.id))
+      && !((demoProduct.styleCodes.includes('F48') || demoProduct.styleCodes.includes('F482')) && legacyF48ClearGlassIds.has(option.id))
+      && (!(demoProduct.styleCodes.includes('F48') || demoProduct.styleCodes.includes('F482')) || f48GlassOptionIds.has(option.id)),
+    )
+    const requestedGlass = compatibleGlass.find((option) => option.id === preferredGlass)
+    const fallbackGlass = compatibleGlass.find((option) => glassCategory(option) === 'decorative')
+      ?? compatibleGlass.find((option) => option.id === 'clear')
+      ?? compatibleGlass.find((option) => option.name.toLowerCase().includes('clear'))
+      ?? compatibleGlass[0]
+    const isStrictNoGlassStyle = demoProduct.styleCodes.every((code) => !glassDoorCodes.has(code))
+    const demoGlass = isGlassCapable && !isStrictNoGlassStyle
+      ? requestedGlass
+        ? {
+            ...requestedGlass,
+            name: preset.glassName ?? requestedGlass.name,
+          }
+        : fallbackGlass ?? null
       : null
     const demoHardware = hardwareOptions[presetIndex % hardwareOptions.length]
 
@@ -636,12 +747,10 @@ export default function App() {
       grain: demoGrain,
       product: demoProduct,
       isGlassCapable,
+      gridMatchesFinish: false,
     }
   }
-  const homeDemoConfigurations = [
-    ...HERO_SLAB_CODES.map((styleCode, index) => buildHomeDemo(styleCode, index)),
-    ...HERO_GRID_PRESETS.map((preset, index) => buildHomeDemo(preset.styleCode, HERO_SLAB_CODES.length + index, preset.glassId)),
-  ]
+  const homeDemoConfigurations = HERO_PRESETS.map((preset, index) => buildHomeDemo(preset, index))
   const activeHomeDemo = homeDemoConfigurations[homeDemoIndex % homeDemoConfigurations.length]
 
   useEffect(() => {
@@ -784,7 +893,13 @@ export default function App() {
     if (!availableDoorLines.some((item) => item.id === nextDoorLineId)) return
     if (nextDoorLineId !== doorLineId) {
       setDoorLineId(nextDoorLineId)
-      if (nextDoorLineId !== '20-gauge-smooth-steel' && nextDoorLineId !== '22-gauge-steel') {
+      if (nextDoorLineId === 'brushed-smooth-fiberglass' && sideliteStyleId === 's2sl') {
+        setSideliteStyleId('')
+        setSideliteGlassCategory('')
+        setSideliteGlassId('')
+        resetSideliteGrid()
+      }
+      if (nextDoorLineId !== '20-gauge-smooth-steel' && nextDoorLineId !== '22-gauge-steel' && nextDoorLineId !== 'brushed-smooth-fiberglass' && nextDoorLineId !== 'textured-fiberglass') {
         setSidelites('none')
         setSideliteStyleId('')
         setSideliteGlassCategory('')
@@ -805,7 +920,14 @@ export default function App() {
 
   const selectGrain = (nextGrain: string) => {
     if (!signatureGrainOptions.some((item) => item.id === nextGrain)) return
-    if (nextGrain !== grainId) setGrainId(nextGrain)
+    if (nextGrain !== grainId) {
+      setGrainId(nextGrain)
+      setSidelites('none')
+      setSideliteStyleId('')
+      setSideliteGlassCategory('')
+      setSideliteGlassId('')
+      resetSideliteGrid()
+    }
     if (signatureGrainOptions.length === 1) goTo(step + 1)
   }
 
@@ -822,7 +944,7 @@ export default function App() {
     setSideliteGridLocation(''); setSideliteGridStyle(''); setSideliteGridPattern(''); setSideliteGridColor(''); setSideliteGridWidth('')
   }
   const selectSideliteStyle = (styleId: string) => {
-    if (!sideliteStyleOptions.some((option) => option.id === styleId)) return
+    if (!visibleSideliteStyleOptions.some((option) => option.id === styleId)) return
     if (styleId !== sideliteStyleId) {
       setSideliteStyleId(styleId)
       setSideliteGlassCategory('')
@@ -987,7 +1109,6 @@ export default function App() {
           <span className="app-name"><strong>Home Guard Door Builder</strong><small>Build your door. Download your order. Request a quote.</small></span>
         </div>
         <div className="header-actions">
-          {screen === 'builder' && <button className="start-over" onClick={startOver}><RotateCcw size={15} /><span>Start Over</span></button>}
           <button className="home-return" aria-label="Home" onClick={() => showScreen('home')}><HomeIcon size={17} /><span>Home</span></button>
           <div className="header-help"><Phone size={16} /><span>Questions? <strong>Talk to a door expert</strong></span></div>
         </div>
@@ -1009,11 +1130,9 @@ export default function App() {
                 <img className="home-entryway-image" src="/assets/hero/hero-entryway.png" alt="Welcoming home entryway with a customizable door preview" />
                 <div className="home-entryway-overlay" aria-hidden="true">
                   <div className="home-entryway-door-slot hero-door-stack entryway-door-stack hero-door-overlay" style={heroDoorOpeningStyle}>
-                    {homeDemoConfigurations.map((demo, index) => (
-                      <div className={`home-demo-door-layer ${index === homeDemoIndex % homeDemoConfigurations.length ? 'active' : ''}`} key={`${demo.style.code}-${demo.finish.id}-${demo.glass?.id ?? 'glass'}-${demo.hardware.id}`}>
-                        <DoorPreview style={demo.style} finish={demo.finish} glass={demo.glass} hardware={demo.hardware} grain={demo.grain} product={demo.product} tintColor={demo.finish.color} applyFinish compact />
-                      </div>
-                    ))}
+                    <div className="home-demo-door-layer active" key={`${activeHomeDemo.style.code}-${activeHomeDemo.finish.id}-${activeHomeDemo.glass?.id ?? 'no-glass'}-${activeHomeDemo.hardware.id}`}>
+                      <DoorPreview style={activeHomeDemo.style} finish={activeHomeDemo.finish} glass={activeHomeDemo.glass} hardware={activeHomeDemo.hardware} grain={activeHomeDemo.grain} product={activeHomeDemo.product} tintColor={activeHomeDemo.finish.color} applyFinish gridMatchesFinish={activeHomeDemo.gridMatchesFinish} compact />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1025,15 +1144,28 @@ export default function App() {
           </div>
         </section>
       </main> : <>
-      <nav className="stepper" aria-label="Configuration progress">
-        {steps.map((label, index) => {
-          const isReachable = canVisitStep(index)
-          const targetPage = pages.findIndex((page) => label === 'Door Style' ? page === 'door-style' : label === 'Finish' ? page === 'finish' : label === 'Glass' ? page === 'glass-type' : label === 'Hardware' ? page === 'hardware' : page === 'review')
-          return <button key={label} className={`${index === activeMainStepIndex ? 'active' : ''} ${index < activeMainStepIndex ? 'done' : ''}`} disabled={!isReachable} aria-current={index === activeMainStepIndex ? 'step' : undefined} onClick={() => isReachable && goTo(targetPage)}><span>{index < activeMainStepIndex ? <Check size={13} /> : index + 1}</span><em>{label}</em></button>
-        })}
-      </nav>
+      <div className="builder-toolbar">
+        <nav className="stepper" aria-label="Configuration progress">
+          {steps.map((label, index) => {
+            const isReachable = canVisitStep(index)
+            const targetPage = pages.findIndex((page) => label === 'Door Style' ? page === 'door-style' : label === 'Finish' ? page === 'finish' : label === 'Glass' ? page === 'glass-type' : label === 'Hardware' ? page === 'hardware' : page === 'review')
+            return <button key={label} className={`${index === activeMainStepIndex ? 'active' : ''} ${index < activeMainStepIndex ? 'done' : ''}`} disabled={!isReachable} aria-current={index === activeMainStepIndex ? 'step' : undefined} onClick={() => isReachable && goTo(targetPage)}><span>{index < activeMainStepIndex ? <Check size={13} /> : index + 1}</span><em>{label}</em></button>
+          })}
+        </nav>
+        <div className="preview-toolbar">
+          <span>Preview</span>
+          {selectedStyle && <div className="preview-view-toggle" role="group" aria-label="Preview view">
+            {previewModes.map((view) => <button type="button" className={builderPreviewView === view ? 'active' : ''} aria-pressed={builderPreviewView === view} key={view} onClick={() => setBuilderPreviewView(view)}>{view}</button>)}
+          </div>}
+        </div>
+      </div>
       <main>
-        {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">{selectedStyle ? <DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} grain={selectedGrain} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} sidelites={sidelites || 'none'} sideliteAssetSrc={selectedSidelitePreview} sideliteMaskSrc={selectedSideliteStyle?.mask} sideliteGlassSrc={sideliteGlassPreview} sideliteClearGlassBase={usesFslGridFlow} /> : <EmptyDoorPreview />}</div>}
+        {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">
+          {selectedStyle && <div className="preview-view-toggle mobile-preview-view-toggle" role="group" aria-label="Preview view">
+            {previewModes.map((view) => <button type="button" className={builderPreviewView === view ? 'active' : ''} aria-pressed={builderPreviewView === view} key={view} onClick={() => setBuilderPreviewView(view)}>{view}</button>)}
+          </div>}
+          {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
+        </div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
           {currentStep !== 'Review & Quote' && <>
             <div className="section-heading step-heading">
@@ -1051,6 +1183,10 @@ export default function App() {
               </div>
             </div>
             <div ref={builderOptionsRef} className="builder-options-scroll">
+              {glassSelectionTarget && <div className={`glass-target-banner glass-target-${glassSelectionTarget}`} role="status" aria-live="polite">
+                <span className="glass-target-icon" aria-hidden="true">{glassSelectionTarget === 'main-door' ? 'D' : 'SL'}</span>
+                <span><small>You are choosing glass for</small><strong>{glassSelectionTarget === 'main-door' ? 'Main Door' : 'Sidelite'}</strong>{glassSelectionTarget === 'sidelite' && <em>{selectedSideliteStyle?.name}{sidelites && sidelites !== 'none' ? ` · ${sideliteLabels[sidelites]}` : ''}</em>}</span>
+              </div>}
               {currentPage === 'finish' && selectedDoorLine && <div className="finish-toolbar">
                 <div className="finish-tabs" role="tablist" aria-label="Finish type">{effectiveFinishTypes.map((type) => <button type="button" role="tab" aria-selected={activeFinishType === type} className={activeFinishType === type ? 'active' : ''} key={type} onClick={() => selectFinishTab(type)}>{type === 'paint' ? 'Paint' : 'Stain'}</button>)}</div>
                 <div className="finish-logo-slot">
@@ -1063,7 +1199,7 @@ export default function App() {
                 {currentPage === 'door-line' && availableDoorLines.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Door Line" selected={doorLineId === item.id} onClick={() => selectDoorLine(item.id)} visual={<span className="door-line-card-image"><img src={item.image} alt="" loading="lazy" decoding="async" /></span>} />)}
                 {currentPage === 'door-grain' && signatureGrainOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Signature grain" selected={selectedGrain === item.id} onClick={() => selectGrain(item.id)} visual={<img className="grain-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'sidelites' && sideliteOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Sidelites" selected={sidelites === item.id} onClick={() => selectSidelites(item.id)} visual={<img className="sidelite-option-image" src={item.image} alt="" loading="eager" decoding="async" />} />)}
-                {currentPage === 'sidelite-style' && sideliteStyleOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow={`${selectedDoorLine?.name ?? 'Steel'} Sidelite`} selected={sideliteStyleId === item.id} onClick={() => selectSideliteStyle(item.id)} visual={<img className="sidelite-style-image" src={item.image} alt="" loading="eager" decoding="async" />} />)}
+                {currentPage === 'sidelite-style' && visibleSideliteStyleOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow={`${selectedDoorLine?.name ?? 'Door'} Sidelite`} selected={sideliteStyleId === item.id} onClick={() => selectSideliteStyle(item.id)} visual={<img className="sidelite-style-image" src={item.image} alt="" loading="eager" decoding="async" />} />)}
                 {currentPage === 'finish' && visibleFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => selectFinish(item.id, item.finishType)} visual={<span className="finish-tile-wrap" style={{ '--fallback-finish': item.color } as CSSProperties}><img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} /></span>} />)}
                 {currentPage === 'glass-type' && availableGlassCategories.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Glass type" selected={selectedGlassCategory === item.id} onClick={() => selectGlassCategory(item.id)} visual={<img className={`glass-option-thumbnail${item.id === 'retro' ? ' retro-glass-thumbnail' : item.id === 'clic' ? ' clic-glass-thumbnail' : ''}`} src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'glass' && glassOptionGroups.map((group) => <GlassOptionCard group={group} selectedId={glassId} onSelect={(item) => selectGlass(item.id)} key={group.key} />)}
@@ -1087,7 +1223,7 @@ export default function App() {
 
           {currentPage === 'review' && !submitted && <>
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
-            <div className="mobile-review-preview"><DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} grain={selectedGrain} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} sidelites={sidelites || 'none'} sideliteAssetSrc={selectedSidelitePreview} sideliteMaskSrc={selectedSideliteStyle?.mask} sideliteGlassSrc={sideliteGlassPreview} sideliteClearGlassBase={usesFslGridFlow} /></div>
+            <div className="mobile-review-preview">{renderConfiguredPreviewMode()}</div>
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
               {configurationSummaryRows.map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span>{target >= 0 && <button onClick={() => goTo(target)}>Edit</button>}</div>)}
@@ -1119,14 +1255,8 @@ export default function App() {
         </section>
 
         {!submitted && <aside>
-          <div className="aside-top">
-            <span>Your design</span>
-            {selectedStyle && <div className="preview-view-toggle" role="group" aria-label="Preview view">
-              {(['Exterior', 'Interior'] as const).map((view) => <button type="button" className={builderPreviewView === view ? 'active' : ''} aria-pressed={builderPreviewView === view} key={view} onClick={() => setBuilderPreviewView(view)}>{view}</button>)}
-            </div>}
-          </div>
           <div className="aside-preview-area">
-            {selectedStyle ? <DoorPreview style={style} finish={previewConfig.finish} glass={previewConfig.glass} hardware={previewConfig.hardware} grain={selectedGrain} product={product} tintColor={previewConfig.tintColor} doorSwing={previewConfig.doorSwing} applyFinish={previewConfig.applyFinish} view={builderPreviewView} onViewChange={setBuilderPreviewView} showViewToggle={false} sidelites={sidelites || 'none'} sideliteAssetSrc={selectedSidelitePreview} sideliteMaskSrc={selectedSideliteStyle?.mask} sideliteGlassSrc={sideliteGlassPreview} sideliteClearGlassBase={usesFslGridFlow} /> : <EmptyDoorPreview />}
+            {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
           </div>
           <div className="mini-summary">
             <span><b>Door style</b><strong>{selectedStyle?.name ?? 'Not selected'}</strong></span>
