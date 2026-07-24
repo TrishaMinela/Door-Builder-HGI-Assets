@@ -23,6 +23,7 @@ type DoorFrameProps = {
   showFrame?: boolean
   finishColor: string
   finishType: 'paint' | 'stain'
+  finishSurface?: 'timber' | 'clad'
 }
 
 // Authored PNG canvas sizes. Every unit is normalized against the shared
@@ -80,6 +81,7 @@ export function DoorFrame({
   showFrame = true,
   finishColor,
   finishType,
+  finishSurface = 'timber',
 }: DoorFrameProps) {
   const frameId = useId().replace(/:/g, '')
   const frameRef = useRef<HTMLDivElement>(null)
@@ -108,7 +110,7 @@ export function DoorFrame({
   const outerTop = openingTop - frameHead
   const doorLeft = openingLeft + leftWidth + leftMullionWidth
   const isInterior = view === 'Interior'
-  const frameFill = variant === 'exterior' ? '#eef1f2' : finishColor
+  const frameFill = finishColor
   const edgeAmount = variant === 'exterior' ? 0.035 : finishType === 'stain' ? 0.075 : 0.055
   const highlightAmount = variant === 'exterior' ? 0.03 : 0.035
   const frameEdge = mixHex(frameFill, '#000000', edgeAmount)
@@ -179,7 +181,7 @@ export function DoorFrame({
   } as CSSProperties
 
   return (
-    <div ref={frameRef} className={`door-frame door-frame-${view.toLowerCase()} door-frame-variant-${variant} ${className}`.trim()} data-sidelites={sidelites} data-view={view} data-variant={variant} data-shared-canvas={sharedComparisonCanvas ? 'true' : 'false'} data-frame={showFrame ? 'visible' : 'hidden'} data-finish-type={finishType} data-scale={showFrame ? unitScale.toFixed(4) : undefined} style={layoutStyle}>
+    <div ref={frameRef} className={`door-frame door-frame-${view.toLowerCase()} door-frame-variant-${variant} ${className}`.trim()} data-sidelites={sidelites} data-view={view} data-variant={variant} data-shared-canvas={sharedComparisonCanvas ? 'true' : 'false'} data-frame={showFrame ? 'visible' : 'hidden'} data-finish-type={finishType} data-finish-surface={finishSurface} data-scale={showFrame ? unitScale.toFixed(4) : undefined} style={layoutStyle}>
       <div className="door-frame-openings door-unit-canvas" aria-hidden="true">
         <div className="door-frame-sidelite-slot door-frame-sidelite-slot-left">
           {hasLeft && leftSideliteSrc && <><img className="door-frame-sidelite door-frame-sidelite-left" src={leftSideliteSrc} data-glass-mask={sideliteMaskSrc} alt="" decoding="async" />{sideliteFinishStyle && <div className={`door-frame-sidelite-finish door-frame-sidelite-finish-${finishType}`} style={sideliteFinishStyle} />}{sideliteDetailStyle && <img className="door-frame-sidelite-detail" src={leftSideliteSrc} alt="" decoding="async" style={sideliteDetailStyle} />}{sideliteHighlightStyle && <div className="door-frame-sidelite-highlight" style={sideliteHighlightStyle} />}{sideliteClearGlassBase && <div className="door-frame-sidelite-clear-glass" style={sideliteGlassMaskStyle} />}{renderSideliteGlass()}</>}

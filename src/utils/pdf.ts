@@ -209,6 +209,7 @@ export async function generateSummaryPdf(
   sidelites: SideliteConfiguration,
   sideliteStyle: string | null,
   sideliteGlass: SideliteGlassConfiguration | null = null,
+  jamb?: { jambType: 'timber' | 'clad'; jambFinishType: 'paint' | 'stain' | 'clad'; jambFinishColor: string; jambFinishOverridden: boolean },
 ) {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   let font = 'helvetica'
@@ -288,8 +289,13 @@ export async function generateSummaryPdf(
       ...(sideliteGlass.gridColor ? [{ label: 'SIDELITE GRID COLOR', value: sideliteGlass.gridColor }] : []),
       ...(sideliteGlass.gridWidth ? [{ label: 'SIDELITE GRID WIDTH', value: sideliteGlass.gridWidth }] : []),
     ] : []),
-    { label: 'FINISH TYPE', value: finish.finishType === 'paint' ? 'Paint' : 'Stain', icon: summaryIcons[2] },
-    { label: 'FINISH COLOR', value: finish.name, swatch: finish.color, icon: summaryIcons[3] },
+    { label: 'DOOR FINISH TYPE', value: finish.finishType === 'paint' ? 'Paint' : 'Stain', icon: summaryIcons[2] },
+    { label: 'DOOR FINISH COLOR', value: finish.name, swatch: finish.color, icon: summaryIcons[3] },
+    ...(jamb ? [
+      { label: 'JAMB TYPE', value: jamb.jambType === 'clad' ? 'Clad' : 'Timber' },
+      { label: 'JAMB FINISH TYPE', value: jamb.jambFinishType === 'clad' ? 'Clad' : jamb.jambFinishType === 'stain' ? 'Stain' : 'Paint' },
+      { label: 'JAMB FINISH COLOR', value: jamb.jambFinishColor },
+    ] : []),
     { label: 'MAIN DOOR GLASS', value: glass?.name ?? 'No glass', icon: summaryIcons[4] },
     ...(grid ? [
       ...(grid.glassCoating !== 'Standard / No Low-E' ? [{ label: 'GLASS COATING', value: grid.glassCoating }] : []),
@@ -396,13 +402,13 @@ export async function generateSummaryPdf(
   return pdf
 }
 
-export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null) {
-  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass)
+export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: { jambType: 'timber' | 'clad'; jambFinishType: 'paint' | 'stain' | 'clad'; jambFinishColor: string; jambFinishOverridden: boolean }) {
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb)
   pdf.save(configurationPdfName)
 }
 
-export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null) {
-  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass)
+export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: { jambType: 'timber' | 'clad'; jambFinishType: 'paint' | 'stain' | 'clad'; jambFinishColor: string; jambFinishOverridden: boolean }) {
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb)
   const dataUri = pdf.output('datauristring')
   return {
     fileName: configurationPdfName,

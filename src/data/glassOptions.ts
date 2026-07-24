@@ -308,8 +308,8 @@ const glassOverlayAssetUrl = (folder: string, fileName: string) =>
     : glassPreviewAssets[`${folder}/${fileName}`] ?? glassPreviewAssets[fileName] ?? ''
 
 const glassThumbnailOptions = [
-  { id: 'ashbury', name: 'Ashbury', image: '/assets/glass/thumbnails/ASHBURY.jpg' },
-  { id: 'bay-point', name: 'Bay Point', image: '/assets/glass/thumbnails/BAYPOINT.jpg' },
+  { id: 'ashbury', name: 'Ashbury', image: '/assets/glass/thumbnails/Ashbury.png' },
+  { id: 'bay-point', name: 'Bay Point', image: '/assets/glass/thumbnails/Bay Point.png' },
   { id: 'berkley', name: 'Berkley', image: '/assets/glass/thumbnails/BERKLEY.jpg' },
   { id: 'blanca', name: 'Blanca', image: '/assets/glass/thumbnails/BLANCA.jpg' },
   { id: 'blinds', name: 'Blinds', image: '/assets/glass/thumbnails/Blinds.png' },

@@ -116,6 +116,12 @@ export type DoorConfiguration = {
   style: DoorStyle
   grain: string | null
   finish: Finish
+  doorFinishType?: 'paint' | 'stain'
+  doorFinishColor?: string
+  jambType?: 'timber' | 'clad'
+  jambFinishType?: 'paint' | 'stain' | 'clad'
+  jambFinishColor?: string
+  jambFinishOverridden?: boolean
   glass: GlassOption | null
   mainDoorGlass?: GlassOption | null
   grid: GridConfiguration | null

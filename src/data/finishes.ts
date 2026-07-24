@@ -56,3 +56,7 @@ export const stainColors: FinishColor[] = [
   { id: 'toasted-caramel', name: 'Toasted Caramel', hex: '#855631' },
   { id: 'winter-halo', name: 'Winter Halo', hex: '#CFC7C5' },
 ]
+
+export const cladColors: FinishColor[] = paintColors.filter(({ id }) =>
+  ['white', 'black', 'brown', 'clay', 'wicker', 'terratone'].includes(id),
+)
