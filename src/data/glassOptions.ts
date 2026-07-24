@@ -584,9 +584,9 @@ const f764Overlays: Record<string, string> = {
 }
 
 const hrtOverlays: Record<string, string> = {
-  'hrt-clear-s11rt': '/assets/hgi-assets/Glass/HRT/HRT.png',
-  'nouveau-nickel': '/assets/hgi-assets/Glass/F/DECO/FNOUNI.png',
-  'nouveau-patina': '/assets/hgi-assets/Glass/F/DECO/FNOUPA.png',
+  'hrt-clear-s11rt': '/assets/hgi-assets/Glass/HRT/HRTClear.png',
+  'hrt-nouveau-nickel': '/assets/hgi-assets/Glass/HRT/HRTNouveaNickel.png',
+  'hrt-nouveau-patina': '/assets/hgi-assets/Glass/HRT/HRTNouveaPatina.png',
 }
 
 const nOverlays: Record<string, string> = {
@@ -1022,6 +1022,8 @@ const variantThumbnailOptions = [
   { id: 'monterey-patina', name: 'Monterey - Patina', image: '/assets/glass/thumbnails/MONTEREY.jpg' },
   { id: 'nouveau-nickel', name: 'Nouveau - Nickel', image: '/assets/glass/thumbnails/Nouveau.png' },
   { id: 'nouveau-patina', name: 'Nouveau - Patina', image: '/assets/glass/thumbnails/Nouveau.png' },
+  { id: 'hrt-nouveau-nickel', name: 'Nouveau - Nickel', image: '/assets/glass/thumbnails/Nouveau.png' },
+  { id: 'hrt-nouveau-patina', name: 'Nouveau - Patina', image: '/assets/glass/thumbnails/Nouveau.png' },
   { id: 'celestial', name: 'Celestial', image: '/assets/glass/thumbnails/Ocean Caming.png' },
   { id: 'courtyard', name: 'Courtyard', image: '/assets/glass/thumbnails/Courtyard.png' },
   { id: 'paris', name: 'Paris', image: '/assets/glass/thumbnails/Paris-option-card.png' },

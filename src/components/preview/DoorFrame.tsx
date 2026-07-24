@@ -118,11 +118,17 @@ export function DoorFrame({
   const sideliteGlassMaskStyle = sideliteMaskSrc ? {
     WebkitMaskImage: `url("${sideliteMaskSrc}")`,
     maskImage: `url("${sideliteMaskSrc}")`,
+    WebkitMaskSize: '100% 100%',
+    maskSize: '100% 100%',
+    WebkitMaskPosition: '0 0',
+    maskPosition: '0 0',
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
   } as CSSProperties : undefined
   const renderSideliteGlass = () => {
     if (!sideliteGlassSrc) return null
     if (!sideliteClearGlassBase) {
-      return <img className="door-frame-sidelite-glass" src={sideliteGlassSrc} alt="" decoding="async" style={sideliteGlassMaskStyle} />
+      return <img className="door-frame-sidelite-glass" src={sideliteGlassSrc} data-glass-mask={sideliteMaskSrc} alt="" decoding="async" style={sideliteGlassMaskStyle} />
     }
     return <div className="door-frame-sidelite-grid-clip" style={sideliteGlassMaskStyle}>
       {sideliteGridMatchesFinish

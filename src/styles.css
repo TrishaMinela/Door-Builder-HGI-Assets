@@ -208,6 +208,12 @@
 .door-stain-highlight{position:absolute;inset:0;width:100%;height:100%;z-index:3;background:linear-gradient(108deg,transparent 0 20%,rgba(255,255,255,.08) 23%,rgba(255,255,255,.42) 25%,rgba(255,255,255,.72) 26.5%,rgba(255,255,255,.28) 28%,rgba(255,255,255,.05) 31%,transparent 34% 62%,rgba(255,255,255,.04) 65%,rgba(255,255,255,.3) 67%,rgba(255,255,255,.08) 69%,transparent 72%);mix-blend-mode:screen;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;transform-origin:center;pointer-events:none}
 .door-stain-highlight:before,.door-frame-sidelite-highlight:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(116deg,transparent 0 43%,rgba(255,255,255,.04) 45%,rgba(255,255,255,.48) 47%,rgba(255,255,255,.78) 48%,rgba(255,255,255,.22) 49.5%,transparent 52%),radial-gradient(ellipse at 22% 9%,rgba(255,255,255,.34),transparent 22%);mix-blend-mode:screen;opacity:.82;filter:blur(.25px)}
 .door-glass-overlay{position:absolute;inset:0;z-index:4;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.door-preview-hrt>.door-style-image{z-index:1}
+.door-preview-hrt>.door-finish-layer{z-index:2}
+.door-preview-hrt>.door-detail-image,.door-preview-hrt>.door-stain-highlight{z-index:3}
+.door-preview-hrt>.door-hrt-decorative-glass{z-index:4;background:linear-gradient(145deg,#edf6f9 0%,#d9e9ef 42%,#f7fbfc 62%,#c9dce3 100%);opacity:1!important;mix-blend-mode:normal!important}
+.door-preview-hrt>.door-hrt-caming-layer{z-index:5;opacity:1!important;mix-blend-mode:normal!important;filter:none!important;isolation:isolate}
+.door-preview-hrt>.hardware-hrt{z-index:6}
 .door-default-glass-overlay{position:absolute;inset:0;z-index:4;width:100%;height:100%;background:linear-gradient(135deg,rgba(210,231,235,.92),rgba(250,253,253,.76) 48%,rgba(174,207,215,.88));-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;pointer-events:none}
 .door-glass-overlay.under-door-image{z-index:4}
 .preview-scene.compact .door-style-image{filter:grayscale(1) contrast(1.08) drop-shadow(0 8px 10px rgba(5,4,11,.2))}
@@ -275,7 +281,8 @@
 .door-frame[data-frame=hidden] .door-frame-openings{inset:0}
 .door-frame[data-frame=visible] .door-style-image{filter:grayscale(1) contrast(1.08)}
 .sidelite-option-image{display:block;width:auto;height:auto;max-width:64%;max-height:64%;object-fit:contain}
-.sidelite-style-image{display:block;width:auto;height:auto;max-width:54%;max-height:88%;object-fit:contain}
+.option-visual:has(.sidelite-style-image){display:flex;align-items:center;justify-content:center}
+.sidelite-style-image{display:block;width:auto;height:auto;max-width:70%;max-height:78%;margin:auto;object-fit:contain;object-position:center}
 
 /* Hardware cards must display the complete source PNG, including transparent padding. */
 .option-visual:has(.hardware-card-image){display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0}
@@ -1252,6 +1259,9 @@ body{overflow:hidden}
 .home-app .home-entryway-door-slot .mapped-preview-door{transform:none!important;transform-origin:center bottom!important}
 .home-app .home-entryway-door-slot .door,.home-app .home-entryway-door-slot .door-style-image,.home-app .home-entryway-door-slot .door-finish-layer,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-stain-highlight,.home-app .home-entryway-door-slot .door-glass-overlay,.home-app .home-entryway-door-slot .door-default-glass-overlay,.home-app .home-entryway-door-slot .hardware{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;transform:none!important;transform-origin:center!important}
 .home-app .home-entryway-door-slot .door-style-image,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-glass-overlay,.home-app .home-entryway-door-slot .hardware img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important;transform:none!important}
+.home-app .home-entryway-door-slot .door-preview-hrt>.door-hrt-decorative-glass{z-index:4!important;opacity:1!important;mix-blend-mode:normal!important}
+.home-app .home-entryway-door-slot .door-preview-hrt>.door-hrt-caming-layer{z-index:5!important;opacity:1!important;mix-blend-mode:normal!important;filter:none!important}
+.home-app .home-entryway-door-slot .door-preview-hrt>.hardware-hrt{z-index:6!important}
 .home-app .home-entryway-door-slot .door-finish-layer,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-stain-highlight,.home-app .home-entryway-door-slot .door-default-glass-overlay{-webkit-mask-size:contain!important;mask-size:contain!important;-webkit-mask-position:center!important;mask-position:center!important;-webkit-mask-repeat:no-repeat!important;mask-repeat:no-repeat!important}
 
 /* The house and configured door share this single intrinsic 1254×1254 coordinate space. */
@@ -1326,6 +1336,9 @@ body{overflow:hidden}
 .mapped-preview-door>.door-detail-image,.mapped-preview-door>.door-stain-highlight{z-index:3}
 .mapped-preview-door>.door-glass-overlay,.mapped-preview-door>.door-default-glass-overlay{z-index:4}
 .mapped-preview-door>.hardware{z-index:5}
+.mapped-preview-door.door-preview-hrt>.door-hrt-decorative-glass{z-index:4}
+.mapped-preview-door.door-preview-hrt>.door-hrt-caming-layer{z-index:5}
+.mapped-preview-door.door-preview-hrt>.hardware-hrt{z-index:6}
 
 /* Selection indicators never participate in card or grid measurements. */
 .option-card,.glass-choice-card,.hardware-option-card{box-sizing:border-box;position:relative}
@@ -1944,4 +1957,55 @@ body:has(.home-app){
     height:max(112cqw,112cqh);
     transform:translate(-50%,-50%);
   }
+}
+
+/* Glass catalogs use a denser, consistent layout for every door and sidelite. */
+.builder-options-scroll .glass-options-grid{
+  grid-template-columns:repeat(5,minmax(0,1fr));
+}
+.glass-options-grid .glass-card-main .option-visual{
+  height:78px;
+  min-height:78px;
+  padding:5px;
+}
+.glass-options-grid .option-card .option-visual{
+  height:78px;
+  min-height:78px;
+  padding:5px;
+}
+.glass-options-grid .option-card .option-copy{
+  min-height:40px;
+  padding:7px 9px 8px;
+}
+.glass-options-grid .option-card .option-copy strong{
+  font-size:13px;
+  line-height:1.15;
+}
+.glass-options-grid .glass-choice-card .option-copy{
+  min-height:40px;
+  padding:7px 9px 8px;
+}
+.glass-options-grid .glass-choice-card .option-copy strong{
+  font-size:13px;
+  line-height:1.15;
+}
+.glass-options-grid .glass-caming-options{
+  gap:4px;
+  padding:5px 7px 7px;
+}
+.glass-options-grid .glass-caming-options button{
+  min-width:54px;
+  padding:4px;
+  font-size:7px;
+}
+@media(min-width:1024px) and (max-width:1279px){
+  .builder-options-scroll .glass-options-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+}
+@media(min-width:561px) and (max-width:1023px){
+  .builder-options-scroll .glass-options-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+  .builder-options-scroll .glass-options-grid{grid-template-columns:1fr}
+  .glass-options-grid .glass-card-main .option-visual{height:100%;min-height:190px}
+  .glass-options-grid .option-card .option-visual{height:100%;min-height:100%}
 }
