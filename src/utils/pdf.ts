@@ -83,13 +83,19 @@ async function applyBrandFont(pdf: jsPDF) {
 
 async function captureComposedDoorPreview() {
   if (typeof document === 'undefined') return cachedDoorPreview
-  const selectors = ['.aside-preview-area .door', '.mobile-review-preview .door', '.mobile-live-preview .door']
+  // Capture the complete procedural assembly rather than only the center slab.
+  // DoorFrame contains the jambs, sidelites, mullions, and threshold.
+  const selectors = [
+    '.aside-preview-area .door-frame[data-frame="visible"]',
+    '.mobile-review-preview .door-frame[data-frame="visible"]',
+    '.mobile-live-preview .door-frame[data-frame="visible"]',
+  ]
   const candidates = selectors.flatMap((selector) => Array.from(document.querySelectorAll<HTMLElement>(selector)))
-  const door = candidates.find((candidate) => candidate.offsetWidth > 0 && candidate.offsetHeight > 0)
-  if (!door) return cachedDoorPreview
+  const assembly = candidates.find((candidate) => candidate.offsetWidth > 0 && candidate.offsetHeight > 0)
+  if (!assembly) return cachedDoorPreview
 
   try {
-    const canvas = await html2canvas(door, {
+    const canvas = await html2canvas(assembly, {
       backgroundColor: null,
       logging: false,
       scale: 3,

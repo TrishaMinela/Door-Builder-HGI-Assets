@@ -27,10 +27,13 @@ const sideliteGlassPages = new Set<BuilderPage>(['sidelite-glass-type', 'sidelit
 type GlassCategory = 'clear' | 'decorative' | 'privacy' | 'blinds' | 'clic' | 'retro'
 const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '' }
 const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
-const proMatchTooltipText = 'ProMatch® colors coordinate with select HGI entry doors, windows, patio doors, clad wrap, and solid aluminum storm doors to help create a consistent exterior finish.'
+const proMatchTooltipTitle = 'About ProMatch® Colors'
+const proMatchTooltipText = 'ProMatch® colors are custom-blended to coordinate across select HGI products. Each painted door is carefully prepared, finished with two coats of enamel, and oven-baked for a smooth, durable finish backed by a 15-year warranty.'
+const timberStainTooltipTitle = 'About TimberStain®'
+const timberStainTooltipText = 'TimberStain® finishes use nature-inspired colors and are hand-applied to enhance the door’s natural texture and grain. Each finish is oven-cured, protected with a durable clear coat, and backed by a 15-year warranty.'
 const proMatchNote = 'Colors may appear differently depending on the material, lighting, and screen. Confirm your final selection with an official color sample.'
 
-function ProMatchInfo() {
+function FinishInfoTooltip({ title, body, ariaLabel, tooltipId }: { title: string; body: string; ariaLabel: string; tooltipId: string }) {
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState({ left: 12, top: 12 })
   const wrapperRef = useRef<HTMLSpanElement>(null)
@@ -87,9 +90,9 @@ function ProMatchInfo() {
     <button
       ref={buttonRef}
       type="button"
-      aria-label="What are ProMatch colors?"
+      aria-label={ariaLabel}
       aria-expanded={open}
-      aria-controls="promatch-colors-tooltip"
+      aria-controls={tooltipId}
       onClick={() => open ? setOpen(false) : showTooltip()}
       onFocus={showTooltip}
       onBlur={(event) => {
@@ -99,14 +102,23 @@ function ProMatchInfo() {
       <HelpCircle size={16} aria-hidden="true" />
     </button>
     {open && <span
-      id="promatch-colors-tooltip"
+      id={tooltipId}
       className="promatch-tooltip"
       role="tooltip"
       style={{ left: position.left, top: position.top }}
     >
-      {proMatchTooltipText}
+      <strong>{title}</strong>
+      <span>{body}</span>
     </span>}
   </span>
+}
+
+function ProMatchInfo() {
+  return <FinishInfoTooltip title={proMatchTooltipTitle} body={proMatchTooltipText} ariaLabel="What are ProMatch colors?" tooltipId="promatch-colors-tooltip" />
+}
+
+function TimberStainInfo() {
+  return <FinishInfoTooltip title={timberStainTooltipTitle} body={timberStainTooltipText} ariaLabel="What are TimberStain finishes?" tooltipId="timberstain-finishes-tooltip" />
 }
 
 const sideliteOptions: { id: SideliteConfiguration; name: string; image: string }[] = [
@@ -950,6 +962,7 @@ export default function App() {
   }
 
   const startOver = () => {
+    setBuilderPreviewView('Exterior')
     setStyleId('')
     setDoorLineId('')
     setGrainId('')
@@ -1001,6 +1014,7 @@ export default function App() {
   }
 
   const showScreen = (next: 'home' | 'builder') => {
+    if (next === 'builder') setBuilderPreviewView('Exterior')
     setScreen(next)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -1359,7 +1373,7 @@ export default function App() {
                     <div className="promatch-brand"><img src="/assets/branding/pro-match-logo.png" alt="ProMatch paint colors" loading="lazy" decoding="async" /><ProMatchInfo /></div>
                     <p>{proMatchNote}</p>
                   </div>}
-                  {(currentPage === 'door-finish' ? activeFinishType : jambFinishType) === 'stain' && <img src="/assets/branding/timberstain-logo.png" alt="TimberStain" loading="lazy" decoding="async" />}
+                  {(currentPage === 'door-finish' ? activeFinishType : jambFinishType) === 'stain' && <div className="timberstain-group"><div className="timberstain-brand"><img src="/assets/branding/timberstain-logo.png" alt="TimberStain®" loading="lazy" decoding="async" /><TimberStainInfo /></div><p>{proMatchNote}</p></div>}
                 </div>
               </div>}
               <div className={`options-grid step-${step} ${currentPage === 'door-style' || currentPage === 'door-grain' || currentPage === 'door-finish' || currentPage === 'jamb-type' || currentPage === 'jamb-finish' || currentPage === 'glass-type' || currentPage === 'glass-variant' || currentPage.startsWith('grid-') || currentPage.startsWith('sidelite-') ? 'door-style-grid' : ''} ${currentPage === 'glass' || currentPage === 'glass-variant' || currentPage === 'sidelite-glass' || currentPage === 'sidelite-glass-variant' ? 'glass-options-grid' : ''}`}>
