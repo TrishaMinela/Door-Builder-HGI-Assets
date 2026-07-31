@@ -1,4 +1,6 @@
 import type { GridColor, GridPattern, GridStyle, GridWidth } from '../types'
+import { isApprovedDecorativeGlassName } from './decorativeGlass'
+import { isApprovedPrivacyGlassName } from './privacyGlass'
 
 export type SideliteGlassCategory = 'clear' | 'decorative' | 'privacy' | 'clic' | 'blinds'
 export type SideliteGlassOption = { id: string; name: string; category: SideliteGlassCategory; asset?: string }
@@ -14,7 +16,7 @@ export const fslGlassCategories = [
   { id: 'blinds', name: 'Mini Blinds', image: '/assets/glass/thumbnails/Blinds.png' },
 ] as const
 
-export const fslGlassOptions: SideliteGlassOption[] = [
+const allFslGlassOptions: SideliteGlassOption[] = [
   { id: 'clear-no-grids', name: 'Clear Glass with No Grids', category: 'clear' },
   { id: 'clear-grids', name: 'Clear Glass with Grids', category: 'clear' },
   option('ASH', 'Ashbury'), option('BAY', 'Bay Point'), option('BER', 'Berkley'), option('BRI', 'Bristol'),
@@ -35,6 +37,11 @@ export const fslGlassOptions: SideliteGlassOption[] = [
   option('ENTL', 'CLiC – Left', 'clic'), option('ENTR', 'CLiC – Right', 'clic'),
   option('FRLBSL', 'Mini Blinds – Raise, Lower & Tilt', 'blinds'), option('RLB', 'Mini Blinds – Raise & Lower', 'blinds'),
 ]
+
+export const fslGlassOptions = allFslGlassOptions.filter((glass) =>
+  (glass.category !== 'decorative' || isApprovedDecorativeGlassName(glass.name))
+  && (glass.category !== 'privacy' || isApprovedPrivacyGlassName(glass.name)),
+)
 
 export type SideliteGridRules = Partial<Record<GridPattern, Partial<Record<GridColor, GridWidth[]>>>>
 const both: GridWidth[] = ['5/8"', '7/8"']

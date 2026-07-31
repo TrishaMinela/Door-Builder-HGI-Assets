@@ -1,5 +1,7 @@
 import type { GridColor, GridPattern, GridStyle, GridWidth } from '../types'
 import type { SideliteGlassCategory, SideliteGlassOption, SideliteGridRules } from './fslGlass'
+import { isApprovedDecorativeGlassName } from './decorativeGlass'
+import { isApprovedPrivacyGlassName } from './privacyGlass'
 
 const asset = (code: string) => `/assets/hgi-assets/Sidelites/SSL/Glass/SSL${code}.png`
 const option = (code: string, name: string, category: SideliteGlassCategory = 'decorative'): SideliteGlassOption => ({ id: code.toLowerCase(), name, category, asset: asset(code) })
@@ -11,7 +13,7 @@ export const sslGlassCategories = [
   { id: 'blinds', name: 'Mini Blinds', image: '/assets/glass/thumbnails/Blinds.png' },
 ] as const
 
-export const sslGlassOptions: SideliteGlassOption[] = [
+const allSslGlassOptions: SideliteGlassOption[] = [
   { id: 'clear-no-grids', name: 'Clear Glass with No Grids', category: 'clear' },
   { id: 'clear-grids', name: 'Clear Glass with Grids', category: 'clear' },
   option('BER', 'Berkley'), option('BRI', 'Bristol'), option('COB', 'Cobblestone'), option('COU', 'Courtyard'),
@@ -29,6 +31,11 @@ export const sslGlassOptions: SideliteGlassOption[] = [
   option('LIN', 'Linen', 'privacy'), option('MIC', 'Micro Granite', 'privacy'), option('RAI', 'Rain', 'privacy'),
   option('VAP', 'Vapor', 'privacy'), option('RLBSL', 'Mini Blinds – Raise, Lower & Tilt', 'blinds'),
 ]
+
+export const sslGlassOptions = allSslGlassOptions.filter((glass) =>
+  (glass.category !== 'decorative' || isApprovedDecorativeGlassName(glass.name))
+  && (glass.category !== 'privacy' || isApprovedPrivacyGlassName(glass.name)),
+)
 
 const both: GridWidth[] = ['5/8"', '7/8"']
 export const sslStandardStyleRules: Partial<Record<GridStyle, SideliteGridRules>> = {

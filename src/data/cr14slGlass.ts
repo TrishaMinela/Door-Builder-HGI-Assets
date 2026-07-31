@@ -2,15 +2,14 @@ import type { GridColor, GridPattern } from '../types'
 import { glassOptions } from './glassOptions'
 import type { SideliteGlassCategory, SideliteGlassOption } from './fslGlass'
 import { s2slStyleRules } from './s2slGlass'
-
-const privacyIds = new Set(['rain'])
+import { isApprovedPrivacyGlassName } from './privacyGlass'
 
 export const cr14slGlassOptions: SideliteGlassOption[] = glassOptions
   .filter((option) => Boolean(option.overlaysByDoorStyle.CR14))
   .map((option) => ({
     id: option.id,
     name: option.name,
-    category: (option.id === 'clear' ? 'clear' : privacyIds.has(option.id) ? 'privacy' : 'decorative') as SideliteGlassCategory,
+    category: (option.id === 'clear' ? 'clear' : isApprovedPrivacyGlassName(option.name) ? 'privacy' : 'decorative') as SideliteGlassCategory,
     asset: option.overlaysByDoorStyle.CR14,
   }))
 

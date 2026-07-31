@@ -1,5 +1,7 @@
 import type { GridColor, GridPattern, GridStyle, GridWidth } from '../types'
 import type { SideliteGlassCategory, SideliteGlassOption, SideliteGridRules } from './fslGlass'
+import { isApprovedDecorativeGlassName } from './decorativeGlass'
+import { isApprovedPrivacyGlassName } from './privacyGlass'
 
 const asset = (code: string) => `/assets/hgi-assets/Sidelites/F48SL/Glass/F48SL${code}.png`
 const option = (code: string, name: string, category: SideliteGlassCategory = 'decorative'): SideliteGlassOption => ({ id: code.toLowerCase(), name, category, asset: asset(code) })
@@ -10,7 +12,7 @@ export const f48slGlassCategories = [
   { id: 'privacy', name: 'Privacy Glass', image: '/assets/glass/thumbnails/Privacy.png' },
 ] as const
 
-export const f48slGlassOptions: SideliteGlassOption[] = [
+const allF48slGlassOptions: SideliteGlassOption[] = [
   { id: 'clear-no-grids', name: 'Clear Glass with No Grids', category: 'clear' },
   { id: 'clear-grids', name: 'Clear Glass with Grids', category: 'clear' },
   option('BER', 'Berkley'), option('BRI', 'Bristol'), option('CAD', 'Cadence'), option('CAL', 'Calandra'),
@@ -27,6 +29,11 @@ export const f48slGlassOptions: SideliteGlassOption[] = [
   option('VAP', 'Vapor', 'privacy'), option('4LBLA', 'Blanca – 4 Lite', 'privacy'),
   option('4LCHI', 'Chinchilla – 4 Lite', 'privacy'), option('4LMIC', 'Micro Granite – 4 Lite', 'privacy'),
 ]
+
+export const f48slGlassOptions = allF48slGlassOptions.filter((glass) =>
+  (glass.category !== 'decorative' || isApprovedDecorativeGlassName(glass.name))
+  && (glass.category !== 'privacy' || isApprovedPrivacyGlassName(glass.name)),
+)
 
 const both: GridWidth[] = ['5/8"', '7/8"']
 export const f48slStandardStyleRules: Partial<Record<GridStyle, SideliteGridRules>> = {

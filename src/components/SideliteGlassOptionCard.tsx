@@ -17,7 +17,7 @@ export function SideliteGlassOptionCard({ groupKey, title, options, selectedId, 
   const isClic = title.toLowerCase().startsWith('clic')
   const image = glassSelectionThumbnail(displayOption.name)
     ?? displayOption.asset
-    ?? (displayOption.id === 'clear-grids' ? '/assets/grid-options/Internal Grids.png' : '/assets/glass/thumbnails/Clear.png')
+    ?? (displayOption.id === 'clear-grids' ? '/assets/grid-options/Internal Grids.png' : '/assets/glass/thumbnails/Clear-option.png')
 
   return (
     <article className={`glass-choice-card ${selected ? 'selected' : ''}`}>
