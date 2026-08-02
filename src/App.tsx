@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { ArrowLeft, ArrowRight, Check, Download, FileText, HelpCircle, Home as HomeIcon, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Download, Eye, FileText, HelpCircle, Home as HomeIcon, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview } from './components/DoorPreview'
 import { DoorStyleThumbnail } from './components/DoorStyleThumbnail'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
@@ -19,6 +19,7 @@ import { s2slGlassCategories, s2slGlassOptions, s2slStyleRules } from './data/s2
 import { cr14slGlassCategories, cr14slGlassOptions, cr14slGridAsset, cr14slStyleRules } from './data/cr14slGlass'
 import { glassSelectionThumbnail } from './data/glassOptions'
 import { cladColors } from './data/finishes'
+import { HomeVisualizer } from './features/home-visualizer/HomeVisualizer'
 
 const glassSteps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
 const noGlassSteps = ['Door Style', 'Finish', 'Hardware', 'Review & Quote']
@@ -422,7 +423,7 @@ function EmptyDoorPreview() {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<'home' | 'builder'>('home')
+  const [screen, setScreen] = useState<'home' | 'builder' | 'visualizer'>('home')
   const [step, setStep] = useState(0)
   const [styleId, setStyleId] = useState('')
   const [doorLineId, setDoorLineId] = useState('')
@@ -1014,7 +1015,7 @@ export default function App() {
     return targetPage >= 0 && targetPage <= step
   }
 
-  const showScreen = (next: 'home' | 'builder') => {
+  const showScreen = (next: 'home' | 'builder' | 'visualizer') => {
     if (next === 'builder') setBuilderPreviewView('Exterior')
     setScreen(next)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1280,7 +1281,7 @@ export default function App() {
   ]
 
   return (
-    <div className={`app ${screen === 'home' ? 'home-app' : ''}`}>
+    <div className={`app ${screen === 'home' ? 'home-app' : screen === 'visualizer' ? 'visualizer-app' : ''}`}>
       <header>
         <div className="brand">
           <button className="brand-home" type="button" aria-label="Go to home page" onClick={() => showScreen('home')}>
@@ -1323,7 +1324,7 @@ export default function App() {
             </div>
           </div>
         </section>
-      </main> : <>
+      </main> : screen === 'visualizer' ? <HomeVisualizer onBack={() => showScreen('builder')} /> : <>
       <div className="builder-toolbar">
         <nav className="stepper" aria-label="Configuration progress">
           {steps.map((label, index) => {
@@ -1421,6 +1422,7 @@ export default function App() {
           {currentPage === 'review' && !submitted && <>
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
             <div className="mobile-review-preview">{renderConfiguredPreviewMode()}</div>
+            <button className="view-on-home-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> View on Your Home <ArrowRight size={17} /></button>
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
               {configurationSummaryRows.map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span>{target >= 0 && <button onClick={() => goTo(target)}>Edit</button>}</div>)}
