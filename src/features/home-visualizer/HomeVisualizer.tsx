@@ -23,10 +23,11 @@ export function HomeVisualizer({ onBack }: Props) {
   const [photo, setPhoto] = useState<SelectedPhoto | null>(null)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const objectUrlRef = useRef<string | null>(null)
 
   useEffect(() => () => {
-    if (photo) URL.revokeObjectURL(photo.objectUrl)
-  }, [photo])
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+  }, [])
 
   const choosePhoto = (file?: File) => {
     if (!file) return
@@ -37,7 +38,10 @@ export function HomeVisualizer({ onBack }: Props) {
     }
 
     setError('')
-    setPhoto({ file, objectUrl: URL.createObjectURL(file) })
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    const objectUrl = URL.createObjectURL(file)
+    objectUrlRef.current = objectUrl
+    setPhoto({ file, objectUrl })
   }
 
   const openPicker = () => {
@@ -53,6 +57,8 @@ export function HomeVisualizer({ onBack }: Props) {
   }
 
   const removePhoto = () => {
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    objectUrlRef.current = null
     setError('')
     setPhoto(null)
     if (inputRef.current) inputRef.current.value = ''
@@ -117,10 +123,11 @@ export function HomeVisualizer({ onBack }: Props) {
           {photo && <div className="visualizer-photo-actions">
             <button type="button" className="visualizer-secondary-button" onClick={openPicker}><RefreshCw size={17} /> Replace Photo</button>
             <button type="button" className="visualizer-remove-button" onClick={removePhoto}><Trash2 size={17} /> Remove Photo</button>
+            <button type="button" className="visualizer-back-button visualizer-back-button-inline" onClick={onBack}><ArrowLeft size={17} /> Back to Door Builder</button>
           </div>}
         </section>
 
-        <button type="button" className="visualizer-back-button" onClick={onBack}><ArrowLeft size={17} /> Back to Door Builder</button>
+        {!photo && <button type="button" className="visualizer-back-button" onClick={onBack}><ArrowLeft size={17} /> Back to Door Builder</button>}
       </div>
     </main>
   )

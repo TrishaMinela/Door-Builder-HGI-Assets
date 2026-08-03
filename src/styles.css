@@ -64,6 +64,52 @@
 @media(max-width:560px){.visualizer-app>header{height:72px}.visualizer-page{padding:24px 14px 28px}.visualizer-heading{margin-bottom:19px}.visualizer-heading h1{font-size:32px}.visualizer-card{padding:16px}.visualizer-card-heading{align-items:flex-start}.visualizer-photo-ready{padding:7px 9px;font-size:8px}.photo-guidance{gap:16px;padding:16px;margin-bottom:17px}.photo-drop-zone{min-height:225px;padding:20px 14px}.visualizer-editor{height:55vh;min-height:230px;max-height:480px}.visualizer-photo-actions{align-items:stretch;flex-direction:column}.visualizer-photo-actions button,.visualizer-back-button{width:100%;min-height:48px}.visualizer-app footer{display:flex}}
 .photo-drop-zone .photo-picker-button{min-height:44px;margin-top:18px;border-radius:4px;padding:0 20px;display:flex;align-items:center;gap:8px;background:var(--peacock);color:#fff;font-size:11px;font-weight:700}
 
+/* The builder intentionally locks the viewport. Restore normal document
+   scrolling while the standalone visualizer screen is active. */
+html:has(.visualizer-app),
+body:has(.visualizer-app),
+#root:has(>.visualizer-app){
+  width:100%;
+  height:auto!important;
+  min-height:100%;
+  max-height:none;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+}
+body:has(.visualizer-app){
+  position:static;
+  touch-action:pan-y;
+  overscroll-behavior-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.app.visualizer-app{
+  display:flex;
+  width:100%;
+  height:auto!important;
+  min-height:100vh;
+  min-height:100dvh;
+  max-height:none;
+  overflow:visible!important;
+}
+.app.visualizer-app>.visualizer-page{
+  flex:1 0 auto;
+  width:100%;
+  height:auto!important;
+  min-height:calc(100vh - 124px);
+  min-height:calc(100dvh - 124px);
+  max-height:none;
+  overflow-x:hidden!important;
+  overflow-y:visible!important;
+  padding-bottom:max(64px,calc(40px + env(safe-area-inset-bottom)));
+  touch-action:pan-y;
+}
+.visualizer-back-button-inline{margin-top:0}
+@media(max-width:700px){
+  .visualizer-photo-actions{align-items:stretch;flex-direction:column}
+  .visualizer-photo-actions button{width:100%;min-height:50px}
+  .app.visualizer-app>.visualizer-page{padding-bottom:max(96px,calc(64px + env(safe-area-inset-bottom)))}
+}
+
 /* Real-device mobile flow */
 @supports (height:100dvh){
   .app{height:100dvh}
