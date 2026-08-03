@@ -117,6 +117,7 @@ export function DoorFrame({
   const frameHighlight = mixHex(frameFill, '#ffffff', highlightAmount)
   const faceGradientId = `door-frame-face-${frameId}`
   const mullionGradientId = `door-frame-mullion-${frameId}`
+  const sideliteMaskId = sideliteMaskSrc?.split('/').pop()?.replace(/\.png$/i, '').toLowerCase() ?? 'default'
   const sideliteGlassMaskStyle = sideliteMaskSrc ? {
     WebkitMaskImage: `url("${sideliteMaskSrc}")`,
     maskImage: `url("${sideliteMaskSrc}")`,
@@ -130,9 +131,11 @@ export function DoorFrame({
   const renderSideliteGlass = () => {
     if (!sideliteGlassSrc) return null
     if (!sideliteClearGlassBase) {
-      return <img className="door-frame-sidelite-glass" src={sideliteGlassSrc} data-glass-mask={sideliteMaskSrc} alt="" decoding="async" style={sideliteGlassMaskStyle} />
+      return <div className="door-frame-sidelite-glass-clip" data-glass-mask={sideliteMaskSrc} style={sideliteGlassMaskStyle}>
+        <img className={`door-frame-sidelite-glass door-frame-sidelite-glass-${sideliteMaskId}`} src={sideliteGlassSrc} alt="" decoding="async" />
+      </div>
     }
-    return <div className="door-frame-sidelite-grid-clip" style={sideliteGlassMaskStyle}>
+    return <div className={`door-frame-sidelite-grid-clip door-frame-sidelite-grid-clip-${sideliteMaskId}`} style={sideliteGlassMaskStyle}>
       {sideliteGridMatchesFinish
         ? <div className="door-frame-sidelite-grid-art door-frame-sidelite-grid-finish" style={{ backgroundColor: finishColor, WebkitMaskImage: `url("${sideliteGlassSrc}")`, maskImage: `url("${sideliteGlassSrc}")` }} />
         : <img className="door-frame-sidelite-grid-art" src={sideliteGlassSrc} alt="" decoding="async" />}

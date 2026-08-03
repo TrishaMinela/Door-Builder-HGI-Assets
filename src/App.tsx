@@ -558,6 +558,8 @@ export default function App() {
         ? `/assets/hgi-assets/Sidelites/Signature/Oak/${selectedSideliteStyle.id.toUpperCase()}.png`
       : isCherrySignatureSidelite
       ? `/assets/hgi-assets/Sidelites/Signature/Cherry/${selectedSideliteStyle.id.toUpperCase()}.png`
+      : selectedDoorLine?.id === '22-gauge-steel' && selectedSideliteStyle.id === 'ssl'
+        ? '/assets/hgi-assets/Sidelites/Signature/Mahogany/SSL.png'
       : `/assets/hgi-assets/Sidelites/${selectedDoorLine?.id === '20-gauge-smooth-steel' || selectedDoorLine?.id === 'brushed-smooth-fiberglass' ? '20 Gauge' : '22 Gauge'}/${selectedSideliteStyle.id.toUpperCase()}.png`
     : undefined
   const selectedSideliteCatalog = selectedSideliteStyle ? sideliteGlassCatalogs[selectedSideliteStyle.id] : null
@@ -782,7 +784,7 @@ export default function App() {
     sideliteAssetSrc={selectedSidelitePreview}
     sideliteMaskSrc={selectedSideliteStyle?.mask}
     sideliteGlassSrc={sideliteGlassPreview}
-    sideliteClearGlassBase={usesFslGridFlow}
+    sideliteClearGlassBase={usesFslGridFlow || selectedFslGlass?.id === 'clear-no-grids'}
     sideliteGridMatchesFinish={sideliteSdlMatchesFinish}
     jambFinish={jambFinish}
     jambType={jambType || 'timber'}
