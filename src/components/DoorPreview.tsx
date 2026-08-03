@@ -7,7 +7,7 @@ import { glassDoorCodes } from '../data/productCatalog'
 import { resolveGlassMaskAsset } from '../data/glassMaskAssets'
 import { DoorFrame } from './preview/DoorFrame'
 
-type Props = {
+export type DoorPreviewProps = {
   style: DoorStyle
   finish: Finish
   glass: GlassOption | null
@@ -240,7 +240,7 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber' }: Props) {
+export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber' }: DoorPreviewProps) {
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
   const previewCandidatesKey = previewCandidates.join('|')
   const styleCodes = product?.styleCodes.length ? product.styleCodes : [style.code]

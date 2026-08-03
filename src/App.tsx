@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { ArrowLeft, ArrowRight, Check, Download, Eye, FileText, HelpCircle, Home as HomeIcon, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
-import { DoorPreview } from './components/DoorPreview'
+import { DoorPreview, type DoorPreviewProps } from './components/DoorPreview'
 import { DoorStyleThumbnail } from './components/DoorStyleThumbnail'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
 import { OptionCard } from './components/OptionCard'
@@ -425,6 +425,8 @@ function EmptyDoorPreview() {
 export default function App() {
   const [screen, setScreen] = useState<'home' | 'builder' | 'visualizer'>('home')
   const [step, setStep] = useState(0)
+  const [showEntrywayGuidance, setShowEntrywayGuidance] = useState(false)
+  const [hasShownEntrywayGuidance, setHasShownEntrywayGuidance] = useState(false)
   const [styleId, setStyleId] = useState('')
   const [doorLineId, setDoorLineId] = useState('')
   const [grainId, setGrainId] = useState('')
@@ -467,6 +469,13 @@ export default function App() {
   const [builderPreviewView, setBuilderPreviewView] = useState<'Exterior' | 'Interior' | 'Both'>('Exterior')
   const builderPanelRef = useRef<HTMLElement | null>(null)
   const builderOptionsRef = useRef<HTMLDivElement | null>(null)
+  const entrywayDialogRef = useRef<HTMLDivElement | null>(null)
+  const entrywayStartButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  const closeEntrywayGuidance = () => {
+    setShowEntrywayGuidance(false)
+    requestAnimationFrame(() => builderOptionsRef.current?.querySelector<HTMLButtonElement>('.option-card')?.focus())
+  }
 
   const selectedStyle = doorStyles.find((item) => item.id === styleId)
   const style = selectedStyle ?? doorStyles[0]
@@ -769,29 +778,44 @@ export default function App() {
   const mainDoorSdlMatchesFinish = usesGridFlow && gridPathId === 'sdl'
   const sideliteSdlMatchesFinish = usesFslGridFlow && sideliteGridLocation === 'sdl'
   const previewModes = ['Exterior', 'Interior', 'Both'] as const
-  const renderConfiguredDoorPreview = (previewView: HardwareView, sharedComparisonCanvas = false) => <DoorPreview
-    style={style}
-    finish={previewConfig.finish}
-    glass={previewConfig.glass}
-    hardware={previewConfig.hardware}
-    grain={selectedGrain}
-    product={product}
-    tintColor={previewConfig.tintColor}
-    doorSwing={previewConfig.doorSwing}
-    applyFinish={previewConfig.applyFinish}
-    gridMatchesFinish={mainDoorSdlMatchesFinish}
-    view={previewView}
-    showViewToggle={false}
-    sidelites={sidelites || 'none'}
-    sideliteAssetSrc={selectedSidelitePreview}
-    sideliteMaskSrc={selectedSideliteStyle?.mask}
-    sideliteGlassSrc={sideliteGlassPreview}
-    sideliteClearGlassBase={usesFslGridFlow || selectedFslGlass?.id === 'clear-no-grids'}
-    sideliteGridMatchesFinish={sideliteSdlMatchesFinish}
-    jambFinish={jambFinish}
-    jambType={jambType || 'timber'}
-    sharedComparisonCanvas={sharedComparisonCanvas}
-  />
+  const configuredDoorPreview: DoorPreviewProps = {
+    style,
+    finish: previewConfig.finish,
+    glass: previewConfig.glass,
+    hardware: previewConfig.hardware,
+    grain: selectedGrain,
+    product,
+    tintColor: previewConfig.tintColor,
+    doorSwing: previewConfig.doorSwing,
+    applyFinish: previewConfig.applyFinish,
+    gridMatchesFinish: mainDoorSdlMatchesFinish,
+    showViewToggle: false,
+    sidelites: sidelites || 'none',
+    sideliteAssetSrc: selectedSidelitePreview,
+    sideliteMaskSrc: selectedSideliteStyle?.mask,
+    sideliteGlassSrc: sideliteGlassPreview,
+    sideliteClearGlassBase: usesFslGridFlow || selectedFslGlass?.id === 'clear-no-grids',
+    sideliteGridMatchesFinish: sideliteSdlMatchesFinish,
+    jambFinish,
+    jambType: jambType || 'timber',
+  }
+  const configuredDoorKey = JSON.stringify({
+    style: style.id,
+    finish: previewConfig.finish.id,
+    tint: previewConfig.tintColor,
+    glass: previewConfig.glass?.id,
+    hardware: previewConfig.hardware.id,
+    grain: selectedGrain,
+    product: product?.styleCodes.join('|'),
+    swing: previewConfig.doorSwing?.id,
+    sidelites,
+    sideliteStyle: selectedSideliteStyle?.id,
+    sideliteGlass: selectedFslGlass?.id,
+    sideliteGlassPreview,
+    jambFinish: jambFinish?.id,
+    jambType,
+  })
+  const renderConfiguredDoorPreview = (previewView: HardwareView, sharedComparisonCanvas = false) => <DoorPreview {...configuredDoorPreview} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} />
   const renderConfiguredPreviewMode = () => builderPreviewView === 'Both'
     ? <div className="preview-comparison" aria-label="Exterior and interior door previews">
         {(['Exterior', 'Interior'] as const).map((previewView) => <div className="preview-comparison-item" key={previewView}>
@@ -1046,6 +1070,34 @@ export default function App() {
     return () => window.clearInterval(timer)
   }, [screen, homeDemoConfigurations.length])
 
+  useEffect(() => {
+    if (!showEntrywayGuidance) return
+    entrywayStartButtonRef.current?.focus()
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeEntrywayGuidance()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const buttons = [...(entrywayDialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])]
+      if (!buttons.length) return
+      const first = buttons[0]
+      const last = buttons[buttons.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showEntrywayGuidance])
+
   const goTo = (next: number) => {
     if (next >= 0 && next < pages.length) setStep(next)
   }
@@ -1128,6 +1180,11 @@ export default function App() {
 
   const showScreen = (next: 'home' | 'builder' | 'visualizer') => {
     if (next === 'builder') setBuilderPreviewView('Exterior')
+    if (next === 'builder' && screen === 'home' && !hasShownEntrywayGuidance) {
+      setHasShownEntrywayGuidance(true)
+      setShowEntrywayGuidance(true)
+    }
+    if (next !== 'builder') setShowEntrywayGuidance(false)
     setScreen(next)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -1406,6 +1463,19 @@ export default function App() {
         </div>
       </header>
 
+      {showEntrywayGuidance && <div className="entryway-guidance-backdrop" role="presentation">
+        <div ref={entrywayDialogRef} className="entryway-guidance-dialog" role="dialog" aria-modal="true" aria-labelledby="entryway-guidance-title" aria-describedby="entryway-guidance-description">
+          <span>Before you begin</span>
+          <h2 id="entryway-guidance-title">Match Your Current Entryway</h2>
+          <p id="entryway-guidance-description">You’re about to configure the door you want to view on your home. For the most accurate visualization, choose a door layout that matches the opening you plan to replace, including the number and placement of any sidelites.</p>
+          <p className="entryway-guidance-note">Transoms are not currently replaced in the visualizer and will remain visible in your uploaded photo.</p>
+          <div className="entryway-guidance-actions">
+            <button type="button" className="entryway-guidance-back" onClick={() => showScreen('home')}>Back</button>
+            <button ref={entrywayStartButtonRef} type="button" className="entryway-guidance-start" onClick={closeEntrywayGuidance}>Start Configuring <ArrowRight size={17} /></button>
+          </div>
+        </div>
+      </div>}
+
       {screen === 'home' ? <main className="home-page">
         <section className="home-hero">
           <div className="home-hero-copy">
@@ -1435,7 +1505,11 @@ export default function App() {
             </div>
           </div>
         </section>
-      </main> : screen === 'visualizer' ? <HomeVisualizer onBack={() => showScreen('builder')} /> : <>
+      </main> : screen === 'visualizer' ? <HomeVisualizer
+        onBack={() => showScreen('builder')}
+        configuredDoorPreview={configuredDoorPreview}
+        configurationKey={configuredDoorKey}
+      /> : <>
       <div className="builder-toolbar">
         <nav className="stepper" aria-label="Configuration progress">
           {steps.map((label, index) => {

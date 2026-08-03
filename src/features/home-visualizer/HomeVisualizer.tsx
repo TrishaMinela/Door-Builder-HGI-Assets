@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
-import { ArrowLeft, Check, ImagePlus, RefreshCw, Trash2, Upload } from 'lucide-react'
-import { EntranceSelector } from './EntranceSelector'
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
+import { ArrowLeft, Check, Eye, ImagePlus, Pencil, RefreshCw, RotateCcw, Trash2, Upload } from 'lucide-react'
+import { cloneEntranceCorners, EntranceSelector, INITIAL_ENTRANCE_CORNERS, isValidEntranceCorners, type EntranceCorners } from './EntranceSelector'
+import type { DoorPreviewProps } from '../../components/DoorPreview'
+import { ConfiguredDoorSource, type DoorSourceState } from './ConfiguredDoorSource'
+import { ComposedPhotoPreview } from './ComposedPhotoPreview'
 
 const MAX_PHOTO_SIZE = 15 * 1024 * 1024
 const SUPPORTED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -12,6 +15,8 @@ type SelectedPhoto = {
 
 type Props = {
   onBack: () => void
+  configuredDoorPreview: DoorPreviewProps
+  configurationKey: string
 }
 
 function fileError(file: File) {
@@ -20,11 +25,22 @@ function fileError(file: File) {
   return ''
 }
 
-export function HomeVisualizer({ onBack }: Props) {
+export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey }: Props) {
   const [photo, setPhoto] = useState<SelectedPhoto | null>(null)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const objectUrlRef = useRef<string | null>(null)
+  const [corners, setCorners] = useState<EntranceCorners>(() => cloneEntranceCorners(INITIAL_ENTRANCE_CORNERS))
+  const [previewMode, setPreviewMode] = useState<'edit' | 'composed'>('edit')
+  const [showAfter, setShowAfter] = useState(true)
+  const [doorSource, setDoorSource] = useState<DoorSourceState>({ url: '', width: 0, height: 0, error: '', ready: false })
+  const updateDoorSource = useCallback((state: DoorSourceState) => setDoorSource(state), [])
+
+  const resetPlacement = () => {
+    setCorners(cloneEntranceCorners(INITIAL_ENTRANCE_CORNERS))
+    setPreviewMode('edit')
+    setShowAfter(true)
+  }
 
   useEffect(() => () => {
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
@@ -43,6 +59,7 @@ export function HomeVisualizer({ onBack }: Props) {
     const objectUrl = URL.createObjectURL(file)
     objectUrlRef.current = objectUrl
     setPhoto({ file, objectUrl })
+    resetPlacement()
   }
 
   const openPicker = () => {
@@ -62,6 +79,7 @@ export function HomeVisualizer({ onBack }: Props) {
     objectUrlRef.current = null
     setError('')
     setPhoto(null)
+    resetPlacement()
     if (inputRef.current) inputRef.current.value = ''
   }
 
@@ -114,7 +132,36 @@ export function HomeVisualizer({ onBack }: Props) {
               <small>JPG, PNG, or WebP · Maximum 15 MB</small>
               <span className="photo-picker-button"><Upload size={17} /> Choose Photo</span>
             </div>
-          </> : <EntranceSelector key={photo.objectUrl} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} />}
+          </> : previewMode === 'edit' ? <>
+            <div className="entrance-placement-instructions">
+              <p>Place the four corners along the inside edges of the existing opening being replaced. Include the door and any sidelites that will be replaced, but keep the home’s existing exterior trim outside the selected area.</p>
+            </div>
+            <EntranceSelector
+              key={photo.objectUrl}
+              corners={corners}
+              imageSrc={photo.objectUrl}
+              imageAlt={`Uploaded entrance photo: ${photo.file.name}`}
+              onCornersChange={setCorners}
+              onReset={resetPlacement}
+            />
+            <button
+              type="button"
+              className="visualizer-apply-button"
+              disabled={!doorSource.ready || Boolean(doorSource.error) || !isValidEntranceCorners(corners)}
+              onClick={() => { setPreviewMode('composed'); setShowAfter(true) }}
+            ><Eye size={18} /> Apply Door to Photo</button>
+            {!doorSource.ready && !doorSource.error && <p className="visualizer-apply-status">Preparing the configured door source…</p>}
+            {doorSource.error && <p className="visualizer-apply-status visualizer-apply-status-error">Resolve the configured door source error below before applying the door.</p>}
+          </> : <>
+            <ComposedPhotoPreview corners={corners} doorSourceUrl={doorSource.url} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} showAfter={showAfter} />
+            <div className="composed-preview-controls" role="group" aria-label="Composed photo controls">
+              <button type="button" onClick={() => setPreviewMode('edit')}><Pencil size={17} /> Edit Placement</button>
+              <button type="button" className={!showAfter ? 'active' : ''} aria-pressed={!showAfter} onClick={() => setShowAfter(false)}>Before</button>
+              <button type="button" className={showAfter ? 'active' : ''} aria-pressed={showAfter} onClick={() => setShowAfter(true)}>After</button>
+              <button type="button" onClick={resetPlacement}><RotateCcw size={17} /> Reset</button>
+              <button type="button" disabled title="Next step coming soon">Continue</button>
+            </div>
+          </>}
 
           <input ref={inputRef} className="visualizer-file-input" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" onChange={onInputChange} />
           {error && <p className="visualizer-error" role="alert">{error}</p>}
@@ -125,6 +172,8 @@ export function HomeVisualizer({ onBack }: Props) {
             <button type="button" className="visualizer-back-button visualizer-back-button-inline" onClick={onBack}><ArrowLeft size={17} /> Back to Door Builder</button>
           </div>}
         </section>
+
+        <ConfiguredDoorSource configurationKey={configurationKey} previewProps={configuredDoorPreview} onStateChange={updateDoorSource} />
 
         {!photo && <button type="button" className="visualizer-back-button" onClick={onBack}><ArrowLeft size={17} /> Back to Door Builder</button>}
       </div>

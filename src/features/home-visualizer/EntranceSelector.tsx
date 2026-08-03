@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { Move, RotateCcw, ScanLine } from 'lucide-react'
 
-type CornerId = 'topLeft' | 'topRight' | 'bottomRight' | 'bottomLeft'
-type Point = { x: number; y: number }
-type Corners = Record<CornerId, Point>
+export type CornerId = 'topLeft' | 'topRight' | 'bottomRight' | 'bottomLeft'
+export type Point = { x: number; y: number }
+export type EntranceCorners = Record<CornerId, Point>
 type InteractionMode = 'edit' | 'move'
 
 const CORNER_ORDER: CornerId[] = ['topLeft', 'topRight', 'bottomRight', 'bottomLeft']
-const INITIAL_CORNERS: Corners = {
+export const INITIAL_ENTRANCE_CORNERS: EntranceCorners = {
   topLeft: { x: 0.35, y: 0.14 },
   topRight: { x: 0.65, y: 0.14 },
   bottomRight: { x: 0.68, y: 0.9 },
@@ -17,14 +17,17 @@ const MIN_SEPARATION = 0.025
 
 type DragState =
   | { kind: 'corner'; corner: CornerId; pointerId: number }
-  | { kind: 'selection'; pointerId: number; startPointer: Point; startCorners: Corners }
+  | { kind: 'selection'; pointerId: number; startPointer: Point; startCorners: EntranceCorners }
 
 type Props = {
+  corners: EntranceCorners
   imageAlt: string
   imageSrc: string
+  onCornersChange: (corners: EntranceCorners) => void
+  onReset: () => void
 }
 
-const cloneCorners = (corners: Corners): Corners => ({
+export const cloneEntranceCorners = (corners: EntranceCorners): EntranceCorners => ({
   topLeft: { ...corners.topLeft },
   topRight: { ...corners.topRight },
   bottomRight: { ...corners.bottomRight },
@@ -35,7 +38,7 @@ function cross(a: Point, b: Point, c: Point) {
   return (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x)
 }
 
-function isValidCorners(corners: Corners) {
+export function isValidEntranceCorners(corners: EntranceCorners) {
   const points = CORNER_ORDER.map((id) => corners[id])
   if (points.some(({ x, y }) => x < 0 || x > 1 || y < 0 || y > 1)) return false
   if (corners.topLeft.x + MIN_SEPARATION >= corners.topRight.x) return false
@@ -47,13 +50,12 @@ function isValidCorners(corners: Corners) {
   return turns.every((turn) => turn > 0.0001) || turns.every((turn) => turn < -0.0001)
 }
 
-export function EntranceSelector({ imageAlt, imageSrc }: Props) {
+export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
   const dragRef = useRef<DragState | null>(null)
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
-  const [corners, setCorners] = useState<Corners>(() => cloneCorners(INITIAL_CORNERS))
   const [mode, setMode] = useState<InteractionMode>('edit')
 
   const updateStageSize = () => {
@@ -97,7 +99,7 @@ export function EntranceSelector({ imageAlt, imageSrc }: Props) {
     if (!startPointer) return
     event.preventDefault()
     stageRef.current?.setPointerCapture(event.pointerId)
-    dragRef.current = { kind: 'selection', pointerId: event.pointerId, startPointer, startCorners: cloneCorners(corners) }
+    dragRef.current = { kind: 'selection', pointerId: event.pointerId, startPointer, startCorners: cloneEntranceCorners(corners) }
   }
 
   const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -108,10 +110,8 @@ export function EntranceSelector({ imageAlt, imageSrc }: Props) {
     event.preventDefault()
 
     if (drag.kind === 'corner') {
-      setCorners((current) => {
-        const candidate = { ...current, [drag.corner]: pointer }
-        return isValidCorners(candidate) ? candidate : current
-      })
+      const candidate = { ...corners, [drag.corner]: pointer }
+      if (isValidEntranceCorners(candidate)) onCornersChange(candidate)
       return
     }
 
@@ -127,8 +127,8 @@ export function EntranceSelector({ imageAlt, imageSrc }: Props) {
     const candidate = Object.fromEntries(CORNER_ORDER.map((id) => [id, {
       x: drag.startCorners[id].x + deltaX,
       y: drag.startCorners[id].y + deltaY,
-    }])) as Corners
-    if (isValidCorners(candidate)) setCorners(candidate)
+    }])) as EntranceCorners
+    if (isValidEntranceCorners(candidate)) onCornersChange(candidate)
   }
 
   const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -143,7 +143,7 @@ export function EntranceSelector({ imageAlt, imageSrc }: Props) {
     <div className="entrance-selector-toolbar" role="group" aria-label="Entrance placement tools">
       <button type="button" className={mode === 'edit' ? 'active' : ''} aria-pressed={mode === 'edit'} onClick={() => setMode('edit')}><ScanLine size={17} /> Edit Entrance</button>
       <button type="button" className={mode === 'move' ? 'active' : ''} aria-pressed={mode === 'move'} onClick={() => setMode('move')}><Move size={17} /> Move Selection</button>
-      <button type="button" onClick={() => setCorners(cloneCorners(INITIAL_CORNERS))}><RotateCcw size={17} /> Reset Placement</button>
+      <button type="button" onClick={onReset}><RotateCcw size={17} /> Reset Placement</button>
     </div>
     <p className="entrance-selector-help">{mode === 'edit' ? 'Drag a corner to outline the complete entrance opening.' : 'Drag inside the highlighted area to move the complete selection.'}</p>
     <div ref={editorRef} className="visualizer-editor" aria-label="House photo entrance editor">
