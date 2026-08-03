@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { ArrowLeft, Check, ImagePlus, RefreshCw, Trash2, Upload } from 'lucide-react'
+import { EntranceSelector } from './EntranceSelector'
 
 const MAX_PHOTO_SIZE = 15 * 1024 * 1024
 const SUPPORTED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -113,9 +114,7 @@ export function HomeVisualizer({ onBack }: Props) {
               <small>JPG, PNG, or WebP · Maximum 15 MB</small>
               <span className="photo-picker-button"><Upload size={17} /> Choose Photo</span>
             </div>
-          </> : <div className="visualizer-editor" aria-label="House photo editor area">
-            <img src={photo.objectUrl} alt={`Uploaded entrance photo: ${photo.file.name}`} />
-          </div>}
+          </> : <EntranceSelector key={photo.objectUrl} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} />}
 
           <input ref={inputRef} className="visualizer-file-input" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" onChange={onInputChange} />
           {error && <p className="visualizer-error" role="alert">{error}</p>}

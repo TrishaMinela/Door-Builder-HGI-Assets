@@ -541,6 +541,7 @@ export default function App() {
   const usesF48GridFlow = (selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && glassId === F48_GRID_GLASS_ID
   const usesSGridFlow = selectedStyleCodes.includes('S') && glassId === S_GRID_GLASS_ID
   const usesGridFlow = usesFullLiteGridFlow || usesF48GridFlow || usesSGridFlow
+  const availableGridLocations = gridLocations.filter((item) => !usesF48GridFlow || item.id !== 'external')
   const usesMappedSidelites = supportsSideliteLine && Boolean(sidelites && sidelites !== 'none')
   const visibleSideliteStyleOptions = isFirSignatureSidelite
     ? sideliteStyleOptions.filter((option) => option.id === 'cr14sl' || option.id === 'fsl')
@@ -900,6 +901,114 @@ export default function App() {
     if (glassId && (!supportsGlass || !availableGlass.some((item) => item.id === glassId))) setGlassId('')
     if (step >= pages.length) setStep(pages.length - 1)
   }, [styleId, doorLineId, grainId, availableDoorLineIds, isSignatureDoorLine, selectedDoorLineLineIdsKey, needsGrainStep, effectiveFinishTypes, selectedFinishType, finishId, availableFinishIds, selectedGlassCategory, glassId, availableGlassIds, supportsGlass, step, pages.length])
+
+  useEffect(() => {
+    if (screen !== 'builder') return
+
+    switch (currentPage) {
+      case 'door-style':
+        if (!selectedStyle && doorStyles[0]) setStyleId(doorStyles[0].id)
+        break
+      case 'door-line':
+        if (!selectedDoorLine && availableDoorLines[0]) setDoorLineId(availableDoorLines[0].id)
+        break
+      case 'door-grain':
+        if (!selectedGrain && signatureGrainOptions[0]) setGrainId(signatureGrainOptions[0].id)
+        break
+      case 'sidelites':
+        if (!sidelites && sideliteOptions[0]) setSidelites(sideliteOptions[0].id)
+        break
+      case 'sidelite-style':
+        if (!selectedSideliteStyle && visibleSideliteStyleOptions[0]) setSideliteStyleId(visibleSideliteStyleOptions[0].id)
+        break
+      case 'door-finish': {
+        const firstFinish = visibleFinishes[0]
+        if (!visibleSelectedFinish && firstFinish) {
+          if (firstFinish.finishType === 'paint') setSelectedPaint(firstFinish.id)
+          else setSelectedStain(firstFinish.id)
+        }
+        break
+      }
+      case 'jamb-type':
+        if (!jambType) setJambType('timber')
+        break
+      case 'jamb-finish':
+        if (!jambFinish && jambFinishOptions[0]) setJambFinishColor(jambFinishOptions[0].id)
+        break
+      case 'glass-type':
+        if (!selectedGlassCategory && availableGlassCategories[0]) setSelectedGlassCategory(availableGlassCategories[0].id)
+        break
+      case 'glass': {
+        const firstGroup = glassOptionGroups[0]
+        if (!selectedGlassGroup && firstGroup) {
+          setSelectedGlassGroupKey(firstGroup.key)
+          setGlassId(firstGroup.options[0]?.id ?? '')
+          setGlassVariantConfirmed(firstGroup.options.length === 1)
+        }
+        break
+      }
+      case 'glass-variant':
+        if (!glassVariantConfirmed && selectedGlassGroup?.options[0]) {
+          setGlassId(selectedGlassGroup.options[0].id)
+          setGlassVariantConfirmed(true)
+        }
+        break
+      case 'grid-location':
+        if (!gridPathId && availableGridLocations[0]) setGridPathId(availableGridLocations[0].id)
+        break
+      case 'grid-style':
+        if (!gridStyle && lowEGridStyles[0]) setGridStyle(lowEGridStyles[0].id)
+        break
+      case 'grid-pattern':
+        if (!gridPattern && compatibleGridPatterns[0]) setGridPattern(compatibleGridPatterns[0].id)
+        break
+      case 'grid-color':
+        if (!gridColor && compatibleGridColors[0]) setGridColor(compatibleGridColors[0])
+        break
+      case 'grid-width':
+        if (!gridWidth && compatibleGridWidths[0]) setGridWidth(compatibleGridWidths[0])
+        break
+      case 'sidelite-glass-type':
+        if (!sideliteGlassCategory && selectedSideliteCatalog?.categories[0]) setSideliteGlassCategory(selectedSideliteCatalog.categories[0].id)
+        break
+      case 'sidelite-glass': {
+        const firstGroup = sideliteGlassOptionGroups[0]
+        if (!selectedSideliteGlassGroup && firstGroup) {
+          setSideliteGlassGroupKey(firstGroup.key)
+          setSideliteGlassId(firstGroup.options[0]?.id ?? '')
+          setSideliteGlassVariantConfirmed(firstGroup.options.length === 1)
+        }
+        break
+      }
+      case 'sidelite-glass-variant':
+        if (!sideliteGlassVariantConfirmed && selectedSideliteGlassGroup?.options[0]) {
+          setSideliteGlassId(selectedSideliteGlassGroup.options[0].id)
+          setSideliteGlassVariantConfirmed(true)
+        }
+        break
+      case 'sidelite-grid-location':
+        if (!sideliteGridLocation) setSideliteGridLocation('internal')
+        break
+      case 'sidelite-grid-style':
+        if (!sideliteGridStyle && fslGridStyles[0]) setSideliteGridStyle(fslGridStyles[0])
+        break
+      case 'sidelite-grid-pattern':
+        if (!sideliteGridPattern && fslPatterns[0]) setSideliteGridPattern(fslPatterns[0])
+        break
+      case 'sidelite-grid-color':
+        if (!sideliteGridColor && fslColors[0]) setSideliteGridColor(fslColors[0])
+        break
+      case 'sidelite-grid-width':
+        if (!sideliteGridWidth && fslWidths[0]) setSideliteGridWidth(fslWidths[0])
+        break
+      case 'hardware':
+        if (!selectedHardware && hardwareStyleGroups[0]?.[0]) setHardwareId(hardwareStyleGroups[0][0].id)
+        break
+      case 'door-swing':
+        if (!selectedDoorSwing && doorSwingOptions[0]) setDoorSwingId(doorSwingOptions[0].id)
+        break
+    }
+  }, [screen, currentPage, selectedStyle, selectedDoorLine, selectedGrain, sidelites, selectedSideliteStyle, visibleSideliteStyleOptions, visibleSelectedFinish, visibleFinishes, jambType, jambFinish, jambFinishOptions, selectedGlassCategory, availableGlassCategories, selectedGlassGroup, glassOptionGroups, glassVariantConfirmed, selectedGlassGroupKey, gridPathId, availableGridLocations, gridStyle, gridPattern, compatibleGridPatterns, gridColor, compatibleGridColors, gridWidth, compatibleGridWidths, sideliteGlassCategory, selectedSideliteCatalog, selectedSideliteGlassGroup, sideliteGlassOptionGroups, sideliteGlassVariantConfirmed, sideliteGridLocation, sideliteGridStyle, fslGridStyles, sideliteGridPattern, fslPatterns, sideliteGridColor, fslColors, sideliteGridWidth, fslWidths, selectedHardware, hardwareStyleGroups, selectedDoorSwing])
 
   useEffect(() => {
     if (!selectedFinish || jambFinishOverridden) return
@@ -1398,7 +1507,7 @@ export default function App() {
                   return <OptionCard key={group.key} title={group.title} eyebrow="Glass" selected={selectedGlassGroupKey === group.key} onClick={() => selectGlassGroup(group)} visual={displayOption.thumbnailPath ? <img className="glass-option-thumbnail" src={displayOption.thumbnailPath} alt="" loading="lazy" decoding="async" /> : undefined} />
                 })}
                 {currentPage === 'glass-variant' && selectedGlassGroup?.options.map((item) => <OptionCard key={item.id} title={glassVariantLabel(item.name)} eyebrow={selectedGlassGroup.title} selected={glassVariantConfirmed && glassId === item.id} onClick={() => selectGlassVariant(item.id)} visual={item.thumbnailPath ? <img className="glass-option-thumbnail" src={item.thumbnailPath} alt="" loading="lazy" decoding="async" /> : undefined} />)}
-                {currentPage === 'grid-location' && gridLocations.filter((item) => !usesF48GridFlow || item.id !== 'external').map((item) => <OptionCard key={item.id} title={item.name} selected={gridPathId === item.id} onClick={() => selectGridLocation(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" loading="eager" decoding="async" />} />)}
+                {currentPage === 'grid-location' && availableGridLocations.map((item) => <OptionCard key={item.id} title={item.name} selected={gridPathId === item.id} onClick={() => selectGridLocation(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" loading="eager" decoding="async" />} />)}
                 {currentPage === 'grid-style' && lowEGridStyles.map((item) => <OptionCard key={item.id} title={item.id} selected={gridStyle === item.id} onClick={() => selectGridStyle(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" loading="eager" decoding="async" />} />)}
                 {currentPage === 'grid-pattern' && compatibleGridPatterns.map((item) => <OptionCard key={item.id} title={item.id} selected={gridPattern === item.id} onClick={() => selectGridPattern(item.id)} visual={<img className="grid-pattern-thumbnail" src="/assets/grid-options/All Lites.png" alt="" loading="eager" decoding="async" />} />)}
                 {currentPage === 'grid-color' && compatibleGridColors.map((color) => <OptionCard key={color} title={color} eyebrow="Grid color" selected={gridColor === color} onClick={() => selectGridColor(color)} visual={<span className="finish-tile-wrap grid-color-tile" style={{ '--fallback-finish': gridColorValues[color] ?? '#efeee8' } as CSSProperties} />} />)}
