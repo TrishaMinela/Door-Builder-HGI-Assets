@@ -134,7 +134,8 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
             </div>
           </> : previewMode === 'edit' ? <>
             <div className="entrance-placement-instructions">
-              <p>Place the four corners along the inside edges of the existing opening being replaced. Include the door and any sidelites that will be replaced, but keep the home’s existing exterior trim outside the selected area.</p>
+              <p>Place the four corners along the inside edges of the existing entrance frame. Keep the home’s existing trim and threshold outside the selected area.</p>
+              {configuredDoorPreview.sidelites && configuredDoorPreview.sidelites !== 'none' && <p>Include the complete inside opening containing the door and selected sidelites, but keep the outer trim outside the selected area.</p>}
             </div>
             <EntranceSelector
               key={photo.objectUrl}

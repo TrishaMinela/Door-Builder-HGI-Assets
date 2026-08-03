@@ -99,10 +99,44 @@ export type CapturedDoorSource = {
   height: number
 }
 
+function trimTransparentPixels(source: HTMLCanvasElement) {
+  const context = source.getContext('2d', { willReadFrequently: true })
+  if (!context) throw new Error('The configured door image could not be inspected.')
+  const pixels = context.getImageData(0, 0, source.width, source.height)
+  let left = source.width
+  let top = source.height
+  let right = -1
+  let bottom = -1
+
+  for (let y = 0; y < pixels.height; y += 1) {
+    for (let x = 0; x < pixels.width; x += 1) {
+      if (pixels.data[(y * pixels.width + x) * 4 + 3] === 0) continue
+      if (x < left) left = x
+      if (x > right) right = x
+      if (y < top) top = y
+      if (y > bottom) bottom = y
+    }
+  }
+
+  if (right < left || bottom < top) throw new Error('The configured door source rendered empty.')
+  const width = right - left + 1
+  const height = bottom - top + 1
+  if (left === 0 && top === 0 && width === source.width && height === source.height) return source
+  const trimmed = document.createElement('canvas')
+  trimmed.width = width
+  trimmed.height = height
+  const trimmedContext = trimmed.getContext('2d')
+  if (!trimmedContext) throw new Error('The configured door image could not be trimmed.')
+  trimmedContext.drawImage(source, left, top, width, height, 0, 0, width, height)
+  source.width = 0
+  source.height = 0
+  return trimmed
+}
+
 export async function captureDoorPreview(previewRoot: HTMLElement): Promise<CapturedDoorSource> {
   await waitForRenderedAssets(previewRoot)
-  const frame = previewRoot.querySelector<HTMLElement>('.door-frame[data-frame="visible"]')
-  if (!frame) throw new Error('The configured exterior door assembly is unavailable.')
+  const frame = previewRoot.querySelector<HTMLElement>('.door-frame[data-frame="opening-only"]')
+  if (!frame) throw new Error('The configured opening-only door assembly is unavailable.')
   const mappedDoor = frame.querySelector('.mapped-preview-door')
   if (mappedDoor && !mappedDoor.querySelector('.door-finish-layer')) {
     throw new Error('The configured slab or finish asset did not finish loading. Please retry.')
@@ -132,6 +166,10 @@ export async function captureDoorPreview(previewRoot: HTMLElement): Promise<Capt
   context.imageSmoothingQuality = 'high'
   context.scale(CAPTURE_SCALE, CAPTURE_SCALE)
   context.drawImage(image, 0, 0, width, height)
-  const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((output) => output ? resolve(output) : reject(new Error('The configured door image could not be encoded.')), 'image/png'))
-  return { blob, width: canvas.width, height: canvas.height }
+  const trimmedCanvas = trimTransparentPixels(canvas)
+  const blob = await new Promise<Blob>((resolve, reject) => trimmedCanvas.toBlob((output) => output ? resolve(output) : reject(new Error('The configured door image could not be encoded.')), 'image/png'))
+  const output = { blob, width: trimmedCanvas.width, height: trimmedCanvas.height }
+  trimmedCanvas.width = 0
+  trimmedCanvas.height = 0
+  return output
 }

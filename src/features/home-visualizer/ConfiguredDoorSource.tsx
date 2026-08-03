@@ -89,7 +89,7 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
       </div>}
     </div>
     <div className="configured-door-capture-host" ref={captureRootRef} aria-hidden="true">
-      <DoorPreview {...previewProps} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} />
+      <DoorPreview {...previewProps} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} placementMode="opening-only" />
     </div>
   </section>
 }
