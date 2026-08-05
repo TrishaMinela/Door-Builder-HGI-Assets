@@ -20,6 +20,8 @@ import { cr14slGlassCategories, cr14slGlassOptions, cr14slGridAsset, cr14slStyle
 import { glassSelectionThumbnail } from './data/glassOptions'
 import { cladColors } from './data/finishes'
 import { HomeVisualizer } from './features/home-visualizer/HomeVisualizer'
+import { HERO_PRESETS, heroDoorFilename, type HeroPreset } from './data/heroPresets'
+import { HeroDoorGenerator } from './features/hero/HeroDoorGenerator'
 
 const glassSteps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
 const noGlassSteps = ['Door Style', 'Finish', 'Hardware', 'Review & Quote']
@@ -293,12 +295,6 @@ const heroDoorOpeningStyle = {
   width: `${HERO_DOOR_OPENING.widthPct}%`,
   height: `${HERO_DOOR_OPENING.heightPct}%`,
 } as CSSProperties
-type HeroPreset = {
-  styleCode: string
-  finishKey: 'black-paint' | 'white-paint' | 'natural-stain' | 'harvest-stain' | 'nutmeg-stain' | 'toasted-caramel-stain' | 'brown-stain' | 'black-cherry-stain'
-  glassId?: string
-  glassName?: string
-}
 const HERO_FINISH_SPECS: Record<HeroPreset['finishKey'], { baseId: string; name: string; colorId?: string }> = {
   'black-paint': { baseId: 'paint-black', name: 'Black Paint' },
   'white-paint': { baseId: 'paint-white', name: 'White Paint' },
@@ -309,37 +305,6 @@ const HERO_FINISH_SPECS: Record<HeroPreset['finishKey'], { baseId: string; name:
   'brown-stain': { baseId: 'stain-cinnamon', colorId: 'paint-brown', name: 'Brown Stain' },
   'black-cherry-stain': { baseId: 'stain-black-cherry', name: 'Black Cherry Stain' },
 }
-const HERO_PRESETS: HeroPreset[] = [
-  { styleCode: '2PHD', finishKey: 'black-paint' },
-  { styleCode: '2PNGSS', finishKey: 'natural-stain' },
-  { styleCode: '3LT', finishKey: 'white-paint', glassId: 'bristol' },
-  { styleCode: '3STEP', finishKey: 'black-paint', glassId: 'paris' },
-  { styleCode: '4LT', finishKey: 'natural-stain', glassId: 'oak-park' },
-  { styleCode: '5LT', finishKey: 'white-paint', glassId: 'bay-point' },
-  { styleCode: 'CR14', finishKey: 'black-paint', glassId: 'margate' },
-  { styleCode: 'CR14PL', finishKey: 'harvest-stain', glassId: 'lexington' },
-  { styleCode: 'F', finishKey: 'white-paint', glassId: 'vilano' },
-  { styleCode: 'F2', finishKey: 'nutmeg-stain', glassId: 'leland' },
-  { styleCode: 'F3', finishKey: 'black-paint', glassId: 'cobblestone' },
-  { styleCode: 'F4', finishKey: 'natural-stain', glassId: 'ovation' },
-  { styleCode: 'F48', finishKey: 'toasted-caramel-stain', glassId: 'lazarus' },
-  { styleCode: 'F482', finishKey: 'brown-stain', glassId: 'dutchcraft', glassName: 'Dutch Craft' },
-  { styleCode: 'F764', finishKey: 'white-paint', glassId: 'cadence' },
-  { styleCode: 'F848', finishKey: 'black-cherry-stain', glassId: 'majestic-nickel', glassName: 'Majestic Elegance' },
-  { styleCode: 'FO', finishKey: 'black-paint', glassId: 'mistify', glassName: 'Mistify - Black' },
-  { styleCode: 'FRT', finishKey: 'harvest-stain', glassId: 'nouveau-nickel', glassName: 'Nouveau' },
-  { styleCode: 'HDAT1', finishKey: 'white-paint', glassId: 'topaz' },
-  { styleCode: 'HRT', finishKey: 'natural-stain', glassId: 'hrt-nouveau-nickel', glassName: 'Nouveau - Nickel' },
-  { styleCode: 'QA', finishKey: 'black-paint', glassId: 'mohave' },
-  { styleCode: 'S', finishKey: 'nutmeg-stain', glassId: 'waterside' },
-  { styleCode: 'S2', finishKey: 'white-paint', glassId: 'entropy' },
-  { styleCode: 'S3', finishKey: 'toasted-caramel-stain', glassId: 'heirlooms-nickel', glassName: 'Heirlooms' },
-  { styleCode: 'S4', finishKey: 'black-paint', glassId: 'renewed-impressions' },
-  { styleCode: 'S836', finishKey: 'brown-stain', glassId: 'privacy', glassName: 'Private Lites' },
-  { styleCode: 'SAT', finishKey: 'white-paint', glassId: 'bristol' },
-  { styleCode: 'SO', finishKey: 'black-cherry-stain', glassId: 'paris' },
-  { styleCode: 'SO2', finishKey: 'black-paint', glassId: 'oak-park' },
-]
 const grainThumbnails: Record<string, string> = {
   Cherry: '/assets/door-lines/grains/cherry.png',
   Fir: '/assets/door-lines/grains/fir.png',
@@ -466,6 +431,7 @@ export default function App() {
   const [submitError, setSubmitError] = useState('')
   const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null)
   const [homeDemoIndex, setHomeDemoIndex] = useState(0)
+  const [heroImageError, setHeroImageError] = useState('')
   const [builderPreviewView, setBuilderPreviewView] = useState<'Exterior' | 'Interior' | 'Both'>('Exterior')
   const builderPanelRef = useRef<HTMLElement | null>(null)
   const builderOptionsRef = useRef<HTMLDivElement | null>(null)
@@ -1070,6 +1036,8 @@ export default function App() {
     return () => window.clearInterval(timer)
   }, [screen, homeDemoConfigurations.length])
 
+  useEffect(() => setHeroImageError(''), [homeDemoIndex])
+
   useEffect(() => {
     if (!showEntrywayGuidance) return
     entrywayStartButtonRef.current?.focus()
@@ -1448,6 +1416,17 @@ export default function App() {
     ['Door swing', selectedDoorSwing?.name ?? 'Not selected', pages.indexOf('door-swing')],
   ]
 
+  const heroGenerationParam = new URLSearchParams(window.location.search).get('generateHeroDoor')
+  if (heroGenerationParam !== null) {
+    const generationIndex = Number.parseInt(heroGenerationParam, 10)
+    const generationDemo = homeDemoConfigurations[generationIndex]
+    if (!generationDemo || !HERO_PRESETS[generationIndex]) return <pre>Invalid hero door index: {heroGenerationParam}</pre>
+    return <HeroDoorGenerator
+      label={heroDoorFilename(HERO_PRESETS[generationIndex], generationIndex)}
+      previewProps={{ style: generationDemo.style, finish: generationDemo.finish, glass: generationDemo.glass, hardware: generationDemo.hardware, grain: generationDemo.grain, product: generationDemo.product, tintColor: generationDemo.finish.color, applyFinish: true, gridMatchesFinish: generationDemo.gridMatchesFinish }}
+    />
+  }
+
   return (
     <div className={`app ${screen === 'home' ? 'home-app' : screen === 'visualizer' ? 'visualizer-app' : ''}`}>
       <header>
@@ -1493,7 +1472,22 @@ export default function App() {
                 <div className="home-entryway-overlay" aria-hidden="true">
                   <div className="home-entryway-door-slot hero-door-stack entryway-door-stack hero-door-overlay" style={heroDoorOpeningStyle}>
                     <div className="home-demo-door-layer active" key={`${activeHomeDemo.style.code}-${activeHomeDemo.finish.id}-${activeHomeDemo.glass?.id ?? 'no-glass'}-${activeHomeDemo.hardware.id}`}>
-                      <DoorPreview style={activeHomeDemo.style} finish={activeHomeDemo.finish} glass={activeHomeDemo.glass} hardware={activeHomeDemo.hardware} grain={activeHomeDemo.grain} product={activeHomeDemo.product} tintColor={activeHomeDemo.finish.color} applyFinish gridMatchesFinish={activeHomeDemo.gridMatchesFinish} compact />
+                      <img
+                        className="hero-static-door-image"
+                        src={`/assets/generated/hero-doors/${heroDoorFilename(HERO_PRESETS[homeDemoIndex % HERO_PRESETS.length], homeDemoIndex % HERO_PRESETS.length)}`}
+                        alt={`${activeHomeDemo.style.name} in ${activeHomeDemo.finish.name}${activeHomeDemo.glass ? ` with ${activeHomeDemo.glass.name} glass` : ''}`}
+                        width="484"
+                        height="1100"
+                        loading={homeDemoIndex === 0 ? 'eager' : 'lazy'}
+                        decoding={homeDemoIndex === 0 ? 'sync' : 'async'}
+                        fetchPriority={homeDemoIndex === 0 ? 'high' : 'auto'}
+                        onLoad={() => setHeroImageError('')}
+                        onError={(event) => {
+                          const message = `Missing generated hero door: ${event.currentTarget.currentSrc || event.currentTarget.src}`
+                          if (import.meta.env.DEV) { console.error(`[hero-door-image:missing] ${message}`); setHeroImageError(message) }
+                        }}
+                      />
+                      {import.meta.env.DEV && heroImageError && <span className="hero-image-warning" role="alert">{heroImageError}</span>}
                     </div>
                   </div>
                 </div>

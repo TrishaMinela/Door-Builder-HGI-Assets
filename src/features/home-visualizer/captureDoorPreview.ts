@@ -133,10 +133,18 @@ function trimTransparentPixels(source: HTMLCanvasElement) {
   return trimmed
 }
 
-export async function captureDoorPreview(previewRoot: HTMLElement): Promise<CapturedDoorSource> {
+type CaptureDoorPreviewOptions = {
+  frameMode?: 'opening-only' | 'hidden' | 'visible'
+  mimeType?: 'image/png' | 'image/webp'
+  targetHeight?: number
+  quality?: number
+}
+
+export async function captureDoorPreview(previewRoot: HTMLElement, options: CaptureDoorPreviewOptions = {}): Promise<CapturedDoorSource> {
   await waitForRenderedAssets(previewRoot)
-  const frame = previewRoot.querySelector<HTMLElement>('.door-frame[data-frame="opening-only"]')
-  if (!frame) throw new Error('The configured opening-only door assembly is unavailable.')
+  const frameMode = options.frameMode ?? 'opening-only'
+  const frame = previewRoot.querySelector<HTMLElement>(`.door-frame[data-frame="${frameMode}"]`)
+  if (!frame) throw new Error(`The configured ${frameMode} door assembly is unavailable.`)
   const mappedDoor = frame.querySelector('.mapped-preview-door')
   if (mappedDoor && !mappedDoor.querySelector('.door-finish-layer')) {
     throw new Error('The configured slab or finish asset did not finish loading. Please retry.')
@@ -166,10 +174,24 @@ export async function captureDoorPreview(previewRoot: HTMLElement): Promise<Capt
   context.imageSmoothingQuality = 'high'
   context.scale(CAPTURE_SCALE, CAPTURE_SCALE)
   context.drawImage(image, 0, 0, width, height)
-  const trimmedCanvas = trimTransparentPixels(canvas)
-  const blob = await new Promise<Blob>((resolve, reject) => trimmedCanvas.toBlob((output) => output ? resolve(output) : reject(new Error('The configured door image could not be encoded.')), 'image/png'))
-  const output = { blob, width: trimmedCanvas.width, height: trimmedCanvas.height }
-  trimmedCanvas.width = 0
-  trimmedCanvas.height = 0
+  let outputCanvas = trimTransparentPixels(canvas)
+  if (options.targetHeight && outputCanvas.height !== options.targetHeight) {
+    const resized = document.createElement('canvas')
+    resized.height = options.targetHeight
+    resized.width = Math.max(1, Math.round(outputCanvas.width * options.targetHeight / outputCanvas.height))
+    const resizedContext = resized.getContext('2d')
+    if (!resizedContext) throw new Error('The configured door image could not be resized.')
+    resizedContext.imageSmoothingEnabled = true
+    resizedContext.imageSmoothingQuality = 'high'
+    resizedContext.drawImage(outputCanvas, 0, 0, resized.width, resized.height)
+    outputCanvas.width = 0
+    outputCanvas.height = 0
+    outputCanvas = resized
+  }
+  const mimeType = options.mimeType ?? 'image/png'
+  const blob = await new Promise<Blob>((resolve, reject) => outputCanvas.toBlob((output) => output ? resolve(output) : reject(new Error('The configured door image could not be encoded.')), mimeType, options.quality))
+  const output = { blob, width: outputCanvas.width, height: outputCanvas.height }
+  outputCanvas.width = 0
+  outputCanvas.height = 0
   return output
 }
