@@ -38,6 +38,8 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
   const [autoFitUndo, setAutoFitUndo] = useState<EntranceCorners | null>(null)
   const [autoFitLoading, setAutoFitLoading] = useState(false)
   const [autoFitError, setAutoFitError] = useState('')
+  const [autoFitFailureCorners, setAutoFitFailureCorners] = useState<EntranceCorners | null>(null)
+  const [cornersChangedAfterAutoFitFailure, setCornersChangedAfterAutoFitFailure] = useState(false)
   const [cleanupLoading, setCleanupLoading] = useState(false)
   const [cleanupError, setCleanupError] = useState('')
   const [cleanupProposal, setCleanupProposal] = useState<(CleanupProposal & { cleanedUrl: string; maskUrl: string }) | null>(null)
@@ -46,6 +48,11 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
   const [doorSource, setDoorSource] = useState<DoorSourceState>({ url: '', width: 0, height: 0, error: '', ready: false })
   const updateDoorSource = useCallback((state: DoorSourceState) => setDoorSource(state), [])
 
+  const clearAutoFitFailure = () => {
+    setAutoFitFailureCorners(null)
+    setCornersChangedAfterAutoFitFailure(false)
+  }
+
   const resetPlacement = () => {
     setCorners(cloneEntranceCorners(INITIAL_ENTRANCE_CORNERS))
     setPreviewMode('edit')
@@ -53,7 +60,14 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
     setAutoFitProposal(null)
     setAutoFitUndo(null)
     setAutoFitError('')
+    clearAutoFitFailure()
   }
+
+  useEffect(() => {
+    setAutoFitProposal(null)
+    setAutoFitError('')
+    clearAutoFitFailure()
+  }, [configurationKey])
 
   useEffect(() => () => {
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
@@ -113,12 +127,37 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
     setAutoFitError('')
     setAutoFitProposal(null)
     try {
-      setAutoFitProposal(await autoFitEntrance(photo.objectUrl, corners, options))
-    } catch (reason) {
-      setAutoFitError(reason instanceof Error ? reason.message : 'We couldn’t confidently find all four entrance edges. Move the corners closer to the opening and try again.')
+      const result = await autoFitEntrance(photo.objectUrl, corners, options)
+      if (result.detectedCount < 1) {
+        setAutoFitFailureCorners(cloneEntranceCorners(corners))
+        setCornersChangedAfterAutoFitFailure(false)
+        setAutoFitError('Move the four points closer to the exact inside corners of the door opening, then try Auto-Fit again. For difficult photos, a wider search will become available after you adjust the points.')
+      } else {
+        setAutoFitProposal(result)
+        clearAutoFitFailure()
+      }
+    } catch {
+      setAutoFitFailureCorners(cloneEntranceCorners(corners))
+      setCornersChangedAfterAutoFitFailure(false)
+      setAutoFitError('Move the four points closer to the exact inside corners of the door opening, then try Auto-Fit again. For difficult photos, a wider search will become available after you adjust the points.')
     } finally {
       setAutoFitLoading(false)
     }
+  }
+
+  const updateCorners = (nextCorners: EntranceCorners) => {
+    setCorners(nextCorners)
+    if (!autoFitFailureCorners || !isValidEntranceCorners(nextCorners)) return
+    const changed = (Object.keys(nextCorners) as Array<keyof EntranceCorners>).some((id) =>
+      Math.abs(nextCorners[id].x - autoFitFailureCorners[id].x) > 1e-7 || Math.abs(nextCorners[id].y - autoFitFailureCorners[id].y) > 1e-7)
+    if (changed) setCornersChangedAfterAutoFitFailure(true)
+  }
+
+  const showWiderAutoFit = Boolean(autoFitFailureCorners && cornersChangedAfterAutoFitFailure && isValidEntranceCorners(corners) && !autoFitProposal)
+
+  const leaveVisualizer = () => {
+    clearAutoFitFailure()
+    onBack()
   }
 
   const runAutoClean = async (options: { wider?: boolean; radius?: 3 | 5 } = {}) => {
@@ -222,30 +261,34 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
             </div>
           </> : previewMode === 'edit' ? <>
             <div className="entrance-placement-instructions">
-              <p>Place the four corners along the inside edges of the existing entrance frame. Keep the home’s existing trim and threshold outside the selected area.</p>
-              {configuredDoorPreview.sidelites && configuredDoorPreview.sidelites !== 'none' && <p>Include the complete inside opening containing the door and selected sidelites, but keep the outer trim outside the selected area.</p>}
+              <Crosshair className="entrance-placement-icon" size={24} aria-hidden="true" />
+              <div>
+                <h3>Outline the Exact Door Opening</h3>
+                <p>Place each corner directly on the inside corner of the existing door frame. Include only the door opening being replaced.</p>
+                <p className="entrance-placement-note">Keep the exterior trim, jamb, and threshold outside the outlined area. Accurate corner placement gives Auto-Fit and the final visualization the best result.</p>
+              </div>
             </div>
+            <p className="entrance-editor-direction"><Crosshair size={15} aria-hidden="true" /> Position the four points on the inside corners shown in the photo.</p>
             <EntranceSelector
               key={photo.objectUrl}
               corners={corners}
               imageSrc={photo.objectUrl}
               imageAlt={`Uploaded entrance photo: ${photo.file.name}`}
-              onCornersChange={setCorners}
+              onCornersChange={updateCorners}
               onReset={resetPlacement}
               proposedCorners={autoFitProposal?.corners}
               proposedDetectedEdges={autoFitProposal ? ['top', 'right', 'bottom', 'left'].map((edge) => autoFitProposal.detectedEdges[edge as keyof typeof autoFitProposal.detectedEdges]) : undefined}
             />
             <div className="auto-fit-controls">
               {!autoFitProposal ? <button type="button" className="visualizer-secondary-button" disabled={autoFitLoading} onClick={() => runAutoFit()}><Crosshair size={17} /> {autoFitLoading ? 'Refining Entrance Edges…' : 'Auto-Fit Entrance'}</button> : <>
-                <button type="button" className="visualizer-apply-button auto-tool-apply" onClick={() => { setAutoFitUndo(cloneEntranceCorners(corners)); setCorners(autoFitProposal.corners); setAutoFitProposal(null); setAutoFitError('') }}><Check size={17} /> Apply Auto-Fit</button>
-                <button type="button" className="visualizer-secondary-button" disabled={autoFitLoading} onClick={() => runAutoFit({ wider: true })}><Crosshair size={17} /> Try Wider Search</button>
+                <button type="button" className="visualizer-apply-button auto-tool-apply" onClick={() => { setAutoFitUndo(cloneEntranceCorners(corners)); setCorners(autoFitProposal.corners); setAutoFitProposal(null); setAutoFitError(''); clearAutoFitFailure() }}><Check size={17} /> Apply Auto-Fit</button>
                 <button type="button" className="visualizer-secondary-button" onClick={() => setAutoFitProposal(null)}>Cancel</button>
               </>}
+              {showWiderAutoFit && <button type="button" className="visualizer-secondary-button" disabled={autoFitLoading} onClick={() => runAutoFit({ wider: true })}><Crosshair size={17} /> Try Wider Search</button>}
               {autoFitUndo && !autoFitProposal && <button type="button" className="visualizer-secondary-button" onClick={() => { setCorners(autoFitUndo); setAutoFitUndo(null) }}><RotateCcw size={17} /> Undo Auto-Fit</button>}
             </div>
             {autoFitProposal && <p className="auto-tool-result">Auto-Fit refined {autoFitProposal.detectedCount} of 4 edges. The remaining edges were kept from your manual placement.</p>}
-            {import.meta.env.DEV && autoFitProposal && <details className="cv-diagnostics"><summary>Auto-Fit diagnostics</summary><div className="cv-diagnostic-stage"><img src={photo.objectUrl} alt="" /><svg viewBox={`0 0 ${autoFitProposal.diagnostics.width} ${autoFitProposal.diagnostics.height}`}>{autoFitProposal.diagnostics.bands.map((line, index) => <line key={`band-${index}`} className="cv-band" style={{ strokeWidth: autoFitProposal.diagnostics.bandWidth * 2 }} x1={line.a.x} y1={line.a.y} x2={line.b.x} y2={line.b.y} />)}{autoFitProposal.diagnostics.segments.map((line, index) => <line key={`segment-${index}`} className="cv-segment" x1={line.a.x} y1={line.a.y} x2={line.b.x} y2={line.b.y} />)}{autoFitProposal.diagnostics.chosen.map((line, index) => <line key={`chosen-${index}`} className={`cv-chosen ${line.kind}`} x1={line.a.x} y1={line.a.y} x2={line.b.x} y2={line.b.y} />)}</svg></div>{(['top', 'right', 'bottom', 'left'] as const).map((edge) => <p key={edge}><strong>{edge[0].toUpperCase() + edge.slice(1)}: {autoFitProposal.detectedEdges[edge] ? 'Refined' : 'Preserved'}</strong> · confidence {autoFitProposal.diagnostics.confidence[edge].toFixed(2)} — {autoFitProposal.diagnostics.reasons[edge]}</p>)}</details>}
-            {autoFitError && <div className="auto-tool-failure"><p className="visualizer-error" role="alert">{autoFitError}</p><button type="button" className="visualizer-secondary-button" disabled={autoFitLoading} onClick={() => runAutoFit({ wider: true })}><Crosshair size={17} /> Try Wider Search</button></div>}
+            {autoFitError && <p className="visualizer-error" role="alert">{autoFitError}</p>}
             <button
               type="button"
               className="visualizer-apply-button"
@@ -255,6 +298,14 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
             {!doorSource.ready && !doorSource.error && <p className="visualizer-apply-status">Preparing the configured door source…</p>}
             {doorSource.error && <p className="visualizer-apply-status visualizer-apply-status-error">Resolve the configured door source error below before applying the door.</p>}
           </> : <>
+            <div className="entrance-placement-instructions">
+              <Crosshair className="entrance-placement-icon" size={24} aria-hidden="true" />
+              <div>
+                <h3>Outline the Exact Door Opening</h3>
+                <p>Place each corner directly on the inside corner of the existing door frame. Include only the door opening being replaced.</p>
+                <p className="entrance-placement-note">Keep the exterior trim, jamb, and threshold outside the outlined area. Accurate corner placement gives Auto-Fit and the final visualization the best result.</p>
+              </div>
+            </div>
             <ComposedPhotoPreview corners={corners} doorSourceUrl={doorSource.url} imageSrc={approvedCleanup?.cleanedUrl ?? photo.objectUrl} originalImageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} showAfter={showAfter} />
             {cleanupProposal && <section className="cleanup-comparison" aria-labelledby="cleanup-comparison-title">
               <h3 id="cleanup-comparison-title">{cleanupProposal.confidence === 'medium' ? 'Possible old hardware' : 'Review Proposed Cleanup'}</h3>
@@ -281,13 +332,13 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
           {photo && <div className="visualizer-photo-actions">
             <button type="button" className="visualizer-secondary-button" onClick={openPicker}><RefreshCw size={17} /> Replace Photo</button>
             <button type="button" className="visualizer-remove-button" onClick={removePhoto}><Trash2 size={17} /> Remove Photo</button>
-            <button type="button" className="visualizer-back-button visualizer-back-button-inline" onClick={onBack}><ArrowLeft size={17} /> Back to Door Builder</button>
+            <button type="button" className="visualizer-back-button visualizer-back-button-inline" onClick={leaveVisualizer}><ArrowLeft size={17} /> Back to Door Builder</button>
           </div>}
         </section>
 
         <ConfiguredDoorSource configurationKey={configurationKey} previewProps={configuredDoorPreview} onStateChange={updateDoorSource} />
 
-        {!photo && <button type="button" className="visualizer-back-button" onClick={onBack}><ArrowLeft size={17} /> Back to Door Builder</button>}
+        {!photo && <button type="button" className="visualizer-back-button" onClick={leaveVisualizer}><ArrowLeft size={17} /> Back to Door Builder</button>}
       </div>
     </main>
   )
