@@ -1459,9 +1459,8 @@ export default function App() {
         <section className="home-hero">
           <div className="home-hero-copy">
             <span className="home-eyebrow">Home Guard Door Builder</span>
-            <h1>Build Your Home Guard Door</h1>
-            <h2>Design your ideal entry door with real styles, finishes, glass, and hardware options.</h2>
-            <p>Preview your selections instantly, save your configuration, and request a quote when you’re ready.</p>
+            <h1>Build a Door Made for Your Home.</h1>
+            <p>Choose your door style, finish, glass, and hardware, then preview your exact combination before requesting a quote.</p>
             <button className="start-building" onClick={() => showScreen('builder')}>Start Building <ArrowRight size={18} /></button>
             <span className="home-trust"><ShieldCheck size={15} /> Built for your home. Backed by Home Guard Industries.</span>
           </div>
