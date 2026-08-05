@@ -1500,6 +1500,7 @@ export default function App() {
         </section>
       </main> : screen === 'visualizer' ? <HomeVisualizer
         onBack={() => showScreen('builder')}
+        onReturnToReview={() => { goTo(pages.indexOf('review')); showScreen('builder') }}
         configuredDoorPreview={configuredDoorPreview}
         configurationKey={configuredDoorKey}
       /> : <>

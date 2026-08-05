@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
-import { ArrowLeft, Brush, Check, Crosshair, Eye, ImagePlus, Pencil, RefreshCw, RotateCcw, Trash2, Upload } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
+import { ArrowLeft, Brush, Check, Crosshair, Download, ImagePlus, RefreshCw, RotateCcw, Trash2, Upload } from 'lucide-react'
 import { cloneEntranceCorners, EntranceSelector, INITIAL_ENTRANCE_CORNERS, isValidEntranceCorners, type EntranceCorners } from './EntranceSelector'
 import type { DoorPreviewProps } from '../../components/DoorPreview'
 import { ConfiguredDoorSource, type DoorSourceState } from './ConfiguredDoorSource'
@@ -7,6 +7,10 @@ import { ComposedPhotoPreview } from './ComposedPhotoPreview'
 import { autoFitEntrance, type AutoFitResult } from './computerVision'
 import { CleanupBrushEditor, type CleanupStroke } from './CleanupBrushEditor'
 import { createBrushCleanup, type CleanupDiagnosticComponent } from './brushCleanup'
+import { CleanupComparisonSlider } from './CleanupComparisonSlider'
+import { FrameAreaEditor } from './FrameAreaEditor'
+import { expandFrameCorners, recolorPhotoFrame, type FrameMaskCorrections, type FrameSides } from './frameRecolor'
+import { completeEntranceBoundary, dividerJambQuads, initializeSideliteEdges, productLayers as createProductLayers, sideliteOpeningQuads, SideliteSelector, type SideliteEdges, type SideliteSide } from './SideliteSelector'
 
 const MAX_PHOTO_SIZE = 15 * 1024 * 1024
 const SUPPORTED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -18,6 +22,7 @@ type SelectedPhoto = {
 
 type Props = {
   onBack: () => void
+  onReturnToReview?: () => void
   configuredDoorPreview: DoorPreviewProps
   configurationKey: string
 }
@@ -28,14 +33,19 @@ function fileError(file: File) {
   return ''
 }
 
-export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey }: Props) {
+export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview, configurationKey }: Props) {
   const [photo, setPhoto] = useState<SelectedPhoto | null>(null)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const objectUrlRef = useRef<string | null>(null)
   const [corners, setCorners] = useState<EntranceCorners>(() => cloneEntranceCorners(INITIAL_ENTRANCE_CORNERS))
-  const [previewMode, setPreviewMode] = useState<'edit' | 'composed'>('edit')
-  const [showAfter, setShowAfter] = useState(true)
+  const [wizardStep, setWizardStep] = useState(0)
+  const [sideliteEdges, setSideliteEdges] = useState<SideliteEdges>({})
+  const [photoSideliteSide, setPhotoSideliteSide] = useState<SideliteSide|'both'|'none'|null>(null)
+  const [flipDoorOrientation, setFlipDoorOrientation] = useState(false)
+  const [downloadPreparing, setDownloadPreparing] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
+  const compositeExporterRef = useRef<(() => Promise<Blob>) | null>(null)
   const [autoFitProposal, setAutoFitProposal] = useState<AutoFitResult | null>(null)
   const [autoFitUndo, setAutoFitUndo] = useState<EntranceCorners | null>(null)
   const [autoFitLoading, setAutoFitLoading] = useState(false)
@@ -44,15 +54,39 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
   const [cornersChangedAfterAutoFitFailure, setCornersChangedAfterAutoFitFailure] = useState(false)
   const [cleanupLoading, setCleanupLoading] = useState(false)
   const [cleanupError, setCleanupError] = useState('')
-  const [cleanupBrushOpen, setCleanupBrushOpen] = useState(false)
   const [cleanupStrokes, setCleanupStrokes] = useState<CleanupStroke[]>([])
-  const cleanupStrokeSnapshotRef = useRef<CleanupStroke[]>([])
-  const [cleanupProposal, setCleanupProposal] = useState<{ cleanedUrl: string; radius: 3 | 5; fullMaskUrl: string; insideMaskUrl: string; outsideMaskUrl: string; width: number; height: number; components: CleanupDiagnosticComponent[] } | null>(null)
+  const [cleanupProposal, setCleanupProposal] = useState<{ cleanedUrl: string; radius: 3 | 5; components: CleanupDiagnosticComponent[] } | null>(null)
+  const [cleanupSampleCenters, setCleanupSampleCenters] = useState<Array<{ x: number; y: number }>>([])
+  const [cleanupSampleAdjusting, setCleanupSampleAdjusting] = useState(false)
   const [approvedCleanup, setApprovedCleanup] = useState<{ cleanedUrl: string; radius: 3 | 5 } | null>(null)
-  const [cleanupPreviewMode, setCleanupPreviewMode] = useState<'original' | 'cleanup' | 'final'>('cleanup')
   const cleanupUrlsRef = useRef(new Set<string>())
   const [doorSource, setDoorSource] = useState<DoorSourceState>({ url: '', width: 0, height: 0, error: '', ready: false })
+  const [outerFrame, setOuterFrame] = useState<EntranceCorners>(() => expandFrameCorners(INITIAL_ENTRANCE_CORNERS))
+  const [frameSides, setFrameSides] = useState<FrameSides>({ top: true, left: true, right: true, bottom: false })
+  const [frameCorrections, setFrameCorrections] = useState<FrameMaskCorrections>({ add: [], remove: [] })
+  const [frameConfirmed, setFrameConfirmed] = useState(false)
+  const [recoloredFrameUrl, setRecoloredFrameUrl] = useState('')
+  const frameUrlRef = useRef('')
+  const activeJambFinish = configuredDoorPreview.jambFinish ?? configuredDoorPreview.finish
+  const hingeSide: SideliteSide = configuredDoorPreview.doorSwing?.id.startsWith('R') ? 'right' : 'left'
+  const configuredSideliteSides = useMemo<SideliteSide[]>(() => configuredDoorPreview.sidelites === 'both-sides' ? ['left', 'right'] : configuredDoorPreview.sidelites === 'hinge-side' ? [hingeSide] : configuredDoorPreview.sidelites === 'lock-side' ? [hingeSide === 'left' ? 'right' : 'left'] : [], [configuredDoorPreview.sidelites, hingeSide])
+  const photoSideliteSides = useMemo<SideliteSide[]>(() => photoSideliteSide==='both'?['left','right']:photoSideliteSide==='left'||photoSideliteSide==='right'?[photoSideliteSide]:[], [photoSideliteSide])
+  const entranceBoundary = useMemo(() => completeEntranceBoundary(corners, sideliteEdges), [corners, sideliteEdges])
+  const sideliteOpenings = useMemo(() => sideliteOpeningQuads(sideliteEdges), [sideliteEdges])
+  const dividerQuads = useMemo(() => dividerJambQuads(corners, sideliteEdges), [corners, sideliteEdges])
+  const visualizerProductLayers = useMemo(() => createProductLayers(corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation), [corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation])
   const updateDoorSource = useCallback((state: DoorSourceState) => setDoorSource(state), [])
+  const setCompositeExporter = useCallback((exporter: (() => Promise<Blob>) | null) => { compositeExporterRef.current = exporter }, [])
+
+  const downloadVisualization = async () => {
+    if (downloadPreparing || !compositeExporterRef.current) return
+    setDownloadPreparing(true);setDownloadError('')
+    try {
+      const blob=await compositeExporterRef.current();const url=URL.createObjectURL(blob);const link=document.createElement('a');const date=new Date().toISOString().slice(0,10)
+      link.href=url;link.download=`home-guard-door-visualization-${date}.jpg`;document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000)
+    } catch (reason) { setDownloadError(reason instanceof Error?reason.message:'The completed photo could not be downloaded.') }
+    finally { setDownloadPreparing(false) }
+  }
 
   const clearAutoFitFailure = () => {
     setAutoFitFailureCorners(null)
@@ -61,24 +95,46 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
 
   const resetPlacement = () => {
     setCorners(cloneEntranceCorners(INITIAL_ENTRANCE_CORNERS))
-    setPreviewMode('edit')
-    setShowAfter(true)
+    setWizardStep(0)
+    setSideliteEdges({})
+    setPhotoSideliteSide(configuredSideliteSides.length===2?'both':configuredSideliteSides.length===0?'none':null)
+    setFlipDoorOrientation(false)
     setAutoFitProposal(null)
     setAutoFitUndo(null)
     setAutoFitError('')
     clearAutoFitFailure()
+    setOuterFrame(expandFrameCorners(INITIAL_ENTRANCE_CORNERS)); setFrameConfirmed(false); setFrameCorrections({ add: [], remove: [] })
   }
 
   useEffect(() => {
     setAutoFitProposal(null)
     setAutoFitError('')
     clearAutoFitFailure()
-  }, [configurationKey])
+    setSideliteEdges({})
+    setPhotoSideliteSide(configuredSideliteSides.length===2?'both':configuredSideliteSides.length===0?'none':null)
+    setFlipDoorOrientation(false)
+  }, [configurationKey, configuredSideliteSides.length])
 
   useEffect(() => () => {
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
     cleanupUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+    if (frameUrlRef.current) URL.revokeObjectURL(frameUrlRef.current)
   }, [])
+
+  const clearRecoloredFrame = () => { if (frameUrlRef.current) URL.revokeObjectURL(frameUrlRef.current); frameUrlRef.current = ''; setRecoloredFrameUrl('') }
+
+  const resetFrameArea = () => { clearRecoloredFrame(); setOuterFrame(expandFrameCorners(entranceBoundary)); setFrameSides({ top: true, left: true, right: true, bottom: false }); setFrameCorrections({ add: [], remove: [] }); setFrameConfirmed(false) }
+
+  useEffect(() => {
+    if (!photo || !frameConfirmed) { clearRecoloredFrame(); return }
+    let cancelled = false
+    const base = approvedCleanup?.cleanedUrl ?? photo.objectUrl
+    void recolorPhotoFrame(base, entranceBoundary, outerFrame, frameSides, frameCorrections, activeJambFinish.color, configuredDoorPreview.jambType === 'clad' ? 'clad' : activeJambFinish.finishType, [corners, ...sideliteOpenings]).then((blob) => {
+      if (cancelled) return
+      clearRecoloredFrame(); const url = URL.createObjectURL(blob); frameUrlRef.current = url; setRecoloredFrameUrl(url)
+    }).catch(() => { if (!cancelled) clearRecoloredFrame() })
+    return () => { cancelled = true }
+  }, [photo, approvedCleanup?.cleanedUrl, frameConfirmed, outerFrame, frameSides, frameCorrections, activeJambFinish.id, configuredDoorPreview.jambType, entranceBoundary, corners, sideliteOpenings])
 
   const clearCleanup = () => {
     cleanupUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
@@ -86,8 +142,9 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
     setCleanupProposal(null)
     setApprovedCleanup(null)
     setCleanupStrokes([])
-    setCleanupBrushOpen(false)
     setCleanupError('')
+    setCleanupSampleCenters([]); setCleanupSampleAdjusting(false)
+    clearRecoloredFrame()
   }
 
   const choosePhoto = (file?: File) => {
@@ -141,7 +198,9 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
         setCornersChangedAfterAutoFitFailure(false)
         setAutoFitError('Move the four points closer to the exact inside corners of the door opening, then try Auto-Fit again. For difficult photos, a wider search will become available after you adjust the points.')
       } else {
-        setAutoFitProposal(result)
+        setAutoFitUndo(cloneEntranceCorners(corners))
+        updateCorners(result.corners)
+        setAutoFitProposal(null)
         clearAutoFitFailure()
       }
     } catch {
@@ -155,36 +214,35 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
 
   const updateCorners = (nextCorners: EntranceCorners) => {
     setCorners(nextCorners)
+    setSideliteEdges(initializeSideliteEdges(nextCorners, photoSideliteSides)); clearCleanup()
+    setOuterFrame(expandFrameCorners(nextCorners)); setFrameConfirmed(false); setFrameCorrections({ add: [], remove: [] }); clearRecoloredFrame()
     if (!autoFitFailureCorners || !isValidEntranceCorners(nextCorners)) return
     const changed = (Object.keys(nextCorners) as Array<keyof EntranceCorners>).some((id) =>
       Math.abs(nextCorners[id].x - autoFitFailureCorners[id].x) > 1e-7 || Math.abs(nextCorners[id].y - autoFitFailureCorners[id].y) > 1e-7)
     if (changed) setCornersChangedAfterAutoFitFailure(true)
   }
 
-  const showWiderAutoFit = Boolean(autoFitFailureCorners && cornersChangedAfterAutoFitFailure && isValidEntranceCorners(corners) && !autoFitProposal)
 
   const leaveVisualizer = () => {
     clearAutoFitFailure()
     onBack()
   }
 
-  const previewBrushCleanup = async (radius: 3 | 5 = 3) => {
+  const previewBrushCleanup = async (radius: 3 | 5 = 3, sampleCenters = cleanupSampleCenters) => {
     if (!photo || cleanupLoading) return
     setCleanupLoading(true)
     setCleanupError('')
     if (cleanupProposal) {
-      ;[cleanupProposal.cleanedUrl, cleanupProposal.fullMaskUrl, cleanupProposal.insideMaskUrl, cleanupProposal.outsideMaskUrl].forEach((url) => { cleanupUrlsRef.current.delete(url); URL.revokeObjectURL(url) })
+      cleanupUrlsRef.current.delete(cleanupProposal.cleanedUrl); URL.revokeObjectURL(cleanupProposal.cleanedUrl)
       setCleanupProposal(null)
     }
     try {
-      const result = await createBrushCleanup(photo.objectUrl, cleanupStrokes, corners, radius)
+      const result = await createBrushCleanup(photo.objectUrl, cleanupStrokes, entranceBoundary, radius, sampleCenters)
       const cleanedUrl = URL.createObjectURL(result.cleanedBlob)
-      const fullMaskUrl = URL.createObjectURL(result.fullMaskBlob)
-      const insideMaskUrl = URL.createObjectURL(result.insideMaskBlob)
-      const outsideMaskUrl = URL.createObjectURL(result.outsideMaskBlob)
-      ;[cleanedUrl, fullMaskUrl, insideMaskUrl, outsideMaskUrl].forEach((url) => cleanupUrlsRef.current.add(url))
-      setCleanupProposal({ cleanedUrl, radius, fullMaskUrl, insideMaskUrl, outsideMaskUrl, width: result.width, height: result.height, components: result.components })
-      setCleanupPreviewMode('cleanup')
+      cleanupUrlsRef.current.add(cleanedUrl)
+      const automaticCenters = result.components.map((component) => component.source ? ({ x: Math.max(0, Math.min(1, (component.source.x + component.source.width / 2) / result.width)), y: Math.max(0, Math.min(1, (component.source.y + component.source.height / 2) / result.height)) }) : ({ x: .5, y: .5 }))
+      if (!sampleCenters.length) setCleanupSampleCenters(automaticCenters)
+      setCleanupProposal({ cleanedUrl, radius, components: result.components }); setCleanupSampleAdjusting(false)
     } catch (reason) {
       setCleanupError(reason instanceof Error ? reason.message : 'The cleanup preview could not be created.')
     } finally {
@@ -197,44 +255,19 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
     if (approvedCleanup) {
       cleanupUrlsRef.current.delete(approvedCleanup.cleanedUrl); URL.revokeObjectURL(approvedCleanup.cleanedUrl)
     }
+    clearRecoloredFrame()
     setApprovedCleanup({ cleanedUrl: cleanupProposal.cleanedUrl, radius: cleanupProposal.radius })
-    ;[cleanupProposal.fullMaskUrl, cleanupProposal.insideMaskUrl, cleanupProposal.outsideMaskUrl].forEach((url) => { cleanupUrlsRef.current.delete(url); URL.revokeObjectURL(url) })
     setCleanupProposal(null)
-    setCleanupBrushOpen(false)
     setCleanupError('')
-    setShowAfter(true)
+    setWizardStep(4)
   }
 
   const cancelCleanupProposal = () => {
     if (!cleanupProposal) return
-    ;[cleanupProposal.cleanedUrl, cleanupProposal.fullMaskUrl, cleanupProposal.insideMaskUrl, cleanupProposal.outsideMaskUrl].forEach((url) => { cleanupUrlsRef.current.delete(url); URL.revokeObjectURL(url) })
+    cleanupUrlsRef.current.delete(cleanupProposal.cleanedUrl); URL.revokeObjectURL(cleanupProposal.cleanedUrl)
     setCleanupProposal(null)
+    setCleanupSampleAdjusting(false)
     setCleanupError('')
-  }
-
-  const undoCleanup = () => {
-    if (!approvedCleanup) return
-    cleanupUrlsRef.current.delete(approvedCleanup.cleanedUrl); URL.revokeObjectURL(approvedCleanup.cleanedUrl)
-    setApprovedCleanup(null)
-    setShowAfter(true)
-  }
-
-  const openCleanupBrush = () => {
-    cleanupStrokeSnapshotRef.current = cleanupStrokes.map((stroke) => ({ ...stroke, points: stroke.points.map((point) => ({ ...point })) }))
-    setCleanupBrushOpen(true)
-    setCleanupError('')
-  }
-
-  const closeCleanupBrush = (restoreSnapshot: boolean) => {
-    cancelCleanupProposal()
-    if (restoreSnapshot) setCleanupStrokes(cleanupStrokeSnapshotRef.current)
-    setCleanupBrushOpen(false)
-    setCleanupError('')
-  }
-
-  const resetCleanupToOriginal = () => {
-    clearCleanup()
-    setShowAfter(true)
   }
 
   return (
@@ -249,8 +282,8 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
         <section className="visualizer-card" aria-labelledby="visualizer-photo-title">
           <div className="visualizer-card-heading">
             <div>
-              <span>Step 1</span>
-              <h2 id="visualizer-photo-title">Add your house photo</h2>
+              <span>{photo ? 'Guided visualizer' : 'Step 1'}</span>
+              <h2 id="visualizer-photo-title">{photo ? ['Door Placement','Sidelite Placement','Frame Selection','Cleanup','Completed Visualization'][wizardStep] : 'Add your house photo'}</h2>
             </div>
             {photo && <span className="visualizer-photo-ready"><Check size={15} /> Photo ready</span>}
           </div>
@@ -286,85 +319,38 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
               <small>JPG, PNG, or WebP · Maximum 15 MB</small>
               <span className="photo-picker-button"><Upload size={17} /> Choose Photo</span>
             </div>
-          </> : previewMode === 'edit' ? <>
-            <div className="entrance-placement-instructions">
-              <Crosshair className="entrance-placement-icon" size={24} aria-hidden="true" />
-              <div>
-                <h3>Outline the Exact Door Opening</h3>
-                <p>Place each corner directly on the inside corner of the existing door frame. Include only the door opening being replaced.</p>
-                <p className="entrance-placement-note">Keep the exterior trim, jamb, and threshold outside the outlined area. Accurate corner placement gives Auto-Fit and the final visualization the best result.</p>
-              </div>
-            </div>
-            <p className="entrance-editor-direction"><Crosshair size={15} aria-hidden="true" /> Position the four points on the inside corners shown in the photo.</p>
-            <EntranceSelector
-              key={photo.objectUrl}
-              corners={corners}
-              imageSrc={photo.objectUrl}
-              imageAlt={`Uploaded entrance photo: ${photo.file.name}`}
-              onCornersChange={updateCorners}
-              onReset={resetPlacement}
-              proposedCorners={autoFitProposal?.corners}
-              proposedDetectedEdges={autoFitProposal ? ['top', 'right', 'bottom', 'left'].map((edge) => autoFitProposal.detectedEdges[edge as keyof typeof autoFitProposal.detectedEdges]) : undefined}
-            />
-            <div className="auto-fit-controls">
-              {!autoFitProposal ? <button type="button" className="visualizer-secondary-button" disabled={autoFitLoading} onClick={() => runAutoFit()}><Crosshair size={17} /> {autoFitLoading ? 'Refining Entrance Edges…' : 'Auto-Fit Entrance'}</button> : <>
-                <button type="button" className="visualizer-apply-button auto-tool-apply" onClick={() => { setAutoFitUndo(cloneEntranceCorners(corners)); setCorners(autoFitProposal.corners); setAutoFitProposal(null); setAutoFitError(''); clearAutoFitFailure() }}><Check size={17} /> Apply Auto-Fit</button>
-                <button type="button" className="visualizer-secondary-button" onClick={() => setAutoFitProposal(null)}>Cancel</button>
-              </>}
-              {showWiderAutoFit && <button type="button" className="visualizer-secondary-button" disabled={autoFitLoading} onClick={() => runAutoFit({ wider: true })}><Crosshair size={17} /> Try Wider Search</button>}
-              {autoFitUndo && !autoFitProposal && <button type="button" className="visualizer-secondary-button" onClick={() => { setCorners(autoFitUndo); setAutoFitUndo(null) }}><RotateCcw size={17} /> Undo Auto-Fit</button>}
-            </div>
-            {autoFitProposal && <p className="auto-tool-result">Auto-Fit refined {autoFitProposal.detectedCount} of 4 edges. The remaining edges were kept from your manual placement.</p>}
-            {autoFitError && <p className="visualizer-error" role="alert">{autoFitError}</p>}
-            <button
-              type="button"
-              className="visualizer-apply-button"
-              disabled={!doorSource.ready || Boolean(doorSource.error) || !isValidEntranceCorners(corners)}
-              onClick={() => { setPreviewMode('composed'); setShowAfter(true) }}
-            ><Eye size={18} /> Confirm Entrance Shape</button>
-            {!doorSource.ready && !doorSource.error && <p className="visualizer-apply-status">Preparing the configured door source…</p>}
-            {doorSource.error && <p className="visualizer-apply-status visualizer-apply-status-error">Resolve the configured door source error below before applying the door.</p>}
           </> : <>
-            <div className="entrance-placement-instructions">
-              <Crosshair className="entrance-placement-icon" size={24} aria-hidden="true" />
-              <div>
-                <h3>Outline the Exact Door Opening</h3>
-                <p>Place each corner directly on the inside corner of the existing door frame. Include only the door opening being replaced.</p>
-                <p className="entrance-placement-note">Keep the exterior trim, jamb, and threshold outside the outlined area. Accurate corner placement gives Auto-Fit and the final visualization the best result.</p>
-              </div>
-            </div>
-            {cleanupBrushOpen ? <>
-              {!cleanupProposal ? <CleanupBrushEditor corners={corners} imageSrc={photo.objectUrl} imageAlt={`Untouched uploaded entrance photo: ${photo.file.name}`} strokes={cleanupStrokes} processing={cleanupLoading} onStrokesChange={(strokes) => { setCleanupStrokes(strokes); cancelCleanupProposal() }} onPreview={() => previewBrushCleanup(3)} onCancel={() => closeCleanupBrush(true)} onDone={() => closeCleanupBrush(false)} /> : <section className="cleanup-preview-workspace" aria-labelledby="cleanup-preview-title">
-                <div className="cleanup-brush-heading"><Brush size={22} aria-hidden="true" /><div><h3 id="cleanup-preview-title">Review Cleanup</h3><p>Details inside the outlined door opening will be covered by the new door. Cleanup is applied only to details extending outside the opening.</p></div></div>
-                <div className="cleanup-preview-toolbar" role="group" aria-label="Cleanup preview view">
-                  <button type="button" className={cleanupPreviewMode === 'original' ? 'active' : ''} aria-pressed={cleanupPreviewMode === 'original'} onClick={() => setCleanupPreviewMode('original')}>Original</button>
-                  <button type="button" className={cleanupPreviewMode === 'cleanup' ? 'active' : ''} aria-pressed={cleanupPreviewMode === 'cleanup'} onClick={() => setCleanupPreviewMode('cleanup')}>Cleanup Preview</button>
-                  <button type="button" className={cleanupPreviewMode === 'final' ? 'active' : ''} aria-pressed={cleanupPreviewMode === 'final'} onClick={() => setCleanupPreviewMode('final')}>Final Preview</button>
-                </div>
-                <ComposedPhotoPreview corners={corners} doorSourceUrl={doorSource.url} imageSrc={cleanupProposal.cleanedUrl} originalImageSrc={photo.objectUrl} imageAlt={`${cleanupPreviewMode === 'original' ? 'Original' : cleanupPreviewMode === 'cleanup' ? 'Cleaned' : 'Final'} entrance preview`} showAfter displayMode={cleanupPreviewMode} />
-                <p className="cleanup-quality-note">This tool works best for small details near the doorway. The original photo is never overwritten during preview.</p>
-                <div className="cleanup-proposal-actions"><button type="button" className="visualizer-apply-button auto-tool-apply" onClick={applyCleanup}><Check size={17} /> Apply Cleanup</button><button type="button" className="visualizer-secondary-button" onClick={cancelCleanupProposal}><Pencil size={17} /> Edit Brush Marks</button><button type="button" className="visualizer-secondary-button" onClick={() => closeCleanupBrush(true)}>Cancel</button></div>
-                {import.meta.env.DEV && <details className="cleanup-diagnostics"><summary>Cleanup diagnostics</summary><div className="cleanup-diagnostic-masks"><figure><img src={cleanupProposal.fullMaskUrl} alt="Full brush mask" /><figcaption>Full mask</figcaption></figure><figure><img src={cleanupProposal.insideMaskUrl} alt="Inside-opening brush mask" /><figcaption>Inside mask</figcaption></figure><figure><img src={cleanupProposal.outsideMaskUrl} alt="Outside-opening brush mask" /><figcaption>Outside mask</figcaption></figure></div><div className="cleanup-diagnostic-stage"><img src={cleanupProposal.cleanedUrl} alt="Cleanup repair diagnostic" /><svg viewBox={`0 0 ${cleanupProposal.width} ${cleanupProposal.height}`} aria-hidden="true">{cleanupProposal.components.map((component, index) => <g key={index}>{component.source && <rect className="cleanup-source-box" {...component.source} />}<rect className="cleanup-destination-box" {...component.destination} /></g>)}</svg></div><ul>{cleanupProposal.components.map((component, index) => <li key={index}>Component {index + 1}: {component.method}</li>)}</ul></details>}
-              </section>}
-              {cleanupError && <p className="visualizer-error" role="alert">{cleanupError}</p>}
-            </> : <>
-              <ComposedPhotoPreview corners={corners} doorSourceUrl={doorSource.url} imageSrc={approvedCleanup?.cleanedUrl ?? photo.objectUrl} originalImageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} showAfter={showAfter} />
-              <div className="cleanup-tool-intro"><Brush size={21} aria-hidden="true" /><div><strong>Remove Old Door Details</strong><p>Brush over old hardware, reflections, or small details that should be removed from the original photo.</p></div><button type="button" onClick={openCleanupBrush}>{approvedCleanup ? 'Edit Cleanup' : 'Remove Old Door Details'}</button></div>
-              <div className="composed-preview-controls" role="group" aria-label="Composed photo controls">
-                <button type="button" onClick={() => setPreviewMode('edit')}><Pencil size={17} /> Edit Entrance Shape</button>
-                <button type="button" className={!showAfter ? 'active' : ''} aria-pressed={!showAfter} onClick={() => setShowAfter(false)}>Before</button>
-                <button type="button" className={showAfter ? 'active' : ''} aria-pressed={showAfter} onClick={() => setShowAfter(true)}>After</button>
-                <button type="button" onClick={resetPlacement}><RotateCcw size={17} /> Reset</button>
-                {approvedCleanup && <button type="button" onClick={undoCleanup}><RotateCcw size={17} /> Undo Applied Cleanup</button>}
-                {(approvedCleanup || cleanupStrokes.length > 0) && <button type="button" onClick={resetCleanupToOriginal}>Reset to Original Photo</button>}
-              </div>
+            {wizardStep<4&&<ol className="visualizer-progress" aria-label="Visualizer progress">{['Door','Sidelites','Frame','Erase'].map((label,index)=><li key={label} className={wizardStep===index?'active':wizardStep>index?'complete':''}><span>{index+1}</span>{label}</li>)}</ol>}
+            {wizardStep===0&&<>
+              <div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>Position the Existing Door</h3><p>Place the four points on the inside corners of the existing door slab. Keep the surrounding frame and threshold outside the selected shape.</p></div></div>
+              <EntranceSelector key={photo.objectUrl} corners={corners} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateCorners} onReset={resetPlacement} showToolbar={false}/>
+              <div className="wizard-secondary"><button type="button" onClick={()=>runAutoFit()} disabled={autoFitLoading}><Crosshair size={17}/> {autoFitLoading?'Refining Door…':'Auto-Fit Door'}</button>{autoFitUndo&&<button type="button" onClick={()=>{updateCorners(autoFitUndo);setAutoFitUndo(null)}}><RotateCcw size={17}/> Undo Auto-Fit</button>}</div>{autoFitError&&<p className="visualizer-error">{autoFitError}</p>}
+              <div className="wizard-navigation"><button type="button" onClick={leaveVisualizer}><ArrowLeft size={17}/> Back</button><button type="button" className="wizard-continue" disabled={!doorSource.ready||!isValidEntranceCorners(corners)} onClick={()=>{if(configuredSideliteSides.length===2){setPhotoSideliteSide('both');if(!sideliteEdges.left||!sideliteEdges.right)setSideliteEdges(initializeSideliteEdges(corners,['left','right']));setWizardStep(1)}else if(configuredSideliteSides.length===1){setWizardStep(1)}else{setPhotoSideliteSide('none');setSideliteEdges({});setOuterFrame(expandFrameCorners(corners));setWizardStep(2)}}}>Continue</button></div>
             </>}
+            {wizardStep===1&&<>
+              <div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>{configuredSideliteSides.length===1&&!photoSideliteSide?'Where Is the Sidelite?':configuredSideliteSides.length===1?'Position the Sidelite Opening':'Position Both Sidelite Openings'}</h3><p>{configuredSideliteSides.length===1&&!photoSideliteSide?'Tap the side where the sidelite appears in your uploaded photo.':configuredSideliteSides.length===1?'Place the four points on the inside corners of the sidelite opening.':'Place each set of points on the inside corners of its sidelite opening.'}</p>{photoSideliteSide&&<p className="entrance-placement-note">{configuredSideliteSides.length===1?'Leave the vertical jamb between the door and sidelite outside the selected sidelite area. It will be colored during the Frame step.':'Keep both divider jambs outside the sidelite selections.'}</p>}</div></div>
+              <SideliteSelector imageSrc={photo.objectUrl} door={corners} edges={sideliteEdges} sides={photoSideliteSides} showSideChoice={configuredSideliteSides.length===1&&!photoSideliteSide} onChooseSide={(side)=>{setPhotoSideliteSide(side);setSideliteEdges(initializeSideliteEdges(corners,[side]));setFrameConfirmed(false);clearCleanup()}} onChange={(edges)=>{setSideliteEdges(edges);setFrameConfirmed(false);clearCleanup()}}/>
+              {configuredSideliteSides.length===1&&photoSideliteSide&&<div className="wizard-secondary"><button type="button" onClick={()=>{const opposite=photoSideliteSide==='left'?'right':'left';setPhotoSideliteSide(opposite);setSideliteEdges(initializeSideliteEdges(corners,[opposite]));setFrameConfirmed(false);clearCleanup()}}>Switch Sidelite Side</button></div>}
+              <div className="wizard-navigation"><button type="button" onClick={()=>setWizardStep(0)}><ArrowLeft size={17}/> Back</button><button type="button" className="wizard-continue" disabled={configuredSideliteSides.length===1&&!photoSideliteSide} onClick={()=>{setOuterFrame(expandFrameCorners(completeEntranceBoundary(corners,sideliteEdges)));setWizardStep(2)}}>Continue</button></div>
+            </>}
+            {wizardStep===2&&<>
+              <div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>Select the Complete Frame</h3><p>Move the four outside points to surround the visible frame around the door and sidelites.</p><p className="entrance-placement-note">The highlighted area will receive your selected Timber Frame or Clad Wrap color.</p></div></div>
+              <p className="frame-wizard-summary">Frame Finish: {configuredDoorPreview.jambType==='clad'?'Clad Wrap':'Timber Frame'} — {activeJambFinish.name}</p>
+              <FrameAreaEditor imageSrc={photo.objectUrl} inner={entranceBoundary} outer={outerFrame} sides={frameSides} corrections={frameCorrections} dividers={dividerQuads} wizardMode onOuterChange={setOuterFrame} onSidesChange={setFrameSides} onCorrectionsChange={setFrameCorrections} onReset={resetFrameArea} onConfirm={()=>{}}/>
+              <div className="wizard-navigation"><button type="button" onClick={()=>setWizardStep(configuredSideliteSides.length?1:0)}><ArrowLeft size={17}/> Back</button><button type="button" className="wizard-continue" onClick={()=>{setFrameConfirmed(true);setWizardStep(3)}}>Continue</button></div>
+            </>}
+            {wizardStep===3&&<>
+              <div className="entrance-placement-instructions"><Brush className="entrance-placement-icon" size={24}/><div><h3>Remove Remaining Old Details</h3><p>Brush only over old hardware, reflections, or small details that remain visible outside the new door.</p></div></div>
+              {!cleanupProposal?<CleanupBrushEditor corners={entranceBoundary} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} strokes={cleanupStrokes} processing={cleanupLoading} onStrokesChange={(strokes)=>{setCleanupStrokes(strokes);setCleanupSampleCenters([])}} onPreview={()=>previewBrushCleanup(3)} onCancel={()=>{}} onDone={()=>{}} wizardMode/>:<><CleanupComparisonSlider originalSrc={photo.objectUrl} cleanupSrc={cleanupProposal.cleanedUrl} imageAlt="Original uploaded entrance photo"/><div className="cleanup-proposal-actions"><button type="button" className="visualizer-apply-button auto-tool-apply" onClick={applyCleanup}>Apply Cleanup</button><button type="button" onClick={cancelCleanupProposal}>Edit Brush Marks</button><button type="button" onClick={cancelCleanupProposal}>Cancel</button></div></>}{cleanupError&&<p className="visualizer-error">{cleanupError}</p>}
+              {!cleanupProposal&&<><button type="button" className="skip-cleanup" onClick={()=>setWizardStep(4)}>Skip Cleanup</button><div className="wizard-navigation"><button type="button" onClick={()=>setWizardStep(2)}><ArrowLeft size={17}/> Back</button><button type="button" className="wizard-continue" onClick={()=>setWizardStep(4)}>Finish</button></div></>}
+            </>}
+            {wizardStep===4&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title"><div className="visualizer-final-heading"><span>Visualization complete</span><h2 id="visualizer-final-title">Your new entrance</h2></div><ComposedPhotoPreview corners={entranceBoundary} productLayers={visualizerProductLayers} doorSourceUrl={doorSource.url} imageSrc={recoloredFrameUrl||approvedCleanup?.cleanedUrl||photo.objectUrl} originalImageSrc={photo.objectUrl} imageAlt={`Completed visualization: ${photo.file.name}`} showAfter displayMode="final" showZoomControls={false} onExporterReady={setCompositeExporter}/><div className="visualizer-final-actions"><button type="button" className="visualizer-download-button" aria-label="Download completed home visualization photo" disabled={downloadPreparing} onClick={downloadVisualization}><Download size={18}/>{downloadPreparing?'Preparing Photo…':'Download Photo'}</button><button type="button" className="visualizer-review-button" aria-label="Return to the Review and Quote page" onClick={onReturnToReview??onBack}>Return to Review</button></div><div className="visualizer-final-text-actions"><button type="button" onClick={()=>setWizardStep(3)}>Edit Visualization</button><button type="button" onClick={()=>setFlipDoorOrientation(value=>!value)}>Hardware on the wrong side? Flip Door Orientation</button></div><span className="visualizer-download-status" role="status" aria-live="polite">{downloadPreparing?'Preparing your full-resolution photo.':''}</span>{downloadError&&<p className="visualizer-error" role="alert">{downloadError}</p>}</section>}
           </>}
 
           <input ref={inputRef} className="visualizer-file-input" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" onChange={onInputChange} />
           {error && <p className="visualizer-error" role="alert">{error}</p>}
 
-          {photo && <div className="visualizer-photo-actions">
+          {photo && wizardStep !== 4 && <div className="visualizer-photo-actions">
             <button type="button" className="visualizer-secondary-button" onClick={openPicker}><RefreshCw size={17} /> Replace Photo</button>
             <button type="button" className="visualizer-remove-button" onClick={removePhoto}><Trash2 size={17} /> Remove Photo</button>
             <button type="button" className="visualizer-back-button visualizer-back-button-inline" onClick={leaveVisualizer}><ArrowLeft size={17} /> Back to Door Builder</button>

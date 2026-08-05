@@ -72,7 +72,7 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
     })
   }, [capture, error, loading, onStateChange])
 
-  return <section className="configured-door-source" aria-labelledby="configured-door-source-title">
+  return <><section className="configured-door-source" aria-labelledby="configured-door-source-title" hidden>
     <div className="configured-door-source-heading">
       <div>
         <span>Development Preview</span>
@@ -88,8 +88,5 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         <button type="button" onClick={() => setRetry((value) => value + 1)}><RefreshCw size={16} /> Retry</button>
       </div>}
     </div>
-    <div className="configured-door-capture-host" ref={captureRootRef} aria-hidden="true">
-      <DoorPreview {...previewProps} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} placementMode="opening-only" />
-    </div>
-  </section>
+  </section><div className="configured-door-capture-host" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} placementMode="opening-only" /></div></>
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { Move, RotateCcw, ScanLine, ZoomIn, ZoomOut } from 'lucide-react'
+import { usePhotoZoom } from './usePhotoZoom'
 
 export type CornerId = 'topLeft' | 'topRight' | 'bottomRight' | 'bottomLeft'
 export type Point = { x: number; y: number }
@@ -27,6 +28,7 @@ type Props = {
   onReset: () => void
   proposedCorners?: EntranceCorners | null
   proposedDetectedEdges?: boolean[]
+  showToolbar?: boolean
 }
 
 export const cloneEntranceCorners = (corners: EntranceCorners): EntranceCorners => ({
@@ -52,16 +54,15 @@ export function isValidEntranceCorners(corners: EntranceCorners) {
   return turns.every((turn) => turn > 0.0001) || turns.every((turn) => turn < -0.0001)
 }
 
-export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges }: Props) {
+export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges, showToolbar = true }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
   const dragRef = useRef<DragState | null>(null)
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
   const [mode, setMode] = useState<InteractionMode>('edit')
-  const [zoom, setZoom] = useState(1)
-
-  useEffect(() => setZoom(1), [imageSrc])
+  const { zoom, pan, onWheel, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
+  useEffect(resetZoom, [imageSrc, resetZoom])
 
   const updateStageSize = () => {
     const editor = editorRef.current
@@ -146,24 +147,21 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   const proposedPolygonPoints = proposedCorners ? CORNER_ORDER.map((id) => `${proposedCorners[id].x * stageSize.width},${proposedCorners[id].y * stageSize.height}`).join(' ') : ''
 
   return <>
-    <div className="entrance-selector-toolbar" role="group" aria-label="Entrance placement tools">
+    {showToolbar && <div className="entrance-selector-toolbar" role="group" aria-label="Entrance placement tools">
       <button type="button" className={mode === 'edit' ? 'active' : ''} aria-pressed={mode === 'edit'} onClick={() => setMode('edit')}><ScanLine size={17} /> Edit Entrance</button>
       <button type="button" className={mode === 'move' ? 'active' : ''} aria-pressed={mode === 'move'} onClick={() => setMode('move')}><Move size={17} /> Move Selection</button>
       <button type="button" onClick={onReset}><RotateCcw size={17} /> Reset Placement</button>
-    </div>
-    <p className="entrance-selector-help">{mode === 'edit' ? 'Drag a corner to outline the complete entrance opening.' : 'Drag inside the highlighted area to move the complete selection.'}</p>
+    </div>}
+    {showToolbar && <p className="entrance-selector-help">{mode === 'edit' ? 'Drag a corner to outline the complete entrance opening.' : 'Drag inside the highlighted area to move the complete selection.'}</p>}
     <div ref={editorRef} className="visualizer-editor" aria-label="House photo entrance editor">
       <div
         ref={stageRef}
         className={`entrance-image-stage entrance-image-stage-${mode}`}
-        style={stageSize.width ? { width: stageSize.width, height: stageSize.height, transform: `scale(${zoom})` } : undefined}
+        style={stageSize.width ? { width: stageSize.width, height: stageSize.height, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` } : undefined}
         onPointerMove={moveDrag}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        onWheel={(event) => {
-          event.preventDefault()
-          setZoom((value) => Math.max(1, Math.min(3, value + (event.deltaY < 0 ? .15 : -.15))))
-        }}
+        onWheel={onWheel}
       >
         <img
           src={imageSrc}
@@ -194,10 +192,10 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
         />)}
       </div>
       <div className="visualizer-zoom-controls" role="group" aria-label="Uploaded photo zoom controls">
-        <button type="button" aria-label="Zoom uploaded photo out" disabled={zoom <= 1} onClick={() => setZoom((value) => Math.max(1, value - .25))}><ZoomOut size={17} /></button>
+        <button type="button" aria-label="Zoom uploaded photo out" disabled={zoom <= 1} onClick={zoomOut}><ZoomOut size={17} /></button>
         <span aria-live="polite">{Math.round(zoom * 100)}%</span>
-        <button type="button" aria-label="Zoom uploaded photo in" disabled={zoom >= 3} onClick={() => setZoom((value) => Math.min(3, value + .25))}><ZoomIn size={17} /></button>
-        <button type="button" onClick={() => setZoom(1)}>Fit</button>
+        <button type="button" aria-label="Zoom uploaded photo in" disabled={zoom >= 4} onClick={zoomIn}><ZoomIn size={17} /></button>
+        <button type="button" onClick={resetZoom}>Reset Zoom</button>
       </div>
     </div>
   </>

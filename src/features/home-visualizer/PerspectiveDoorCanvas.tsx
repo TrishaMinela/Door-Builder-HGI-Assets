@@ -7,11 +7,34 @@ type Props = {
   photoHeight: number
   photoWidth: number
   visible: boolean
+  sourceRect?: { x: number; y: number; width: number; height: number }
+  diagnosticName?: string
+  flipX?: boolean
 }
 
 type Matrix = [number, number, number, number, number, number, number, number, number]
 const EDGE_OVERLAP_PX = 1.5
 const SUPERSAMPLE_SCALE = 2
+const PRODUCT_ALPHA_BOOST = 1.35
+
+function reportUnexpectedWhiteEdgePixels(source: ImageData, left: number, top: number, width: number, height: number, name: string) {
+  if (!import.meta.env.DEV) return
+  const edgeBand = Math.max(1, Math.round(Math.min(width, height) * .025))
+  let opaqueEdgePixels = 0
+  let nearlyWhiteEdgePixels = 0
+  for (let y = Math.max(0, top); y < Math.min(source.height, top + height); y += 1) {
+    for (let x = Math.max(0, left); x < Math.min(source.width, left + width); x += 1) {
+      if (x >= left + edgeBand && x < left + width - edgeBand) continue
+      const offset = (y * source.width + x) * 4
+      if (source.data[offset + 3] < 245) continue
+      opaqueEdgePixels += 1
+      if (source.data[offset] > 242 && source.data[offset + 1] > 242 && source.data[offset + 2] > 242) nearlyWhiteEdgePixels += 1
+    }
+  }
+  // Glass inserts are intentionally ignored because they sit inside the source;
+  // this diagnostic only examines the vertical product-edge bands where strips occur.
+  if (opaqueEdgePixels && nearlyWhiteEdgePixels / opaqueEdgePixels > .2) console.warn('[home-visualizer:unexpected-white-edge]', { layer: name, nearlyWhiteEdgePixels, opaqueEdgePixels })
+}
 
 function overscanQuadrilateral(points: Point[], overlap: number) {
   const center = points.reduce((sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length }), { x: 0, y: 0 })
@@ -76,7 +99,7 @@ function loadImage(src: string) {
   })
 }
 
-export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, photoWidth, visible }: Props) {
+export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, photoWidth, visible, sourceRect = { x: 0, y: 0, width: 1, height: 1 }, diagnosticName = 'configured-door', flipX = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const renderRunRef = useRef(0)
 
@@ -84,6 +107,7 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
     const canvas = canvasRef.current
     if (!canvas || !photoWidth || !photoHeight || !doorSourceUrl) return
     const run = ++renderRunRef.current
+    canvas.dataset.renderReady = 'false'
     const outputWidth = photoWidth
     const outputHeight = photoHeight
     canvas.width = outputWidth
@@ -110,6 +134,11 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
       outputContext.imageSmoothingQuality = 'high'
       sourceContext.drawImage(sourceImage, 0, 0)
       const source = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height)
+      const sourceLeft = sourceRect.x * source.width
+      const sourceTop = sourceRect.y * source.height
+      const sourceSpanWidth = sourceRect.width * source.width
+      const sourceSpanHeight = sourceRect.height * source.height
+      reportUnexpectedWhiteEdgePixels(source, Math.round(sourceLeft), Math.round(sourceTop), Math.round(sourceSpanWidth), Math.round(sourceSpanHeight), diagnosticName)
       const confirmedPoints = [corners.topLeft, corners.topRight, corners.bottomRight, corners.bottomLeft]
         .map(({ x, y }) => ({ x: x * outputWidth, y: y * outputHeight }))
       const targetPoints = overscanQuadrilateral(confirmedPoints, EDGE_OVERLAP_PX)
@@ -139,8 +168,11 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
           const unitX = (a * x + b * y + c) / denominator
           const unitY = (d * x + e * y + f) / denominator
           if (unitX < 0 || unitX > 1 || unitY < 0 || unitY > 1) continue
-          const sourceX = Math.min(source.width - 1, Math.max(0, unitX * (source.width - 1)))
-          const sourceY = Math.min(source.height - 1, Math.max(0, unitY * (source.height - 1)))
+          // Convert the normalized crop to its exact half-open source-pixel interval.
+          // Sampling from first pixel through last pixel keeps interpolation out of
+          // the transparent mullion columns that separate authored product regions.
+          const sourceX = Math.min(source.width - 1, Math.max(0, sourceLeft + (flipX ? 1 - unitX : unitX) * Math.max(0, sourceSpanWidth - 1)))
+          const sourceY = Math.min(source.height - 1, Math.max(0, sourceTop + unitY * Math.max(0, sourceSpanHeight - 1)))
           const x0 = Math.floor(sourceX)
           const y0 = Math.floor(sourceY)
           const x1 = Math.min(source.width - 1, x0 + 1)
@@ -164,12 +196,13 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
           const alphaWeight01 = weight01 * alpha01
           const alphaWeight11 = weight11 * alpha11
           const targetOffset = (y * renderWidth + x) * 4
-          const alpha = alphaWeight00 + alphaWeight10 + alphaWeight01 + alphaWeight11
-          if (alpha > 0) {
-            warped.data[targetOffset] = (source.data[offset00] * alphaWeight00 + source.data[offset10] * alphaWeight10 + source.data[offset01] * alphaWeight01 + source.data[offset11] * alphaWeight11) / alpha
-            warped.data[targetOffset + 1] = (source.data[offset00 + 1] * alphaWeight00 + source.data[offset10 + 1] * alphaWeight10 + source.data[offset01 + 1] * alphaWeight01 + source.data[offset11 + 1] * alphaWeight11) / alpha
-            warped.data[targetOffset + 2] = (source.data[offset00 + 2] * alphaWeight00 + source.data[offset10 + 2] * alphaWeight10 + source.data[offset01 + 2] * alphaWeight01 + source.data[offset11 + 2] * alphaWeight11) / alpha
-            warped.data[targetOffset + 3] = alpha * 255
+          const sampledAlpha = alphaWeight00 + alphaWeight10 + alphaWeight01 + alphaWeight11
+          const outputAlpha = Math.min(1, sampledAlpha * PRODUCT_ALPHA_BOOST)
+          if (sampledAlpha > 0) {
+            warped.data[targetOffset] = (source.data[offset00] * alphaWeight00 + source.data[offset10] * alphaWeight10 + source.data[offset01] * alphaWeight01 + source.data[offset11] * alphaWeight11) / sampledAlpha
+            warped.data[targetOffset + 1] = (source.data[offset00 + 1] * alphaWeight00 + source.data[offset10 + 1] * alphaWeight10 + source.data[offset01 + 1] * alphaWeight01 + source.data[offset11 + 1] * alphaWeight11) / sampledAlpha
+            warped.data[targetOffset + 2] = (source.data[offset00 + 2] * alphaWeight00 + source.data[offset10 + 2] * alphaWeight10 + source.data[offset01 + 2] * alphaWeight01 + source.data[offset11 + 2] * alphaWeight11) / sampledAlpha
+            warped.data[targetOffset + 3] = outputAlpha * 255
           }
         }
       }
@@ -181,6 +214,11 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
         if (supersampledContext) {
           supersampledContext.putImageData(warped, 0, 0)
           outputContext.drawImage(supersampledCanvas, 0, 0, renderWidth, renderHeight, minX, minY, regionWidth, regionHeight)
+          canvas.dataset.renderReady = 'true'
+          if (import.meta.env.DEV) {
+            const renderedRegion = outputContext.getImageData(minX, minY, regionWidth, regionHeight)
+            reportUnexpectedWhiteEdgePixels(renderedRegion, 0, 0, regionWidth, regionHeight, `${diagnosticName}-warped`)
+          }
         }
         supersampledCanvas.width = 0
         supersampledCanvas.height = 0
@@ -191,7 +229,7 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
 
     void render()
     return () => { renderRunRef.current += 1 }
-  }, [corners, doorSourceUrl, photoHeight, photoWidth])
+  }, [corners, diagnosticName, doorSourceUrl, flipX, photoHeight, photoWidth, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height])
 
   return <canvas ref={canvasRef} className="perspective-door-canvas" style={{ opacity: visible ? 1 : 0 }} aria-hidden="true" />
 }

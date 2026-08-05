@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { Brush, Check, RotateCcw, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react'
 import type { EntranceCorners, Point } from './EntranceSelector'
+import { usePhotoZoom } from './usePhotoZoom'
 
 export type CleanupStroke = {
   points: Point[]
@@ -22,9 +23,10 @@ type Props = {
   onPreview: () => void
   onCancel: () => void
   onDone: () => void
+  wizardMode?: boolean
 }
 
-export function CleanupBrushEditor({ corners, imageAlt, imageSrc, strokes, processing, onStrokesChange, onPreview, onCancel, onDone }: Props) {
+export function CleanupBrushEditor({ corners, imageAlt, imageSrc, strokes, processing, onStrokesChange, onPreview, onCancel, onDone, wizardMode = false }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
@@ -34,9 +36,8 @@ export function CleanupBrushEditor({ corners, imageAlt, imageSrc, strokes, proce
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
   const [brushSize, setBrushSize] = useState<BrushSize>('medium')
   const [cursorPoint, setCursorPoint] = useState<Point | null>(null)
-  const [zoom, setZoom] = useState(1)
-
-  useEffect(() => setZoom(1), [imageSrc])
+  const { zoom, pan, onWheel, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
+  useEffect(resetZoom, [imageSrc, resetZoom])
 
   const updateStageSize = () => {
     const editor = editorRef.current
@@ -117,13 +118,13 @@ export function CleanupBrushEditor({ corners, imageAlt, imageSrc, strokes, proce
   const outline = CORNER_ORDER.map((id) => `${corners[id].x * stageSize.width},${corners[id].y * stageSize.height}`).join(' ')
 
   return <section className="cleanup-brush-workspace" aria-labelledby="cleanup-brush-title">
-    <div className="cleanup-brush-heading"><Brush size={22} aria-hidden="true" /><div><h3 id="cleanup-brush-title">Remove Old Door Details</h3><p>Brush over old hardware, reflections, or small details that should be removed from the original photo.</p></div></div>
-    <p className="cleanup-region-guidance">Details inside the outlined door opening will be covered by the new door. Cleanup is applied only to details extending outside the opening.</p>
+    {!wizardMode && <div className="cleanup-brush-heading"><Brush size={22} aria-hidden="true" /><div><h3 id="cleanup-brush-title">Remove Old Door Details</h3><p>Brush over old hardware, reflections, or small details that should be removed from the original photo.</p></div></div>}
+    {!wizardMode && <p className="cleanup-region-guidance">Details inside the outlined door opening will be covered by the new door. Cleanup is applied only to details extending outside the opening.</p>}
     <div className="cleanup-brush-sizes" role="group" aria-label="Cleanup brush size">
       {(Object.keys(BRUSH_RADII) as BrushSize[]).map((size) => <button key={size} type="button" className={brushSize === size ? 'active' : ''} aria-pressed={brushSize === size} onClick={() => setBrushSize(size)}>{size[0].toUpperCase() + size.slice(1)}</button>)}
     </div>
     <div ref={editorRef} className="visualizer-editor cleanup-brush-editor">
-      <div ref={stageRef} className="entrance-image-stage cleanup-brush-stage" style={stageSize.width ? { width: stageSize.width, height: stageSize.height, transform: `scale(${zoom})` } : undefined} onPointerEnter={(event) => setCursorPoint(pointFromPointer(event))} onPointerLeave={() => setCursorPoint(null)} onPointerDown={startStroke} onPointerMove={continueStroke} onPointerUp={finishStroke} onPointerCancel={finishStroke} onWheel={(event) => { event.preventDefault(); setZoom((value) => Math.max(1, Math.min(3, value + (event.deltaY < 0 ? .15 : -.15)))) }}>
+      <div ref={stageRef} className="entrance-image-stage cleanup-brush-stage" style={stageSize.width ? { width: stageSize.width, height: stageSize.height, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` } : undefined} onPointerEnter={(event) => setCursorPoint(pointFromPointer(event))} onPointerLeave={() => setCursorPoint(null)} onPointerDown={startStroke} onPointerMove={continueStroke} onPointerUp={finishStroke} onPointerCancel={finishStroke} onWheel={onWheel}>
         <img src={imageSrc} alt={imageAlt} draggable={false} onLoad={(event) => { naturalSizeRef.current = { width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }; updateStageSize() }} />
         {stageSize.width > 0 && <svg className="cleanup-brush-overlay" viewBox={`0 0 ${stageSize.width} ${stageSize.height}`} aria-hidden="true">
           <polygon className="cleanup-entrance-outline" points={outline} />
@@ -134,10 +135,10 @@ export function CleanupBrushEditor({ corners, imageAlt, imageSrc, strokes, proce
         {cursorPoint && stageSize.width > 0 && <span className="cleanup-brush-cursor" aria-hidden="true" style={{ left: cursorPoint.x * stageSize.width, top: cursorPoint.y * stageSize.height, width: BRUSH_RADII[brushSize] * shortestDisplayEdge * 2, height: BRUSH_RADII[brushSize] * shortestDisplayEdge * 2 }} />}
       </div>
       <div className="visualizer-zoom-controls" role="group" aria-label="Photo zoom controls">
-        <button type="button" aria-label="Zoom out" disabled={zoom <= 1} onClick={() => setZoom((value) => Math.max(1, value - .25))}><ZoomOut size={17} /></button>
+        <button type="button" aria-label="Zoom out" disabled={zoom <= 1} onClick={zoomOut}><ZoomOut size={17} /></button>
         <span aria-live="polite">{Math.round(zoom * 100)}%</span>
-        <button type="button" aria-label="Zoom in" disabled={zoom >= 3} onClick={() => setZoom((value) => Math.min(3, value + .25))}><ZoomIn size={17} /></button>
-        <button type="button" onClick={() => setZoom(1)}>Fit</button>
+        <button type="button" aria-label="Zoom in" disabled={zoom >= 4} onClick={zoomIn}><ZoomIn size={17} /></button>
+        <button type="button" onClick={resetZoom}>Reset Zoom</button>
       </div>
     </div>
     {farFromEntrance && <p className="cleanup-brush-warning">Cleanup works best on small details near the doorway.</p>}
@@ -145,8 +146,8 @@ export function CleanupBrushEditor({ corners, imageAlt, imageSrc, strokes, proce
       <button type="button" disabled={!strokes.length || processing} onClick={() => onStrokesChange(strokes.slice(0, -1))}><RotateCcw size={16} /> Undo Last Stroke</button>
       <button type="button" disabled={!strokes.length || processing} onClick={() => onStrokesChange([])}><Trash2 size={16} /> Clear Brush Marks</button>
       <button type="button" className="cleanup-preview-button" disabled={!strokes.length || processing} onClick={onPreview}><Check size={16} /> {processing ? 'Preparing Preview…' : 'Preview Cleanup'}</button>
-      <button type="button" disabled={processing} onClick={onCancel}><X size={16} /> Cancel</button>
-      <button type="button" disabled={processing} onClick={onDone}>Done</button>
+      {!wizardMode && <button type="button" disabled={processing} onClick={onCancel}><X size={16} /> Cancel</button>}
+      {!wizardMode && <button type="button" disabled={processing} onClick={onDone}>Done</button>}
     </div>
   </section>
 }
