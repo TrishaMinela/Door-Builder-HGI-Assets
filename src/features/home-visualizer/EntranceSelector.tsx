@@ -137,7 +137,7 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
     dragRef.current = null
   }
 
-  const polygonPoints = CORNER_ORDER.map((id) => `${corners[id].x * 100},${corners[id].y * 100}`).join(' ')
+  const polygonPoints = CORNER_ORDER.map((id) => `${corners[id].x * stageSize.width},${corners[id].y * stageSize.height}`).join(' ')
 
   return <>
     <div className="entrance-selector-toolbar" role="group" aria-label="Entrance placement tools">
@@ -163,9 +163,9 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
             updateStageSize()
           }}
         />
-        <svg className="entrance-selection-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        {stageSize.width > 0 && <svg className="entrance-selection-svg" viewBox={`0 0 ${stageSize.width} ${stageSize.height}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
           <polygon className={`entrance-selection-polygon ${mode === 'move' ? 'move-enabled' : ''}`} points={polygonPoints} onPointerDown={beginSelectionDrag} />
-        </svg>
+        </svg>}
         {CORNER_ORDER.map((id) => <button
           type="button"
           key={id}

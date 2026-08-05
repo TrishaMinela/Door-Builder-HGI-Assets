@@ -150,17 +150,16 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
               className="visualizer-apply-button"
               disabled={!doorSource.ready || Boolean(doorSource.error) || !isValidEntranceCorners(corners)}
               onClick={() => { setPreviewMode('composed'); setShowAfter(true) }}
-            ><Eye size={18} /> Apply Door to Photo</button>
+            ><Eye size={18} /> Confirm Entrance Shape</button>
             {!doorSource.ready && !doorSource.error && <p className="visualizer-apply-status">Preparing the configured door source…</p>}
             {doorSource.error && <p className="visualizer-apply-status visualizer-apply-status-error">Resolve the configured door source error below before applying the door.</p>}
           </> : <>
             <ComposedPhotoPreview corners={corners} doorSourceUrl={doorSource.url} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} showAfter={showAfter} />
             <div className="composed-preview-controls" role="group" aria-label="Composed photo controls">
-              <button type="button" onClick={() => setPreviewMode('edit')}><Pencil size={17} /> Edit Placement</button>
+              <button type="button" onClick={() => setPreviewMode('edit')}><Pencil size={17} /> Edit Entrance Shape</button>
               <button type="button" className={!showAfter ? 'active' : ''} aria-pressed={!showAfter} onClick={() => setShowAfter(false)}>Before</button>
               <button type="button" className={showAfter ? 'active' : ''} aria-pressed={showAfter} onClick={() => setShowAfter(true)}>After</button>
               <button type="button" onClick={resetPlacement}><RotateCcw size={17} /> Reset</button>
-              <button type="button" disabled title="Next step coming soon">Continue</button>
             </div>
           </>}
 

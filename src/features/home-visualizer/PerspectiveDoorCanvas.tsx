@@ -4,14 +4,28 @@ import type { EntranceCorners, Point } from './EntranceSelector'
 type Props = {
   corners: EntranceCorners
   doorSourceUrl: string
-  height: number
+  photoHeight: number
+  photoWidth: number
   visible: boolean
-  width: number
 }
 
 type Matrix = [number, number, number, number, number, number, number, number, number]
+const EDGE_OVERLAP_PX = 1.5
+const SUPERSAMPLE_SCALE = 2
 
-const MAX_WORKING_EDGE = 1600
+function overscanQuadrilateral(points: Point[], overlap: number) {
+  const center = points.reduce((sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length }), { x: 0, y: 0 })
+  return points.map((point) => {
+    const directionX = point.x - center.x
+    const directionY = point.y - center.y
+    const distance = Math.hypot(directionX, directionY)
+    if (!distance) return point
+    return {
+      x: point.x + directionX / distance * overlap,
+      y: point.y + directionY / distance * overlap,
+    }
+  })
+}
 
 function squareToQuadrilateral([topLeft, topRight, bottomRight, bottomLeft]: Point[]): Matrix | null {
   const dx1 = topRight.x - bottomRight.x
@@ -62,21 +76,24 @@ function loadImage(src: string) {
   })
 }
 
-export function PerspectiveDoorCanvas({ corners, doorSourceUrl, height, visible, width }: Props) {
+export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, photoWidth, visible }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const renderRunRef = useRef(0)
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas || !width || !height || !doorSourceUrl) return
+    if (!canvas || !photoWidth || !photoHeight || !doorSourceUrl) return
     const run = ++renderRunRef.current
-    const workingScale = Math.min(window.devicePixelRatio || 1, MAX_WORKING_EDGE / Math.max(width, height))
-    const outputWidth = Math.max(1, Math.round(width * workingScale))
-    const outputHeight = Math.max(1, Math.round(height * workingScale))
+    const outputWidth = photoWidth
+    const outputHeight = photoHeight
     canvas.width = outputWidth
     canvas.height = outputHeight
     const context = canvas.getContext('2d')
-    context?.clearRect(0, 0, outputWidth, outputHeight)
+    if (context) {
+      context.imageSmoothingEnabled = true
+      context.imageSmoothingQuality = 'high'
+      context.clearRect(0, 0, outputWidth, outputHeight)
+    }
 
     const render = async () => {
       const sourceImage = await loadImage(doorSourceUrl)
@@ -87,46 +104,94 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, height, visible,
       const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently: true })
       const outputContext = canvas.getContext('2d')
       if (!sourceContext || !outputContext) return
+      sourceContext.imageSmoothingEnabled = true
+      sourceContext.imageSmoothingQuality = 'high'
+      outputContext.imageSmoothingEnabled = true
+      outputContext.imageSmoothingQuality = 'high'
       sourceContext.drawImage(sourceImage, 0, 0)
       const source = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height)
-      const targetPoints = [corners.topLeft, corners.topRight, corners.bottomRight, corners.bottomLeft]
+      const confirmedPoints = [corners.topLeft, corners.topRight, corners.bottomRight, corners.bottomLeft]
         .map(({ x, y }) => ({ x: x * outputWidth, y: y * outputHeight }))
-      const forward = squareToQuadrilateral(targetPoints)
+      const targetPoints = overscanQuadrilateral(confirmedPoints, EDGE_OVERLAP_PX)
+      const minX = Math.max(0, Math.floor(Math.min(...targetPoints.map((point) => point.x)) - 1))
+      const maxX = Math.min(outputWidth, Math.ceil(Math.max(...targetPoints.map((point) => point.x)) + 1))
+      const minY = Math.max(0, Math.floor(Math.min(...targetPoints.map((point) => point.y)) - 1))
+      const maxY = Math.min(outputHeight, Math.ceil(Math.max(...targetPoints.map((point) => point.y)) + 1))
+      const regionWidth = Math.max(1, maxX - minX)
+      const regionHeight = Math.max(1, maxY - minY)
+      const renderWidth = regionWidth * SUPERSAMPLE_SCALE
+      const renderHeight = regionHeight * SUPERSAMPLE_SCALE
+      const renderPoints = targetPoints.map((point) => ({
+        x: (point.x - minX) * SUPERSAMPLE_SCALE,
+        y: (point.y - minY) * SUPERSAMPLE_SCALE,
+      }))
+      const forward = squareToQuadrilateral(renderPoints)
       const inverse = forward ? invert(forward) : null
       if (!inverse) return
 
-      const minX = Math.max(0, Math.floor(Math.min(...targetPoints.map((point) => point.x))))
-      const maxX = Math.min(outputWidth - 1, Math.ceil(Math.max(...targetPoints.map((point) => point.x))))
-      const minY = Math.max(0, Math.floor(Math.min(...targetPoints.map((point) => point.y))))
-      const maxY = Math.min(outputHeight - 1, Math.ceil(Math.max(...targetPoints.map((point) => point.y))))
-      const warped = outputContext.createImageData(outputWidth, outputHeight)
+      const warped = outputContext.createImageData(renderWidth, renderHeight)
       const [a, b, c, d, e, f, g, h, i] = inverse
 
-      for (let y = minY; y <= maxY; y += 1) {
-        for (let x = minX; x <= maxX; x += 1) {
+      for (let y = 0; y < renderHeight; y += 1) {
+        for (let x = 0; x < renderWidth; x += 1) {
           const denominator = g * x + h * y + i
           if (Math.abs(denominator) < 1e-8) continue
           const unitX = (a * x + b * y + c) / denominator
           const unitY = (d * x + e * y + f) / denominator
           if (unitX < 0 || unitX > 1 || unitY < 0 || unitY > 1) continue
-          const sourceX = Math.min(source.width - 1, Math.max(0, Math.round(unitX * (source.width - 1))))
-          const sourceY = Math.min(source.height - 1, Math.max(0, Math.round(unitY * (source.height - 1))))
-          const sourceOffset = (sourceY * source.width + sourceX) * 4
-          const targetOffset = (y * outputWidth + x) * 4
-          warped.data[targetOffset] = source.data[sourceOffset]
-          warped.data[targetOffset + 1] = source.data[sourceOffset + 1]
-          warped.data[targetOffset + 2] = source.data[sourceOffset + 2]
-          warped.data[targetOffset + 3] = source.data[sourceOffset + 3]
+          const sourceX = Math.min(source.width - 1, Math.max(0, unitX * (source.width - 1)))
+          const sourceY = Math.min(source.height - 1, Math.max(0, unitY * (source.height - 1)))
+          const x0 = Math.floor(sourceX)
+          const y0 = Math.floor(sourceY)
+          const x1 = Math.min(source.width - 1, x0 + 1)
+          const y1 = Math.min(source.height - 1, y0 + 1)
+          const fractionX = sourceX - x0
+          const fractionY = sourceY - y0
+          const offset00 = (y0 * source.width + x0) * 4
+          const offset10 = (y0 * source.width + x1) * 4
+          const offset01 = (y1 * source.width + x0) * 4
+          const offset11 = (y1 * source.width + x1) * 4
+          const weight00 = (1 - fractionX) * (1 - fractionY)
+          const weight10 = fractionX * (1 - fractionY)
+          const weight01 = (1 - fractionX) * fractionY
+          const weight11 = fractionX * fractionY
+          const alpha00 = source.data[offset00 + 3] / 255
+          const alpha10 = source.data[offset10 + 3] / 255
+          const alpha01 = source.data[offset01 + 3] / 255
+          const alpha11 = source.data[offset11 + 3] / 255
+          const alphaWeight00 = weight00 * alpha00
+          const alphaWeight10 = weight10 * alpha10
+          const alphaWeight01 = weight01 * alpha01
+          const alphaWeight11 = weight11 * alpha11
+          const targetOffset = (y * renderWidth + x) * 4
+          const alpha = alphaWeight00 + alphaWeight10 + alphaWeight01 + alphaWeight11
+          if (alpha > 0) {
+            warped.data[targetOffset] = (source.data[offset00] * alphaWeight00 + source.data[offset10] * alphaWeight10 + source.data[offset01] * alphaWeight01 + source.data[offset11] * alphaWeight11) / alpha
+            warped.data[targetOffset + 1] = (source.data[offset00 + 1] * alphaWeight00 + source.data[offset10 + 1] * alphaWeight10 + source.data[offset01 + 1] * alphaWeight01 + source.data[offset11 + 1] * alphaWeight11) / alpha
+            warped.data[targetOffset + 2] = (source.data[offset00 + 2] * alphaWeight00 + source.data[offset10 + 2] * alphaWeight10 + source.data[offset01 + 2] * alphaWeight01 + source.data[offset11 + 2] * alphaWeight11) / alpha
+            warped.data[targetOffset + 3] = alpha * 255
+          }
         }
       }
-      if (renderRunRef.current === run) outputContext.putImageData(warped, 0, 0)
+      if (renderRunRef.current === run) {
+        const supersampledCanvas = document.createElement('canvas')
+        supersampledCanvas.width = renderWidth
+        supersampledCanvas.height = renderHeight
+        const supersampledContext = supersampledCanvas.getContext('2d')
+        if (supersampledContext) {
+          supersampledContext.putImageData(warped, 0, 0)
+          outputContext.drawImage(supersampledCanvas, 0, 0, renderWidth, renderHeight, minX, minY, regionWidth, regionHeight)
+        }
+        supersampledCanvas.width = 0
+        supersampledCanvas.height = 0
+      }
       sourceCanvas.width = 0
       sourceCanvas.height = 0
     }
 
     void render()
     return () => { renderRunRef.current += 1 }
-  }, [corners, doorSourceUrl, height, width])
+  }, [corners, doorSourceUrl, photoHeight, photoWidth])
 
   return <canvas ref={canvasRef} className="perspective-door-canvas" style={{ opacity: visible ? 1 : 0 }} aria-hidden="true" />
 }

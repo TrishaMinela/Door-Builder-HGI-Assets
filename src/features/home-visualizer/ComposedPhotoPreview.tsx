@@ -38,7 +38,7 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
         naturalSizeRef.current = { width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }
         updateStageSize()
       }} />
-      {stageSize.width > 0 && <PerspectiveDoorCanvas corners={corners} doorSourceUrl={doorSourceUrl} width={stageSize.width} height={stageSize.height} visible={showAfter} />}
+      {stageSize.width > 0 && <PerspectiveDoorCanvas corners={corners} doorSourceUrl={doorSourceUrl} photoWidth={naturalSizeRef.current.width} photoHeight={naturalSizeRef.current.height} visible={showAfter} />}
     </div>
   </div>
 }
