@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { Move, RotateCcw, ScanLine } from 'lucide-react'
+import { Move, RotateCcw, ScanLine, ZoomIn, ZoomOut } from 'lucide-react'
 
 export type CornerId = 'topLeft' | 'topRight' | 'bottomRight' | 'bottomLeft'
 export type Point = { x: number; y: number }
@@ -59,6 +59,9 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   const dragRef = useRef<DragState | null>(null)
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
   const [mode, setMode] = useState<InteractionMode>('edit')
+  const [zoom, setZoom] = useState(1)
+
+  useEffect(() => setZoom(1), [imageSrc])
 
   const updateStageSize = () => {
     const editor = editorRef.current
@@ -153,10 +156,14 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
       <div
         ref={stageRef}
         className={`entrance-image-stage entrance-image-stage-${mode}`}
-        style={stageSize.width ? { width: stageSize.width, height: stageSize.height } : undefined}
+        style={stageSize.width ? { width: stageSize.width, height: stageSize.height, transform: `scale(${zoom})` } : undefined}
         onPointerMove={moveDrag}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onWheel={(event) => {
+          event.preventDefault()
+          setZoom((value) => Math.max(1, Math.min(3, value + (event.deltaY < 0 ? .15 : -.15))))
+        }}
       >
         <img
           src={imageSrc}
@@ -185,6 +192,12 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
           onPointerDown={(event) => beginCornerDrag(id, event)}
           disabled={mode !== 'edit'}
         />)}
+      </div>
+      <div className="visualizer-zoom-controls" role="group" aria-label="Uploaded photo zoom controls">
+        <button type="button" aria-label="Zoom uploaded photo out" disabled={zoom <= 1} onClick={() => setZoom((value) => Math.max(1, value - .25))}><ZoomOut size={17} /></button>
+        <span aria-live="polite">{Math.round(zoom * 100)}%</span>
+        <button type="button" aria-label="Zoom uploaded photo in" disabled={zoom >= 3} onClick={() => setZoom((value) => Math.min(3, value + .25))}><ZoomIn size={17} /></button>
+        <button type="button" onClick={() => setZoom(1)}>Fit</button>
       </div>
     </div>
   </>

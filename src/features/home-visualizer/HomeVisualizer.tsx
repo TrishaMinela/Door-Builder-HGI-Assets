@@ -6,7 +6,7 @@ import { ConfiguredDoorSource, type DoorSourceState } from './ConfiguredDoorSour
 import { ComposedPhotoPreview } from './ComposedPhotoPreview'
 import { autoFitEntrance, type AutoFitResult } from './computerVision'
 import { CleanupBrushEditor, type CleanupStroke } from './CleanupBrushEditor'
-import { createBrushCleanup } from './brushCleanup'
+import { createBrushCleanup, type CleanupDiagnosticComponent } from './brushCleanup'
 
 const MAX_PHOTO_SIZE = 15 * 1024 * 1024
 const SUPPORTED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -47,8 +47,9 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
   const [cleanupBrushOpen, setCleanupBrushOpen] = useState(false)
   const [cleanupStrokes, setCleanupStrokes] = useState<CleanupStroke[]>([])
   const cleanupStrokeSnapshotRef = useRef<CleanupStroke[]>([])
-  const [cleanupProposal, setCleanupProposal] = useState<{ cleanedUrl: string; radius: 3 | 5 } | null>(null)
+  const [cleanupProposal, setCleanupProposal] = useState<{ cleanedUrl: string; radius: 3 | 5; fullMaskUrl: string; insideMaskUrl: string; outsideMaskUrl: string; width: number; height: number; components: CleanupDiagnosticComponent[] } | null>(null)
   const [approvedCleanup, setApprovedCleanup] = useState<{ cleanedUrl: string; radius: 3 | 5 } | null>(null)
+  const [cleanupPreviewMode, setCleanupPreviewMode] = useState<'original' | 'cleanup' | 'final'>('cleanup')
   const cleanupUrlsRef = useRef(new Set<string>())
   const [doorSource, setDoorSource] = useState<DoorSourceState>({ url: '', width: 0, height: 0, error: '', ready: false })
   const updateDoorSource = useCallback((state: DoorSourceState) => setDoorSource(state), [])
@@ -172,14 +173,18 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
     setCleanupLoading(true)
     setCleanupError('')
     if (cleanupProposal) {
-      cleanupUrlsRef.current.delete(cleanupProposal.cleanedUrl); URL.revokeObjectURL(cleanupProposal.cleanedUrl)
+      ;[cleanupProposal.cleanedUrl, cleanupProposal.fullMaskUrl, cleanupProposal.insideMaskUrl, cleanupProposal.outsideMaskUrl].forEach((url) => { cleanupUrlsRef.current.delete(url); URL.revokeObjectURL(url) })
       setCleanupProposal(null)
     }
     try {
-      const cleanedBlob = await createBrushCleanup(photo.objectUrl, cleanupStrokes, radius)
-      const cleanedUrl = URL.createObjectURL(cleanedBlob)
-      cleanupUrlsRef.current.add(cleanedUrl)
-      setCleanupProposal({ cleanedUrl, radius })
+      const result = await createBrushCleanup(photo.objectUrl, cleanupStrokes, corners, radius)
+      const cleanedUrl = URL.createObjectURL(result.cleanedBlob)
+      const fullMaskUrl = URL.createObjectURL(result.fullMaskBlob)
+      const insideMaskUrl = URL.createObjectURL(result.insideMaskBlob)
+      const outsideMaskUrl = URL.createObjectURL(result.outsideMaskBlob)
+      ;[cleanedUrl, fullMaskUrl, insideMaskUrl, outsideMaskUrl].forEach((url) => cleanupUrlsRef.current.add(url))
+      setCleanupProposal({ cleanedUrl, radius, fullMaskUrl, insideMaskUrl, outsideMaskUrl, width: result.width, height: result.height, components: result.components })
+      setCleanupPreviewMode('cleanup')
     } catch (reason) {
       setCleanupError(reason instanceof Error ? reason.message : 'The cleanup preview could not be created.')
     } finally {
@@ -192,7 +197,8 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
     if (approvedCleanup) {
       cleanupUrlsRef.current.delete(approvedCleanup.cleanedUrl); URL.revokeObjectURL(approvedCleanup.cleanedUrl)
     }
-    setApprovedCleanup(cleanupProposal)
+    setApprovedCleanup({ cleanedUrl: cleanupProposal.cleanedUrl, radius: cleanupProposal.radius })
+    ;[cleanupProposal.fullMaskUrl, cleanupProposal.insideMaskUrl, cleanupProposal.outsideMaskUrl].forEach((url) => { cleanupUrlsRef.current.delete(url); URL.revokeObjectURL(url) })
     setCleanupProposal(null)
     setCleanupBrushOpen(false)
     setCleanupError('')
@@ -201,7 +207,7 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
 
   const cancelCleanupProposal = () => {
     if (!cleanupProposal) return
-    cleanupUrlsRef.current.delete(cleanupProposal.cleanedUrl); URL.revokeObjectURL(cleanupProposal.cleanedUrl)
+    ;[cleanupProposal.cleanedUrl, cleanupProposal.fullMaskUrl, cleanupProposal.insideMaskUrl, cleanupProposal.outsideMaskUrl].forEach((url) => { cleanupUrlsRef.current.delete(url); URL.revokeObjectURL(url) })
     setCleanupProposal(null)
     setCleanupError('')
   }
@@ -328,12 +334,17 @@ export function HomeVisualizer({ onBack, configuredDoorPreview, configurationKey
               </div>
             </div>
             {cleanupBrushOpen ? <>
-              <CleanupBrushEditor corners={corners} imageSrc={photo.objectUrl} imageAlt={`Untouched uploaded entrance photo: ${photo.file.name}`} strokes={cleanupStrokes} processing={cleanupLoading} onStrokesChange={(strokes) => { setCleanupStrokes(strokes); cancelCleanupProposal() }} onPreview={() => previewBrushCleanup(3)} onCancel={() => closeCleanupBrush(true)} onDone={() => closeCleanupBrush(false)} />
-              {cleanupProposal && <section className="cleanup-comparison cleanup-brush-comparison" aria-labelledby="cleanup-comparison-title">
-                <h3 id="cleanup-comparison-title">Review Cleanup Preview</h3>
-                <div className="cleanup-comparison-grid"><figure><img src={photo.objectUrl} alt="Completely untouched original entrance" /><figcaption>Original</figcaption></figure><figure><img src={cleanupProposal.cleanedUrl} alt="Proposed brushed-detail cleanup" /><figcaption>Proposed Cleanup</figcaption></figure></div>
-                <p className="cleanup-quality-note">This tool works best for small objects and reflections. Large or highly detailed areas may not reconstruct perfectly.</p>
-                <div className="cleanup-proposal-actions"><button type="button" className="visualizer-apply-button auto-tool-apply" onClick={applyCleanup}><Check size={17} /> Apply Cleanup</button><button type="button" className="visualizer-secondary-button" disabled={cleanupLoading} onClick={() => previewBrushCleanup(5)}><RefreshCw size={17} /> {cleanupLoading ? 'Retrying…' : 'Retry (Larger Radius)'}</button><button type="button" className="visualizer-secondary-button" onClick={cancelCleanupProposal}>Cancel</button></div>
+              {!cleanupProposal ? <CleanupBrushEditor corners={corners} imageSrc={photo.objectUrl} imageAlt={`Untouched uploaded entrance photo: ${photo.file.name}`} strokes={cleanupStrokes} processing={cleanupLoading} onStrokesChange={(strokes) => { setCleanupStrokes(strokes); cancelCleanupProposal() }} onPreview={() => previewBrushCleanup(3)} onCancel={() => closeCleanupBrush(true)} onDone={() => closeCleanupBrush(false)} /> : <section className="cleanup-preview-workspace" aria-labelledby="cleanup-preview-title">
+                <div className="cleanup-brush-heading"><Brush size={22} aria-hidden="true" /><div><h3 id="cleanup-preview-title">Review Cleanup</h3><p>Details inside the outlined door opening will be covered by the new door. Cleanup is applied only to details extending outside the opening.</p></div></div>
+                <div className="cleanup-preview-toolbar" role="group" aria-label="Cleanup preview view">
+                  <button type="button" className={cleanupPreviewMode === 'original' ? 'active' : ''} aria-pressed={cleanupPreviewMode === 'original'} onClick={() => setCleanupPreviewMode('original')}>Original</button>
+                  <button type="button" className={cleanupPreviewMode === 'cleanup' ? 'active' : ''} aria-pressed={cleanupPreviewMode === 'cleanup'} onClick={() => setCleanupPreviewMode('cleanup')}>Cleanup Preview</button>
+                  <button type="button" className={cleanupPreviewMode === 'final' ? 'active' : ''} aria-pressed={cleanupPreviewMode === 'final'} onClick={() => setCleanupPreviewMode('final')}>Final Preview</button>
+                </div>
+                <ComposedPhotoPreview corners={corners} doorSourceUrl={doorSource.url} imageSrc={cleanupProposal.cleanedUrl} originalImageSrc={photo.objectUrl} imageAlt={`${cleanupPreviewMode === 'original' ? 'Original' : cleanupPreviewMode === 'cleanup' ? 'Cleaned' : 'Final'} entrance preview`} showAfter displayMode={cleanupPreviewMode} />
+                <p className="cleanup-quality-note">This tool works best for small details near the doorway. The original photo is never overwritten during preview.</p>
+                <div className="cleanup-proposal-actions"><button type="button" className="visualizer-apply-button auto-tool-apply" onClick={applyCleanup}><Check size={17} /> Apply Cleanup</button><button type="button" className="visualizer-secondary-button" onClick={cancelCleanupProposal}><Pencil size={17} /> Edit Brush Marks</button><button type="button" className="visualizer-secondary-button" onClick={() => closeCleanupBrush(true)}>Cancel</button></div>
+                {import.meta.env.DEV && <details className="cleanup-diagnostics"><summary>Cleanup diagnostics</summary><div className="cleanup-diagnostic-masks"><figure><img src={cleanupProposal.fullMaskUrl} alt="Full brush mask" /><figcaption>Full mask</figcaption></figure><figure><img src={cleanupProposal.insideMaskUrl} alt="Inside-opening brush mask" /><figcaption>Inside mask</figcaption></figure><figure><img src={cleanupProposal.outsideMaskUrl} alt="Outside-opening brush mask" /><figcaption>Outside mask</figcaption></figure></div><div className="cleanup-diagnostic-stage"><img src={cleanupProposal.cleanedUrl} alt="Cleanup repair diagnostic" /><svg viewBox={`0 0 ${cleanupProposal.width} ${cleanupProposal.height}`} aria-hidden="true">{cleanupProposal.components.map((component, index) => <g key={index}>{component.source && <rect className="cleanup-source-box" {...component.source} />}<rect className="cleanup-destination-box" {...component.destination} /></g>)}</svg></div><ul>{cleanupProposal.components.map((component, index) => <li key={index}>Component {index + 1}: {component.method}</li>)}</ul></details>}
               </section>}
               {cleanupError && <p className="visualizer-error" role="alert">{cleanupError}</p>}
             </> : <>
