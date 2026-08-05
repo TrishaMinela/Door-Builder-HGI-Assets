@@ -25,6 +25,8 @@ type Props = {
   imageSrc: string
   onCornersChange: (corners: EntranceCorners) => void
   onReset: () => void
+  proposedCorners?: EntranceCorners | null
+  proposedDetectedEdges?: boolean[]
 }
 
 export const cloneEntranceCorners = (corners: EntranceCorners): EntranceCorners => ({
@@ -50,7 +52,7 @@ export function isValidEntranceCorners(corners: EntranceCorners) {
   return turns.every((turn) => turn > 0.0001) || turns.every((turn) => turn < -0.0001)
 }
 
-export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset }: Props) {
+export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
@@ -138,6 +140,7 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   }
 
   const polygonPoints = CORNER_ORDER.map((id) => `${corners[id].x * stageSize.width},${corners[id].y * stageSize.height}`).join(' ')
+  const proposedPolygonPoints = proposedCorners ? CORNER_ORDER.map((id) => `${proposedCorners[id].x * stageSize.width},${proposedCorners[id].y * stageSize.height}`).join(' ') : ''
 
   return <>
     <div className="entrance-selector-toolbar" role="group" aria-label="Entrance placement tools">
@@ -165,6 +168,13 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
         />
         {stageSize.width > 0 && <svg className="entrance-selection-svg" viewBox={`0 0 ${stageSize.width} ${stageSize.height}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
           <polygon className={`entrance-selection-polygon ${mode === 'move' ? 'move-enabled' : ''}`} points={polygonPoints} onPointerDown={beginSelectionDrag} />
+          {proposedCorners && <>
+            <polygon className="entrance-selection-proposal-fill" points={proposedPolygonPoints} />
+            {CORNER_ORDER.map((id, index) => {
+              const nextId = CORNER_ORDER[(index + 1) % CORNER_ORDER.length]
+              return <line key={id} className={`entrance-selection-proposal-edge ${proposedDetectedEdges?.[index] ? 'detected' : 'manual'}`} x1={proposedCorners[id].x * stageSize.width} y1={proposedCorners[id].y * stageSize.height} x2={proposedCorners[nextId].x * stageSize.width} y2={proposedCorners[nextId].y * stageSize.height} />
+            })}
+          </>}
         </svg>}
         {CORNER_ORDER.map((id) => <button
           type="button"

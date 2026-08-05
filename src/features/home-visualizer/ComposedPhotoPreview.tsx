@@ -7,10 +7,11 @@ type Props = {
   doorSourceUrl: string
   imageAlt: string
   imageSrc: string
+  originalImageSrc: string
   showAfter: boolean
 }
 
-export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSrc, showAfter }: Props) {
+export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSrc, originalImageSrc, showAfter }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
@@ -34,7 +35,7 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
 
   return <div ref={editorRef} className="visualizer-editor composed-photo-editor" aria-label="Configured door applied to house photo">
     <div className="entrance-image-stage composed-photo-stage" style={stageSize.width ? { width: stageSize.width, height: stageSize.height } : undefined}>
-      <img src={imageSrc} alt={imageAlt} onLoad={(event) => {
+      <img src={showAfter ? imageSrc : originalImageSrc} alt={imageAlt} onLoad={(event) => {
         naturalSizeRef.current = { width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }
         updateStageSize()
       }} />
