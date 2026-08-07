@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { ArrowLeft, ArrowRight, Check, Download, Eye, FileText, HelpCircle, Home as HomeIcon, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Download, FileText, HelpCircle, Home as HomeIcon, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview, type DoorPreviewProps } from './components/DoorPreview'
 import { DoorStyleThumbnail } from './components/DoorStyleThumbnail'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
@@ -1602,7 +1602,7 @@ export default function App() {
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
             <div className="mobile-review-preview">{renderConfiguredPreviewMode()}</div>
             <section className="visualizer-promo-card visualizer-promo-card-mobile" aria-labelledby="mobile-visualizer-promo-title">
-              <div className="visualizer-promo-graphic" aria-hidden="true"><div className="visualizer-tablet"><span className="visualizer-house-roof" /><span className="visualizer-house-door" /><Eye size={15} /></div></div>
+              <div className="visualizer-promo-graphic" aria-hidden="true"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="" /></div>
               <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow"><HomeIcon size={15} /> Home Visualizer</span><h2 id="mobile-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => showScreen('visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
             </section>
             <div className="summary-card">
@@ -1640,7 +1640,7 @@ export default function App() {
             {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
           </div>
           {currentPage === 'review' && <section className="visualizer-promo-card visualizer-promo-card-desktop" aria-labelledby="desktop-visualizer-promo-title">
-            <div className="visualizer-promo-graphic" aria-hidden="true"><div className="visualizer-tablet"><span className="visualizer-house-roof" /><span className="visualizer-house-door" /><Eye size={15} /></div></div>
+            <div className="visualizer-promo-graphic" aria-hidden="true"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="" /></div>
             <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow"><HomeIcon size={15} /> Home Visualizer</span><h2 id="desktop-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => showScreen('visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
           </section>}
           {currentPage !== 'review' && <div className="mini-summary">
