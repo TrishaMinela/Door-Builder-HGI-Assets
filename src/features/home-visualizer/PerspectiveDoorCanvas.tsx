@@ -13,9 +13,10 @@ type Props = {
 }
 
 type Matrix = [number, number, number, number, number, number, number, number, number]
-const EDGE_OVERLAP_PX = 1.5
-const SUPERSAMPLE_SCALE = 2
+const EDGE_OVERLAP_PX = 2
+const SUPERSAMPLE_SCALE = 4
 const PRODUCT_ALPHA_BOOST = 1.35
+const EDGE_ALPHA_BOOST = 1.75
 
 function reportUnexpectedWhiteEdgePixels(source: ImageData, left: number, top: number, width: number, height: number, name: string) {
   if (!import.meta.env.DEV) return
@@ -34,6 +35,14 @@ function reportUnexpectedWhiteEdgePixels(source: ImageData, left: number, top: n
   // Glass inserts are intentionally ignored because they sit inside the source;
   // this diagnostic only examines the vertical product-edge bands where strips occur.
   if (opaqueEdgePixels && nearlyWhiteEdgePixels / opaqueEdgePixels > .2) console.warn('[home-visualizer:unexpected-white-edge]', { layer: name, nearlyWhiteEdgePixels, opaqueEdgePixels })
+}
+
+function tightAlphaBounds(source: ImageData, sourceRect: { x: number; y: number; width: number; height: number }) {
+  const initialLeft=Math.max(0,Math.floor(sourceRect.x*source.width)),initialTop=Math.max(0,Math.floor(sourceRect.y*source.height)),initialRight=Math.min(source.width-1,Math.ceil((sourceRect.x+sourceRect.width)*source.width)-1),initialBottom=Math.min(source.height-1,Math.ceil((sourceRect.y+sourceRect.height)*source.height)-1)
+  let left=initialRight,top=initialBottom,right=initialLeft,bottom=initialTop
+  for(let y=initialTop;y<=initialBottom;y+=1){for(let x=initialLeft;x<=initialRight;x+=1){if(source.data[(y*source.width+x)*4+3]<=8)continue;left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}}
+  if(right<left||bottom<top)return{left:initialLeft,top:initialTop,width:initialRight-initialLeft+1,height:initialBottom-initialTop+1}
+  return{left,top,width:right-left+1,height:bottom-top+1}
 }
 
 function overscanQuadrilateral(points: Point[], overlap: number) {
@@ -134,10 +143,11 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
       outputContext.imageSmoothingQuality = 'high'
       sourceContext.drawImage(sourceImage, 0, 0)
       const source = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height)
-      const sourceLeft = sourceRect.x * source.width
-      const sourceTop = sourceRect.y * source.height
-      const sourceSpanWidth = sourceRect.width * source.width
-      const sourceSpanHeight = sourceRect.height * source.height
+      const tightSource=tightAlphaBounds(source,sourceRect)
+      const sourceLeft=tightSource.left
+      const sourceTop=tightSource.top
+      const sourceSpanWidth=tightSource.width
+      const sourceSpanHeight=tightSource.height
       reportUnexpectedWhiteEdgePixels(source, Math.round(sourceLeft), Math.round(sourceTop), Math.round(sourceSpanWidth), Math.round(sourceSpanHeight), diagnosticName)
       const confirmedPoints = [corners.topLeft, corners.topRight, corners.bottomRight, corners.bottomLeft]
         .map(({ x, y }) => ({ x: x * outputWidth, y: y * outputHeight }))
@@ -197,7 +207,10 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
           const alphaWeight11 = weight11 * alpha11
           const targetOffset = (y * renderWidth + x) * 4
           const sampledAlpha = alphaWeight00 + alphaWeight10 + alphaWeight01 + alphaWeight11
-          const outputAlpha = Math.min(1, sampledAlpha * PRODUCT_ALPHA_BOOST)
+          const distanceToBoundary = Math.min(unitX, 1 - unitX, unitY, 1 - unitY)
+          const boundaryBand = 2 / Math.max(1, Math.min(renderWidth, renderHeight))
+          const isProductBoundary=distanceToBoundary<=boundaryBand
+          const outputAlpha=isProductBoundary&&sampledAlpha>.008?1:Math.min(1,sampledAlpha*(isProductBoundary?EDGE_ALPHA_BOOST:PRODUCT_ALPHA_BOOST))
           if (sampledAlpha > 0) {
             warped.data[targetOffset] = (source.data[offset00] * alphaWeight00 + source.data[offset10] * alphaWeight10 + source.data[offset01] * alphaWeight01 + source.data[offset11] * alphaWeight11) / sampledAlpha
             warped.data[targetOffset + 1] = (source.data[offset00 + 1] * alphaWeight00 + source.data[offset10 + 1] * alphaWeight10 + source.data[offset01 + 1] * alphaWeight01 + source.data[offset11 + 1] * alphaWeight11) / sampledAlpha

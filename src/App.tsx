@@ -1601,7 +1601,10 @@ export default function App() {
           {currentPage === 'review' && !submitted && <>
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
             <div className="mobile-review-preview">{renderConfiguredPreviewMode()}</div>
-            <button className="view-on-home-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> View on Your Home <ArrowRight size={17} /></button>
+            <section className="visualizer-promo-card visualizer-promo-card-mobile" aria-labelledby="mobile-visualizer-promo-title">
+              <div className="visualizer-promo-graphic" aria-hidden="true"><div className="visualizer-tablet"><span className="visualizer-house-roof" /><span className="visualizer-house-door" /><Eye size={15} /></div></div>
+              <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow"><HomeIcon size={15} /> Home Visualizer</span><h2 id="mobile-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => showScreen('visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
+            </section>
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
               {configurationSummaryRows.map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span>{target >= 0 && <button onClick={() => goTo(target)}>Edit</button>}</div>)}
@@ -1632,11 +1635,15 @@ export default function App() {
           {currentPage !== 'review' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Previous</button><button className="next" disabled={(currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'sidelites' && !sidelites) || (currentPage === 'sidelite-style' && !selectedSideliteStyle) || (currentPage === 'door-finish' && !visibleSelectedFinish) || (currentPage === 'jamb-type' && !jambType) || (currentPage === 'jamb-finish' && !jambFinish) || (currentPage === 'glass-type' && !selectedGlassCategory) || (currentPage === 'glass' && visibleGlass.length > 0 && !selectedGlass && !selectedGlassGroup) || (currentPage === 'glass-variant' && !glassVariantConfirmed) || (currentPage === 'grid-location' && !gridPathId) || (currentPage === 'grid-style' && !gridStyle) || (currentPage === 'grid-pattern' && !gridPattern) || (currentPage === 'grid-color' && !gridColor) || (currentPage === 'grid-width' && !gridWidth) || (currentPage === 'sidelite-glass-type' && !sideliteGlassCategory) || (currentPage === 'sidelite-glass' && !selectedFslGlass && !selectedSideliteGlassGroup) || (currentPage === 'sidelite-glass-variant' && !sideliteGlassVariantConfirmed) || (currentPage === 'sidelite-grid-location' && !sideliteGridLocation) || (currentPage === 'sidelite-grid-style' && !sideliteGridStyle) || (currentPage === 'sidelite-grid-pattern' && !sideliteGridPattern) || (currentPage === 'sidelite-grid-color' && !sideliteGridColor) || (currentPage === 'sidelite-grid-width' && !sideliteGridWidth) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>Next <ArrowRight size={17} /></button></div>}
         </section>
 
-        {!submitted && <aside>
+        {!submitted && <aside className={currentPage === 'review' ? 'review-preview-panel' : undefined}>
           <div className="aside-preview-area">
             {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
           </div>
-          <div className="mini-summary">
+          {currentPage === 'review' && <section className="visualizer-promo-card visualizer-promo-card-desktop" aria-labelledby="desktop-visualizer-promo-title">
+            <div className="visualizer-promo-graphic" aria-hidden="true"><div className="visualizer-tablet"><span className="visualizer-house-roof" /><span className="visualizer-house-door" /><Eye size={15} /></div></div>
+            <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow"><HomeIcon size={15} /> Home Visualizer</span><h2 id="desktop-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => showScreen('visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
+          </section>}
+          {currentPage !== 'review' && <div className="mini-summary">
             <span><b>Door style</b><strong>{selectedStyle?.name ?? 'Not selected'}</strong></span>
             <span><b>Door Line</b><strong>{selectedDoorLine?.name ?? 'Not selected'}</strong></span>
             {selectedGrain && <span><b>Grain</b><strong>{selectedGrain}</strong></span>}
@@ -1650,7 +1657,7 @@ export default function App() {
             {gridConfiguration && <>{gridConfiguration.gridLocation && <span><b>Grid location</b><strong>{gridConfiguration.gridLocation}</strong></span>}{gridConfiguration.gridStyle && <span><b>Grid style</b><strong>{gridConfiguration.gridStyle}</strong></span>}{gridConfiguration.gridPattern && <span><b>Grid pattern</b><strong>{gridConfiguration.gridPattern}</strong></span>}{gridConfiguration.gridColor && <span><b>Grid color</b><strong>{gridConfiguration.gridColor}</strong></span>}{gridConfiguration.gridWidth && <span><b>Grid width</b><strong>{gridConfiguration.gridWidth}</strong></span>}</>}
             <span><b>Hardware</b><strong>{selectedHardware ? hardwareDisplayName(selectedHardware) : 'Not selected'}</strong></span>
             <span><b>Door swing</b><strong>{selectedDoorSwing?.name ?? 'Not selected'}</strong></span>
-          </div>
+          </div>}
         </aside>}
       </main>
       </>}

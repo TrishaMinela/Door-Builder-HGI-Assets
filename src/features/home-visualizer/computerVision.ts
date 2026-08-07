@@ -109,9 +109,11 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
     for (let pixel = 0, offset = 0; pixel < gray.length; pixel += 1, offset += 4) gray[pixel] = rgba[offset] * 0.299 + rgba[offset + 1] * 0.587 + rgba[offset + 2] * 0.114
     const current = pixelCorners(corners, canvas.width, canvas.height)
     const manualLines = EDGE_IDS.map(([start, end]) => ({ a: current[start], b: current[end], score: 0, source: 'manual' as const }))
-    const shorter = Math.min(canvas.width, canvas.height)
-    const band = options.wider ? Math.max(16, Math.min(70, shorter * 0.045)) : Math.max(8, Math.min(35, shorter * 0.02))
-    const movementLimit = options.wider ? Math.min(60, shorter * 0.04) : Math.min(30, shorter * 0.02)
+    const selectedWidth=(Math.hypot(current.topRight.x-current.topLeft.x,current.topRight.y-current.topLeft.y)+Math.hypot(current.bottomRight.x-current.bottomLeft.x,current.bottomRight.y-current.bottomLeft.y))/2
+    const selectedHeight=(Math.hypot(current.bottomLeft.x-current.topLeft.x,current.bottomLeft.y-current.topLeft.y)+Math.hypot(current.bottomRight.x-current.topRight.x,current.bottomRight.y-current.topRight.y))/2
+    const selectedScale=Math.min(selectedWidth,selectedHeight)
+    const band=options.wider?Math.max(24,Math.min(110,selectedScale*.18)):Math.max(12,Math.min(72,selectedScale*.1))
+    const movementLimit=options.wider?Math.min(82,Math.max(24,selectedScale*.16)):Math.min(64,Math.max(12,selectedScale*.1))
     const sampleGray = (x: number, y: number) => {
       const px = Math.max(0, Math.min(canvas.width - 1, Math.round(x)))
       const py = Math.max(0, Math.min(canvas.height - 1, Math.round(y)))
@@ -144,32 +146,74 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
     const refinements = manualLines.map((manual, edgeIndex) => {
       const dx = manual.b.x - manual.a.x; const dy = manual.b.y - manual.a.y; const length = Math.hypot(dx, dy)
       const direction = { x: dx / length, y: dy / length }; const normal = { x: -direction.y, y: direction.x }
-      const sampleCount = Math.max(30, Math.min(80, Math.round(length / 12)))
-      const candidates: Array<Point & { strength: number; offset: number }> = []
-      for (let index = 0; index < sampleCount; index += 1) {
+      const sampleCount = Math.max(40, Math.min(80, Math.round(length / 10)))
+      const origins = Array.from({ length: sampleCount }, (_, index) => {
         const ratio = (index + 0.5) / sampleCount
-        const origin = { x: manual.a.x + dx * ratio, y: manual.a.y + dy * ratio }
-        let best: (Point & { strength: number; offset: number; value: number }) | null = null
-        // Polygon edges run clockwise, so this normal points into the opening.
-        // On the bottom edge, negative offsets move down toward porch/step lines.
-        const minimumOffset = edgeIndex === 2 && !options.wider ? -band * 0.3 : -band
-        const maximumOffset = band
-        for (let offset = minimumOffset; offset <= maximumOffset; offset += 1) {
-          const point = { x: origin.x + normal.x * offset, y: origin.y + normal.y * offset }
-          if (point.x < 2 || point.x >= canvas.width - 2 || point.y < 2 || point.y >= canvas.height - 2) continue
-          const strength = Math.abs(sampleGray(point.x + normal.x * 1.5, point.y + normal.y * 1.5) - sampleGray(point.x - normal.x * 1.5, point.y - normal.y * 1.5))
-          const downwardPenalty = edgeIndex === 2 && offset < 0 ? Math.abs(offset) * 1.4 : 0
-          const value = strength - Math.abs(offset) * (options.wider ? 0.12 : 0.22) - downwardPenalty
-          if (!best || value > best.value) best = { ...point, strength, offset, value }
-        }
-        if (best) candidates.push(best)
+        return { x: manual.a.x + dx * ratio, y: manual.a.y + dy * ratio }
+      })
+      const gradientAt = (origin: Point, offset: number) => {
+        const point = { x: origin.x + normal.x * offset, y: origin.y + normal.y * offset }
+        if (point.x < 2 || point.x >= canvas.width - 2 || point.y < 2 || point.y >= canvas.height - 2) return 0
+        return Math.abs(sampleGray(point.x + normal.x * 1.5, point.y + normal.y * 1.5) - sampleGray(point.x - normal.x * 1.5, point.y - normal.y * 1.5))
       }
+      // The rough line is the center of a symmetric search band. Score complete,
+      // parallel candidate boundaries so either sign of the normal is equally valid.
+      const scoreCandidates = (radius: number) => {
+        const offsets = Array.from({ length: Math.floor(radius * 2) + 1 }, (_, index) => index - Math.floor(radius))
+        const raw = offsets.map((offset) => ({ offset, values: origins.map((origin) => gradientAt(origin, offset)) }))
+        const noiseFloor = Math.max(options.wider ? 6 : 7, median(raw.flatMap((candidate) => candidate.values)) * 1.3)
+        return raw.map(({ offset, values }) => {
+          const supported = values.map((value) => value >= noiseFloor)
+          let longestRun = 0; let currentRun = 0
+          supported.forEach((value) => { currentRun = value ? currentRun + 1 : 0; longestRun = Math.max(longestRun, currentRun) })
+          const strength = median(values.filter((value) => value >= noiseFloor))
+          const support = supported.filter(Boolean).length / sampleCount
+          const continuity = longestRun / sampleCount
+          const strengthScore = Math.min(1, strength / 42)
+          const proximity = Math.exp(-Math.abs(offset) / Math.max(5, radius * .48))
+          const score = strengthScore * .36 + support * .28 + continuity * .18 + proximity * .18
+          return { offset, score, strength, support, continuity, noiseFloor }
+        }).sort((first, second) => second.score - first.score || Math.abs(first.offset) - Math.abs(second.offset))
+      }
+      const closeRadius = Math.max(10, Math.min(band, Math.round(band * .56)))
+      const closeCandidates = scoreCandidates(closeRadius)
+      const closeWinner = closeCandidates[0]
+      const closeIsConfident = Boolean(closeWinner && closeWinner.score >= .62 && closeWinner.support >= .46 && closeWinner.continuity >= .18)
+      const scored = closeIsConfident ? closeCandidates : scoreCandidates(band)
+      const winner = scored[0]
+      if (!winner) return { line: manual, confidence: 0, refined: false, reason: 'no valid gradient candidates in the symmetric search band' }
+
+      origins.filter((_, index) => index % 4 === 0).forEach((origin) => sampleDiagnostics.push({
+        a: { x: origin.x - normal.x * (closeIsConfident ? closeRadius : band), y: origin.y - normal.y * (closeIsConfident ? closeRadius : band) },
+        b: { x: origin.x + normal.x * (closeIsConfident ? closeRadius : band), y: origin.y + normal.y * (closeIsConfident ? closeRadius : band) },
+        kind: `${EDGE_NAMES[edgeIndex]}-symmetric-scan`,
+      }))
+      sampleDiagnostics.push({
+        a: { x: manual.a.x + normal.x * winner.offset, y: manual.a.y + normal.y * winner.offset },
+        b: { x: manual.b.x + normal.x * winner.offset, y: manual.b.y + normal.y * winner.offset },
+        kind: `${EDGE_NAMES[edgeIndex]}-winning-line`,
+      })
+
+      // Permit a small local variation around the winning offset so PCA can retain
+      // genuine perspective while preventing samples from jumping to unrelated trim.
+      const localRadius = options.wider ? 5 : 3
+      const candidates: Array<Point & { strength: number; offset: number }> = origins.flatMap((origin) => {
+        let best: { strength: number; offset: number } | null = null
+        for (let offset = winner.offset - localRadius; offset <= winner.offset + localRadius; offset += 1) {
+          const strength = gradientAt(origin, offset)
+          const value = strength - Math.abs(offset - winner.offset) * 1.25
+          if (!best || value > best.strength - Math.abs(best.offset - winner.offset) * 1.25) best = { strength, offset }
+        }
+        if (!best || best.strength < winner.noiseFloor) return []
+        return [{ x: origin.x + normal.x * best.offset, y: origin.y + normal.y * best.offset, strength: best.strength, offset: best.offset }]
+      })
       const strengths = candidates.map((point) => point.strength)
-      const strengthFloor = Math.max(10, median(strengths) * 0.65)
+      const strengthFloor = Math.max(options.wider?8:9, median(strengths) * 0.72)
       const usable = candidates.filter((point) => point.strength >= strengthFloor)
       const offsetMedian = median(usable.map((point) => point.offset))
       const offsetMad = median(usable.map((point) => Math.abs(point.offset - offsetMedian)))
-      const consistent = usable.filter((point) => Math.abs(point.offset - offsetMedian) <= Math.max(3, offsetMad * 2.8))
+      const consistencyLimit=options.wider?Math.max(5,offsetMad*2.8):Math.max(3,Math.min(7,offsetMad*2.4))
+      const consistent = usable.filter((point) => Math.abs(point.offset - offsetMedian) <= consistencyLimit)
       consistent.forEach((point) => sampleDiagnostics.push({ a: { x: point.x - normal.x * 2, y: point.y - normal.y * 2 }, b: { x: point.x + normal.x * 2, y: point.y + normal.y * 2 }, kind: EDGE_NAMES[edgeIndex] }))
       const fitted = fitRobustLine(consistent, manual)
       if (!fitted) return { line: manual, confidence: 0, refined: false, reason: `${consistent.length}/${sampleCount} consistent gradient samples; insufficient line support` }
@@ -186,9 +230,14 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
       const angleScore = Math.max(0, 1 - angleDelta / (options.wider ? 0.16 : 0.1))
       const movementScore = Math.max(0, 1 - movement / Math.max(1, movementLimit))
       const confidence = support * 0.3 + strengthScore * 0.2 + residualScore * 0.18 + consistencyScore * 0.14 + angleScore * 0.1 + movementScore * 0.08
-      const required = options.wider ? 0.55 : 0.6
-      const refined = confidence >= required && movement <= movementLimit && fitted.inliers.length >= Math.max(12, sampleCount * 0.38)
-      return { line: refined ? fitted : manual, confidence, refined, reason: refined ? `${fitted.inliers.length}/${sampleCount} samples, ${movement.toFixed(1)}px movement, ${residual.toFixed(1)}px residual` : `preserved: confidence ${confidence.toFixed(2)}, movement ${movement.toFixed(1)}px, ${fitted.inliers.length}/${sampleCount} inliers` }
+      const required = options.wider ? 0.55 : 0.64
+      const offsetIsStable=offsetMad<=Math.max(options.wider?6:3.5,band*(options.wider ? .24 : .16))
+      const refined = confidence >= required && movement <= movementLimit && Math.abs(offsetMedian)<=movementLimit && offsetIsStable && fitted.inliers.length >= Math.max(options.wider?12:18, sampleCount * (options.wider ? .38 : .45))
+      const fittedDx=fitted.b.x-fitted.a.x,fittedDy=fitted.b.y-fitted.a.y,orientationSign=fittedDx*direction.x+fittedDy*direction.y<0?-1:1,fittedAngle=Math.atan2(fittedDy*orientationSign,fittedDx*orientationSign),manualAngle=Math.atan2(direction.y,direction.x)
+      let fittedRotation=fittedAngle-manualAngle;while(fittedRotation>Math.PI)fittedRotation-=Math.PI*2;while(fittedRotation<-Math.PI)fittedRotation+=Math.PI*2
+      const maximumAngle=options.wider?Math.PI/24:Math.PI/36,regularizedAngle=manualAngle+Math.max(-maximumAngle,Math.min(maximumAngle,fittedRotation)),regularizedDirection={x:Math.cos(regularizedAngle),y:Math.sin(regularizedAngle)},center={x:(manual.a.x+manual.b.x)/2+normal.x*offsetMedian,y:(manual.a.y+manual.b.y)/2+normal.y*offsetMedian},halfLength=length/2
+      const regularizedLine:PixelLine={a:{x:center.x-regularizedDirection.x*halfLength,y:center.y-regularizedDirection.y*halfLength},b:{x:center.x+regularizedDirection.x*halfLength,y:center.y+regularizedDirection.y*halfLength},score:confidence,source:'gradient-fit'}
+      return { line: refined ? regularizedLine : manual, confidence, refined, reason: refined ? `${fitted.inliers.length}/${sampleCount} samples, ${Math.abs(offsetMedian).toFixed(1)}px shift, ${(Math.abs(regularizedAngle-manualAngle)*180/Math.PI).toFixed(1)}° angle refinement, variation ${offsetMad.toFixed(1)}px, ${residual.toFixed(1)}px residual` : `preserved: confidence ${confidence.toFixed(2)}, movement ${movement.toFixed(1)}px, median offset ${offsetMedian.toFixed(1)}px, variation ${offsetMad.toFixed(1)}px, ${fitted.inliers.length}/${sampleCount} inliers` }
     })
 
     const confidence = {} as Record<EdgeName, number>
@@ -205,9 +254,10 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
       bottomRight: { x: points[2].x / canvas.width, y: points[2].y / canvas.height }, bottomLeft: { x: points[3].x / canvas.width, y: points[3].y / canvas.height },
     }
     const ids = Object.keys(proposed) as CornerId[]
-    const cornerLimit = options.wider ? 80 : 40
+    const cornerLimit = options.wider ? Math.min(120,movementLimit*1.6) : Math.min(84,movementLimit*1.45)
     const area = Math.abs(points.reduce((sum, point, index) => sum + point.x * points[(index + 1) % 4].y - points[(index + 1) % 4].x * point.y, 0)) / 2
-    if (!isValidEntranceCorners(proposed) || area < canvas.width * canvas.height * 0.01 || ids.some((id) => Math.hypot((proposed[id].x - corners[id].x) * canvas.width, (proposed[id].y - corners[id].y) * canvas.height) > cornerLimit)) {
+    const manualPoints=[current.topLeft,current.topRight,current.bottomRight,current.bottomLeft],manualArea=Math.abs(manualPoints.reduce((sum,point,index)=>sum+point.x*manualPoints[(index+1)%4].y-manualPoints[(index+1)%4].x*point.y,0))/2,areaRatio=area/Math.max(1,manualArea)
+    if (!isValidEntranceCorners(proposed) || area < canvas.width * canvas.height * 0.01 || areaRatio<(options.wider ? .55 : .7)||areaRatio>(options.wider?1.65:1.35)||ids.some((id) => Math.hypot((proposed[id].x - corners[id].x) * canvas.width, (proposed[id].y - corners[id].y) * canvas.height) > cornerLimit)) {
       EDGE_NAMES.forEach((name) => { detectedEdges[name] = false; reasons[name] = `preserved: combined refined shape failed safety validation` })
       return { corners, detectedEdges, detectedCount: 0, diagnostics: { width: canvas.width, height: canvas.height, bandWidth: band, bands: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'band' })), segments: sampleDiagnostics, chosen: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'manual' })), confidence, reasons } }
     }
@@ -215,7 +265,7 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
       corners: proposed, detectedEdges, detectedCount,
       diagnostics: {
         width: canvas.width, height: canvas.height, bandWidth: band, bands: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'band' })),
-        segments: sampleDiagnostics.slice(0, 320),
+        segments: sampleDiagnostics.slice(0, 1200),
         chosen: chosen.map((line, index) => ({ a: line.a, b: line.b, kind: detectedEdges[EDGE_NAMES[index]] ? 'detected' : 'manual' })), confidence, reasons,
       },
     }

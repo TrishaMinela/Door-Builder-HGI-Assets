@@ -61,7 +61,7 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   const dragRef = useRef<DragState | null>(null)
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
   const [mode, setMode] = useState<InteractionMode>('edit')
-  const { zoom, pan, onWheel, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
+  const { zoom, pan, isPanning, onWheel, beginPan, movePan, endPan, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
   useEffect(resetZoom, [imageSrc, resetZoom])
 
   const updateStageSize = () => {
@@ -156,11 +156,15 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
     <div ref={editorRef} className="visualizer-editor" aria-label="House photo entrance editor">
       <div
         ref={stageRef}
-        className={`entrance-image-stage entrance-image-stage-${mode}`}
+        className={`entrance-image-stage entrance-image-stage-${mode} ${zoom > 1 ? 'photo-pan-enabled' : ''} ${isPanning ? 'photo-panning' : ''}`}
         style={stageSize.width ? { width: stageSize.width, height: stageSize.height, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` } : undefined}
-        onPointerMove={moveDrag}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
+        onPointerDown={(event) => {
+          const target = event.target as Element
+          if (!target.closest('button, .entrance-selection-polygon.move-enabled')) beginPan(event)
+        }}
+        onPointerMove={(event) => { if (!movePan(event)) moveDrag(event) }}
+        onPointerUp={(event) => { endPan(event); endDrag(event) }}
+        onPointerCancel={(event) => { endPan(event); endDrag(event) }}
         onWheel={onWheel}
       >
         <img

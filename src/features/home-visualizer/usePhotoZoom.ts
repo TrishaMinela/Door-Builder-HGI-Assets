@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject, type WheelEvent as ReactWheelEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject, type WheelEvent as ReactWheelEvent } from 'react'
 
 type Size = { width: number; height: number }
 
@@ -9,6 +9,8 @@ export function usePhotoZoom(editorRef: RefObject<HTMLDivElement | null>, stageS
   const panRef = useRef(pan)
   const pendingRef = useRef<{ delta: number; x: number; y: number } | null>(null)
   const frameRef = useRef<number | null>(null)
+  const panDragRef = useRef<{ pointerId: number; clientX: number; clientY: number; startPan: { x: number; y: number } } | null>(null)
+  const [isPanning, setIsPanning] = useState(false)
 
   const commit = useCallback((nextZoom: number, requestedPan: { x: number; y: number }) => {
     const editor = editorRef.current
@@ -59,8 +61,33 @@ export function usePhotoZoom(editorRef: RefObject<HTMLDivElement | null>, stageS
     })
   }, [commit, editorRef])
 
+  const beginPan = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    if (zoomRef.current <= 1) return false
+    event.preventDefault()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    panDragRef.current = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, startPan: { ...panRef.current } }
+    setIsPanning(true)
+    return true
+  }, [])
+
+  const movePan = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    const drag = panDragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return false
+    event.preventDefault()
+    commit(zoomRef.current, { x: drag.startPan.x + event.clientX - drag.clientX, y: drag.startPan.y + event.clientY - drag.clientY })
+    return true
+  }, [commit])
+
+  const endPan = useCallback((event: ReactPointerEvent<HTMLElement>) => {
+    if (panDragRef.current?.pointerId !== event.pointerId) return false
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    panDragRef.current = null
+    setIsPanning(false)
+    return true
+  }, [])
+
   useEffect(() => () => { if (frameRef.current !== null) cancelAnimationFrame(frameRef.current) }, [])
   useEffect(() => { if (zoomRef.current > 1) commit(zoomRef.current, panRef.current) }, [commit])
 
-  return { zoom, pan, onWheel, zoomIn: () => zoomBy(.1), zoomOut: () => zoomBy(-.1), resetZoom }
+  return { zoom, pan, isPanning, onWheel, beginPan, movePan, endPan, zoomIn: () => zoomBy(.1), zoomOut: () => zoomBy(-.1), resetZoom }
 }
