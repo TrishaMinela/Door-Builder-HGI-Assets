@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { ArrowLeft, ArrowRight, Check, Download, FileText, HelpCircle, Home as HomeIcon, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Download, Eye, FileText, HelpCircle, Home as HomeIcon, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview, type DoorPreviewProps } from './components/DoorPreview'
 import { DoorStyleThumbnail } from './components/DoorStyleThumbnail'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
@@ -1527,6 +1527,7 @@ export default function App() {
           {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
         </div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
+          {currentPage === 'review' && !submitted && <button className="floating-visualizer-launch" type="button" onClick={() => showScreen('visualizer')} aria-label="Launch Door Visualizer"><Eye size={19} /><span>Launch Door Visualizer</span><ArrowRight size={16} /></button>}
           {currentStep !== 'Review & Quote' && <>
             <div className="section-heading step-heading">
               <div className="step-heading-copy">
