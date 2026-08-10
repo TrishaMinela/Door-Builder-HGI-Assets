@@ -88,18 +88,21 @@ export async function recolorPhotoFrame(imageSrc: string, inner: EntranceCorners
   if (!sides.bottom) polygon(maskContext, [outer.bottomLeft, outer.bottomRight, inner.bottomRight, inner.bottomLeft], width, height)
   maskContext.globalCompositeOperation = 'source-over'
   replay(maskContext, corrections.add, width, height, 'source-over'); replay(maskContext, corrections.remove, width, height, 'destination-out')
-  const featherRadius=Math.max(.9,Math.min(1.75,Math.max(width,height)>=5000?1.75:Math.max(width,height)>=2500?1.2:.9))
+  const featherRadius=Math.max(.7,Math.min(1.2,Math.max(width,height)>=5000?1.2:Math.max(width,height)>=2500?.9:.7))
   const featherCanvas=document.createElement('canvas');featherCanvas.width=maskCanvas.width;featherCanvas.height=maskCanvas.height;const featherContext=featherCanvas.getContext('2d')!;featherContext.imageSmoothingEnabled=true;featherContext.imageSmoothingQuality='high';featherContext.filter=`blur(${featherRadius*MASK_SUPERSAMPLE}px)`;featherContext.drawImage(maskCanvas,0,0)
   const finalMaskCanvas=document.createElement('canvas'),hardMaskCanvas=document.createElement('canvas');finalMaskCanvas.width=hardMaskCanvas.width=width;finalMaskCanvas.height=hardMaskCanvas.height=height;const finalMaskContext=finalMaskCanvas.getContext('2d')!,hardMaskContext=hardMaskCanvas.getContext('2d')!;for(const maskOutputContext of [finalMaskContext,hardMaskContext]){maskOutputContext.imageSmoothingEnabled=true;maskOutputContext.imageSmoothingQuality='high'}finalMaskContext.drawImage(featherCanvas,0,0,featherCanvas.width,featherCanvas.height,cropLeft,cropTop,cropWidth,cropHeight);hardMaskContext.drawImage(maskCanvas,0,0,maskCanvas.width,maskCanvas.height,cropLeft,cropTop,cropWidth,cropHeight)
   const pixels = context.getImageData(0, 0, width, height); const originalPixels=import.meta.env.DEV?new Uint8ClampedArray(pixels.data):null;const mask = finalMaskContext.getImageData(0, 0, width, height).data; const hardMask=hardMaskContext.getImageData(0,0,width,height).data;const target = parseHex(targetColor);const targetHsl=rgbToHsl(target.r,target.g,target.b)
-  let sourceLightnessTotal=0,sourcePixelCount=0
-  for(let index=0;index<width*height;index+=1){if(hardMask[index*4+3]<128)continue;const offset=index*4;sourceLightnessTotal+=rgbToHsl(pixels.data[offset],pixels.data[offset+1],pixels.data[offset+2]).l;sourcePixelCount+=1}
-  const averageSourceLightness=sourcePixelCount?sourceLightnessTotal/sourcePixelCount:.5
-  const targetCenter=Math.max(.14,Math.min(.88,targetHsl.l));const contrastScale=targetCenter<.25?.68:targetCenter>.75?.78:.92
-  const strength=finishType==='stain'?.7:finishType==='clad'?.82:.78
+  const sourceLightnessSamples:number[]=[]
+  const sampleStep=Math.max(1,Math.ceil(width*height/60000))
+  for(let index=0;index<width*height;index+=sampleStep){if(hardMask[index*4+3]<192)continue;const offset=index*4;sourceLightnessSamples.push(rgbToHsl(pixels.data[offset],pixels.data[offset+1],pixels.data[offset+2]).l)}
+  sourceLightnessSamples.sort((first,second)=>first-second)
+  const sourceLightnessCenter=sourceLightnessSamples.length?sourceLightnessSamples[Math.floor(sourceLightnessSamples.length/2)]:.5
+  const targetCenter=Math.max(.14,Math.min(.88,targetHsl.l))
+  const contrastScale=finishType==='stain'?.78:targetCenter<.25?.64:targetCenter>.75?.68:.74
+  const strength=finishType==='stain'?.76:finishType==='clad'?.88:.86
   for (let index = 0; index < width * height; index += 1) {
     const alpha = mask[index * 4 + 3] / 255 * strength; if (!alpha) continue
-    const offset=index*4,sourceHsl=rgbToHsl(pixels.data[offset],pixels.data[offset+1],pixels.data[offset+2]);const preservedLightness=Math.max(.035,Math.min(.965,targetCenter+(sourceHsl.l-averageSourceLightness)*contrastScale));const saturation=finishType==='stain'?Math.min(1,targetHsl.s*1.05):targetHsl.s;const colored=hslToRgb(targetHsl.h,saturation,preservedLightness)
+    const offset=index*4,sourceHsl=rgbToHsl(pixels.data[offset],pixels.data[offset+1],pixels.data[offset+2]);const localVariation=Math.max(-.2,Math.min(.2,sourceHsl.l-sourceLightnessCenter));const preservedLightness=Math.max(.045,Math.min(.955,targetCenter+localVariation*contrastScale));const saturation=finishType==='stain'?Math.min(1,targetHsl.s*1.03):targetHsl.s;const colored=hslToRgb(targetHsl.h,saturation,preservedLightness)
     pixels.data[offset]=Math.round(pixels.data[offset]*(1-alpha)+colored.r*alpha);pixels.data[offset+1]=Math.round(pixels.data[offset+1]*(1-alpha)+colored.g*alpha);pixels.data[offset+2]=Math.round(pixels.data[offset+2]*(1-alpha)+colored.b*alpha)
   }
   context.putImageData(pixels, 0, 0);if(originalPixels)publishDevelopmentDiagnostics(originalPixels,pixels.data,mask,width,height,featherRadius,outer);const result = await blob(canvas);canvas.width=canvas.height=maskCanvas.width=maskCanvas.height=featherCanvas.width=featherCanvas.height=finalMaskCanvas.width=finalMaskCanvas.height=hardMaskCanvas.width=hardMaskCanvas.height=0;return result

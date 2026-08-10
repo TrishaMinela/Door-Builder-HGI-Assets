@@ -202,7 +202,7 @@ function drawFooterIcon(pdf: jsPDF, x: number, y: number, type: 'website' | 'ema
   }
 }
 
-export async function generateSummaryPdf(
+async function generateLegacySummaryPdf(
   contact: ContactForm,
   product: ResolvedDoorProduct,
   style: DoorStyle,
@@ -403,6 +403,88 @@ export async function generateSummaryPdf(
     pdf.setFontSize(7.5)
     pdf.setTextColor(...COLORS.muted)
     pdf.text(`Prepared for ${contact.fullName} · ${contact.email} · ${contact.phone}`, 297.64, 827, { align: 'center' })
+  }
+
+  return pdf
+}
+
+export async function generateSummaryPdf(
+  contact: ContactForm,
+  product: ResolvedDoorProduct,
+  style: DoorStyle,
+  grain: string | null,
+  finish: Finish,
+  glass: GlassOption | null,
+  grid: GridConfiguration | null,
+  hardware: HardwareOption,
+  doorSwing: DoorSwing,
+  sidelites: SideliteConfiguration,
+  sideliteStyle: string | null,
+  sideliteGlass: SideliteGlassConfiguration | null = null,
+  jamb?: { jambType: 'timber' | 'clad'; jambFinishType: 'paint' | 'stain' | 'clad'; jambFinishColor: string; jambFinishOverridden: boolean },
+) {
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
+  let font = 'helvetica'
+  try {
+    await applyBrandFont(pdf)
+    font = 'Montserrat'
+  } catch {
+    pdf.setFont('helvetica', 'normal')
+  }
+
+  const pageWidth = pdf.internal.pageSize.getWidth()
+  const pageHeight = pdf.internal.pageSize.getHeight()
+  const template = await loadImage('/assets/pdf/home-guard-door-configuration-template.png')
+  pdf.addImage(template, 'PNG', 0, 0, pageWidth, pageHeight)
+
+  const generatedDate = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date())
+  pdf.setFont(font, 'bold')
+  pdf.setFontSize(10)
+  pdf.setTextColor(...COLORS.teal)
+  pdf.text(generatedDate, 114, 135)
+
+  const material = product.doorTypes.map((doorType) => grain ? doorType.replace(` - ${grain}`, '') : doorType).join(' / ')
+  const placement = sidelites === 'none' ? 'No Sidelites' : sidelites === 'hinge-side' ? 'Hinge-Side Sidelite' : sidelites === 'lock-side' ? 'Lock-Side Sidelite' : 'Sidelites on Both Sides'
+  const gridDetails = grid ? [grid.glassCoating !== 'Standard / No Low-E' ? grid.glassCoating : '', grid.gridLocation, grid.gridStyle, grid.gridPattern, grid.gridColor, grid.gridWidth].filter(Boolean).join(' / ') : ''
+  const sideliteGridDetails = sideliteGlass ? [sideliteGlass.glassCoating, sideliteGlass.gridLocation, sideliteGlass.gridStyle, sideliteGlass.gridPattern, sideliteGlass.gridColor, sideliteGlass.gridWidth].filter(Boolean).join(' / ') : ''
+  const rowValues = [
+    grain ? `${material} - ${grain}` : material,
+    style.name,
+    placement,
+    sidelites === 'none' ? 'Not applicable' : sideliteStyle ?? 'Not selected',
+    sidelites === 'none' ? 'Not applicable' : [sideliteGlass?.glass ?? 'Not selected', sideliteGridDetails].filter(Boolean).join(' - '),
+    finish.finishType === 'paint' ? 'Paint' : 'Stain',
+    finish.name,
+    jamb?.jambType === 'clad' ? 'Clad' : 'Timber',
+    jamb?.jambFinishType === 'clad' ? 'Clad' : jamb?.jambFinishType === 'stain' ? 'Stain' : 'Paint',
+    jamb?.jambFinishColor || 'Not selected',
+    [glass?.name ?? 'No glass', gridDetails].filter(Boolean).join(' - '),
+    hardwareDisplayName(hardware),
+    doorSwing.name,
+  ]
+  const rowBaselines = [214, 259.5, 305, 350.5, 396, 441.5, 487, 532.5, 578, 623.5, 669, 714.5, 760]
+  pdf.setFont(font, 'bold')
+  pdf.setTextColor(...COLORS.dark)
+  rowValues.forEach((value, index) => {
+    const availableWidth = 268
+    let fontSize = 9
+    pdf.setFontSize(fontSize)
+    while (pdf.getTextWidth(value) > availableWidth && fontSize > 6.6) {
+      fontSize -= .2
+      pdf.setFontSize(fontSize)
+    }
+    const lines = wrapText(pdf, value, availableWidth, 1)
+    pdf.text(lines[0], 39, rowBaselines[index])
+  })
+
+  const composedPreview = await captureComposedDoorPreview()
+  if (composedPreview) addImageContained(pdf, composedPreview, 346, 190, 209, 218)
+
+  if (contact.fullName) {
+    pdf.setFont(font, 'normal')
+    pdf.setFontSize(6.5)
+    pdf.setTextColor(92, 99, 103)
+    pdf.text(`Prepared for ${contact.fullName}`, 451, 425, { align: 'center' })
   }
 
   return pdf

@@ -15,8 +15,7 @@ type Props = {
 type Matrix = [number, number, number, number, number, number, number, number, number]
 const EDGE_OVERLAP_PX = 2
 const SUPERSAMPLE_SCALE = 4
-const PRODUCT_ALPHA_BOOST = 1.35
-const EDGE_ALPHA_BOOST = 1.75
+const VISIBLE_ALPHA_THRESHOLD = 20
 
 function reportUnexpectedWhiteEdgePixels(source: ImageData, left: number, top: number, width: number, height: number, name: string) {
   if (!import.meta.env.DEV) return
@@ -40,7 +39,7 @@ function reportUnexpectedWhiteEdgePixels(source: ImageData, left: number, top: n
 function tightAlphaBounds(source: ImageData, sourceRect: { x: number; y: number; width: number; height: number }) {
   const initialLeft=Math.max(0,Math.floor(sourceRect.x*source.width)),initialTop=Math.max(0,Math.floor(sourceRect.y*source.height)),initialRight=Math.min(source.width-1,Math.ceil((sourceRect.x+sourceRect.width)*source.width)-1),initialBottom=Math.min(source.height-1,Math.ceil((sourceRect.y+sourceRect.height)*source.height)-1)
   let left=initialRight,top=initialBottom,right=initialLeft,bottom=initialTop
-  for(let y=initialTop;y<=initialBottom;y+=1){for(let x=initialLeft;x<=initialRight;x+=1){if(source.data[(y*source.width+x)*4+3]<=8)continue;left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}}
+  for(let y=initialTop;y<=initialBottom;y+=1){for(let x=initialLeft;x<=initialRight;x+=1){if(source.data[(y*source.width+x)*4+3]<=VISIBLE_ALPHA_THRESHOLD)continue;left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y)}}
   if(right<left||bottom<top)return{left:initialLeft,top:initialTop,width:initialRight-initialLeft+1,height:initialBottom-initialTop+1}
   return{left,top,width:right-left+1,height:bottom-top+1}
 }
@@ -207,15 +206,14 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
           const alphaWeight11 = weight11 * alpha11
           const targetOffset = (y * renderWidth + x) * 4
           const sampledAlpha = alphaWeight00 + alphaWeight10 + alphaWeight01 + alphaWeight11
-          const distanceToBoundary = Math.min(unitX, 1 - unitX, unitY, 1 - unitY)
-          const boundaryBand = 2 / Math.max(1, Math.min(renderWidth, renderHeight))
-          const isProductBoundary=distanceToBoundary<=boundaryBand
-          const outputAlpha=isProductBoundary&&sampledAlpha>.008?1:Math.min(1,sampledAlpha*(isProductBoundary?EDGE_ALPHA_BOOST:PRODUCT_ALPHA_BOOST))
-          if (sampledAlpha > 0) {
+          // Preserve the authored RGBA source exactly. The supersampled warp and
+          // premultiplied interpolation provide antialiasing without thickening the
+          // slab edge or making translucent glass/detail pixels artificially opaque.
+          if (sampledAlpha > .004) {
             warped.data[targetOffset] = (source.data[offset00] * alphaWeight00 + source.data[offset10] * alphaWeight10 + source.data[offset01] * alphaWeight01 + source.data[offset11] * alphaWeight11) / sampledAlpha
             warped.data[targetOffset + 1] = (source.data[offset00 + 1] * alphaWeight00 + source.data[offset10 + 1] * alphaWeight10 + source.data[offset01 + 1] * alphaWeight01 + source.data[offset11 + 1] * alphaWeight11) / sampledAlpha
             warped.data[targetOffset + 2] = (source.data[offset00 + 2] * alphaWeight00 + source.data[offset10 + 2] * alphaWeight10 + source.data[offset01 + 2] * alphaWeight01 + source.data[offset11 + 2] * alphaWeight11) / sampledAlpha
-            warped.data[targetOffset + 3] = outputAlpha * 255
+            warped.data[targetOffset + 3] = sampledAlpha * 255
           }
         }
       }
