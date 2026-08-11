@@ -13,9 +13,10 @@ type Props = {
 }
 
 type Matrix = [number, number, number, number, number, number, number, number, number]
-const EDGE_OVERLAP_PX = 2
+const EDGE_OVERLAP_PX = 2.5
 const SUPERSAMPLE_SCALE = 4
 const VISIBLE_ALPHA_THRESHOLD = 20
+const OPAQUE_PRODUCT_THRESHOLD = .08
 
 function reportUnexpectedWhiteEdgePixels(source: ImageData, left: number, top: number, width: number, height: number, name: string) {
   if (!import.meta.env.DEV) return
@@ -44,16 +45,50 @@ function tightAlphaBounds(source: ImageData, sourceRect: { x: number; y: number;
   return{left,top,width:right-left+1,height:bottom-top+1}
 }
 
+function lineIntersection(firstStart: Point, firstEnd: Point, secondStart: Point, secondEnd: Point) {
+  const firstX = firstEnd.x - firstStart.x
+  const firstY = firstEnd.y - firstStart.y
+  const secondX = secondEnd.x - secondStart.x
+  const secondY = secondEnd.y - secondStart.y
+  const denominator = firstX * secondY - firstY * secondX
+  if (Math.abs(denominator) < 1e-8) return null
+  const offsetX = secondStart.x - firstStart.x
+  const offsetY = secondStart.y - firstStart.y
+  const ratio = (offsetX * secondY - offsetY * secondX) / denominator
+  return { x: firstStart.x + ratio * firstX, y: firstStart.y + ratio * firstY }
+}
+
 function overscanQuadrilateral(points: Point[], overlap: number) {
-  const center = points.reduce((sum, point) => ({ x: sum.x + point.x / points.length, y: sum.y + point.y / points.length }), { x: 0, y: 0 })
-  return points.map((point) => {
-    const directionX = point.x - center.x
-    const directionY = point.y - center.y
-    const distance = Math.hypot(directionX, directionY)
-    if (!distance) return point
+  const signedArea = points.reduce((area, point, index) => {
+    const next = points[(index + 1) % points.length]
+    return area + point.x * next.y - next.x * point.y
+  }, 0)
+  const orientation = signedArea >= 0 ? 1 : -1
+  const offsetEdges = points.map((point, index) => {
+    const next = points[(index + 1) % points.length]
+    const edgeX = next.x - point.x
+    const edgeY = next.y - point.y
+    const length = Math.hypot(edgeX, edgeY)
+    if (!length) return { start: point, end: next }
+    const normalX = edgeY / length * orientation * overlap
+    const normalY = -edgeX / length * orientation * overlap
     return {
-      x: point.x + directionX / distance * overlap,
-      y: point.y + directionY / distance * overlap,
+      start: { x: point.x + normalX, y: point.y + normalY },
+      end: { x: next.x + normalX, y: next.y + normalY },
+    }
+  })
+  return points.map((point, index) => {
+    const previous = offsetEdges[(index + offsetEdges.length - 1) % offsetEdges.length]
+    const current = offsetEdges[index]
+    const intersection = lineIntersection(previous.start, previous.end, current.start, current.end)
+    if (!intersection) return current.start
+    // Prevent an extreme perspective corner from creating a visible miter spike.
+    const distance = Math.hypot(intersection.x - point.x, intersection.y - point.y)
+    const maximumDistance = overlap * 2.5
+    if (distance <= maximumDistance) return intersection
+    return {
+      x: point.x + (intersection.x - point.x) / distance * maximumDistance,
+      y: point.y + (intersection.y - point.y) / distance * maximumDistance,
     }
   })
 }
@@ -206,14 +241,14 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
           const alphaWeight11 = weight11 * alpha11
           const targetOffset = (y * renderWidth + x) * 4
           const sampledAlpha = alphaWeight00 + alphaWeight10 + alphaWeight01 + alphaWeight11
-          // Preserve the authored RGBA source exactly. The supersampled warp and
-          // premultiplied interpolation provide antialiasing without thickening the
-          // slab edge or making translucent glass/detail pixels artificially opaque.
+          // The configured slab and sidelites must fully replace the photographed
+          // product. Promote authored product pixels to full coverage while keeping
+          // the lowest alpha samples as a smooth supersampled outer-edge transition.
           if (sampledAlpha > .004) {
             warped.data[targetOffset] = (source.data[offset00] * alphaWeight00 + source.data[offset10] * alphaWeight10 + source.data[offset01] * alphaWeight01 + source.data[offset11] * alphaWeight11) / sampledAlpha
             warped.data[targetOffset + 1] = (source.data[offset00 + 1] * alphaWeight00 + source.data[offset10 + 1] * alphaWeight10 + source.data[offset01 + 1] * alphaWeight01 + source.data[offset11 + 1] * alphaWeight11) / sampledAlpha
             warped.data[targetOffset + 2] = (source.data[offset00 + 2] * alphaWeight00 + source.data[offset10 + 2] * alphaWeight10 + source.data[offset01 + 2] * alphaWeight01 + source.data[offset11 + 2] * alphaWeight11) / sampledAlpha
-            warped.data[targetOffset + 3] = sampledAlpha * 255
+            warped.data[targetOffset + 3] = Math.min(1,sampledAlpha/OPAQUE_PRODUCT_THRESHOLD)*255
           }
         }
       }

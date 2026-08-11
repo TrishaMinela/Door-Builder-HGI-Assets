@@ -29,6 +29,7 @@ type Props = {
   proposedCorners?: EntranceCorners | null
   proposedDetectedEdges?: boolean[]
   showToolbar?: boolean
+  highlightHandles?: boolean
 }
 
 export const cloneEntranceCorners = (corners: EntranceCorners): EntranceCorners => ({
@@ -54,7 +55,7 @@ export function isValidEntranceCorners(corners: EntranceCorners) {
   return turns.every((turn) => turn > 0.0001) || turns.every((turn) => turn < -0.0001)
 }
 
-export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges, showToolbar = true }: Props) {
+export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges, showToolbar = true, highlightHandles = false }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
@@ -81,15 +82,16 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
     return () => observer.disconnect()
   }, [])
 
-  const normalizedPointer = (event: ReactPointerEvent): Point | null => {
+  const normalizedPointer = (event: Pick<ReactPointerEvent,'clientX'|'clientY'>): Point | null => {
     const stage = stageRef.current
     if (!stage) return null
     const bounds = stage.getBoundingClientRect()
     if (!bounds.width || !bounds.height) return null
-    return {
+    const point = {
       x: Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width)),
       y: Math.min(1, Math.max(0, (event.clientY - bounds.top) / bounds.height)),
     }
+    return point
   }
 
   const beginCornerDrag = (corner: CornerId, event: ReactPointerEvent<HTMLButtonElement>) => {
@@ -117,7 +119,9 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
 
     if (drag.kind === 'corner') {
       const candidate = { ...corners, [drag.corner]: pointer }
-      if (isValidEntranceCorners(candidate)) onCornersChange(candidate)
+      if (isValidEntranceCorners(candidate)) {
+        onCornersChange(candidate)
+      }
       return
     }
 
@@ -188,7 +192,7 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
         {CORNER_ORDER.map((id) => <button
           type="button"
           key={id}
-          className="entrance-corner-handle"
+          className={`entrance-corner-handle ${highlightHandles?'guidance-pulse':''}`}
           style={{ left: `${corners[id].x * 100}%`, top: `${corners[id].y * 100}%` }}
           aria-label={`Move ${id.replace(/([A-Z])/g, ' $1').toLowerCase()} corner`}
           onPointerDown={(event) => beginCornerDrag(id, event)}

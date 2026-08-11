@@ -10,6 +10,8 @@ export type AutoFitResult = {
   corners: EntranceCorners
   detectedEdges: Record<EdgeName, boolean>
   detectedCount: number
+  alreadyAligned: boolean
+  averageMovement: number
   diagnostics: {
     width: number
     height: number
@@ -114,7 +116,8 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
     const roughRatio=selectedWidth/Math.max(1,selectedHeight)
     const targetDoorRatio=Math.max(.32,Math.min(.62,roughRatio*.65+.45*.35))
     const selectedScale=Math.min(selectedWidth,selectedHeight)
-    const band=options.wider?Math.max(24,Math.min(110,selectedScale*.18)):Math.max(12,Math.min(72,selectedScale*.1))
+    const imageScale=Math.min(canvas.width,canvas.height)
+    const band=options.wider?Math.max(18,Math.min(70,imageScale*.065)):Math.max(10,Math.min(50,imageScale*.04))
     const movementLimit=options.wider?Math.min(82,Math.max(24,selectedScale*.16)):Math.min(64,Math.max(12,selectedScale*.1))
     const sampleGray = (x: number, y: number) => {
       const px = Math.max(0, Math.min(canvas.width - 1, Math.round(x)))
@@ -152,8 +155,7 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
     const refinements = manualLines.map((manual, edgeIndex) => {
       const dx = manual.b.x - manual.a.x; const dy = manual.b.y - manual.a.y; const length = Math.hypot(dx, dy)
       const direction = { x: dx / length, y: dy / length }; const normal = { x: -direction.y, y: direction.x }
-      const perpendicularScale=edgeIndex===0||edgeIndex===2?selectedHeight:selectedWidth
-      const edgeBand=options.wider?Math.max(28,Math.min(128,perpendicularScale*.12)):Math.max(16,Math.min(88,perpendicularScale*.07))
+      const edgeBand=band
       const edgeMovementLimit=options.wider?Math.min(104,Math.max(26,edgeBand*.9)):Math.min(72,Math.max(14,edgeBand*.86))
       const sampleCount = Math.max(40, Math.min(80, Math.round(length / 10)))
       const origins = Array.from({ length: sampleCount }, (_, index) => {
@@ -245,9 +247,9 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
       const angleScore = Math.max(0, 1 - angleDelta / (options.wider ? 0.16 : 0.1))
       const movementScore = Math.max(0, 1 - movement / Math.max(1, edgeMovementLimit))
       const confidence = support*.26+strengthScore*.18+residualScore*.16+consistencyScore*.12+angleScore*.09+movementScore*.07+winner.geometryScore*.07+winner.pixelSimilarity*.05
-      const required = options.wider ? 0.53 : 0.6
+      const required = options.wider ? 0.46 : 0.5
       const offsetIsStable=offsetMad<=Math.max(options.wider?6:3.5,edgeBand*(options.wider ? .24 : .16))
-      const refined = confidence >= required && movement <= edgeMovementLimit && Math.abs(offsetMedian)<=edgeMovementLimit && offsetIsStable && fitted.inliers.length >= Math.max(options.wider?12:18, sampleCount * (options.wider ? .38 : .45))
+      const refined = confidence >= required && movement <= edgeMovementLimit && Math.abs(offsetMedian)<=edgeMovementLimit && offsetIsStable && fitted.inliers.length >= Math.max(options.wider?10:12, sampleCount * (options.wider ? .28 : .32))
       const fittedDx=fitted.b.x-fitted.a.x,fittedDy=fitted.b.y-fitted.a.y,orientationSign=fittedDx*direction.x+fittedDy*direction.y<0?-1:1,fittedAngle=Math.atan2(fittedDy*orientationSign,fittedDx*orientationSign),manualAngle=Math.atan2(direction.y,direction.x)
       let fittedRotation=fittedAngle-manualAngle;while(fittedRotation>Math.PI)fittedRotation-=Math.PI*2;while(fittedRotation<-Math.PI)fittedRotation+=Math.PI*2
       const maximumAngle=options.wider?Math.PI/24:Math.PI/36,regularizedAngle=manualAngle+Math.max(-maximumAngle,Math.min(maximumAngle,fittedRotation)),regularizedDirection={x:Math.cos(regularizedAngle),y:Math.sin(regularizedAngle)},center={x:(manual.a.x+manual.b.x)/2+normal.x*offsetMedian,y:(manual.a.y+manual.b.y)/2+normal.y*offsetMedian},halfLength=length/2
@@ -260,9 +262,14 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
     const detectedEdges = {} as Record<EdgeName, boolean>
     const chosen = refinements.map((result, index) => { const name = EDGE_NAMES[index]; confidence[name] = result.confidence; detectedEdges[name] = result.refined; reasons[name] = result.reason; return result.line })
     const detectedCount = EDGE_NAMES.filter((name) => detectedEdges[name]).length
+    const movements=EDGE_NAMES.map((name)=>{const match=reasons[name]?.match(/(?:movement|shift) ([\d.]+)px/);return match?Number(match[1]):Number.POSITIVE_INFINITY})
+    const supportedAlignedEdges=EDGE_NAMES.filter((name,index)=>confidence[name]>=.42&&movements[index]<=4).length
+    const alreadyAligned=detectedCount===0&&supportedAlignedEdges>=2
+    const finiteMovements=movements.filter(Number.isFinite)
+    const averageMovement=finiteMovements.length?finiteMovements.reduce((sum,value)=>sum+value,0)/finiteMovements.length:0
     const [top, right, bottom, left] = chosen
     const intersections = [lineIntersection(top, left), lineIntersection(top, right), lineIntersection(bottom, right), lineIntersection(bottom, left)]
-    if (intersections.some((point) => !point)) return { corners, detectedEdges: { top: false, right: false, bottom: false, left: false }, detectedCount: 0, diagnostics: { width: canvas.width, height: canvas.height, bandWidth: band, bands: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'band' })), segments: sampleDiagnostics, chosen: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'manual' })), confidence, reasons } }
+    if (intersections.some((point) => !point)) return { corners, detectedEdges: { top: false, right: false, bottom: false, left: false }, detectedCount: 0, alreadyAligned, averageMovement, diagnostics: { width: canvas.width, height: canvas.height, bandWidth: band, bands: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'band' })), segments: sampleDiagnostics, chosen: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'manual' })), confidence, reasons } }
     const points = intersections as Point[]
     const proposed: EntranceCorners = {
       topLeft: { x: points[0].x / canvas.width, y: points[0].y / canvas.height }, topRight: { x: points[1].x / canvas.width, y: points[1].y / canvas.height },
@@ -277,10 +284,10 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
     const proposedRatio=proposedWidth/Math.max(1,proposedHeight),ratioDistance=Math.abs(Math.log(Math.max(.01,proposedRatio)/targetDoorRatio)),doorLikeRatio=proposedRatio>=.24&&proposedRatio<=.74&&ratioDistance<=(options.wider?.58:.46)
     if (!isValidEntranceCorners(proposed) || !doorLikeRatio || area < canvas.width * canvas.height * 0.01 || areaRatio<(options.wider ? .55 : .7)||areaRatio>(options.wider?1.65:1.35)||ids.some((id) => Math.hypot((proposed[id].x - corners[id].x) * canvas.width, (proposed[id].y - corners[id].y) * canvas.height) > cornerLimit)) {
       EDGE_NAMES.forEach((name) => { detectedEdges[name] = false; reasons[name] = `preserved: combined refined shape failed safety validation` })
-      return { corners, detectedEdges, detectedCount: 0, diagnostics: { width: canvas.width, height: canvas.height, bandWidth: band, bands: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'band' })), segments: sampleDiagnostics, chosen: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'manual' })), confidence, reasons } }
+      return { corners, detectedEdges, detectedCount: 0, alreadyAligned, averageMovement, diagnostics: { width: canvas.width, height: canvas.height, bandWidth: band, bands: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'band' })), segments: sampleDiagnostics, chosen: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'manual' })), confidence, reasons } }
     }
     return {
-      corners: proposed, detectedEdges, detectedCount,
+      corners: proposed, detectedEdges, detectedCount, alreadyAligned: false, averageMovement,
       diagnostics: {
         width: canvas.width, height: canvas.height, bandWidth: band, bands: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'band' })),
         segments: sampleDiagnostics.slice(0, 1200),
