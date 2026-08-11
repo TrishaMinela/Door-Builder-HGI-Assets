@@ -111,6 +111,8 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
     const manualLines = EDGE_IDS.map(([start, end]) => ({ a: current[start], b: current[end], score: 0, source: 'manual' as const }))
     const selectedWidth=(Math.hypot(current.topRight.x-current.topLeft.x,current.topRight.y-current.topLeft.y)+Math.hypot(current.bottomRight.x-current.bottomLeft.x,current.bottomRight.y-current.bottomLeft.y))/2
     const selectedHeight=(Math.hypot(current.bottomLeft.x-current.topLeft.x,current.bottomLeft.y-current.topLeft.y)+Math.hypot(current.bottomRight.x-current.topRight.x,current.bottomRight.y-current.topRight.y))/2
+    const roughRatio=selectedWidth/Math.max(1,selectedHeight)
+    const targetDoorRatio=Math.max(.32,Math.min(.62,roughRatio*.65+.45*.35))
     const selectedScale=Math.min(selectedWidth,selectedHeight)
     const band=options.wider?Math.max(24,Math.min(110,selectedScale*.18)):Math.max(12,Math.min(72,selectedScale*.1))
     const movementLimit=options.wider?Math.min(82,Math.max(24,selectedScale*.16)):Math.min(64,Math.max(12,selectedScale*.1))
@@ -119,16 +121,20 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
       const py = Math.max(0, Math.min(canvas.height - 1, Math.round(y)))
       return gray[py * canvas.width + px]
     }
+    const colorDifference = (firstX:number,firstY:number,secondX:number,secondY:number) => {
+      const x1=Math.max(0,Math.min(canvas.width-1,Math.round(firstX))),y1=Math.max(0,Math.min(canvas.height-1,Math.round(firstY))),x2=Math.max(0,Math.min(canvas.width-1,Math.round(secondX))),y2=Math.max(0,Math.min(canvas.height-1,Math.round(secondY))),first=(y1*canvas.width+x1)*4,second=(y2*canvas.width+x2)*4
+      return Math.hypot(rgba[first]-rgba[second],rgba[first+1]-rgba[second+1],rgba[first+2]-rgba[second+2])
+    }
     const median = (values: number[]) => { const sorted = [...values].sort((a, b) => a - b); return sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0 }
     const angleDifference = (first: PixelLine, second: PixelLine) => {
       const dot = (first.b.x - first.a.x) * (second.b.x - second.a.x) + (first.b.y - first.a.y) * (second.b.y - second.a.y)
       const lengths = Math.hypot(first.b.x - first.a.x, first.b.y - first.a.y) * Math.hypot(second.b.x - second.a.x, second.b.y - second.a.y)
       return Math.acos(Math.max(-1, Math.min(1, Math.abs(dot / Math.max(1, lengths)))))
     }
-    const fitRobustLine = (points: Point[], reference: PixelLine) => {
+    const fitRobustLine = (points: Point[], reference: PixelLine, localBand = band) => {
       if (points.length < 10) return null
       let best: Point[] = []
-      const threshold = Math.max(1.5, Math.min(4, band * 0.12))
+      const threshold = Math.max(1.5, Math.min(4, localBand * 0.12))
       for (let iteration = 0; iteration < 90; iteration += 1) {
         const first = points[(iteration * 17) % points.length]
         const second = points[(iteration * 37 + 7) % points.length]
@@ -146,6 +152,9 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
     const refinements = manualLines.map((manual, edgeIndex) => {
       const dx = manual.b.x - manual.a.x; const dy = manual.b.y - manual.a.y; const length = Math.hypot(dx, dy)
       const direction = { x: dx / length, y: dy / length }; const normal = { x: -direction.y, y: direction.x }
+      const perpendicularScale=edgeIndex===0||edgeIndex===2?selectedHeight:selectedWidth
+      const edgeBand=options.wider?Math.max(28,Math.min(128,perpendicularScale*.12)):Math.max(16,Math.min(88,perpendicularScale*.07))
+      const edgeMovementLimit=options.wider?Math.min(104,Math.max(26,edgeBand*.9)):Math.min(72,Math.max(14,edgeBand*.86))
       const sampleCount = Math.max(40, Math.min(80, Math.round(length / 10)))
       const origins = Array.from({ length: sampleCount }, (_, index) => {
         const ratio = (index + 0.5) / sampleCount
@@ -171,21 +180,27 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
           const continuity = longestRun / sampleCount
           const strengthScore = Math.min(1, strength / 42)
           const proximity = Math.exp(-Math.abs(offset) / Math.max(5, radius * .48))
-          const score = strengthScore * .36 + support * .28 + continuity * .18 + proximity * .18
-          return { offset, score, strength, support, continuity, noiseFloor }
+          const candidateWidth=edgeIndex===1||edgeIndex===3?selectedWidth-offset:selectedWidth
+          const candidateHeight=edgeIndex===0||edgeIndex===2?selectedHeight-offset:selectedHeight
+          const candidateRatio=candidateWidth/Math.max(1,candidateHeight)
+          const geometryScore=Math.exp(-Math.abs(Math.log(Math.max(.01,candidateRatio)/targetDoorRatio))/.3)*(candidateRatio>=.24&&candidateRatio<=.74?1:.25)
+          const interiorVariation=median(origins.map(origin=>colorDifference(origin.x+normal.x*(offset+4),origin.y+normal.y*(offset+4),origin.x+normal.x*(offset+10),origin.y+normal.y*(offset+10))))
+          const pixelSimilarity=Math.max(0,1-interiorVariation/62)
+          const score = strengthScore * .3 + support * .23 + continuity * .15 + proximity * .16 + geometryScore * .09 + pixelSimilarity * .07
+          return { offset, score, strength, support, continuity, noiseFloor, geometryScore, pixelSimilarity, candidateRatio }
         }).sort((first, second) => second.score - first.score || Math.abs(first.offset) - Math.abs(second.offset))
       }
-      const closeRadius = Math.max(10, Math.min(band, Math.round(band * .56)))
+      const closeRadius = Math.max(10, Math.min(edgeBand, Math.round(edgeBand * .56)))
       const closeCandidates = scoreCandidates(closeRadius)
       const closeWinner = closeCandidates[0]
       const closeIsConfident = Boolean(closeWinner && closeWinner.score >= .62 && closeWinner.support >= .46 && closeWinner.continuity >= .18)
-      const scored = closeIsConfident ? closeCandidates : scoreCandidates(band)
+      const scored = closeIsConfident ? closeCandidates : scoreCandidates(edgeBand)
       const winner = scored[0]
       if (!winner) return { line: manual, confidence: 0, refined: false, reason: 'no valid gradient candidates in the symmetric search band' }
 
       origins.filter((_, index) => index % 4 === 0).forEach((origin) => sampleDiagnostics.push({
-        a: { x: origin.x - normal.x * (closeIsConfident ? closeRadius : band), y: origin.y - normal.y * (closeIsConfident ? closeRadius : band) },
-        b: { x: origin.x + normal.x * (closeIsConfident ? closeRadius : band), y: origin.y + normal.y * (closeIsConfident ? closeRadius : band) },
+        a: { x: origin.x - normal.x * (closeIsConfident ? closeRadius : edgeBand), y: origin.y - normal.y * (closeIsConfident ? closeRadius : edgeBand) },
+        b: { x: origin.x + normal.x * (closeIsConfident ? closeRadius : edgeBand), y: origin.y + normal.y * (closeIsConfident ? closeRadius : edgeBand) },
         kind: `${EDGE_NAMES[edgeIndex]}-symmetric-scan`,
       }))
       sampleDiagnostics.push({
@@ -215,7 +230,7 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
       const consistencyLimit=options.wider?Math.max(5,offsetMad*2.8):Math.max(3,Math.min(7,offsetMad*2.4))
       const consistent = usable.filter((point) => Math.abs(point.offset - offsetMedian) <= consistencyLimit)
       consistent.forEach((point) => sampleDiagnostics.push({ a: { x: point.x - normal.x * 2, y: point.y - normal.y * 2 }, b: { x: point.x + normal.x * 2, y: point.y + normal.y * 2 }, kind: EDGE_NAMES[edgeIndex] }))
-      const fitted = fitRobustLine(consistent, manual)
+      const fitted = fitRobustLine(consistent, manual, edgeBand)
       if (!fitted) return { line: manual, confidence: 0, refined: false, reason: `${consistent.length}/${sampleCount} consistent gradient samples; insufficient line support` }
       const residual = median(fitted.inliers.map((point) => distanceToLine(point, fitted)))
       const movement = (distanceToLine(manual.a, fitted) + distanceToLine(manual.b, fitted)) / 2
@@ -225,19 +240,19 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
         const match = consistent.find((candidate) => candidate.x === point.x && candidate.y === point.y)
         return match?.strength ?? 0
       })) / 45)
-      const residualScore = Math.max(0, 1 - residual / Math.max(2, band * 0.18))
-      const consistencyScore = Math.max(0, 1 - offsetMad / Math.max(3, band * 0.25))
+      const residualScore = Math.max(0, 1 - residual / Math.max(2, edgeBand * 0.18))
+      const consistencyScore = Math.max(0, 1 - offsetMad / Math.max(3, edgeBand * 0.25))
       const angleScore = Math.max(0, 1 - angleDelta / (options.wider ? 0.16 : 0.1))
-      const movementScore = Math.max(0, 1 - movement / Math.max(1, movementLimit))
-      const confidence = support * 0.3 + strengthScore * 0.2 + residualScore * 0.18 + consistencyScore * 0.14 + angleScore * 0.1 + movementScore * 0.08
-      const required = options.wider ? 0.55 : 0.64
-      const offsetIsStable=offsetMad<=Math.max(options.wider?6:3.5,band*(options.wider ? .24 : .16))
-      const refined = confidence >= required && movement <= movementLimit && Math.abs(offsetMedian)<=movementLimit && offsetIsStable && fitted.inliers.length >= Math.max(options.wider?12:18, sampleCount * (options.wider ? .38 : .45))
+      const movementScore = Math.max(0, 1 - movement / Math.max(1, edgeMovementLimit))
+      const confidence = support*.26+strengthScore*.18+residualScore*.16+consistencyScore*.12+angleScore*.09+movementScore*.07+winner.geometryScore*.07+winner.pixelSimilarity*.05
+      const required = options.wider ? 0.53 : 0.6
+      const offsetIsStable=offsetMad<=Math.max(options.wider?6:3.5,edgeBand*(options.wider ? .24 : .16))
+      const refined = confidence >= required && movement <= edgeMovementLimit && Math.abs(offsetMedian)<=edgeMovementLimit && offsetIsStable && fitted.inliers.length >= Math.max(options.wider?12:18, sampleCount * (options.wider ? .38 : .45))
       const fittedDx=fitted.b.x-fitted.a.x,fittedDy=fitted.b.y-fitted.a.y,orientationSign=fittedDx*direction.x+fittedDy*direction.y<0?-1:1,fittedAngle=Math.atan2(fittedDy*orientationSign,fittedDx*orientationSign),manualAngle=Math.atan2(direction.y,direction.x)
       let fittedRotation=fittedAngle-manualAngle;while(fittedRotation>Math.PI)fittedRotation-=Math.PI*2;while(fittedRotation<-Math.PI)fittedRotation+=Math.PI*2
       const maximumAngle=options.wider?Math.PI/24:Math.PI/36,regularizedAngle=manualAngle+Math.max(-maximumAngle,Math.min(maximumAngle,fittedRotation)),regularizedDirection={x:Math.cos(regularizedAngle),y:Math.sin(regularizedAngle)},center={x:(manual.a.x+manual.b.x)/2+normal.x*offsetMedian,y:(manual.a.y+manual.b.y)/2+normal.y*offsetMedian},halfLength=length/2
       const regularizedLine:PixelLine={a:{x:center.x-regularizedDirection.x*halfLength,y:center.y-regularizedDirection.y*halfLength},b:{x:center.x+regularizedDirection.x*halfLength,y:center.y+regularizedDirection.y*halfLength},score:confidence,source:'gradient-fit'}
-      return { line: refined ? regularizedLine : manual, confidence, refined, reason: refined ? `${fitted.inliers.length}/${sampleCount} samples, ${Math.abs(offsetMedian).toFixed(1)}px shift, ${(Math.abs(regularizedAngle-manualAngle)*180/Math.PI).toFixed(1)}° angle refinement, variation ${offsetMad.toFixed(1)}px, ${residual.toFixed(1)}px residual` : `preserved: confidence ${confidence.toFixed(2)}, movement ${movement.toFixed(1)}px, median offset ${offsetMedian.toFixed(1)}px, variation ${offsetMad.toFixed(1)}px, ${fitted.inliers.length}/${sampleCount} inliers` }
+      return { line: refined ? regularizedLine : manual, confidence, refined, reason: refined ? `${fitted.inliers.length}/${sampleCount} samples, ${Math.abs(offsetMedian).toFixed(1)}px shift, ${(Math.abs(regularizedAngle-manualAngle)*180/Math.PI).toFixed(1)}° angle refinement, ratio ${winner.candidateRatio.toFixed(2)}, pixel similarity ${winner.pixelSimilarity.toFixed(2)}, variation ${offsetMad.toFixed(1)}px, ${residual.toFixed(1)}px residual` : `preserved: confidence ${confidence.toFixed(2)}, movement ${movement.toFixed(1)}px, ratio ${winner.candidateRatio.toFixed(2)}, pixel similarity ${winner.pixelSimilarity.toFixed(2)}, median offset ${offsetMedian.toFixed(1)}px, variation ${offsetMad.toFixed(1)}px, ${fitted.inliers.length}/${sampleCount} inliers` }
     })
 
     const confidence = {} as Record<EdgeName, number>
@@ -257,7 +272,10 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
     const cornerLimit = options.wider ? Math.min(120,movementLimit*1.6) : Math.min(84,movementLimit*1.45)
     const area = Math.abs(points.reduce((sum, point, index) => sum + point.x * points[(index + 1) % 4].y - points[(index + 1) % 4].x * point.y, 0)) / 2
     const manualPoints=[current.topLeft,current.topRight,current.bottomRight,current.bottomLeft],manualArea=Math.abs(manualPoints.reduce((sum,point,index)=>sum+point.x*manualPoints[(index+1)%4].y-manualPoints[(index+1)%4].x*point.y,0))/2,areaRatio=area/Math.max(1,manualArea)
-    if (!isValidEntranceCorners(proposed) || area < canvas.width * canvas.height * 0.01 || areaRatio<(options.wider ? .55 : .7)||areaRatio>(options.wider?1.65:1.35)||ids.some((id) => Math.hypot((proposed[id].x - corners[id].x) * canvas.width, (proposed[id].y - corners[id].y) * canvas.height) > cornerLimit)) {
+    const proposedWidth=(Math.hypot(points[1].x-points[0].x,points[1].y-points[0].y)+Math.hypot(points[2].x-points[3].x,points[2].y-points[3].y))/2
+    const proposedHeight=(Math.hypot(points[3].x-points[0].x,points[3].y-points[0].y)+Math.hypot(points[2].x-points[1].x,points[2].y-points[1].y))/2
+    const proposedRatio=proposedWidth/Math.max(1,proposedHeight),ratioDistance=Math.abs(Math.log(Math.max(.01,proposedRatio)/targetDoorRatio)),doorLikeRatio=proposedRatio>=.24&&proposedRatio<=.74&&ratioDistance<=(options.wider?.58:.46)
+    if (!isValidEntranceCorners(proposed) || !doorLikeRatio || area < canvas.width * canvas.height * 0.01 || areaRatio<(options.wider ? .55 : .7)||areaRatio>(options.wider?1.65:1.35)||ids.some((id) => Math.hypot((proposed[id].x - corners[id].x) * canvas.width, (proposed[id].y - corners[id].y) * canvas.height) > cornerLimit)) {
       EDGE_NAMES.forEach((name) => { detectedEdges[name] = false; reasons[name] = `preserved: combined refined shape failed safety validation` })
       return { corners, detectedEdges, detectedCount: 0, diagnostics: { width: canvas.width, height: canvas.height, bandWidth: band, bands: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'band' })), segments: sampleDiagnostics, chosen: manualLines.map((line) => ({ a: line.a, b: line.b, kind: 'manual' })), confidence, reasons } }
     }
