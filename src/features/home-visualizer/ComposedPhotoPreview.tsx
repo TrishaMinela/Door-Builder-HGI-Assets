@@ -4,6 +4,7 @@ import type { EntranceCorners } from './EntranceSelector'
 import { PerspectiveDoorCanvas } from './PerspectiveDoorCanvas'
 import { usePhotoZoom } from './usePhotoZoom'
 import type { ProductLayer } from './SideliteSelector'
+import { buildEntranceRegionMap } from './entranceRegionMap'
 
 type Props = {
   corners: EntranceCorners
@@ -47,6 +48,19 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
 
   const showOriginal = displayMode ? displayMode === 'original' : !showAfter
   const showDoor = displayMode ? displayMode === 'final' : showAfter
+  useEffect(() => {
+    if (!import.meta.env.DEV || !naturalSizeRef.current.width || !naturalSizeRef.current.height) return
+    const activeLayers = productLayers?.length ? productLayers : [{ kind: 'door' as const, corners, sourceRect: { x: 0, y: 0, width: 1, height: 1 } }]
+    const diagnostic = buildEntranceRegionMap(naturalSizeRef.current.width, naturalSizeRef.current.height, corners, activeLayers)
+    console.debug('[home-visualizer:entrance-region-map]', {
+      processingResolution: `${naturalSizeRef.current.width}×${naturalSizeRef.current.height}`,
+      seamPixelCount: diagnostic.seamPixelCount,
+      maximumSeamWidth: diagnostic.maximumSeamWidth,
+      repairedByRegion: diagnostic.repairedByRegion,
+      overlapSourcePixels: 2.5,
+      showSeamPixels: diagnostic.seamPixelCount ? 'magenta diagnostic required' : 'no seam pixels to display',
+    })
+  }, [corners, productLayers, stageSize.width, stageSize.height])
   const exportComposite = useCallback(async () => {
     const stage = editorRef.current?.querySelector<HTMLElement>('.composed-photo-stage')
     const width = naturalSizeRef.current.width

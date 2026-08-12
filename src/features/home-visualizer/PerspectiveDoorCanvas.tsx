@@ -17,6 +17,35 @@ const EDGE_OVERLAP_PX = 2.5
 const SUPERSAMPLE_SCALE = 4
 const VISIBLE_ALPHA_THRESHOLD = 20
 const OPAQUE_PRODUCT_THRESHOLD = .08
+const MATTE_EXTRUSION_RADIUS = 4
+
+function extrudeTransparentEdgeColors(source: ImageData) {
+  const original = new Uint8ClampedArray(source.data)
+  let transparentWhiteMattePixels = 0
+  let extrudedPixels = 0
+  for (let y = 0; y < source.height; y += 1) for (let x = 0; x < source.width; x += 1) {
+    const offset = (y * source.width + x) * 4
+    if (original[offset + 3] >= 245) continue
+    if (original[offset] > 240 && original[offset + 1] > 240 && original[offset + 2] > 240) transparentWhiteMattePixels += 1
+    let nearestOffset = -1; let nearestDistance = Number.POSITIVE_INFINITY
+    for (let dy = -MATTE_EXTRUSION_RADIUS; dy <= MATTE_EXTRUSION_RADIUS; dy += 1) for (let dx = -MATTE_EXTRUSION_RADIUS; dx <= MATTE_EXTRUSION_RADIUS; dx += 1) {
+      const distance = dx * dx + dy * dy
+      if (!distance || distance >= nearestDistance) continue
+      const px = x + dx; const py = y + dy
+      if (px < 0 || px >= source.width || py < 0 || py >= source.height) continue
+      const candidate = (py * source.width + px) * 4
+      if (original[candidate + 3] < 245) continue
+      nearestOffset = candidate; nearestDistance = distance
+    }
+    if (nearestOffset < 0) continue
+    source.data[offset] = original[nearestOffset]
+    source.data[offset + 1] = original[nearestOffset + 1]
+    source.data[offset + 2] = original[nearestOffset + 2]
+    // Preserve authored alpha; only hidden RGB is extruded for safe interpolation.
+    extrudedPixels += 1
+  }
+  return { transparentWhiteMattePixels, extrudedPixels }
+}
 
 function reportUnexpectedWhiteEdgePixels(source: ImageData, left: number, top: number, width: number, height: number, name: string) {
   if (!import.meta.env.DEV) return
@@ -177,12 +206,14 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
       outputContext.imageSmoothingQuality = 'high'
       sourceContext.drawImage(sourceImage, 0, 0)
       const source = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height)
+      const matteDiagnostics = extrudeTransparentEdgeColors(source)
       const tightSource=tightAlphaBounds(source,sourceRect)
       const sourceLeft=tightSource.left
       const sourceTop=tightSource.top
       const sourceSpanWidth=tightSource.width
       const sourceSpanHeight=tightSource.height
       reportUnexpectedWhiteEdgePixels(source, Math.round(sourceLeft), Math.round(sourceTop), Math.round(sourceSpanWidth), Math.round(sourceSpanHeight), diagnosticName)
+      if (import.meta.env.DEV) console.debug('[home-visualizer:transparent-edge-extrusion]', { layer: diagnosticName, radius: MATTE_EXTRUSION_RADIUS, ...matteDiagnostics })
       const confirmedPoints = [corners.topLeft, corners.topRight, corners.bottomRight, corners.bottomLeft]
         .map(({ x, y }) => ({ x: x * outputWidth, y: y * outputHeight }))
       const targetPoints = overscanQuadrilateral(confirmedPoints, EDGE_OVERLAP_PX)

@@ -101,6 +101,9 @@ function pcaLine(points: Point[], reference: PixelLine): PixelLine | null {
   return { a, b, score: 0, source: 'gradient-fit' }
 }
 
+function rgbToLab(r:number,g:number,b:number){const linear=(value:number)=>{value/=255;return value>.04045?Math.pow((value+.055)/1.055,2.4):value/12.92},red=linear(r),green=linear(g),blue=linear(b),x=(red*.4124+green*.3576+blue*.1805)/.95047,y=red*.2126+green*.7152+blue*.0722,z=(red*.0193+green*.1192+blue*.9505)/1.08883,f=(value:number)=>value>.008856?Math.cbrt(value):7.787*value+16/116;return{l:116*f(y)-16,a:500*(f(x)-f(y)),b:200*(f(y)-f(z))}}
+const labDifference=(first:ReturnType<typeof rgbToLab>,second:ReturnType<typeof rgbToLab>)=>Math.hypot(first.l-second.l,first.a-second.a,first.b-second.b)
+
 export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners, options: { wider?: boolean } = {}): Promise<AutoFitResult> {
   const canvas = await imageCanvas(imageSrc)
   try {
@@ -126,7 +129,7 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
     }
     const colorDifference = (firstX:number,firstY:number,secondX:number,secondY:number) => {
       const x1=Math.max(0,Math.min(canvas.width-1,Math.round(firstX))),y1=Math.max(0,Math.min(canvas.height-1,Math.round(firstY))),x2=Math.max(0,Math.min(canvas.width-1,Math.round(secondX))),y2=Math.max(0,Math.min(canvas.height-1,Math.round(secondY))),first=(y1*canvas.width+x1)*4,second=(y2*canvas.width+x2)*4
-      return Math.hypot(rgba[first]-rgba[second],rgba[first+1]-rgba[second+1],rgba[first+2]-rgba[second+2])
+      return labDifference(rgbToLab(rgba[first],rgba[first+1],rgba[first+2]),rgbToLab(rgba[second],rgba[second+1],rgba[second+2]))
     }
     const median = (values: number[]) => { const sorted = [...values].sort((a, b) => a - b); return sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0 }
     const angleDifference = (first: PixelLine, second: PixelLine) => {
@@ -187,9 +190,11 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
           const candidateRatio=candidateWidth/Math.max(1,candidateHeight)
           const geometryScore=Math.exp(-Math.abs(Math.log(Math.max(.01,candidateRatio)/targetDoorRatio))/.3)*(candidateRatio>=.24&&candidateRatio<=.74?1:.25)
           const interiorVariation=median(origins.map(origin=>colorDifference(origin.x+normal.x*(offset+4),origin.y+normal.y*(offset+4),origin.x+normal.x*(offset+10),origin.y+normal.y*(offset+10))))
-          const pixelSimilarity=Math.max(0,1-interiorVariation/62)
-          const score = strengthScore * .3 + support * .23 + continuity * .15 + proximity * .16 + geometryScore * .09 + pixelSimilarity * .07
-          return { offset, score, strength, support, continuity, noiseFloor, geometryScore, pixelSimilarity, candidateRatio }
+          const pixelSimilarity=Math.max(0,1-interiorVariation/32)
+          const localDeltaE=median(origins.map(origin=>colorDifference(origin.x+normal.x*(offset-3.5),origin.y+normal.y*(offset-3.5),origin.x+normal.x*(offset+3.5),origin.y+normal.y*(offset+3.5))))
+          const colorMode=localDeltaE>=14?'normal':localDeltaE<7?'similar':'ambiguous',colorScore=Math.min(1,localDeltaE/24)
+          const score = colorMode==='similar'?strengthScore*.29+support*.23+continuity*.15+proximity*.23+geometryScore*.07+pixelSimilarity*.01+colorScore*.02:strengthScore*.27+support*.22+continuity*.14+proximity*.18+geometryScore*.08+pixelSimilarity*.04+colorScore*.07
+          return { offset, score, strength, support, continuity, noiseFloor, geometryScore, pixelSimilarity, candidateRatio, localDeltaE, colorMode }
         }).sort((first, second) => second.score - first.score || Math.abs(first.offset) - Math.abs(second.offset))
       }
       const closeRadius = Math.max(10, Math.min(edgeBand, Math.round(edgeBand * .56)))
@@ -254,7 +259,7 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
       let fittedRotation=fittedAngle-manualAngle;while(fittedRotation>Math.PI)fittedRotation-=Math.PI*2;while(fittedRotation<-Math.PI)fittedRotation+=Math.PI*2
       const maximumAngle=options.wider?Math.PI/24:Math.PI/36,regularizedAngle=manualAngle+Math.max(-maximumAngle,Math.min(maximumAngle,fittedRotation)),regularizedDirection={x:Math.cos(regularizedAngle),y:Math.sin(regularizedAngle)},center={x:(manual.a.x+manual.b.x)/2+normal.x*offsetMedian,y:(manual.a.y+manual.b.y)/2+normal.y*offsetMedian},halfLength=length/2
       const regularizedLine:PixelLine={a:{x:center.x-regularizedDirection.x*halfLength,y:center.y-regularizedDirection.y*halfLength},b:{x:center.x+regularizedDirection.x*halfLength,y:center.y+regularizedDirection.y*halfLength},score:confidence,source:'gradient-fit'}
-      return { line: refined ? regularizedLine : manual, confidence, refined, reason: refined ? `${fitted.inliers.length}/${sampleCount} samples, ${Math.abs(offsetMedian).toFixed(1)}px shift, ${(Math.abs(regularizedAngle-manualAngle)*180/Math.PI).toFixed(1)}° angle refinement, ratio ${winner.candidateRatio.toFixed(2)}, pixel similarity ${winner.pixelSimilarity.toFixed(2)}, variation ${offsetMad.toFixed(1)}px, ${residual.toFixed(1)}px residual` : `preserved: confidence ${confidence.toFixed(2)}, movement ${movement.toFixed(1)}px, ratio ${winner.candidateRatio.toFixed(2)}, pixel similarity ${winner.pixelSimilarity.toFixed(2)}, median offset ${offsetMedian.toFixed(1)}px, variation ${offsetMad.toFixed(1)}px, ${fitted.inliers.length}/${sampleCount} inliers` }
+      return { line: refined ? regularizedLine : manual, confidence, refined, reason: refined ? `${fitted.inliers.length}/${sampleCount} samples, ${Math.abs(offsetMedian).toFixed(1)}px shift, ${(Math.abs(regularizedAngle-manualAngle)*180/Math.PI).toFixed(1)}° angle refinement, ${winner.colorMode} color mode, Delta E ${winner.localDeltaE.toFixed(1)}, ratio ${winner.candidateRatio.toFixed(2)}, variation ${offsetMad.toFixed(1)}px, ${residual.toFixed(1)}px residual` : `preserved: confidence ${confidence.toFixed(2)}, movement ${movement.toFixed(1)}px, ${winner.colorMode} color mode, Delta E ${winner.localDeltaE.toFixed(1)}, ratio ${winner.candidateRatio.toFixed(2)}, median offset ${offsetMedian.toFixed(1)}px, variation ${offsetMad.toFixed(1)}px, ${fitted.inliers.length}/${sampleCount} inliers` }
     })
 
     const confidence = {} as Record<EdgeName, number>
