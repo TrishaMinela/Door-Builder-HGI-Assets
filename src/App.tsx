@@ -11,7 +11,7 @@ import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, 
 import { approvedPrivacyGlassIds } from './data/privacyGlass'
 import type { ContactForm, DoorSwing, GlassCoating, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, HardwareView, PreviewHardware, SideliteConfiguration, SideliteGlassConfiguration } from './types'
 import { configurationPdfName } from './utils/pdfConfig'
-import { submitQuote, type SubmissionResult } from './utils/submission'
+import { submitQuote } from './utils/submission'
 import { fslGlassCategories, fslGlassOptions, fslGridAsset, fslLowEStyleRules, fslStandardStyleRules, type SideliteGlassCategory, type SideliteGlassOption } from './data/fslGlass'
 import { f48slGlassCategories, f48slGlassOptions, f48slGridAsset, f48slLowEStyleRules, f48slStandardStyleRules } from './data/f48slGlass'
 import { sslGlassCategories, sslGlassOptions, sslGridAsset, sslLowEStyleRules, sslStandardStyleRules } from './data/sslGlass'
@@ -429,7 +429,7 @@ export default function App() {
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
-  const [submissionResult, setSubmissionResult] = useState<SubmissionResult | null>(null)
+  const [testMode, setTestMode] = useState(true)
   const [homeDemoIndex, setHomeDemoIndex] = useState(0)
   const [heroImageError, setHeroImageError] = useState('')
   const [builderPreviewView, setBuilderPreviewView] = useState<'Exterior' | 'Interior' | 'Both'>('Exterior')
@@ -1122,7 +1122,6 @@ export default function App() {
     setSubmitted(false)
     setSubmitting(false)
     setSubmitError('')
-    setSubmissionResult(null)
     setScreen('builder')
     goTo(0)
   }
@@ -1365,8 +1364,7 @@ export default function App() {
       const { generateSummaryAttachment } = await import('./utils/pdf')
       const jambSummary = { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' as const : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden }
       const attachment = await generateSummaryAttachment(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, jambSummary)
-      const result = await submitQuote({ configuration: { product, style, grain: selectedGrain, finish, doorFinishType: finish.finishType, doorFinishColor: finish.name, ...jambSummary, glass: configuredGlass, mainDoorGlass: configuredGlass, grid: gridConfiguration, hardware: selectedHardware, doorSwing: selectedDoorSwing, sidelites: sidelites || 'none', sidelitePlacement: sidelites || 'none', ...(selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}), ...(sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}) }, contact, attachment, submittedAt: new Date().toISOString() })
-      setSubmissionResult(result)
+      await submitQuote({ configuration: { product, style, grain: selectedGrain, finish, doorFinishType: finish.finishType, doorFinishColor: finish.name, ...jambSummary, glass: configuredGlass, mainDoorGlass: configuredGlass, grid: gridConfiguration, hardware: selectedHardware, doorSwing: selectedDoorSwing, sidelites: sidelites || 'none', sidelitePlacement: sidelites || 'none', ...(selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}), ...(sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}) }, contact, attachment, submittedAt: new Date().toISOString() })
       setSubmitted(true)
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Something went wrong. Please try again.')
@@ -1428,7 +1426,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app ${screen === 'home' ? 'home-app' : screen === 'visualizer' ? 'visualizer-app' : ''}`}>
+    <div className={`app ${screen === 'home' ? 'home-app' : screen === 'visualizer' ? 'visualizer-app' : ''} ${screen === 'builder' && currentPage === 'review' && submitted ? 'review-confirmation-centered' : ''}`}>
       <header>
         <div className="brand">
           <button className="brand-home" type="button" aria-label="Go to home page" onClick={() => showScreen('home')}>
@@ -1437,6 +1435,7 @@ export default function App() {
           <span className="app-name"><strong>Home Guard Door Builder</strong></span>
         </div>
         <div className="header-actions">
+          <button type="button" className={`test-flow-toggle ${testMode ? 'active' : ''}`} role="switch" aria-label="Test current review experience" aria-checked={testMode} onClick={() => { setTestMode((value) => !value); setSubmitted(false); setSubmitError('') }}><span>Test</span><i aria-hidden="true"/></button>
           <button className="home-return" aria-label="Home" onClick={() => showScreen('home')}><HomeIcon size={17} /><span>Home</span></button>
           <div className="header-dealer-cta"><span>Want this door? <strong>Connect with a Dealer</strong></span><a href="https://homeguardindustries.com/find-a-home-guard-dealer-hub/" target="_blank" rel="noreferrer">Find a Dealer <ExternalLink size={14} /></a></div>
         </div>
@@ -1503,7 +1502,7 @@ export default function App() {
         configuredDoorPreview={configuredDoorPreview}
         configurationKey={configuredDoorKey}
       /> : <>
-      <div className="builder-toolbar">
+      <div className={`builder-toolbar ${currentPage === 'review' && submitted ? 'confirmation-toolbar' : ''}`}>
         <nav className="stepper" aria-label="Configuration progress">
           {steps.map((label, index) => {
             const isReachable = canVisitStep(index)
@@ -1511,12 +1510,12 @@ export default function App() {
             return <button key={label} className={`${index === activeMainStepIndex ? 'active' : ''} ${index < activeMainStepIndex ? 'done' : ''}`} disabled={!isReachable} aria-current={index === activeMainStepIndex ? 'step' : undefined} onClick={() => isReachable && goTo(targetPage)}><span>{index < activeMainStepIndex ? <Check size={13} /> : index + 1}</span><em>{label}</em></button>
           })}
         </nav>
-        <div className="preview-toolbar">
+        {!(currentPage === 'review' && submitted) && <div className="preview-toolbar">
           <span>Preview</span>
           {selectedStyle && <div className="preview-view-toggle" role="group" aria-label="Preview view">
             {previewModes.map((view) => <button type="button" className={builderPreviewView === view ? 'active' : ''} aria-pressed={builderPreviewView === view} key={view} onClick={() => setBuilderPreviewView(view)}>{view}</button>)}
           </div>}
-        </div>
+        </div>}
       </div>
       <main>
         {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">
@@ -1526,7 +1525,7 @@ export default function App() {
           {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
         </div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
-          {currentPage === 'review' && !submitted && <button className="floating-visualizer-launch" type="button" onClick={() => showScreen('visualizer')} aria-label="Launch Door Visualizer"><Eye size={19} /><span>Launch Door Visualizer</span><ArrowRight size={16} /></button>}
+          {testMode && currentPage === 'review' && !submitted && <button className="floating-visualizer-launch" type="button" onClick={() => showScreen('visualizer')} aria-label="Launch Door Visualizer"><Eye size={19} /><span>Launch Door Visualizer</span><ArrowRight size={16} /></button>}
           {currentStep !== 'Review & Quote' && <>
             <div className="section-heading step-heading">
               <div className="step-heading-copy">
@@ -1601,20 +1600,20 @@ export default function App() {
           {currentPage === 'review' && !submitted && <>
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
             <div className="mobile-review-preview">{renderConfiguredPreviewMode()}</div>
-            <section className="visualizer-promo-card visualizer-promo-card-mobile" aria-labelledby="mobile-visualizer-promo-title">
+            {testMode && <section className="visualizer-promo-card visualizer-promo-card-mobile" aria-labelledby="mobile-visualizer-promo-title">
               <div className="visualizer-promo-graphic" aria-hidden="true"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="" /></div>
               <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow">Home Visualizer</span><h2 id="mobile-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => showScreen('visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
-            </section>
+            </section>}
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
               {configurationSummaryRows.map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span>{target >= 0 && <button onClick={() => goTo(target)}>Edit</button>}</div>)}
             </div>
-            <div className="review-download-form">
-              <div className="attachment-card">
+            <div className={`review-download-form ${testMode ? '' : 'form-only'}`}>
+              {testMode && <div className="attachment-card">
                 <span className="attachment-icon"><FileText size={25} /></span>
                 <span className="attachment-copy"><strong>{configurationPdfName}</strong></span>
                 <button type="button" onClick={downloadPdf}><Download size={16} /> Download PDF</button>
-              </div>
+              </div>}
               <div className="form-card">
                 <h2>Your Contact Information</h2><p>We’ll use your ZIP code to help connect you with the right Home Guard dealer.</p>
                 <QuoteForm values={contact} errors={errors} onChange={updateContact} />
@@ -1626,10 +1625,11 @@ export default function App() {
             </div>
           </>}
 
-          {submitted && <div className="success">
-            <span><Check size={32} /></span><small>{submissionResult?.mode === 'demo' ? 'Demo complete' : 'Configuration sent'}</small><h1>Thanks, {contact.fullName}.</h1>
-            <p>{submissionResult?.message}</p>
-            <button onClick={downloadPdf}><Download size={17} /> Download Your Summary</button>
+          {submitted && <div className="success post-submit-visualizer">
+            <span><Check size={32} /></span><small>Configuration received</small><h1>Thanks, {contact.fullName}.</h1>
+            <p>Your configuration PDF will be sent to <strong>{contact.email}</strong>.</p>
+            <p>While you wait, see how your configured door could look on your own home.</p>
+            <button className="post-submit-visualizer-button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Try the Door Visualizer <ArrowRight size={17} /></button>
           </div>}
 
           {currentPage !== 'review' && <div className="builder-actions"><button className="back" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /> Previous</button><button className="next" disabled={(currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'sidelites' && !sidelites) || (currentPage === 'sidelite-style' && !selectedSideliteStyle) || (currentPage === 'door-finish' && !visibleSelectedFinish) || (currentPage === 'jamb-type' && !jambType) || (currentPage === 'jamb-finish' && !jambFinish) || (currentPage === 'glass-type' && !selectedGlassCategory) || (currentPage === 'glass' && visibleGlass.length > 0 && !selectedGlass && !selectedGlassGroup) || (currentPage === 'glass-variant' && !glassVariantConfirmed) || (currentPage === 'grid-location' && !gridPathId) || (currentPage === 'grid-style' && !gridStyle) || (currentPage === 'grid-pattern' && !gridPattern) || (currentPage === 'grid-color' && !gridColor) || (currentPage === 'grid-width' && !gridWidth) || (currentPage === 'sidelite-glass-type' && !sideliteGlassCategory) || (currentPage === 'sidelite-glass' && !selectedFslGlass && !selectedSideliteGlassGroup) || (currentPage === 'sidelite-glass-variant' && !sideliteGlassVariantConfirmed) || (currentPage === 'sidelite-grid-location' && !sideliteGridLocation) || (currentPage === 'sidelite-grid-style' && !sideliteGridStyle) || (currentPage === 'sidelite-grid-pattern' && !sideliteGridPattern) || (currentPage === 'sidelite-grid-color' && !sideliteGridColor) || (currentPage === 'sidelite-grid-width' && !sideliteGridWidth) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}>Next <ArrowRight size={17} /></button></div>}
@@ -1639,7 +1639,7 @@ export default function App() {
           <div className="aside-preview-area">
             {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
           </div>
-          {currentPage === 'review' && <section className="visualizer-promo-card visualizer-promo-card-desktop" aria-labelledby="desktop-visualizer-promo-title">
+          {testMode && currentPage === 'review' && <section className="visualizer-promo-card visualizer-promo-card-desktop" aria-labelledby="desktop-visualizer-promo-title">
             <div className="visualizer-promo-graphic" aria-hidden="true"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="" /></div>
             <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow">Home Visualizer</span><h2 id="desktop-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => showScreen('visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
           </section>}
