@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { ArrowLeft, ArrowRight, Check, Download, Eye, FileText, HelpCircle, Home as HomeIcon, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Download, ExternalLink, Eye, FileText, Globe, HelpCircle, Home as HomeIcon, Mail, MapPin, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview, type DoorPreviewProps } from './components/DoorPreview'
 import { DoorStyleThumbnail } from './components/DoorStyleThumbnail'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
@@ -1438,7 +1438,7 @@ export default function App() {
         </div>
         <div className="header-actions">
           <button className="home-return" aria-label="Home" onClick={() => showScreen('home')}><HomeIcon size={17} /><span>Home</span></button>
-          <div className="header-help"><Phone size={16} /><span>Questions? <strong>Talk to a door expert</strong></span></div>
+          <div className="header-dealer-cta"><span>Want this door? <strong>Connect with a Dealer</strong></span><a href="https://homeguardindustries.com/find-a-home-guard-dealer-hub/" target="_blank" rel="noreferrer">Find a Dealer <ExternalLink size={14} /></a></div>
         </div>
       </header>
 
@@ -1559,7 +1559,7 @@ export default function App() {
                 </div>
               </div>}
               <div className={`options-grid step-${step} ${currentPage === 'door-style' || currentPage === 'door-grain' || currentPage === 'door-finish' || currentPage === 'jamb-type' || currentPage === 'jamb-finish' || currentPage === 'glass-type' || currentPage === 'glass-variant' || currentPage.startsWith('grid-') || currentPage.startsWith('sidelite-') ? 'door-style-grid' : ''} ${currentPage === 'glass' || currentPage === 'glass-variant' || currentPage === 'sidelite-glass' || currentPage === 'sidelite-glass-variant' ? 'glass-options-grid' : ''}`}>
-                {currentPage === 'door-style' && doorStyles.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.eyebrow} selected={styleId === item.id} onClick={() => selectDoorStyle(item.id)} visual={<DoorStyleThumbnail style={item} />} badge={item.variants.some((variant) => variant.lineId.startsWith('signature-')) ? <img src="/assets/branding/signature-series-logo.png" alt="Available in Signature Series" loading="lazy" decoding="async" /> : undefined} />)}
+                {currentPage === 'door-style' && doorStyles.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.eyebrow} selected={styleId === item.id} onClick={() => selectDoorStyle(item.id)} visual={<DoorStyleThumbnail style={item} />} />)}
                 {currentPage === 'door-line' && availableDoorLines.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Door Line" selected={doorLineId === item.id} onClick={() => selectDoorLine(item.id)} visual={<span className="door-line-card-image"><img src={item.image} alt="" loading="lazy" decoding="async" /></span>} />)}
                 {currentPage === 'door-grain' && signatureGrainOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Signature grain" selected={selectedGrain === item.id} onClick={() => selectGrain(item.id)} visual={<img className="grain-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'sidelites' && sideliteOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Sidelites" selected={sidelites === item.id} onClick={() => selectSidelites(item.id)} visual={<img className="sidelite-option-image" src={item.image} alt="" loading="eager" decoding="async" />} />)}
@@ -1662,7 +1662,16 @@ export default function App() {
         </aside>}
       </main>
       </>}
-      <footer><span>Copyright 2026 Home Guard Industries</span><span>Built for your home. Backed for years.</span></footer>
+      <footer className="site-footer">
+        <div className="site-footer-contact">
+          <div className="site-footer-direct"><a href="tel:+18005251885"><Phone size={15} /><span>1-800-525-1885</span></a><a href="mailto:getintouch@homeguardindustries.com"><Mail size={15} /><span>getintouch@homeguardindustries.com</span></a></div>
+          <div className="site-footer-location"><a href="https://www.google.com/maps/place/13101+Main+St,+Grabill,+IN+46741/@41.20679,-84.9711317,17z/data=!3m1!4b1!4m5!3m4!1s0x8816004dd3ac2ac5:0x8788f6dae643c569!8m2!3d41.20679!4d-84.968943" target="_blank" rel="noreferrer"><MapPin size={15} /><span>13101 Main Street, Grabill, IN 46741</span></a><a href="https://homeguardindustries.com" target="_blank" rel="noreferrer"><Globe size={15} /><span>homeguardindustries.com</span></a></div>
+        </div>
+        <div className="site-footer-meta">
+          <span>© 2026 Home Guard Industries</span>
+          <span>Built with 🤍 by <a href="https://schoolradius.co/" target="_blank" rel="noreferrer">School Radius</a></span>
+        </div>
+      </footer>
     </div>
   )
 }
