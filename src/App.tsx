@@ -1434,7 +1434,7 @@ export default function App() {
           <button className="brand-home" type="button" aria-label="Go to home page" onClick={() => showScreen('home')}>
             <img src="/assets/branding/hgi-logo-black.png" alt="Home Guard Industries Doors and Windows" />
           </button>
-          <span className="app-name"><strong>Home Guard Door Builder</strong><small>Build your door. Download your order. Request a quote.</small></span>
+          <span className="app-name"><strong>Home Guard Door Builder</strong></span>
         </div>
         <div className="header-actions">
           <button className="home-return" aria-label="Home" onClick={() => showScreen('home')}><HomeIcon size={17} /><span>Home</span></button>
@@ -1462,7 +1462,6 @@ export default function App() {
             <h1>Build a Door Made for Your Home.</h1>
             <p>Choose your door style, finish, glass, and hardware, then preview your exact combination before requesting a quote.</p>
             <button className="start-building" onClick={() => showScreen('builder')}>Start Building <ArrowRight size={18} /></button>
-            <span className="home-trust"><ShieldCheck size={15} /> Built for your home. Backed by Home Guard Industries.</span>
           </div>
           <div className="home-hero-visual">
             <div className="home-entryway-demo hero-composite" aria-label="Animated examples of configurable entry doors">
