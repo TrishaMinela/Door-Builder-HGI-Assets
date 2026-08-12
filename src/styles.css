@@ -2211,3 +2211,25 @@ body:has(.home-app){
   .auto-fit-no-improvement>div{align-items:stretch;flex-direction:column}.auto-fit-no-improvement button{width:100%;min-height:50px}
 }
 @media(prefers-reduced-motion:reduce){.entrance-corner-handle.guidance-pulse:before{animation:none;box-shadow:0 0 0 5px #f8d30e70,0 0 0 7px #0d666c55}}
+
+/* Architectural refinement: one restrained surface/control language across builder + visualizer. */
+:root{--surface:#fff;--page:#f5f7f7;--border:#cfd8da;--radius-workspace:7px;--radius-card:5px;--radius-control:5px;--shadow-raised:0 4px 12px #05040b0d}
+body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
+.home-hero{background:var(--page)!important}.home-hero-visual{background:#edf1f1}.home-hero-visual:before,.home-hero-visual:after,.home-app .home-hero:after{display:none!important}
+.stepper{box-shadow:none;border-bottom:1px solid var(--border)}
+.builder-panel{padding-top:50px;padding-bottom:32px}.section-heading{margin-bottom:27px}.section-heading h1{margin-top:8px}.options-grid{gap:12px}.builder-actions{margin-top:29px;padding-top:19px}
+.option-card,.glass-choice-card,.hardware-option-card,.how-card,.explore-cards article{border:1px solid var(--border);border-radius:var(--radius-card);box-shadow:none;transform:none}
+.option-card:hover,.glass-choice-card:hover,.hardware-option-card:hover,.how-card:hover,.explore-cards article:hover{border-color:var(--peacock);box-shadow:none;transform:none}
+.option-card.selected,.glass-choice-card.selected,.hardware-option-card.selected{border-color:var(--peacock);outline:2px solid var(--peacock);outline-offset:-2px;box-shadow:inset 4px 0 0 var(--gold)}
+.option-copy{padding:13px 14px 15px}.check{box-shadow:0 0 0 2px var(--gold)}
+.summary-card,.form-card,.mini-summary,.review-preview-panel,.visualizer-promo-card,.visualizer-card,.configured-door-source,.cleanup-comparison,.cleanup-brush-workspace,.cleanup-preview-workspace{border:1px solid var(--border);border-radius:var(--radius-workspace);box-shadow:none;background:var(--surface)}
+.summary-card,.form-card{padding:19px;margin-bottom:15px}.mini-summary{box-shadow:none}.visualizer-card,.configured-door-source{padding:clamp(17px,2.5vw,25px)}.visualizer-heading{margin-bottom:22px}.visualizer-card-heading{margin-bottom:17px}
+.photo-guidance,.entrance-placement-instructions,.frame-area-heading,.auto-fit-no-improvement,.cleanup-region-guidance,.frame-finish-summary{border-radius:var(--radius-card);box-shadow:none}.photo-guidance{gap:20px;margin-bottom:18px;padding:15px 17px}.photo-drop-zone,.visualizer-editor,.configured-door-checkerboard{border-radius:var(--radius-workspace)}
+.next,.success button,.submit-button,.start-building,.visualizer-promo-copy button,.visualizer-download-button,.visualizer-apply-button,.wizard-navigation .wizard-continue,.auto-fit-adjust,.auto-fit-entrance-button{border-radius:var(--radius-control);box-shadow:none!important;transform:none!important}
+.home-return,.section-resets button,.wizard-navigation button,.wizard-secondary button,.visualizer-photo-actions button,.visualizer-back-button,.frame-preview-controls button,.frame-actions button,.frame-tool-controls button,.frame-area-actions>button,.cleanup-preview-toolbar button,.auto-fit-controls button,.auto-fit-no-improvement button,.visualizer-review-button{border-radius:var(--radius-control);box-shadow:none}
+.start-building:hover,.visualizer-promo-copy button:hover{transform:none;box-shadow:none}
+.preview-view-toggle{border-radius:6px;padding:4px;box-shadow:none}.preview-view-toggle button,.selection-path button{border-radius:4px}.visualizer-photo-ready,.cleanup-comparison-label,.visualizer-comparison-label{border-radius:4px}
+.quote-fields{gap:11px}.quote-fields input,.quote-fields textarea,select,input,textarea{border-radius:var(--radius-control)}.quote-fields input:focus,.quote-fields textarea:focus,select:focus,input:focus-visible,textarea:focus-visible{outline:none;border-color:var(--peacock);box-shadow:0 0 0 2px #0d666c22}
+.auto-fit-failure-modal{border-radius:var(--radius-workspace);padding:24px 25px 21px;box-shadow:0 10px 28px #05040b35}.auto-fit-example,.configured-door-source-error{border-radius:var(--radius-card)}.promatch-tooltip{border-radius:var(--radius-card)!important;box-shadow:var(--shadow-raised)!important}
+.how-it-works{padding-top:68px;padding-bottom:74px}.home-section-heading{margin-bottom:34px}.how-cards,.explore-cards{gap:14px}.how-card,.explore-cards article{padding:22px 19px}.explore-section{padding-top:54px;padding-bottom:60px}
+@media(max-width:900px){.builder-panel{padding-top:33px}.visualizer-page{padding-top:26px}}
