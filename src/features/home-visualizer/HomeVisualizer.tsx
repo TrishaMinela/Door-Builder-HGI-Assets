@@ -71,7 +71,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const [outerFrame, setOuterFrame] = useState<EntranceCorners>(() => expandFrameCorners(INITIAL_ENTRANCE_CORNERS))
   const [framePlacementMode, setFramePlacementMode] = useState<'automatic'|'manual'>('automatic')
   const [frameBaseDisplaySize, setFrameBaseDisplaySize] = useState({width:0,height:0})
-  const [frameSides, setFrameSides] = useState<FrameSides>({ top: true, left: true, right: true, bottom: false })
+  const [frameSides, setFrameSides] = useState<FrameSides>({ top: true, left: true, right: true, bottom: true })
   const [frameCorrections, setFrameCorrections] = useState<FrameMaskCorrections>({ add: [], remove: [] })
   const [frameConfirmed, setFrameConfirmed] = useState(false)
   const [recoloredFrameUrl, setRecoloredFrameUrl] = useState('')
@@ -143,7 +143,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const clearRecoloredFrame = () => { if (frameUrlRef.current) URL.revokeObjectURL(frameUrlRef.current); frameUrlRef.current = ''; setRecoloredFrameUrl('') }
 
   const automaticFrame=useMemo(()=>frameBaseDisplaySize.width?createAutomaticFrame(entranceBoundary,frameBaseDisplaySize):expandFrameCorners(entranceBoundary),[entranceBoundary,frameBaseDisplaySize])
-  const resetFrameArea = () => { clearRecoloredFrame(); setFramePlacementMode('automatic');setOuterFrame(automaticFrame); setFrameSides({ top: true, left: true, right: true, bottom: false }); setFrameCorrections({ add: [], remove: [] }); setFrameConfirmed(true) }
+  const resetFrameArea = () => { clearRecoloredFrame(); setFramePlacementMode('automatic');setOuterFrame(automaticFrame); setFrameSides({ top: true, left: true, right: true, bottom: true }); setFrameCorrections({ add: [], remove: [] }); setFrameConfirmed(true) }
 
   useEffect(()=>{if(framePlacementMode!=='automatic')return;setOuterFrame(automaticFrame);setFrameConfirmed(true);setFrameCorrections({add:[],remove:[]})},[automaticFrame,framePlacementMode])
   useEffect(()=>{if(!import.meta.env.DEV||!photo||!frameBaseDisplaySize.width)return;const normalizedMargin={x:AUTO_FRAME_MARGIN_PX/frameBaseDisplaySize.width,y:AUTO_FRAME_MARGIN_PX/frameBaseDisplaySize.height};console.debug('[home-visualizer:automatic-frame]',{doorPolygon:corners,leftSidelitePolygon:sideliteEdges.left?sideliteOpenings[0]??null:null,rightSidelitePolygon:sideliteEdges.right?sideliteOpenings[sideliteEdges.left?1:0]??null:null,assemblyEnvelope:entranceBoundary,displayMarginPx:AUTO_FRAME_MARGIN_PX,sourceEquivalentNormalized:normalizedMargin,outerFramePolygon:outerFrame,framePlacementMode,dividerJambRegions:dividerJambs,frameMaskOpenings:[corners,...sideliteOpenings]})},[photo,corners,sideliteEdges,sideliteOpenings,entranceBoundary,frameBaseDisplaySize,outerFrame,framePlacementMode,dividerJambs])
@@ -404,7 +404,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
               <div className="wizard-navigation"><button type="button" onClick={()=>setWizardStep(0)}><ArrowLeft size={17}/> Back</button><button type="button" className="wizard-continue" disabled={configuredSideliteSides.length===1&&!photoSideliteSide} onClick={()=>{setFrameConfirmed(true);setWizardStep(2)}}>Continue</button></div>
             </>}
             {wizardStep===2&&<>
-              <div className="entrance-placement-instructions automatic-frame-status"><Check className="entrance-placement-icon" size={24}/><div><h3>Frame detected from your door placement</h3><p>We've automatically included the surrounding frame and divider jambs.</p></div></div>
+              <div className="entrance-placement-instructions automatic-frame-status"><Check className="entrance-placement-icon" size={24}/><div><h3>Frame detected from your door placement</h3><p>We've automatically included the surrounding frame, divider jambs, and threshold.</p></div></div>
               <p className="frame-wizard-summary">Frame Finish: {configuredDoorPreview.jambType==='clad'?'Clad Wrap':'Timber Frame'} — {activeJambFinish.name}</p>
               <FrameAreaEditor imageSrc={recoloredFrameUrl||photo.objectUrl} inner={entranceBoundary} openings={[corners,...sideliteOpenings]} outer={outerFrame} sides={frameSides} corrections={frameCorrections} wizardMode editable={framePlacementMode==='manual'} onDisplaySize={(size)=>setFrameBaseDisplaySize(current=>current.width?current:size)} onOuterChange={(value)=>{setFramePlacementMode('manual');setOuterFrame(value)}} onSidesChange={setFrameSides} onCorrectionsChange={setFrameCorrections} onReset={resetFrameArea} onConfirm={()=>{}}/>
               <div className="automatic-frame-actions">{framePlacementMode==='automatic'?<button type="button" onClick={()=>setFramePlacementMode('manual')}>Adjust Frame</button>:<button type="button" onClick={resetFrameArea}><RotateCcw size={15}/> Reset to Automatic</button>}</div>

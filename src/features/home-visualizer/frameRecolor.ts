@@ -3,7 +3,7 @@ import type { EntranceCorners, Point } from './EntranceSelector'
 
 export type FrameSides = { top: boolean; left: boolean; right: boolean; bottom: boolean }
 export type FrameMaskCorrections = { add: CleanupStroke[]; remove: CleanupStroke[] }
-export const AUTO_FRAME_MARGIN_PX = 15
+export const AUTO_FRAME_MARGIN_PX = 10
 
 type DisplaySize = { width: number; height: number }
 
@@ -14,13 +14,13 @@ function lineIntersection(firstA: Point, firstB: Point, secondA: Point, secondB:
   return{x:firstA.x+ratio*firstX,y:firstA.y+ratio*firstY}
 }
 
-/** Offset the assembly's four perspective edges in base display pixels. The
- * bottom edge remains at the opening boundary so porch/threshold pixels are
- * excluded by default. Returned coordinates stay normalized and floating-point. */
+/** Offset the assembly's four perspective edges in base display pixels,
+ * including the bottom threshold edge. Coordinates remain normalized and
+ * floating-point so the frame follows the entrance perspective. */
 export function createAutomaticFrame(assembly: EntranceCorners, displaySize: DisplaySize, marginPx=AUTO_FRAME_MARGIN_PX): EntranceCorners {
   const width=Math.max(1,displaySize.width),height=Math.max(1,displaySize.height)
   const points=[assembly.topLeft,assembly.topRight,assembly.bottomRight,assembly.bottomLeft].map(point=>({x:point.x*width,y:point.y*height}))
-  const offsets=[marginPx,marginPx,0,marginPx]
+  const offsets=[marginPx,marginPx,marginPx,marginPx]
   const lines=points.map((point,index)=>{const next=points[(index+1)%points.length],dx=next.x-point.x,dy=next.y-point.y,length=Math.max(1e-8,Math.hypot(dx,dy)),distance=offsets[index],nx=dy/length*distance,ny=-dx/length*distance;return[{x:point.x+nx,y:point.y+ny},{x:next.x+nx,y:next.y+ny}]as const})
   const expanded=lines.map((line,index)=>lineIntersection(lines[(index+3)%4][0],lines[(index+3)%4][1],line[0],line[1])??line[0])
   const normalized=expanded.map(point=>({x:Math.max(0,Math.min(1,point.x/width)),y:Math.max(0,Math.min(1,point.y/height))}))
