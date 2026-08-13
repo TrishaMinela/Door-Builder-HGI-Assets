@@ -3,7 +3,7 @@ import type { EntranceCorners, Point } from './EntranceSelector'
 
 export type FrameSides = { top: boolean; left: boolean; right: boolean; bottom: boolean }
 export type FrameMaskCorrections = { add: CleanupStroke[]; remove: CleanupStroke[] }
-export const AUTO_FRAME_MARGIN_PX = 10
+export const AUTO_FRAME_MARGIN_PX = 15
 
 type DisplaySize = { width: number; height: number }
 
