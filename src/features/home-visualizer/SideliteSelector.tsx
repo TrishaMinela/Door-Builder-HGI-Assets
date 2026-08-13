@@ -7,6 +7,8 @@ export type SideliteSide = 'left' | 'right'
 export type SideliteOpening = { innerTop: Point; innerBottom: Point; outerTop: Point; outerBottom: Point }
 export type SideliteEdges = { left?: SideliteOpening; right?: SideliteOpening }
 type Handle = keyof SideliteOpening
+const MAGNIFIER_ZOOM=3
+const MAGNIFIER_SIZE=264
 
 export function initializeSideliteEdges(door: EntranceCorners, sides: SideliteSide[]): SideliteEdges {
   const topWidth=door.topRight.x-door.topLeft.x,bottomWidth=door.bottomRight.x-door.bottomLeft.x
@@ -26,7 +28,7 @@ export function dividerJambQuads(door:EntranceCorners,edges:SideliteEdges):Entra
 
 type Props={imageSrc:string;door:EntranceCorners;edges:SideliteEdges;sides:SideliteSide[];showSideChoice?:boolean;onChooseSide?:(side:SideliteSide)=>void;onChange:(edges:SideliteEdges)=>void}
 export function SideliteSelector({imageSrc,door,edges,sides,showSideChoice=false,onChooseSide,onChange}:Props){
-  const editorRef=useRef<HTMLDivElement>(null),stageRef=useRef<HTMLDivElement>(null),naturalRef=useRef({width:0,height:0}),dragRef=useRef<{side:SideliteSide;handle:Handle;pointer:number}|null>(null);const[size,setSize]=useState({width:0,height:0})
+  const editorRef=useRef<HTMLDivElement>(null),stageRef=useRef<HTMLDivElement>(null),naturalRef=useRef({width:0,height:0}),dragRef=useRef<{side:SideliteSide;handle:Handle;pointer:number}|null>(null);const[size,setSize]=useState({width:0,height:0}),[activeHandle,setActiveHandle]=useState<{side:SideliteSide;handle:Handle}|null>(null)
   const {zoom,pan,isPanning,onWheel,beginPan,movePan,endPan,zoomIn,zoomOut,resetZoom}=usePhotoZoom(editorRef,size)
   useEffect(resetZoom,[imageSrc,resetZoom])
   const resize=()=>{const bounds=editorRef.current?.getBoundingClientRect(),natural=naturalRef.current;if(!bounds||!natural.width)return;const scale=Math.min(bounds.width/natural.width,bounds.height/natural.height);setSize({width:natural.width*scale,height:natural.height*scale})};useEffect(()=>{const observer=new ResizeObserver(resize);if(editorRef.current)observer.observe(editorRef.current);return()=>observer.disconnect()},[])
@@ -38,11 +40,13 @@ export function SideliteSelector({imageSrc,door,edges,sides,showSideChoice=false
     const opening = edges[side]
     if (!opening) return []
     return (['innerTop','innerBottom','outerTop','outerBottom'] as Handle[]).map((handle) => (
-      <button key={`${side}-${handle}`} type="button" className={`sidelite-edge-handle ${handle.startsWith('inner')?'inner':''}`} aria-label={`Move ${side} sidelite ${handle}`} style={{left:`${opening[handle].x*100}%`,top:`${opening[handle].y*100}%`}} onPointerDown={(event)=>{event.preventDefault();stageRef.current?.setPointerCapture(event.pointerId);dragRef.current={side,handle,pointer:event.pointerId}}}/>
+      <button key={`${side}-${handle}`} type="button" className={`sidelite-edge-handle ${handle.startsWith('inner')?'inner':''}`} aria-label={`Move ${side} sidelite ${handle}`} style={{left:`${opening[handle].x*100}%`,top:`${opening[handle].y*100}%`}} onPointerDown={(event)=>{event.preventDefault();stageRef.current?.setPointerCapture(event.pointerId);dragRef.current={side,handle,pointer:event.pointerId};setActiveHandle({side,handle})}}/>
     ))
   }) : []
+  const magnifiedPoint=activeHandle?edges[activeHandle.side]?.[activeHandle.handle]:null
   return <div ref={editorRef} className="visualizer-editor sidelite-editor">
-    <div ref={stageRef} className={`entrance-image-stage sidelite-stage ${zoom>1?'photo-pan-enabled':''} ${isPanning?'photo-panning':''}`} style={size.width?{width:size.width,height:size.height,transform:`translate(${pan.x}px, ${pan.y}px) scale(${zoom})`}:undefined} onPointerDown={event=>{if(!(event.target as Element).closest('button'))beginPan(event)}} onPointerMove={event=>{if(!movePan(event))move(event)}} onPointerUp={event=>{endPan(event);dragRef.current=null}} onPointerCancel={event=>{endPan(event);dragRef.current=null}} onWheel={onWheel}>
+    {magnifiedPoint&&size.width>0&&<div className="entrance-point-magnifier" aria-hidden="true" style={{backgroundImage:`url(${JSON.stringify(imageSrc)})`,backgroundSize:`${size.width*MAGNIFIER_ZOOM}px ${size.height*MAGNIFIER_ZOOM}px`,backgroundPosition:`${MAGNIFIER_SIZE/2-magnifiedPoint.x*size.width*MAGNIFIER_ZOOM}px ${MAGNIFIER_SIZE/2-magnifiedPoint.y*size.height*MAGNIFIER_ZOOM}px`}}><span>3×</span><i/></div>}
+    <div ref={stageRef} className={`entrance-image-stage sidelite-stage ${zoom>1?'photo-pan-enabled':''} ${isPanning?'photo-panning':''}`} style={size.width?{width:size.width,height:size.height,transform:`translate(${pan.x}px, ${pan.y}px) scale(${zoom})`}:undefined} onPointerDown={event=>{if(!(event.target as Element).closest('button'))beginPan(event)}} onPointerMove={event=>{if(!movePan(event))move(event)}} onPointerUp={event=>{endPan(event);dragRef.current=null;setActiveHandle(null)}} onPointerCancel={event=>{endPan(event);dragRef.current=null;setActiveHandle(null)}} onWheel={onWheel}>
       <img src={imageSrc} alt="Uploaded entrance for sidelite placement" onLoad={event=>{naturalRef.current={width:event.currentTarget.naturalWidth,height:event.currentTarget.naturalHeight};resize()}}/>
       {size.width>0&&<svg className="sidelite-selection-svg" viewBox={`0 0 ${size.width} ${size.height}`}><polygon className="sidelite-door-confirmed" points={doorPts}/>{dividerJambQuads(door,edges).map((quad,index)=><polygon key={`d${index}`} className="sidelite-divider-region" points={pts(quad)}/>)}{(['left','right']as SideliteSide[]).map(side=>edges[side]&&<polygon key={side} className="sidelite-region" points={pts(sideliteQuadrilateral(side,edges[side]!))}/>)}</svg>}
       {showSideChoice&&<><button type="button" className="sidelite-side-zone sidelite-side-zone-left" style={{left:0,top:`${doorTop*100}%`,width:`${Math.max(.12,Math.min(door.topLeft.x,door.bottomLeft.x))*100}%`,height:`${Math.max(.2,doorBottom-doorTop)*100}%`}} onClick={()=>onChooseSide?.('left')}><span>Left</span><small>Left of Door</small></button><button type="button" className="sidelite-side-zone sidelite-side-zone-right" style={{right:0,top:`${doorTop*100}%`,width:`${Math.max(.12,1-Math.max(door.topRight.x,door.bottomRight.x))*100}%`,height:`${Math.max(.2,doorBottom-doorTop)*100}%`}} onClick={()=>onChooseSide?.('right')}><span>Right</span><small>Right of Door</small></button></>}

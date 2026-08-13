@@ -13,10 +13,13 @@ type Props = {
 }
 
 type Matrix = [number, number, number, number, number, number, number, number, number]
-const EDGE_OVERLAP_PX = 2.5
+// Product layers tuck beneath the adjacent jamb/frame mask. Four source-photo
+// pixels is enough to cover rasterized edge fringes without visibly enlarging
+// the configured slab or sidelites.
+const EDGE_OVERLAP_PX = 4
 const SUPERSAMPLE_SCALE = 4
 const VISIBLE_ALPHA_THRESHOLD = 20
-const OPAQUE_PRODUCT_THRESHOLD = .08
+const OPAQUE_PRODUCT_THRESHOLD = .015
 const MATTE_EXTRUSION_RADIUS = 4
 
 function extrudeTransparentEdgeColors(source: ImageData) {
@@ -275,7 +278,7 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
           // The configured slab and sidelites must fully replace the photographed
           // product. Promote authored product pixels to full coverage while keeping
           // the lowest alpha samples as a smooth supersampled outer-edge transition.
-          if (sampledAlpha > .004) {
+          if (sampledAlpha > .001) {
             warped.data[targetOffset] = (source.data[offset00] * alphaWeight00 + source.data[offset10] * alphaWeight10 + source.data[offset01] * alphaWeight01 + source.data[offset11] * alphaWeight11) / sampledAlpha
             warped.data[targetOffset + 1] = (source.data[offset00 + 1] * alphaWeight00 + source.data[offset10 + 1] * alphaWeight10 + source.data[offset01 + 1] * alphaWeight01 + source.data[offset11 + 1] * alphaWeight11) / sampledAlpha
             warped.data[targetOffset + 2] = (source.data[offset00 + 2] * alphaWeight00 + source.data[offset10 + 2] * alphaWeight10 + source.data[offset01 + 2] * alphaWeight01 + source.data[offset11 + 2] * alphaWeight11) / sampledAlpha

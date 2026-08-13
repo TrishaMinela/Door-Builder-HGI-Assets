@@ -106,7 +106,10 @@ export async function recolorPhotoFrame(imageSrc: string, inner: EntranceCorners
   maskContext.fillStyle = '#fff'
   polygon(maskContext, [outer.topLeft, outer.topRight, outer.bottomRight, outer.bottomLeft], width, height)
   maskContext.globalCompositeOperation = 'destination-out'
-  const FRAME_UNDERLAP_PX=2.5
+  // Reuse each exact opening polygon, then contract its mask cutout so the
+  // recolored frame extends underneath the product. This shared 4px overlap
+  // prevents the original bright/dark photo from appearing between layers.
+  const FRAME_UNDERLAP_PX=4
   openings.forEach((opening) => polygon(maskContext, contractOpeningForOverlap(opening,width,height,FRAME_UNDERLAP_PX), width, height))
   if (!sides.bottom) polygon(maskContext, [outer.bottomLeft, outer.bottomRight, inner.bottomRight, inner.bottomLeft], width, height)
   maskContext.globalCompositeOperation = 'source-over'

@@ -8,6 +8,8 @@ export type EntranceCorners = Record<CornerId, Point>
 type InteractionMode = 'edit' | 'move'
 
 const CORNER_ORDER: CornerId[] = ['topLeft', 'topRight', 'bottomRight', 'bottomLeft']
+const MAGNIFIER_ZOOM = 3
+const MAGNIFIER_SIZE = 264
 export const INITIAL_ENTRANCE_CORNERS: EntranceCorners = {
   topLeft: { x: 0.35, y: 0.14 },
   topRight: { x: 0.65, y: 0.14 },
@@ -62,6 +64,7 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   const dragRef = useRef<DragState | null>(null)
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
   const [mode, setMode] = useState<InteractionMode>('edit')
+  const [activeCorner, setActiveCorner] = useState<CornerId | null>(null)
   const { zoom, pan, isPanning, onWheel, beginPan, movePan, endPan, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
   useEffect(resetZoom, [imageSrc, resetZoom])
 
@@ -99,6 +102,7 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
     event.preventDefault()
     stageRef.current?.setPointerCapture(event.pointerId)
     dragRef.current = { kind: 'corner', corner, pointerId: event.pointerId }
+    setActiveCorner(corner)
   }
 
   const beginSelectionDrag = (event: ReactPointerEvent<SVGPolygonElement>) => {
@@ -145,6 +149,7 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
     if (dragRef.current?.pointerId !== event.pointerId) return
     if (stageRef.current?.hasPointerCapture(event.pointerId)) stageRef.current.releasePointerCapture(event.pointerId)
     dragRef.current = null
+    setActiveCorner(null)
   }
 
   const polygonPoints = CORNER_ORDER.map((id) => `${corners[id].x * stageSize.width},${corners[id].y * stageSize.height}`).join(' ')
@@ -158,6 +163,15 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
     </div>}
     {showToolbar && <p className="entrance-selector-help">{mode === 'edit' ? 'Drag a corner to outline the complete entrance opening.' : 'Drag inside the highlighted area to move the complete selection.'}</p>}
     <div ref={editorRef} className="visualizer-editor" aria-label="House photo entrance editor">
+      {activeCorner && stageSize.width > 0 && <div
+        className="entrance-point-magnifier"
+        aria-hidden="true"
+        style={{
+          backgroundImage: `url(${JSON.stringify(imageSrc)})`,
+          backgroundSize: `${stageSize.width * MAGNIFIER_ZOOM}px ${stageSize.height * MAGNIFIER_ZOOM}px`,
+          backgroundPosition: `${MAGNIFIER_SIZE / 2 - corners[activeCorner].x * stageSize.width * MAGNIFIER_ZOOM}px ${MAGNIFIER_SIZE / 2 - corners[activeCorner].y * stageSize.height * MAGNIFIER_ZOOM}px`,
+        }}
+      ><span>3×</span><i /></div>}
       <div
         ref={stageRef}
         className={`entrance-image-stage entrance-image-stage-${mode} ${zoom > 1 ? 'photo-pan-enabled' : ''} ${isPanning ? 'photo-panning' : ''}`}
