@@ -26,7 +26,7 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
   const [comparisonPosition, setComparisonPosition] = useState(50)
   const comparisonDragRef = useRef<number | null>(null)
-  const { zoom, pan, onWheel, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
+  const { zoom, pan, isPanning, onWheel, beginPan, movePan, endPan, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
   useEffect(resetZoom, [originalImageSrc, resetZoom])
 
   const updateStageSize = () => {
@@ -79,7 +79,7 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
   const updateComparison=(event:ReactPointerEvent)=>{if(comparisonDragRef.current!==event.pointerId)return;const bounds=event.currentTarget.getBoundingClientRect();setComparisonPosition(Math.max(0,Math.min(100,(event.clientX-bounds.left)/bounds.width*100)))}
 
   return <div ref={editorRef} className="visualizer-editor composed-photo-editor" aria-label="Configured door applied to house photo">
-    <div className={`entrance-image-stage composed-photo-stage ${beforeAfter?'before-after-stage':''}`} style={stageSize.width ? { width: stageSize.width, height: stageSize.height, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` } : undefined} onWheel={onWheel} onPointerMove={updateComparison} onPointerUp={()=>{comparisonDragRef.current=null}} onPointerCancel={()=>{comparisonDragRef.current=null}}>
+    <div className={`entrance-image-stage composed-photo-stage ${beforeAfter?'before-after-stage':''} ${zoom>1?'photo-pan-enabled':''} ${isPanning?'photo-panning':''}`} style={stageSize.width ? { width: stageSize.width, height: stageSize.height, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` } : undefined} onWheel={onWheel} onPointerDown={(event)=>{if(!(event.target as Element).closest('.visualizer-comparison-handle'))beginPan(event)}} onPointerMove={(event)=>{if(comparisonDragRef.current===event.pointerId)updateComparison(event);else movePan(event)}} onPointerUp={(event)=>{endPan(event);comparisonDragRef.current=null}} onPointerCancel={(event)=>{endPan(event);comparisonDragRef.current=null}}>
       <img src={showOriginal ? originalImageSrc : imageSrc} alt={imageAlt} onLoad={(event) => {
         naturalSizeRef.current = { width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }
         updateStageSize()
