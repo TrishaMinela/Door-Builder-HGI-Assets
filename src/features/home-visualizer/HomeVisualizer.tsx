@@ -9,7 +9,7 @@ import { CleanupBrushEditor, type CleanupStroke } from './CleanupBrushEditor'
 import { createBrushCleanup, type CleanupDiagnosticComponent } from './brushCleanup'
 import { CleanupComparisonSlider } from './CleanupComparisonSlider'
 import { FrameAreaEditor } from './FrameAreaEditor'
-import { AUTO_FRAME_MARGIN_PX, createAutomaticFrame, expandFrameCorners, recolorPhotoFrame, type FrameMaskCorrections, type FrameSides } from './frameRecolor'
+import { AUTO_FRAME_WIDTH_RATIO, createAutomaticFrame, expandFrameCorners, recolorPhotoFrame, type FrameMaskCorrections, type FrameSides } from './frameRecolor'
 import { completeEntranceBoundary, dividerJambQuads, initializeSideliteEdges, productLayers as createProductLayers, sideliteOpeningQuads, SideliteSelector, type SideliteEdges, type SideliteSide } from './SideliteSelector'
 import { AutoFitGuidanceModal } from './AutoFitGuidanceModal'
 
@@ -70,7 +70,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const [doorSource, setDoorSource] = useState<DoorSourceState>({ url: '', width: 0, height: 0, error: '', ready: false })
   const [outerFrame, setOuterFrame] = useState<EntranceCorners>(() => expandFrameCorners(INITIAL_ENTRANCE_CORNERS))
   const [framePlacementMode, setFramePlacementMode] = useState<'automatic'|'manual'>('automatic')
-  const [frameBaseDisplaySize, setFrameBaseDisplaySize] = useState({width:0,height:0})
+  const [frameImageSize, setFrameImageSize] = useState({width:0,height:0})
   const [frameSides, setFrameSides] = useState<FrameSides>({ top: true, left: true, right: true, bottom: true })
   const [frameCorrections, setFrameCorrections] = useState<FrameMaskCorrections>({ add: [], remove: [] })
   const [frameConfirmed, setFrameConfirmed] = useState(false)
@@ -120,7 +120,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
     setAutoFitUndo(null)
     setAutoFitError('')
     clearAutoFitFailure()
-    setOuterFrame(expandFrameCorners(INITIAL_ENTRANCE_CORNERS)); setFramePlacementMode('automatic');setFrameBaseDisplaySize({width:0,height:0});setFrameConfirmed(false); setFrameCorrections({ add: [], remove: [] })
+    setOuterFrame(expandFrameCorners(INITIAL_ENTRANCE_CORNERS)); setFramePlacementMode('automatic');setFrameImageSize({width:0,height:0});setFrameConfirmed(false); setFrameCorrections({ add: [], remove: [] })
   }
 
   useEffect(() => {
@@ -142,11 +142,11 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
 
   const clearRecoloredFrame = () => { if (frameUrlRef.current) URL.revokeObjectURL(frameUrlRef.current); frameUrlRef.current = ''; setRecoloredFrameUrl('') }
 
-  const automaticFrame=useMemo(()=>frameBaseDisplaySize.width?createAutomaticFrame(entranceBoundary,frameBaseDisplaySize):expandFrameCorners(entranceBoundary),[entranceBoundary,frameBaseDisplaySize])
+  const automaticFrame=useMemo(()=>frameImageSize.width?createAutomaticFrame(entranceBoundary,corners,frameImageSize):expandFrameCorners(entranceBoundary),[entranceBoundary,corners,frameImageSize])
   const resetFrameArea = () => { clearRecoloredFrame(); setFramePlacementMode('automatic');setOuterFrame(automaticFrame); setFrameSides({ top: true, left: true, right: true, bottom: true }); setFrameCorrections({ add: [], remove: [] }); setFrameConfirmed(true) }
 
   useEffect(()=>{if(framePlacementMode!=='automatic')return;setOuterFrame(automaticFrame);setFrameConfirmed(true);setFrameCorrections({add:[],remove:[]})},[automaticFrame,framePlacementMode])
-  useEffect(()=>{if(!import.meta.env.DEV||!photo||!frameBaseDisplaySize.width)return;const normalizedMargin={x:AUTO_FRAME_MARGIN_PX/frameBaseDisplaySize.width,y:AUTO_FRAME_MARGIN_PX/frameBaseDisplaySize.height};console.debug('[home-visualizer:automatic-frame]',{doorPolygon:corners,leftSidelitePolygon:sideliteEdges.left?sideliteOpenings[0]??null:null,rightSidelitePolygon:sideliteEdges.right?sideliteOpenings[sideliteEdges.left?1:0]??null:null,assemblyEnvelope:entranceBoundary,displayMarginPx:AUTO_FRAME_MARGIN_PX,sourceEquivalentNormalized:normalizedMargin,outerFramePolygon:outerFrame,framePlacementMode,dividerJambRegions:dividerJambs,frameMaskOpenings:[corners,...sideliteOpenings]})},[photo,corners,sideliteEdges,sideliteOpenings,entranceBoundary,frameBaseDisplaySize,outerFrame,framePlacementMode,dividerJambs])
+  useEffect(()=>{if(!import.meta.env.DEV||!photo||!frameImageSize.width)return;console.debug('[home-visualizer:automatic-frame]',{doorPolygon:corners,leftSidelitePolygon:sideliteEdges.left?sideliteOpenings[0]??null:null,rightSidelitePolygon:sideliteEdges.right?sideliteOpenings[sideliteEdges.left?1:0]??null:null,assemblyEnvelope:entranceBoundary,frameWidthRatio:AUTO_FRAME_WIDTH_RATIO,sourceImageSize:frameImageSize,outerFramePolygon:outerFrame,framePlacementMode,dividerJambRegions:dividerJambs,frameMaskOpenings:[corners,...sideliteOpenings]})},[photo,corners,sideliteEdges,sideliteOpenings,entranceBoundary,frameImageSize,outerFrame,framePlacementMode,dividerJambs])
 
   useEffect(() => {
     if (!photo || !frameConfirmed) { clearRecoloredFrame(); return }
@@ -242,7 +242,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const updateCorners = (nextCorners: EntranceCorners) => {
     setCorners(nextCorners)
     setSideliteEdges(initializeSideliteEdges(nextCorners, photoSideliteSides)); clearCleanup()
-    if(framePlacementMode==='automatic'){setOuterFrame(frameBaseDisplaySize.width?createAutomaticFrame(completeEntranceBoundary(nextCorners,initializeSideliteEdges(nextCorners,photoSideliteSides)),frameBaseDisplaySize):expandFrameCorners(nextCorners));setFrameCorrections({ add: [], remove: [] })} clearRecoloredFrame()
+    if(framePlacementMode==='automatic'){setOuterFrame(frameImageSize.width?createAutomaticFrame(completeEntranceBoundary(nextCorners,initializeSideliteEdges(nextCorners,photoSideliteSides)),nextCorners,frameImageSize):expandFrameCorners(nextCorners));setFrameCorrections({ add: [], remove: [] })} clearRecoloredFrame()
   }
 
   const updateManualCorners=(nextCorners:EntranceCorners)=>{
@@ -274,7 +274,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
     } else {
       setPhotoSideliteSide('none')
       setSideliteEdges({})
-      if(framePlacementMode==='automatic')setOuterFrame(frameBaseDisplaySize.width?createAutomaticFrame(corners,frameBaseDisplaySize):expandFrameCorners(corners))
+      if(framePlacementMode==='automatic')setOuterFrame(frameImageSize.width?createAutomaticFrame(corners,corners,frameImageSize):expandFrameCorners(corners))
       setWizardStep(2)
     }
   }
@@ -406,7 +406,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
             {wizardStep===2&&<>
               <div className="entrance-placement-instructions automatic-frame-status"><Check className="entrance-placement-icon" size={24}/><div><h3>Frame detected from your door placement</h3><p>We've automatically included the surrounding frame, divider jambs, and threshold.</p></div></div>
               <p className="frame-wizard-summary">Frame Finish: {configuredDoorPreview.jambType==='clad'?'Clad Wrap':'Timber Frame'} — {activeJambFinish.name}</p>
-              <FrameAreaEditor imageSrc={recoloredFrameUrl||photo.objectUrl} inner={entranceBoundary} openings={[corners,...sideliteOpenings]} outer={outerFrame} sides={frameSides} corrections={frameCorrections} wizardMode editable={framePlacementMode==='manual'} onDisplaySize={(size)=>setFrameBaseDisplaySize(current=>current.width?current:size)} onOuterChange={(value)=>{setFramePlacementMode('manual');setOuterFrame(value)}} onSidesChange={setFrameSides} onCorrectionsChange={setFrameCorrections} onReset={resetFrameArea} onConfirm={()=>{}}/>
+              <FrameAreaEditor imageSrc={recoloredFrameUrl||photo.objectUrl} inner={entranceBoundary} openings={[corners,...sideliteOpenings]} outer={outerFrame} sides={frameSides} corrections={frameCorrections} wizardMode editable={framePlacementMode==='manual'} onImageSize={(size)=>setFrameImageSize(current=>current.width?current:size)} onOuterChange={(value)=>{setFramePlacementMode('manual');setOuterFrame(value)}} onSidesChange={setFrameSides} onCorrectionsChange={setFrameCorrections} onReset={resetFrameArea} onConfirm={()=>{}}/>
               <div className="automatic-frame-actions">{framePlacementMode==='automatic'?<button type="button" onClick={()=>setFramePlacementMode('manual')}>Adjust Frame</button>:<button type="button" onClick={resetFrameArea}><RotateCcw size={15}/> Reset to Automatic</button>}</div>
               <div className="wizard-navigation"><button type="button" onClick={()=>setWizardStep(configuredSideliteSides.length?1:0)}><ArrowLeft size={17}/> Back</button><button type="button" className="wizard-continue" onClick={()=>{setFrameConfirmed(true);setWizardStep(4)}}>Finish Visualization</button></div>
             </>}
