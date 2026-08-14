@@ -4,7 +4,7 @@ import type { EntranceCorners, Point } from './EntranceSelector'
 export type FrameSides = { top: boolean; left: boolean; right: boolean; bottom: boolean }
 export type FrameMaskCorrections = { add: CleanupStroke[]; remove: CleanupStroke[] }
 export const MIN_AUTO_FRAME_RATIO = .025
-export const AUTO_FRAME_WIDTH_RATIO = .04
+export const AUTO_FRAME_WIDTH_RATIO = .06
 export const MAX_AUTO_FRAME_RATIO = .06
 
 type ImageSize = { width: number; height: number }
