@@ -11,6 +11,7 @@ type InteractionMode = 'edit' | 'move'
 const CORNER_ORDER: CornerId[] = ['topLeft', 'topRight', 'bottomRight', 'bottomLeft']
 const MAGNIFIER_ZOOM = 3
 const MAGNIFIER_SIZE = 264
+const MOBILE_MAGNIFIER_SIZE = 90
 export const INITIAL_ENTRANCE_CORNERS: EntranceCorners = {
   topLeft: { x: 0.35, y: 0.14 },
   topRight: { x: 0.65, y: 0.14 },
@@ -33,6 +34,7 @@ type Props = {
   proposedDetectedEdges?: boolean[]
   showToolbar?: boolean
   highlightHandles?: boolean
+  onAlignmentReadyChange?: (ready: boolean) => void
 }
 
 export const cloneEntranceCorners = (corners: EntranceCorners): EntranceCorners => ({
@@ -58,7 +60,7 @@ export function isValidEntranceCorners(corners: EntranceCorners) {
   return turns.every((turn) => turn > 0.0001) || turns.every((turn) => turn < -0.0001)
 }
 
-export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges, showToolbar = true, highlightHandles = false }: Props) {
+export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges, showToolbar = true, highlightHandles = false, onAlignmentReadyChange }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
@@ -69,6 +71,9 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   const [activeCorner, setActiveCorner] = useState<CornerId | null>(null)
   const [snapGuides,setSnapGuides]=useState<SnapGuides>({})
   const [alignedEdges,setAlignedEdges]=useState<Set<number>>(()=>new Set())
+  const magnifierSize=typeof window!=='undefined'&&window.matchMedia('(max-width: 767px)').matches?MOBILE_MAGNIFIER_SIZE:MAGNIFIER_SIZE
+  const alignmentReady=CORNER_ORDER.every((_id,index)=>alignedEdges.has(index)||alignedEdges.has((index+3)%4))
+  useEffect(()=>onAlignmentReadyChange?.(alignmentReady),[alignmentReady,onAlignmentReadyChange])
   const { zoom, pan, isPanning, onWheel, beginPan, movePan, endPan, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
   useEffect(resetZoom, [imageSrc, resetZoom])
 
@@ -174,9 +179,11 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
         className="entrance-point-magnifier"
         aria-hidden="true"
         style={{
+          width: magnifierSize,
+          height: magnifierSize,
           backgroundImage: `url(${JSON.stringify(imageSrc)})`,
           backgroundSize: `${stageSize.width * MAGNIFIER_ZOOM}px ${stageSize.height * MAGNIFIER_ZOOM}px`,
-          backgroundPosition: `${MAGNIFIER_SIZE / 2 - corners[activeCorner].x * stageSize.width * MAGNIFIER_ZOOM}px ${MAGNIFIER_SIZE / 2 - corners[activeCorner].y * stageSize.height * MAGNIFIER_ZOOM}px`,
+          backgroundPosition: `${magnifierSize / 2 - corners[activeCorner].x * stageSize.width * MAGNIFIER_ZOOM}px ${magnifierSize / 2 - corners[activeCorner].y * stageSize.height * MAGNIFIER_ZOOM}px`,
         }}
       ><span>3×</span><i /></div>}
       <div

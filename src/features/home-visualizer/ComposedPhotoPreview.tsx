@@ -57,7 +57,7 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
       seamPixelCount: diagnostic.seamPixelCount,
       maximumSeamWidth: diagnostic.maximumSeamWidth,
       repairedByRegion: diagnostic.repairedByRegion,
-      overlapSourcePixels: 4,
+      overlapSourcePixels: 6,
       showSeamPixels: diagnostic.seamPixelCount ? 'magenta diagnostic required' : 'no seam pixels to display',
     })
   }, [corners, productLayers, stageSize.width, stageSize.height])

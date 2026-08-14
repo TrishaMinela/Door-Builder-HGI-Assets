@@ -58,6 +58,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const [autoFitUnableToImprove, setAutoFitUnableToImprove] = useState(false)
   const [autoFitAlreadyAligned, setAutoFitAlreadyAligned] = useState(false)
   const [highlightAutoFitHandles, setHighlightAutoFitHandles] = useState(false)
+  const [autoFitAlignmentReady, setAutoFitAlignmentReady] = useState(false)
   const handleHighlightTimerRef = useRef<number | null>(null)
   const [cleanupLoading, setCleanupLoading] = useState(false)
   const [cleanupError, setCleanupError] = useState('')
@@ -111,6 +112,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   }
 
   const resetPlacement = () => {
+    setAutoFitAlignmentReady(false)
     setCorners(cloneEntranceCorners(INITIAL_ENTRANCE_CORNERS))
     setWizardStep(0)
     setSideliteEdges({})
@@ -125,6 +127,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
 
   useEffect(() => {
     setHasSeenAutoFitGuidance(false)
+    setAutoFitAlignmentReady(false)
     setAutoFitProposal(null)
     setAutoFitError('')
     clearAutoFitFailure()
@@ -391,8 +394,8 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
             {wizardStep<4&&<ol className="visualizer-progress" aria-label="Visualizer progress" style={{gridTemplateColumns:`repeat(${visualizerProgressSteps.length},minmax(0,1fr))`}}>{visualizerProgressSteps.map(({label,step},index)=><li key={label} className={wizardStep===step?'active':wizardStep>step?'complete':''}><span>{index+1}</span>{label}</li>)}</ol>}
             {wizardStep===0&&<>
               <div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>Outline the Door</h3><p>Move the four points roughly near the inside corners of the existing door.</p><p className="entrance-placement-note">Then use Auto-Fit to align the outline more precisely.</p></div></div>
-              <EntranceSelector key={photo.objectUrl} corners={corners} proposedCorners={autoFitProposal?.corners} proposedDetectedEdges={autoFitProposal?['top','right','bottom','left'].map((edge)=>autoFitProposal.detectedEdges[edge as keyof typeof autoFitProposal.detectedEdges]):undefined} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightHandles={highlightAutoFitHandles}/>
-              <div className="wizard-secondary auto-fit-primary-row"><button type="button" className="auto-fit-entrance-button" onClick={requestAutoFit} disabled={autoFitLoading||Boolean(autoFitProposal)}><Crosshair size={18}/> {autoFitLoading?'Finding Entrance…':'Auto-Fit Entrance'}</button>{autoFitUndo&&<button type="button" onClick={()=>{updateCorners(autoFitUndo);setAutoFitUndo(null)}}><RotateCcw size={17}/> Undo Auto-Fit</button>}</div>{autoFitProposal&&<div className="auto-fit-controls"><button type="button" className="visualizer-apply-button auto-tool-apply" onClick={applyAutoFit}>Apply Auto-Fit</button><button type="button" onClick={()=>{setAutoFitProposal(null);setAutoFitError('')}}>Cancel</button></div>}{autoFitProposal&&autoFitError&&<p className="auto-tool-result" role="status">{autoFitError}</p>}
+              <EntranceSelector key={photo.objectUrl} corners={corners} proposedCorners={autoFitProposal?.corners} proposedDetectedEdges={autoFitProposal?['top','right','bottom','left'].map((edge)=>autoFitProposal.detectedEdges[edge as keyof typeof autoFitProposal.detectedEdges]):undefined} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightHandles={highlightAutoFitHandles} onAlignmentReadyChange={setAutoFitAlignmentReady}/>
+              {autoFitAlignmentReady&&!autoFitUndo&&<div className="auto-fit-ready-callout" role="status"><strong>All four points are aligned.</strong><span>Use Auto-Fit to precisely refine the door opening.</span><div className="wizard-secondary auto-fit-primary-row"><button type="button" className="auto-fit-entrance-button auto-fit-ready-button" onClick={requestAutoFit} disabled={autoFitLoading||Boolean(autoFitProposal)}><Crosshair size={18}/> {autoFitLoading?'Finding Entrance…':'Auto-Fit Entrance'}</button></div></div>}{autoFitUndo&&<div className="wizard-secondary auto-fit-undo-only"><button type="button" onClick={()=>{updateCorners(autoFitUndo);setAutoFitUndo(null)}}><RotateCcw size={17}/> Undo Auto-Fit</button></div>}{autoFitProposal&&<div className="auto-fit-controls"><button type="button" className="visualizer-apply-button auto-tool-apply" onClick={applyAutoFit}>Apply Auto-Fit</button><button type="button" onClick={()=>{setAutoFitProposal(null);setAutoFitError('')}}>Cancel</button></div>}{autoFitProposal&&autoFitError&&<p className="auto-tool-result" role="status">{autoFitError}</p>}
               {autoFitUnableToImprove&&<div className="auto-fit-no-improvement" role="status"><strong>Auto-Fit couldn’t improve this placement.</strong><p>You can adjust the points and try again, or continue with your current placement.</p><div><button type="button" onClick={()=>runAutoFit(false)} disabled={autoFitLoading}>{autoFitLoading?'Trying Again…':'Try Again'}</button><button type="button" className="auto-fit-use-manual" onClick={continueFromDoorPlacement} disabled={!doorSource.ready||!isValidEntranceCorners(corners)}>Continue</button></div></div>}
               {autoFitAlreadyAligned&&<div className="auto-fit-no-improvement auto-fit-already-aligned" role="status"><strong>Your door outline is already well aligned.</strong><p>You can keep the current placement and continue.</p><div><button type="button" className="auto-fit-use-manual" onClick={continueFromDoorPlacement} disabled={!doorSource.ready||!isValidEntranceCorners(corners)}>Keep Current Placement &amp; Continue</button></div></div>}
               <div className="wizard-navigation"><button type="button" onClick={leaveVisualizer}><ArrowLeft size={17}/> Back</button><button type="button" className="wizard-continue" disabled={!doorSource.ready||!isValidEntranceCorners(corners)} onClick={continueFromDoorPlacement}>Continue</button></div>

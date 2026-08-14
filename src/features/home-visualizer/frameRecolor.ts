@@ -112,9 +112,9 @@ export async function recolorPhotoFrame(imageSrc: string, inner: EntranceCorners
   polygon(maskContext, [outer.topLeft, outer.topRight, outer.bottomRight, outer.bottomLeft], width, height)
   maskContext.globalCompositeOperation = 'destination-out'
   // Reuse each exact opening polygon, then contract its mask cutout so the
-  // recolored frame extends underneath the product. This shared 4px overlap
+  // recolored frame extends underneath the product. This shared 6px overlap
   // prevents the original bright/dark photo from appearing between layers.
-  const FRAME_UNDERLAP_PX=4
+  const FRAME_UNDERLAP_PX=6
   openings.forEach((opening) => polygon(maskContext, contractOpeningForOverlap(opening,width,height,FRAME_UNDERLAP_PX), width, height))
   if (!sides.bottom) polygon(maskContext, [outer.bottomLeft, outer.bottomRight, inner.bottomRight, inner.bottomLeft], width, height)
   maskContext.globalCompositeOperation = 'source-over'
@@ -131,7 +131,7 @@ export async function recolorPhotoFrame(imageSrc: string, inner: EntranceCorners
   const sourceLightnessCenter=sourceLightnessSamples.length?sourceLightnessSamples[Math.floor(sourceLightnessSamples.length/2)]:.5
   const targetCenter=Math.max(.14,Math.min(.88,targetHsl.l))
   const contrastScale=finishType==='stain'?.78:targetCenter<.25?.64:targetCenter>.75?.68:.74
-  const strength=finishType==='stain'?.88:finishType==='clad'?.94:.92
+  const strength=finishType==='stain'?.9:1
   for (let index = 0; index < width * height; index += 1) {
     const alpha = mask[index * 4 + 3] / 255 * strength; if (!alpha) continue
     const offset=index*4,sourceHsl=rgbToHsl(pixels.data[offset],pixels.data[offset+1],pixels.data[offset+2]);const localVariation=Math.max(-.2,Math.min(.2,sourceHsl.l-sourceLightnessCenter));const preservedLightness=Math.max(.045,Math.min(.955,targetCenter+localVariation*contrastScale));const saturation=finishType==='stain'?Math.min(1,targetHsl.s*1.03):targetHsl.s;const colored=hslToRgb(targetHsl.h,saturation,preservedLightness)
