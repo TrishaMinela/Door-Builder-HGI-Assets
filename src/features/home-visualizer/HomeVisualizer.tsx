@@ -244,7 +244,8 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
 
   const updateCorners = (nextCorners: EntranceCorners) => {
     setCorners(nextCorners)
-    setSideliteEdges(initializeSideliteEdges(nextCorners, photoSideliteSides)); clearCleanup()
+    setSideliteEdges(initializeSideliteEdges(nextCorners, photoSideliteSides))
+    if(cleanupProposal||approvedCleanup||cleanupStrokes.length||cleanupError||cleanupSampleCenters.length||cleanupSampleAdjusting||recoloredFrameUrl)clearCleanup()
     if(framePlacementMode==='automatic'){setOuterFrame(frameImageSize.width?createAutomaticFrame(completeEntranceBoundary(nextCorners,initializeSideliteEdges(nextCorners,photoSideliteSides)),nextCorners,frameImageSize):expandFrameCorners(nextCorners));setFrameCorrections({ add: [], remove: [] })} clearRecoloredFrame()
   }
 

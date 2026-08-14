@@ -65,6 +65,8 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
   const dragRef = useRef<DragState | null>(null)
+  const pendingCornersRef=useRef<EntranceCorners|null>(null)
+  const cornerFrameRef=useRef<number|null>(null)
   const snapRef = useRef<SnapState>(emptySnapState())
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
   const [mode, setMode] = useState<InteractionMode>('edit')
@@ -76,6 +78,18 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   useEffect(()=>onAlignmentReadyChange?.(alignmentReady),[alignmentReady,onAlignmentReadyChange])
   const { zoom, pan, isPanning, onWheel, beginPan, movePan, endPan, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
   useEffect(resetZoom, [imageSrc, resetZoom])
+  useEffect(()=>()=>{if(cornerFrameRef.current!==null)cancelAnimationFrame(cornerFrameRef.current)},[])
+
+  const scheduleCornersChange=(nextCorners:EntranceCorners)=>{
+    pendingCornersRef.current=nextCorners
+    if(cornerFrameRef.current!==null)return
+    cornerFrameRef.current=requestAnimationFrame(()=>{
+      cornerFrameRef.current=null
+      const pending=pendingCornersRef.current
+      pendingCornersRef.current=null
+      if(pending)onCornersChange(pending)
+    })
+  }
 
   const updateStageSize = () => {
     const editor = editorRef.current
@@ -135,7 +149,7 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
       const snapped=freeDragWithMagneticSnap(corners,drag.corner,pointer,stageSize,snapRef.current,event.shiftKey);snapRef.current=snapped.state;setSnapGuides(snapped.guides);setAlignedEdges(current=>{const next=new Set(current),cornerIndex=CORNER_ORDER.indexOf(drag.corner),previousEdge=(cornerIndex+3)%4;next.delete(cornerIndex);next.delete(previousEdge);if(snapped.state.primary==='previous')next.add(previousEdge);if(snapped.state.primary==='next')next.add(cornerIndex);if(snapped.state.secondary){next.add(previousEdge);next.add(cornerIndex)}return next})
       const candidate = { ...corners, [drag.corner]: snapped.point }
       if (isValidEntranceCorners(candidate)) {
-        onCornersChange(candidate)
+        scheduleCornersChange(candidate)
       }
       return
     }
@@ -153,13 +167,14 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
       x: drag.startCorners[id].x + deltaX,
       y: drag.startCorners[id].y + deltaY,
     }])) as EntranceCorners
-    if (isValidEntranceCorners(candidate)) onCornersChange(candidate)
+    if (isValidEntranceCorners(candidate)) scheduleCornersChange(candidate)
   }
 
   const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (dragRef.current?.pointerId !== event.pointerId) return
     if (stageRef.current?.hasPointerCapture(event.pointerId)) stageRef.current.releasePointerCapture(event.pointerId)
     dragRef.current = null
+    if(pendingCornersRef.current){if(cornerFrameRef.current!==null)cancelAnimationFrame(cornerFrameRef.current);cornerFrameRef.current=null;const pending=pendingCornersRef.current;pendingCornersRef.current=null;onCornersChange(pending)}
     snapRef.current=emptySnapState();setSnapGuides({})
     setActiveCorner(null)
   }
