@@ -2,29 +2,30 @@ export type FinishColor = {
   id: string
   name: string
   hex: string
+  proMatch?: boolean
 }
 
 export const paintColors: FinishColor[] = [
-  { id: 'terratone', name: 'Terratone', hex: '#3E3013' },
-  { id: 'black', name: 'Black', hex: '#242424' },
-  { id: 'brown', name: 'Brown', hex: '#3A1B0C' },
+  { id: 'terratone', name: 'Terratone', hex: '#3E3013', proMatch: true },
+  { id: 'black', name: 'Black', hex: '#242424', proMatch: true },
+  { id: 'brown', name: 'Brown', hex: '#3A1B0C', proMatch: true },
   { id: 'coastal-plain', name: 'Coastal Plain', hex: '#9FA694' },
   { id: 'cozy-cottage', name: 'Cozy Cottage', hex: '#FBEDD3' },
-  { id: 'clay', name: 'Clay', hex: '#8E8063' },
+  { id: 'clay', name: 'Clay', hex: '#8E8063', proMatch: true },
   { id: 'daffodil', name: 'Daffodil', hex: '#FAD97A' },
-  { id: 'desert-tan', name: 'Desert Tan', hex: '#C6B89E' },
-  { id: 'eldridge-gray', name: 'Eldridge Gray', hex: '#696A62' },
+  { id: 'desert-tan', name: 'Desert Tan', hex: '#C6B89E', proMatch: true },
+  { id: 'eldridge-gray', name: 'Eldridge Gray', hex: '#696A62', proMatch: true },
   { id: 'eggshell', name: 'Eggshell', hex: '#F8F1DF' },
-  { id: 'forest', name: 'Forest', hex: '#152415' },
+  { id: 'forest', name: 'Forest', hex: '#152415', proMatch: true },
   { id: 'iron-ore', name: 'Iron Ore', hex: '#434341' },
-  { id: 'mocha', name: 'Mocha', hex: '#2A2416' },
+  { id: 'mocha', name: 'Mocha', hex: '#2A2416', proMatch: true },
   { id: 'musket', name: 'Musket', hex: '#372813' },
-  { id: 'navy', name: 'Navy', hex: '#10355A' },
+  { id: 'navy', name: 'Navy', hex: '#10355A', proMatch: true },
   { id: 'pacific-blue', name: 'Pacific Blue', hex: '#5E6C74' },
   { id: 'pewter', name: 'Pewter', hex: '#A8A19B' },
   { id: 'positive-red', name: 'Positive Red', hex: '#AD2C34' },
-  { id: 'wineberry', name: 'Wineberry', hex: '#3F0D04' },
-  { id: 'white', name: 'White', hex: '#EBEEE8' },
+  { id: 'wineberry', name: 'Wineberry', hex: '#3F0D04', proMatch: true },
+  { id: 'white', name: 'White', hex: '#EBEEE8', proMatch: true },
   { id: 'wicker', name: 'Wicker', hex: '#C1B396' },
   { id: 'crabapple', name: 'Crabapple', hex: '#660000' },
   { id: 'orange-krate', name: 'Orange Krate', hex: '#C96F25' },

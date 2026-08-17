@@ -14,7 +14,7 @@ const shade = (hex: string, amount = 35) => {
   return `#${[r, g, b].map((channel) => channel.toString(16).padStart(2, '0')).join('')}`
 }
 
-const toFinish = (kind: 'paint' | 'stain', color: { id: string; name: string; hex: string }): Finish => ({
+const toFinish = (kind: 'paint' | 'stain', color: { id: string; name: string; hex: string; proMatch?: boolean }): Finish => ({
   id: `${kind}-${color.id}`,
   name: color.name,
   description: `Home Guard ${kind} color.`,
@@ -23,6 +23,7 @@ const toFinish = (kind: 'paint' | 'stain', color: { id: string; name: string; he
   accent: shade(color.hex),
   category: kind,
   finishType: kind,
+  proMatch: color.proMatch === true,
 })
 
 export const finishes: Finish[] = [

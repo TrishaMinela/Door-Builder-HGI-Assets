@@ -29,6 +29,7 @@ export type Finish = {
   accent: string
   category: 'grain' | 'paint' | 'stain'
   finishType: 'paint' | 'stain'
+  proMatch: boolean
 }
 
 export type GlassOption = {

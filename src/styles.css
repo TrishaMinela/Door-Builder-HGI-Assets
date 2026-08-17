@@ -436,11 +436,35 @@ body:has(.visualizer-app){
 .finish-tile-wrap{
   width:104px;
   height:104px;
+  position:relative;
   display:block;
   border-radius:8px;
   background:var(--fallback-finish,#efeee8);
   box-shadow:0 3px 12px #0002;
   overflow:hidden;
+}
+.finish-tile-wrap::before,
+.finish-tile-wrap::after{
+  content:none!important;
+  display:none!important;
+}
+.finish-tile-flat{
+  background-color:var(--fallback-finish,#efeee8);
+  background-image:none!important;
+}
+.finish-tile-wrap .pro-match-swatch-logo{
+  position:absolute;
+  right:8px;
+  bottom:8px;
+  z-index:5;
+  width:38px;
+  height:auto;
+  max-width:none;
+  max-height:none;
+  margin:0;
+  display:block;
+  opacity:1;
+  pointer-events:none;
 }
 .finish-tile-image{
   width:100%;
