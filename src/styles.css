@@ -2340,6 +2340,21 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
 }
 
 @media (max-width:767px){
+  :root{--mobile-footer-height:70px}
+  html:has(.app:not(.home-app):not(.visualizer-app)),
+  body:has(.app:not(.home-app):not(.visualizer-app)),
+  #root:has(>.app:not(.home-app):not(.visualizer-app)),
+  .app:not(.home-app):not(.visualizer-app),
+  .app:not(.home-app):not(.visualizer-app)>main,
+  .app:not(.home-app):not(.visualizer-app) .builder-panel,
+  .app:not(.home-app):not(.visualizer-app) .builder-options-scroll{background-color:var(--page)}
+  html:has(.app:not(.home-app):not(.visualizer-app)){overflow-x:clip;overflow-y:auto;overscroll-behavior-y:contain}
+  body:has(.app:not(.home-app):not(.visualizer-app)),
+  #root:has(>.app:not(.home-app):not(.visualizer-app)),
+  .app:not(.home-app):not(.visualizer-app){min-height:100%;overflow-x:clip;overflow-y:visible;overscroll-behavior-y:contain}
+  .app:not(.home-app):not(.visualizer-app)>main{min-height:100vh;min-height:100dvh;overflow:visible}
+  .app:not(.home-app):not(.visualizer-app) .builder-panel,
+  .app:not(.home-app):not(.visualizer-app) .builder-options-scroll{overscroll-behavior-y:contain}
   .app.visualizer-app{flex-direction:column}
   html,body,#root,.app{max-width:100%;overflow-x:hidden}
   .app:not(.home-app) .builder-panel,.app:not(.home-app) .builder-panel.configuration-step,.app:not(.home-app) .builder-panel.review-step{padding-left:16px;padding-right:16px}
@@ -2382,8 +2397,8 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .site-footer{max-width:100%;overflow:hidden}
   .site-footer-contact,.site-footer-direct,.site-footer-location{align-items:center;justify-content:center;flex-direction:row}
   .app:not(.home-app)>.site-footer{position:fixed;left:0;right:0;bottom:0;z-index:1050;width:100%;max-width:none}
-  .app:not(.home-app)>main{padding-bottom:calc(82px + env(safe-area-inset-bottom))}
-  .configuration-step .builder-options-scroll{padding-bottom:calc(176px + env(safe-area-inset-bottom))}
+  .app:not(.home-app)>main{padding-bottom:calc(var(--mobile-footer-height) + 12px + env(safe-area-inset-bottom))}
+  .configuration-step .builder-options-scroll{padding-bottom:calc(var(--mobile-footer-height) + 106px + env(safe-area-inset-bottom))}
   .configuration-step:has(.builder-options-scroll .step-0) .step-heading h1,
   .configuration-step:has(.builder-options-scroll .step-0) .step-heading-copy>p{display:none}
   .configuration-step:has(.builder-options-scroll .step-0) .step-heading{margin-bottom:12px}
@@ -2417,7 +2432,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .configuration-step .builder-options-scroll>.options-grid .hardware-finish-options{gap:3px;margin-top:auto;padding:5px;display:flex;flex-wrap:wrap}
   .configuration-step .builder-options-scroll>.options-grid .glass-caming-options button,
   .configuration-step .builder-options-scroll>.options-grid .hardware-finish-options button{min-width:0;min-height:34px;flex:1 1 42%;padding:3px;font-size:6px}
-  .configuration-step .builder-actions{left:16px;right:16px;bottom:calc(82px + env(safe-area-inset-bottom));z-index:1060;width:auto;height:54px;padding:0;display:flex;align-items:center;justify-content:space-between;background:transparent;border:0;box-shadow:none;pointer-events:none}
+  .configuration-step .builder-actions{left:16px;right:16px;bottom:calc(var(--mobile-footer-height) + 12px + env(safe-area-inset-bottom));z-index:1060;width:auto;height:54px;padding:0;display:flex;align-items:center;justify-content:space-between;background:transparent;border:0;box-shadow:none;pointer-events:none}
   .configuration-step .builder-actions button{width:54px;height:54px;min-width:54px;min-height:54px;max-width:54px;margin:0;border:2px solid #fff;border-radius:50%;padding:0;display:grid;place-items:center;gap:0;line-height:0;box-sizing:border-box;-webkit-appearance:none;appearance:none;box-shadow:0 5px 16px #05040b5c;pointer-events:auto}
   .configuration-step .builder-actions .back{background:var(--black);color:#fff}
   .configuration-step .builder-actions .next{background:var(--peacock);color:#fff}
