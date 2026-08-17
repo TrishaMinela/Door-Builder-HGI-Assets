@@ -46,6 +46,18 @@ const smoothPaintDoorPreviewAssets: Record<string, string> = {
   SW: slabUrl('Smooth', 'Wagon Wheel - Smooth.png'),
 }
 
+// F3 uses the same smooth square slab for both of these product lines. Keep the
+// mapping explicit so 22-gauge preview resolution does not look for a textured
+// F3 source that is not part of the supplied preview assets.
+const exactDoorLinePreviewAssets: Record<string, Record<string, string>> = {
+  '22-gauge-steel': {
+    F3: slabUrl('Smooth', 'Square - Smooth.png'),
+  },
+  'brushed-smooth-fiberglass': {
+    F3: slabUrl('Smooth', 'Square - Smooth.png'),
+  },
+}
+
 export const doorPreviewAssets: Record<string, string> = smoothPaintDoorPreviewAssets
 
 const texturedPaintDoorPreviewAssets: Record<string, string> = {
@@ -173,6 +185,9 @@ function doorStyleThumbnailPreview(style: DoorStyle) {
 export function resolveDoorPreviewCandidates(style: DoorStyle, finishType?: Finish['finishType'], product?: ResolvedDoorProduct | null, grain?: string | null) {
   const candidates: (string | undefined)[] = []
   const hasExactDoorLine = product?.doorTypes.length === 1
+  const exactLineId = hasExactDoorLine ? product?.matchingVariants[0]?.lineId : undefined
+  const exactLineAssets = exactLineId ? exactDoorLinePreviewAssets[exactLineId] : undefined
+  if (exactLineAssets) candidates.push(previewFromMap(style, exactLineAssets))
   const useStainableSteelTexture = hasExactDoorLine && usesPaintableStainableSteelPreview(product)
   const signatureGrainAssets = hasExactDoorLine && usesSignaturePreview(product) ? signaturePaintPreviewByGrain(grain) : null
   if (signatureGrainAssets) candidates.push(previewFromMap(style, signatureGrainAssets))

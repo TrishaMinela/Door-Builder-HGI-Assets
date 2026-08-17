@@ -2379,10 +2379,11 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .configuration-step .builder-options-scroll>.options-grid .glass-caming-options button,
   .configuration-step .builder-options-scroll>.options-grid .hardware-finish-options button{min-width:0;min-height:34px;flex:1 1 42%;padding:3px;font-size:6px}
   .configuration-step .builder-actions{left:16px;right:16px;bottom:calc(82px + env(safe-area-inset-bottom));z-index:1060;width:auto;height:54px;padding:0;display:flex;align-items:center;justify-content:space-between;background:transparent;border:0;box-shadow:none;pointer-events:none}
-  .configuration-step .builder-actions button{width:54px;height:54px;min-height:54px;max-width:none;margin:0;border:2px solid #fff;border-radius:50%;padding:0;display:grid;place-items:center;font-size:0;box-shadow:0 5px 16px #05040b5c;pointer-events:auto}
+  .configuration-step .builder-actions button{width:54px;height:54px;min-width:54px;min-height:54px;max-width:54px;margin:0;border:2px solid #fff;border-radius:50%;padding:0;display:grid;place-items:center;gap:0;line-height:0;box-sizing:border-box;-webkit-appearance:none;appearance:none;box-shadow:0 5px 16px #05040b5c;pointer-events:auto}
   .configuration-step .builder-actions .back{background:var(--black);color:#fff}
   .configuration-step .builder-actions .next{background:var(--peacock);color:#fff}
-  .configuration-step .builder-actions button svg{width:22px;height:22px;margin:0}
+  .configuration-step .builder-actions button span{display:none}
+  .configuration-step .builder-actions button svg{display:block;width:22px;height:22px;margin:0}
   .configuration-step .builder-actions button:disabled{opacity:.42}
   .visualizer-heading{display:none}
   .visualizer-photo-ready{display:none}
