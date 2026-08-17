@@ -2386,7 +2386,6 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .mobile-review-preview{width:100%;margin-bottom:16px}
   .wizard-navigation,.visualizer-final-actions{position:sticky;left:0;right:0;bottom:0;z-index:30;margin:16px -14px -14px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--border);box-shadow:0 -7px 18px #05040b1a}
   .wizard-navigation button,.visualizer-final-actions button{min-height:48px}
-  .visualizer-card:has(.auto-fit-controls) .wizard-navigation{display:none}
   .auto-fit-controls{position:sticky;bottom:0;z-index:31;margin:14px -14px -14px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr 1fr;background:#fff;border-top:1px solid var(--border);box-shadow:0 -7px 18px #05040b1a}
   .auto-fit-controls button,.visualizer-apply-button.auto-tool-apply{width:100%;min-height:48px}
   .visualizer-final-actions{display:grid;grid-template-columns:1fr 1fr}
