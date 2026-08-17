@@ -46,15 +46,14 @@ const smoothPaintDoorPreviewAssets: Record<string, string> = {
   SW: slabUrl('Smooth', 'Wagon Wheel - Smooth.png'),
 }
 
-// F3 uses the same smooth square slab for both of these product lines. Keep the
-// mapping explicit so 22-gauge preview resolution does not look for a textured
-// F3 source that is not part of the supplied preview assets.
+// F3 uses the supplied textured square slab for both of these product lines.
+// Keep this line-specific so the other smooth preview mappings stay unchanged.
 const exactDoorLinePreviewAssets: Record<string, Record<string, string>> = {
   '22-gauge-steel': {
-    F3: slabUrl('Smooth', 'Square - Smooth.png'),
+    F3: slabUrl('Textured', 'F3 - Textured.png'),
   },
   'brushed-smooth-fiberglass': {
-    F3: slabUrl('Smooth', 'Square - Smooth.png'),
+    F3: slabUrl('Textured', 'F3 - Textured.png'),
   },
 }
 
