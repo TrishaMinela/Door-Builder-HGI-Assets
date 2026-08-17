@@ -1017,6 +1017,13 @@ export default function App() {
     if (screen !== 'builder') return
 
     requestAnimationFrame(() => {
+      if (window.matchMedia('(max-width: 900px)').matches) {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+        builderPanelRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+        builderOptionsRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+        return
+      }
+
       const selectedCard = builderOptionsRef.current?.querySelector<HTMLElement>('.option-card.selected, .glass-choice-card.selected, .hardware-option-card.selected')
 
       if (selectedCard) {
