@@ -486,6 +486,9 @@ body:has(.visualizer-app){
 }
 .jamb-type-visual{display:block;width:72%;height:78%;margin:auto;border:10px solid #ddd;border-bottom-color:#171817;background:#f7f7f4;box-shadow:inset 0 0 0 2px rgba(0,0,0,.14)}
 .jamb-type-clad{border-color:#d8dcdd;border-bottom-color:#171817;background:linear-gradient(90deg,#e6e8e8,#fafafa,#e1e4e4)}
+.jamb-type-card-image{display:block;width:100%;height:100%;overflow:hidden}
+.option-visual .jamb-type-card-image img{display:block;width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;object-position:center}
+.option-visual .jamb-type-card-image-clad img{transform:scale(2.05);transform-origin:center}
 .door-frame[data-finish-surface='clad'] .door-frame-svg{filter:saturate(.92)}
 .option-card.selected .finish-tile-wrap{
   box-shadow:0 3px 12px #0002;
