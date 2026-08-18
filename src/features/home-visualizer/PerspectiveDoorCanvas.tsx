@@ -18,6 +18,8 @@ type Matrix = [number, number, number, number, number, number, number, number, n
 // the configured slab or sidelites.
 const EDGE_OVERLAP_PX = 6
 const SUPERSAMPLE_SCALE = 4
+const MAX_SUPERSAMPLED_PIXELS = 12_000_000
+const MAX_TEMPORARY_CANVAS_DIMENSION = 4096
 const VISIBLE_ALPHA_THRESHOLD = 20
 const OPAQUE_PRODUCT_THRESHOLD = .015
 const MATTE_EXTRUSION_RADIUS = 4
@@ -226,12 +228,16 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
       const maxY = Math.min(outputHeight, Math.ceil(Math.max(...targetPoints.map((point) => point.y)) + 1))
       const regionWidth = Math.max(1, maxX - minX)
       const regionHeight = Math.max(1, maxY - minY)
-      const renderWidth = regionWidth * SUPERSAMPLE_SCALE
-      const renderHeight = regionHeight * SUPERSAMPLE_SCALE
+      const regionPixels = regionWidth * regionHeight
+      let supersampleScale = SUPERSAMPLE_SCALE
+      while (supersampleScale > 1 && (regionPixels * supersampleScale * supersampleScale > MAX_SUPERSAMPLED_PIXELS || regionWidth * supersampleScale > MAX_TEMPORARY_CANVAS_DIMENSION || regionHeight * supersampleScale > MAX_TEMPORARY_CANVAS_DIMENSION)) supersampleScale -= 1
+      const renderWidth = regionWidth * supersampleScale
+      const renderHeight = regionHeight * supersampleScale
       const renderPoints = targetPoints.map((point) => ({
-        x: (point.x - minX) * SUPERSAMPLE_SCALE,
-        y: (point.y - minY) * SUPERSAMPLE_SCALE,
+        x: (point.x - minX) * supersampleScale,
+        y: (point.y - minY) * supersampleScale,
       }))
+      if (import.meta.env.DEV) console.debug('[home-visualizer:warp-resolution]', { layer: diagnosticName, regionWidth, regionHeight, supersampleScale, renderWidth, renderHeight, maximumTemporaryPixels: MAX_SUPERSAMPLED_PIXELS, maximumTemporaryDimension: MAX_TEMPORARY_CANVAS_DIMENSION })
       const forward = squareToQuadrilateral(renderPoints)
       const inverse = forward ? invert(forward) : null
       if (!inverse) return
@@ -307,7 +313,11 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
       sourceCanvas.height = 0
     }
 
-    void render()
+    void render().catch((reason) => {
+      if (renderRunRef.current !== run) return
+      canvas.dataset.renderReady = 'error'
+      if (import.meta.env.DEV) console.error('[home-visualizer:door-warp-error]', { layer: diagnosticName, reason })
+    })
     return () => { renderRunRef.current += 1 }
   }, [corners, diagnosticName, doorSourceUrl, flipX, photoHeight, photoWidth, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height])
 

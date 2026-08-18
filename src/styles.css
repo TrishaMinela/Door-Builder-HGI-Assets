@@ -2192,7 +2192,7 @@ body:has(.home-app){
 .visualizer-zoom-controls button{min-width:38px;height:38px;border:0;border-radius:3px;padding:0 8px;display:grid;place-items:center;background:#fff;color:var(--peacock);font-size:10px;font-weight:800;cursor:pointer}
 .visualizer-zoom-controls button:disabled{opacity:.45;cursor:not-allowed}
 .visualizer-zoom-controls span{min-width:42px;text-align:center;font-size:9px;font-weight:750}
-.visualizer-step-editor-shell{position:relative}.mobile-photo-tools{display:none}.mobile-nav-icon{display:none}
+.visualizer-step-editor-shell{position:relative}.mobile-photo-tools,.mobile-frame-contextual-action{display:none}.mobile-nav-icon{display:none}
 .cleanup-comparison-editor{height:min(62vh,680px)}
 .cleanup-comparison-stage{touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .cleanup-comparison-stage>img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}
@@ -2378,6 +2378,10 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .mobile-photo-tools button{width:46px;height:46px;border:1px solid #ffffff88;border-radius:var(--radius-control);padding:0;display:grid;place-items:center;background:#05040bd9;color:#fff;box-shadow:0 3px 12px #05040b55;pointer-events:auto;-webkit-appearance:none;appearance:none}
   .mobile-photo-tools button.remove{color:#fff;background:#8b3125e8}
   .mobile-photo-tools svg{display:block}
+  .mobile-frame-contextual-action{position:absolute;left:50%;bottom:78px;z-index:22;display:flex;transform:translateX(-50%)}
+  .mobile-frame-contextual-action button{min-width:132px;height:48px;border:1px solid var(--peacock);border-radius:var(--radius-control);padding:0 16px;display:flex;align-items:center;justify-content:center;gap:7px;background:#fff;color:var(--peacock);box-shadow:0 5px 16px #05040b42;font-size:10px;font-weight:800;white-space:nowrap}
+  .mobile-frame-contextual-action button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+  .visualizer-step-editor-shell+.automatic-frame-actions{display:none}
   .visualizer-desktop-photo-action{display:none!important}
   .configured-door-checkerboard{min-height:260px}
   .entrance-point-magnifier{left:8px;top:auto;bottom:12px;transform:none}
