@@ -85,7 +85,8 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const dividerJambs = useMemo(() => dividerJambQuads(corners,sideliteEdges),[corners,sideliteEdges])
   const visualizerProductLayers = useMemo(() => createProductLayers(corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation), [corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation])
   const doorPlacementValid = isValidEntranceCorners(corners)
-  const canContinueDoorPlacement = doorSource.ready && doorPlacementValid && !autoFitLoading
+  const canContinueDoorPlacement = doorPlacementValid && !autoFitLoading
+  const autoFitPlacementComplete = Boolean(autoFitUndo) || autoFitAlreadyAligned
   const updateDoorSource = useCallback((state: DoorSourceState) => setDoorSource(state), [])
   const setCompositeExporter = useCallback((exporter: (() => Promise<Blob>) | null) => { compositeExporterRef.current = exporter }, [])
 
@@ -261,7 +262,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
 
   const handleContinueDoorPlacement = () => {
     const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
-    if (import.meta.env.DEV && isMobile) console.debug('[home-visualizer:mobileNextTapped]', { currentStep: wizardStep, activeDoorPoints: corners, doorPlacementValid, canContinue: canContinueDoorPlacement, disabled: !canContinueDoorPlacement, autoFitProcessing: autoFitLoading, autoFitProposal: null })
+    if (import.meta.env.DEV && isMobile) console.debug('[home-visualizer:mobileNextTapped]', { currentStep: wizardStep, activeDoorPoints: corners, doorPlacementValid, canContinue: canContinueDoorPlacement, disabled: !canContinueDoorPlacement, autoFitProcessing: autoFitLoading, autoFitApplied: Boolean(autoFitUndo), autoFitProposal: null })
     if (!canContinueDoorPlacement) return
     if (import.meta.env.DEV && isMobile) console.debug('[home-visualizer:mobileNextNavigationStarted]', { currentStep: wizardStep })
     if (configuredSideliteSides.length === 2) {
@@ -282,8 +283,8 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
     if (!import.meta.env.DEV || wizardStep !== 0 || typeof window === 'undefined' || !window.matchMedia('(max-width: 767px)').matches) return
     const nextButton = document.querySelector<HTMLButtonElement>('.visualizer-step-editor-shell > .wizard-navigation .wizard-continue')
     const styles = nextButton ? window.getComputedStyle(nextButton) : null
-    console.debug('[home-visualizer:mobileNextState]', { currentStep: wizardStep, isMobile: true, activeDoorPoints: corners, doorPlacementValid, canContinue: canContinueDoorPlacement, disabled: nextButton?.disabled ?? true, autoFitProcessing: autoFitLoading, autoFitProposal: null, zIndex: styles?.zIndex ?? null, pointerEvents: styles?.pointerEvents ?? null })
-  }, [wizardStep, corners, doorPlacementValid, canContinueDoorPlacement, autoFitLoading])
+    console.debug('MOBILE_CONTINUE_DEBUG', { currentStep: wizardStep, activeDoorPoints: corners, doorPlacementValid, greenPointValidityState: autoFitAlignmentReady, autoFitApplied: Boolean(autoFitUndo), hasAutoFitProposal: false, doorSourceReady: doorSource.ready, autoFitProcessing: autoFitLoading, sharedCanContinue: canContinueDoorPlacement, mobileDisabledExpression: '!canContinueDoorPlacement', finalDisabled: nextButton?.disabled ?? true, zIndex: styles?.zIndex ?? null, pointerEvents: styles?.pointerEvents ?? null })
+  }, [wizardStep, corners, doorPlacementValid, autoFitAlignmentReady, autoFitUndo, doorSource.ready, canContinueDoorPlacement, autoFitLoading])
 
 
   const adjustAutoFitPoints = () => {
@@ -396,7 +397,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
           </> : <>
             {wizardStep<4&&<ol className="visualizer-progress" aria-label="Visualizer progress" style={{gridTemplateColumns:`repeat(${visualizerProgressSteps.length},minmax(0,1fr))`}}>{visualizerProgressSteps.map(({label,step},index)=><li key={label} className={wizardStep===step?'active':wizardStep>step?'complete':''}><span>{index+1}</span>{label}</li>)}</ol>}
             {wizardStep===0&&<>
-              <div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>Outline the Door</h3><p>Move the four points roughly near the inside corners of the existing door.</p><p className="entrance-placement-note">Then use Auto-Fit to align the outline more precisely.</p></div></div>
+              {!autoFitPlacementComplete&&<div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>Outline the Door</h3><p>Move the four points roughly near the inside corners of the existing door.</p><p className="entrance-placement-note">Then use Auto-Fit to align the outline more precisely.</p></div></div>}
               <div className="visualizer-step-editor-shell">
                 <EntranceSelector key={photo.objectUrl} corners={corners} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightHandles={highlightAutoFitHandles} onAlignmentReadyChange={setAutoFitAlignmentReady}/>
                 <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" aria-label="Replace photo" onClick={openPicker}><RefreshCw size={21}/></button><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
