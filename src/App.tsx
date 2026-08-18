@@ -1154,6 +1154,14 @@ export default function App() {
 
   const showScreen = (next: 'home' | 'builder' | 'visualizer') => {
     if (next === 'builder') setBuilderPreviewView('Exterior')
+    if (next === 'builder' && screen === 'home') {
+      // Starting again from Home begins a fresh pass through the workflow while
+      // retaining the customer's configured door and contact selections.
+      setStep(0)
+      setSubmitted(false)
+      setSubmitting(false)
+      setSubmitError('')
+    }
     if (next === 'builder' && screen === 'home' && !hasShownEntrywayGuidance) {
       setHasShownEntrywayGuidance(true)
       setShowEntrywayGuidance(true)

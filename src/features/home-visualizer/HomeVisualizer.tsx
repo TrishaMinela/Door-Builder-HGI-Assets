@@ -49,7 +49,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const [showPlacementGuidance, setShowPlacementGuidance] = useState(false)
   const placementGuidanceButtonRef = useRef<HTMLButtonElement>(null)
   const compositeExporterRef = useRef<(() => Promise<Blob>) | null>(null)
-  const [autoFitUndo, setAutoFitUndo] = useState<EntranceCorners | null>(null)
+  const [autoFitApplied, setAutoFitApplied] = useState(false)
   const [autoFitLoading, setAutoFitLoading] = useState(false)
   const [hasSeenAutoFitGuidance, setHasSeenAutoFitGuidance] = useState(false)
   const [showAutoFitGuidance, setShowAutoFitGuidance] = useState(false)
@@ -86,7 +86,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const visualizerProductLayers = useMemo(() => createProductLayers(corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation), [corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation])
   const doorPlacementValid = isValidEntranceCorners(corners)
   const canContinueDoorPlacement = doorPlacementValid && !autoFitLoading
-  const autoFitPlacementComplete = Boolean(autoFitUndo) || autoFitAlreadyAligned
+  const autoFitPlacementComplete = autoFitApplied || autoFitAlreadyAligned
   const updateDoorSource = useCallback((state: DoorSourceState) => setDoorSource(state), [])
   const setCompositeExporter = useCallback((exporter: (() => Promise<Blob>) | null) => { compositeExporterRef.current = exporter }, [])
 
@@ -103,6 +103,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   useEffect(()=>{if(!showPlacementGuidance)return;placementGuidanceButtonRef.current?.focus();const onKeyDown=(event:KeyboardEvent)=>{if(event.key==='Escape')setShowPlacementGuidance(false)};document.addEventListener('keydown',onKeyDown);return()=>document.removeEventListener('keydown',onKeyDown)},[showPlacementGuidance])
 
   const clearAutoFitFailure = () => {
+    setAutoFitApplied(false)
     setShowAutoFitGuidance(false)
     setAutoFitUnableToImprove(false)
     setAutoFitAlreadyAligned(false)
@@ -118,7 +119,6 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
     setSideliteEdges({})
     setPhotoSideliteSide(configuredSideliteSides.length===2?'both':configuredSideliteSides.length===0?'none':null)
     setFlipDoorOrientation(false)
-    setAutoFitUndo(null)
     clearAutoFitFailure()
     setOuterFrame(expandFrameCorners(INITIAL_ENTRANCE_CORNERS)); setFramePlacementMode('automatic');setFrameImageSize({width:0,height:0});setFrameConfirmed(false); setFrameCorrections({ add: [], remove: [] })
   }
@@ -217,13 +217,14 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const runAutoFit = async (wider=false) => {
     if (!photo || autoFitLoading) return
     setAutoFitLoading(true)
+    setAutoFitApplied(false)
     setAutoFitUnableToImprove(false)
     setAutoFitAlreadyAligned(false)
     try {
       const result = await autoFitEntrance(photo.objectUrl, corners,{wider})
       if (import.meta.env.DEV) console.debug('[home-visualizer:autoFitResult]', { success: result.detectedCount > 0, refinedEdgeCount: result.detectedCount, averageMovement: result.averageMovement, geometryValid: isValidEntranceCorners(result.corners), outcome: result.detectedCount > 0 ? 'proposal' : result.alreadyAligned ? 'already-aligned' : 'failure', proposedPoints: result.corners, edgeDiagnostics: result.diagnostics })
-      if(result.detectedCount>0&&isValidEntranceCorners(result.corners)){setAutoFitUndo(cloneEntranceCorners(corners));setShowAutoFitGuidance(false);setAutoFitUnableToImprove(false);setAutoFitAlreadyAligned(false);updateCorners(cloneEntranceCorners(result.corners))}
-      else if(result.alreadyAligned){setAutoFitUnableToImprove(false);setAutoFitAlreadyAligned(true)}
+      if(result.detectedCount>0&&isValidEntranceCorners(result.corners)){setAutoFitApplied(true);setShowAutoFitGuidance(false);setAutoFitUnableToImprove(false);setAutoFitAlreadyAligned(false);updateCorners(cloneEntranceCorners(result.corners))}
+      else if(result.alreadyAligned){setAutoFitApplied(true);setAutoFitUnableToImprove(false);setAutoFitAlreadyAligned(true)}
       else{setAutoFitAlreadyAligned(false);setAutoFitUnableToImprove(true)}
     } catch (reason) {
       if(import.meta.env.DEV)console.error('[home-visualizer:auto-fit-error]',reason)
@@ -262,7 +263,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
 
   const handleContinueDoorPlacement = () => {
     const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
-    if (import.meta.env.DEV && isMobile) console.debug('[home-visualizer:mobileNextTapped]', { currentStep: wizardStep, activeDoorPoints: corners, doorPlacementValid, canContinue: canContinueDoorPlacement, disabled: !canContinueDoorPlacement, autoFitProcessing: autoFitLoading, autoFitApplied: Boolean(autoFitUndo), autoFitProposal: null })
+    if (import.meta.env.DEV && isMobile) console.debug('[home-visualizer:mobileNextTapped]', { currentStep: wizardStep, activeDoorPoints: corners, doorPlacementValid, canContinue: canContinueDoorPlacement, disabled: !canContinueDoorPlacement, autoFitProcessing: autoFitLoading, autoFitApplied, autoFitProposal: null })
     if (!canContinueDoorPlacement) return
     if (import.meta.env.DEV && isMobile) console.debug('[home-visualizer:mobileNextNavigationStarted]', { currentStep: wizardStep })
     if (configuredSideliteSides.length === 2) {
@@ -283,8 +284,8 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
     if (!import.meta.env.DEV || wizardStep !== 0 || typeof window === 'undefined' || !window.matchMedia('(max-width: 767px)').matches) return
     const nextButton = document.querySelector<HTMLButtonElement>('.visualizer-step-editor-shell > .wizard-navigation .wizard-continue')
     const styles = nextButton ? window.getComputedStyle(nextButton) : null
-    console.debug('MOBILE_CONTINUE_DEBUG', { currentStep: wizardStep, activeDoorPoints: corners, doorPlacementValid, greenPointValidityState: autoFitAlignmentReady, autoFitApplied: Boolean(autoFitUndo), hasAutoFitProposal: false, doorSourceReady: doorSource.ready, autoFitProcessing: autoFitLoading, sharedCanContinue: canContinueDoorPlacement, mobileDisabledExpression: '!canContinueDoorPlacement', finalDisabled: nextButton?.disabled ?? true, zIndex: styles?.zIndex ?? null, pointerEvents: styles?.pointerEvents ?? null })
-  }, [wizardStep, corners, doorPlacementValid, autoFitAlignmentReady, autoFitUndo, doorSource.ready, canContinueDoorPlacement, autoFitLoading])
+    console.debug('MOBILE_CONTINUE_DEBUG', { currentStep: wizardStep, activeDoorPoints: corners, doorPlacementValid, greenPointValidityState: autoFitAlignmentReady, autoFitApplied, hasAutoFitProposal: false, doorSourceReady: doorSource.ready, autoFitProcessing: autoFitLoading, sharedCanContinue: canContinueDoorPlacement, mobileDisabledExpression: '!canContinueDoorPlacement', finalDisabled: nextButton?.disabled ?? true, zIndex: styles?.zIndex ?? null, pointerEvents: styles?.pointerEvents ?? null })
+  }, [wizardStep, corners, doorPlacementValid, autoFitAlignmentReady, autoFitApplied, doorSource.ready, canContinueDoorPlacement, autoFitLoading])
 
 
   const adjustAutoFitPoints = () => {
@@ -403,7 +404,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
                 <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" aria-label="Replace photo" onClick={openPicker}><RefreshCw size={21}/></button><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
                 <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button><button type="button" className="wizard-continue" aria-label="Continue" disabled={!canContinueDoorPlacement} onClick={handleContinueDoorPlacement}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button></div>
               </div>
-              {autoFitAlignmentReady&&!autoFitUndo&&<div className="auto-fit-ready-callout" role="status"><strong>All four points are aligned.</strong><span>Use Auto-Fit to precisely refine the door opening.</span><div className="wizard-secondary auto-fit-primary-row"><button type="button" className="auto-fit-entrance-button auto-fit-ready-button" onClick={requestAutoFit} disabled={autoFitLoading}><Crosshair size={18}/> {autoFitLoading?'Finding Entrance…':'Auto-Fit Entrance'}</button></div></div>}{autoFitUndo&&<div className="wizard-secondary auto-fit-undo-only"><button type="button" onClick={()=>{updateCorners(autoFitUndo);setAutoFitUndo(null)}}><RotateCcw size={17}/> Undo Auto-Fit</button></div>}
+              {autoFitAlignmentReady&&!autoFitApplied&&<div className="auto-fit-ready-callout" role="status"><strong>All four points are aligned.</strong><span>Use Auto-Fit to precisely refine the door opening.</span><div className="wizard-secondary auto-fit-primary-row"><button type="button" className="auto-fit-entrance-button auto-fit-ready-button" onClick={requestAutoFit} disabled={autoFitLoading}><Crosshair size={18}/> {autoFitLoading?'Finding Entrance…':'Auto-Fit Entrance'}</button></div></div>}
               {autoFitUnableToImprove&&<div className="auto-fit-no-improvement" role="status"><strong>Auto-Fit couldn’t improve this placement.</strong><p>You can adjust the points and try again, or continue with your current placement.</p><div><button type="button" onClick={()=>runAutoFit(false)} disabled={autoFitLoading}>{autoFitLoading?'Trying Again…':'Try Again'}</button><button type="button" className="auto-fit-use-manual" onClick={handleContinueDoorPlacement} disabled={!canContinueDoorPlacement}>Continue</button></div></div>}
               {autoFitAlreadyAligned&&<div className="auto-fit-no-improvement auto-fit-already-aligned" role="status"><strong>Your door outline is already well aligned.</strong><p>You can keep the current placement and continue.</p><div><button type="button" className="auto-fit-use-manual" onClick={handleContinueDoorPlacement} disabled={!canContinueDoorPlacement}>Keep Current Placement &amp; Continue</button></div></div>}
             </>}
