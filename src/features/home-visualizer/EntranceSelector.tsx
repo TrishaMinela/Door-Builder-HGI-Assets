@@ -13,10 +13,10 @@ const MAGNIFIER_ZOOM = 3
 const MAGNIFIER_SIZE = 264
 const MOBILE_MAGNIFIER_SIZE = 90
 export const INITIAL_ENTRANCE_CORNERS: EntranceCorners = {
-  topLeft: { x: 0.39, y: 0.2 },
-  topRight: { x: 0.61, y: 0.2 },
-  bottomRight: { x: 0.64, y: 0.84 },
-  bottomLeft: { x: 0.36, y: 0.84 },
+  topLeft: { x: 0.35, y: 0.35 },
+  topRight: { x: 0.65, y: 0.35 },
+  bottomRight: { x: 0.65, y: 0.65 },
+  bottomLeft: { x: 0.35, y: 0.65 },
 }
 const MIN_SEPARATION = 0.025
 

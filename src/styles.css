@@ -2192,6 +2192,7 @@ body:has(.home-app){
 .visualizer-zoom-controls button{min-width:38px;height:38px;border:0;border-radius:3px;padding:0 8px;display:grid;place-items:center;background:#fff;color:var(--peacock);font-size:10px;font-weight:800;cursor:pointer}
 .visualizer-zoom-controls button:disabled{opacity:.45;cursor:not-allowed}
 .visualizer-zoom-controls span{min-width:42px;text-align:center;font-size:9px;font-weight:750}
+.visualizer-step-editor-shell{position:relative}.mobile-photo-tools{display:none}.mobile-nav-icon{display:none}
 .cleanup-comparison-editor{height:min(62vh,680px)}
 .cleanup-comparison-stage{touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .cleanup-comparison-stage>img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}
@@ -2368,9 +2369,21 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .photo-guidance{grid-template-columns:1fr;gap:12px;padding:14px}
   .photo-guidance ul{gap:7px}
   .visualizer-editor,.frame-area-editor,.cleanup-brush-editor,.cleanup-preview-workspace .composed-photo-editor,.cleanup-comparison-editor,.cleanup-sample-editor{width:100%;height:min(62vh,560px);min-height:280px;max-height:none}
+  .visualizer-step-editor-shell{position:relative;margin-bottom:68px}
+  .visualizer-step-editor-shell .visualizer-editor{overflow:visible}
+  .visualizer-step-editor-shell .visualizer-editor>.visualizer-zoom-controls{top:calc(100% + 8px);right:auto;bottom:auto;left:50%;min-height:48px;transform:translateX(-50%);white-space:nowrap}
+  .visualizer-step-editor-shell .visualizer-zoom-controls button{min-width:48px;width:48px;height:48px;padding:0}
+  .visualizer-step-editor-shell .visualizer-zoom-controls button:last-child{width:auto;min-width:48px;padding:0 12px}
+  .mobile-photo-tools{position:absolute;top:12px;right:12px;z-index:20;display:flex;gap:8px;pointer-events:none}
+  .mobile-photo-tools button{width:46px;height:46px;border:1px solid #ffffff88;border-radius:var(--radius-control);padding:0;display:grid;place-items:center;background:#05040bd9;color:#fff;box-shadow:0 3px 12px #05040b55;pointer-events:auto;-webkit-appearance:none;appearance:none}
+  .mobile-photo-tools button.remove{color:#fff;background:#8b3125e8}
+  .mobile-photo-tools svg{display:block}
+  .visualizer-desktop-photo-action{display:none!important}
   .configured-door-checkerboard{min-height:260px}
   .entrance-point-magnifier{left:8px;top:auto;bottom:12px;transform:none}
-  .entrance-corner-handle,.frame-corner-handle,.sidelite-edge-handle{width:56px;height:56px}
+  .entrance-corner-handle{width:40px;height:40px}
+  .entrance-corner-handle:before{width:11px;height:11px}
+  .frame-corner-handle,.sidelite-edge-handle{width:56px;height:56px}
   .cleanup-comparison-handle,.visualizer-comparison-handle{width:56px;height:56px}
   .quote-fields{grid-template-columns:1fr}
   .quote-fields .field-wide{grid-column:auto}
@@ -2386,6 +2399,14 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .mobile-review-preview{width:100%;margin-bottom:16px}
   .wizard-navigation,.visualizer-final-actions{position:sticky;left:0;right:0;bottom:0;z-index:30;margin:16px -14px -14px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--border);box-shadow:0 -7px 18px #05040b1a}
   .wizard-navigation button,.visualizer-final-actions button{min-height:48px}
+  .visualizer-step-editor-shell>.wizard-navigation{position:absolute;left:12px;right:12px;bottom:12px;z-index:30;margin:0;padding:0;display:flex;align-items:center;justify-content:space-between;background:transparent;border:0;box-shadow:none;pointer-events:none}
+  .visualizer-step-editor-shell>.wizard-navigation button{width:54px;height:54px;min-width:54px;min-height:54px;max-width:54px;flex:0 0 54px;margin:0;border:2px solid #fff;border-radius:50%;padding:0;display:grid;place-items:center;gap:0;line-height:0;box-sizing:border-box;-webkit-appearance:none;appearance:none;box-shadow:0 5px 16px #05040b5c;pointer-events:auto}
+  .visualizer-step-editor-shell>.wizard-navigation button:first-child{background:var(--black);color:#fff}
+  .visualizer-step-editor-shell>.wizard-navigation .wizard-continue{background:var(--peacock);color:#fff}
+  .visualizer-step-editor-shell>.wizard-navigation button:disabled{opacity:.42}
+  .visualizer-step-editor-shell>.wizard-navigation .wizard-nav-label{display:none}
+  .visualizer-step-editor-shell>.wizard-navigation svg{display:block;width:22px;height:22px;margin:0}
+  .visualizer-step-editor-shell>.wizard-navigation .mobile-nav-icon{display:block}
   .auto-fit-controls{position:sticky;bottom:0;z-index:31;margin:14px -14px -14px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr 1fr;background:#fff;border-top:1px solid var(--border);box-shadow:0 -7px 18px #05040b1a}
   .auto-fit-controls button,.visualizer-apply-button.auto-tool-apply{width:100%;min-height:48px}
   .visualizer-final-actions{display:grid;grid-template-columns:1fr 1fr}
@@ -2432,6 +2453,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .configuration-step .builder-options-scroll>.options-grid .glass-caming-options button,
   .configuration-step .builder-options-scroll>.options-grid .hardware-finish-options button{min-width:0;min-height:34px;flex:1 1 42%;padding:3px;font-size:6px}
   .configuration-step .builder-actions{left:16px;right:16px;bottom:calc(var(--mobile-footer-height) + 12px + env(safe-area-inset-bottom));z-index:1060;width:auto;height:54px;padding:0;display:flex;align-items:center;justify-content:space-between;background:transparent;border:0;box-shadow:none;pointer-events:none}
+  .visualizer-step-editor-shell>.wizard-navigation{position:fixed;left:16px;right:16px;bottom:calc(var(--mobile-footer-height) + 12px + env(safe-area-inset-bottom));z-index:1060;width:auto;height:54px;margin:0;padding:0;display:flex;align-items:center;justify-content:space-between;background:transparent;border:0;box-shadow:none;pointer-events:none}
   .configuration-step .builder-actions button{width:54px;height:54px;min-width:54px;min-height:54px;max-width:54px;margin:0;border:2px solid #fff;border-radius:50%;padding:0;display:grid;place-items:center;gap:0;line-height:0;box-sizing:border-box;-webkit-appearance:none;appearance:none;box-shadow:0 5px 16px #05040b5c;pointer-events:auto}
   .configuration-step .builder-actions .back{background:var(--black);color:#fff}
   .configuration-step .builder-actions .next{background:var(--peacock);color:#fff}
