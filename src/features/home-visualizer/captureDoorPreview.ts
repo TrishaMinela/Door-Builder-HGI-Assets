@@ -6,6 +6,107 @@ function nextFrame() {
   return new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 }
 
+function alphaCoverage(canvas: HTMLCanvasElement) {
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+  if (!context) return { nonTransparentPixelCount: 0, coverageRatio: 0 }
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
+  let nonTransparentPixelCount = 0
+  for (let offset = 3; offset < pixels.length; offset += 4) if (pixels[offset] > 0) nonTransparentPixelCount += 1
+  return { nonTransparentPixelCount, coverageRatio: nonTransparentPixelCount / Math.max(1, canvas.width * canvas.height) }
+}
+
+function cssUrl(value: string) {
+  return value.match(/url\(["']?([^"')]+)["']?\)/)?.[1] ?? ''
+}
+
+function loadCanvasImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error(`A configured door layer could not be rendered: ${src}`))
+    image.src = src
+  })
+}
+
+async function loadSvgImage(element: SVGSVGElement) {
+  const markup = new XMLSerializer().serializeToString(element)
+  const url = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }))
+  try {
+    return await loadCanvasImage(url)
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+async function renderDoorLayers(frame: HTMLElement, width: number, height: number) {
+  const canvas = document.createElement('canvas')
+  canvas.width = width * CAPTURE_SCALE
+  canvas.height = height * CAPTURE_SCALE
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('The browser could not create the configured door image.')
+  context.imageSmoothingEnabled = true
+  context.imageSmoothingQuality = 'high'
+  const frameBounds = frame.getBoundingClientRect()
+  const candidates = Array.from(frame.querySelectorAll<HTMLElement | SVGSVGElement>('*')).filter((element) => {
+    const style = window.getComputedStyle(element)
+    if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false
+    if (element instanceof HTMLImageElement) return element.complete && element.naturalWidth > 0
+    if (element instanceof SVGSVGElement) return true
+    const color = style.backgroundColor
+    return color !== 'rgba(0, 0, 0, 0)' && color !== 'transparent' || element.classList.contains('door-frame-sidelite-clear-glass')
+  })
+
+  for (const element of candidates) {
+    const bounds = element.getBoundingClientRect()
+    const x = (bounds.left - frameBounds.left) * CAPTURE_SCALE
+    const y = (bounds.top - frameBounds.top) * CAPTURE_SCALE
+    const layerWidth = bounds.width * CAPTURE_SCALE
+    const layerHeight = bounds.height * CAPTURE_SCALE
+    if (layerWidth <= 0 || layerHeight <= 0) continue
+    const style = window.getComputedStyle(element)
+    const layer = document.createElement('canvas')
+    layer.width = canvas.width
+    layer.height = canvas.height
+    const layerContext = layer.getContext('2d')
+    if (!layerContext) continue
+    layerContext.imageSmoothingEnabled = true
+    layerContext.imageSmoothingQuality = 'high'
+    if (element instanceof HTMLImageElement) {
+      const matrix = style.transform === 'none' ? null : new DOMMatrix(style.transform)
+      if (matrix && matrix.a < 0) {
+        layerContext.save()
+        layerContext.translate(x + layerWidth, y)
+        layerContext.scale(-1, 1)
+        layerContext.drawImage(element, 0, 0, layerWidth, layerHeight)
+        layerContext.restore()
+      } else layerContext.drawImage(element, x, y, layerWidth, layerHeight)
+    } else if (element instanceof SVGSVGElement) {
+      const svgImage = await loadSvgImage(element)
+      layerContext.drawImage(svgImage, x, y, layerWidth, layerHeight)
+    }
+    else {
+      layerContext.fillStyle = element.classList.contains('door-frame-sidelite-clear-glass') ? '#dce9ed' : style.backgroundColor
+      layerContext.fillRect(x, y, layerWidth, layerHeight)
+    }
+    const maskSource = element instanceof HTMLElement ? cssUrl(style.maskImage || style.getPropertyValue('-webkit-mask-image')) : ''
+    if (maskSource) {
+      const mask = await loadCanvasImage(maskSource)
+      layerContext.globalCompositeOperation = 'destination-in'
+      layerContext.drawImage(mask, x, y, layerWidth, layerHeight)
+      layerContext.globalCompositeOperation = 'source-over'
+    }
+    const blendMode = style.mixBlendMode
+    context.globalCompositeOperation = blendMode === 'multiply' || blendMode === 'screen' || blendMode === 'overlay' ? blendMode : 'source-over'
+    context.globalAlpha = Math.max(0, Math.min(1, Number(style.opacity) || 1))
+    context.drawImage(layer, 0, 0)
+    context.globalAlpha = 1
+    context.globalCompositeOperation = 'source-over'
+    layer.width = 0
+    layer.height = 0
+  }
+  return canvas
+}
+
 async function waitForRenderedAssets(root: HTMLElement) {
   let previousMarkup = ''
   let stablePasses = 0
@@ -30,67 +131,6 @@ async function waitForRenderedAssets(root: HTMLElement) {
   }
 
   throw new Error('The configured door assets did not finish loading. Please retry.')
-}
-
-function blobToDataUrl(blob: Blob) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(new Error('A configured door asset could not be read.'))
-    reader.readAsDataURL(blob)
-  })
-}
-
-async function assetAsDataUrl(url: string, cache: Map<string, Promise<string>>) {
-  if (url.startsWith('data:') || url.startsWith('blob:')) return url
-  const absoluteUrl = new URL(url, window.location.href).href
-  const cached = cache.get(absoluteUrl)
-  if (cached) return cached
-  const request = fetch(absoluteUrl)
-    .then((response) => {
-      if (!response.ok) throw new Error(`A configured door asset could not be fetched: ${url}`)
-      return response.blob()
-    })
-    .then(blobToDataUrl)
-  cache.set(absoluteUrl, request)
-  return request
-}
-
-async function inlineCssUrls(value: string, cache: Map<string, Promise<string>>) {
-  const matches = Array.from(value.matchAll(/url\(["']?([^"')]+)["']?\)/g))
-  let inlined = value
-  for (const match of matches) {
-    const source = match[1]
-    const dataUrl = await assetAsDataUrl(source, cache)
-    inlined = inlined.replace(match[0], `url("${dataUrl}")`)
-  }
-  return inlined
-}
-
-async function cloneWithComputedStyles(source: HTMLElement) {
-  const clone = source.cloneNode(true) as HTMLElement
-  const sourceNodes = [source, ...Array.from(source.querySelectorAll<HTMLElement>('*'))]
-  const cloneNodes = [clone, ...Array.from(clone.querySelectorAll<HTMLElement>('*'))]
-  const assetCache = new Map<string, Promise<string>>()
-
-  await Promise.all(sourceNodes.map(async (sourceNode, index) => {
-    const cloneNode = cloneNodes[index]
-    const computed = window.getComputedStyle(sourceNode)
-    const declarations: string[] = []
-    for (const property of Array.from(computed)) {
-      const value = await inlineCssUrls(computed.getPropertyValue(property), assetCache)
-      declarations.push(`${property}:${value};`)
-    }
-    cloneNode.setAttribute('style', declarations.join(''))
-    if (sourceNode instanceof HTMLImageElement && cloneNode instanceof HTMLImageElement) {
-      cloneNode.src = await assetAsDataUrl(sourceNode.currentSrc || sourceNode.src, assetCache)
-      cloneNode.removeAttribute('srcset')
-    }
-  }))
-
-  clone.style.transform = 'none'
-  clone.style.transformOrigin = 'top left'
-  return clone
 }
 
 export type CapturedDoorSource = {
@@ -141,6 +181,7 @@ type CaptureDoorPreviewOptions = {
 }
 
 export async function captureDoorPreview(previewRoot: HTMLElement, options: CaptureDoorPreviewOptions = {}): Promise<CapturedDoorSource> {
+  const captureStartTime = performance.now()
   await waitForRenderedAssets(previewRoot)
   const frameMode = options.frameMode ?? 'opening-only'
   const frame = previewRoot.querySelector<HTMLElement>(`.door-frame[data-frame="${frameMode}"]`)
@@ -159,21 +200,40 @@ export async function captureDoorPreview(previewRoot: HTMLElement, options: Capt
   const height = Math.ceil(Number.parseFloat(frame.style.height) || frame.offsetHeight)
   if (!width || !height) throw new Error('The configured door assembly has invalid dimensions.')
 
-  const clone = await cloneWithComputedStyles(frame)
-  const serialized = new XMLSerializer().serializeToString(clone)
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;background:transparent">${serialized}</div></foreignObject></svg>`
-  const image = new Image()
-  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
-  await image.decode()
-  const canvas = document.createElement('canvas')
-  canvas.width = width * CAPTURE_SCALE
-  canvas.height = height * CAPTURE_SCALE
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error('The browser could not create the configured door image.')
-  context.imageSmoothingEnabled = true
-  context.imageSmoothingQuality = 'high'
-  context.scale(CAPTURE_SCALE, CAPTURE_SCALE)
-  context.drawImage(image, 0, 0, width, height)
+  const sourceBounds = frame.getBoundingClientRect()
+  const sourceStyle = window.getComputedStyle(frame)
+  const sourceImages = Array.from(frame.querySelectorAll('img'))
+  if (!sourceBounds.width || !sourceBounds.height) throw new Error('The configured door source has no measurable layout dimensions.')
+
+  const canvas = await renderDoorLayers(frame, width, height)
+  const coverage = alphaCoverage(canvas)
+  if (import.meta.env.DEV) console.debug('CONFIGURED_DOOR_SOURCE_DEBUG', {
+    viewportWidth: window.innerWidth,
+    isMobile: window.matchMedia('(max-width: 767px)').matches,
+    sourceElementWidth: sourceBounds.width,
+    sourceElementHeight: sourceBounds.height,
+    logicalWidth: width,
+    logicalHeight: height,
+    canvasWidth: canvas.width,
+    canvasHeight: canvas.height,
+    devicePixelRatio: window.devicePixelRatio,
+    imageAssets: sourceImages.length,
+    loadedImageAssets: sourceImages.filter((asset) => asset.complete && asset.naturalWidth > 0 && asset.naturalHeight > 0).length,
+    nonTransparentPixelCount: coverage.nonTransparentPixelCount,
+    sourceCoverageRatio: coverage.coverageRatio,
+    captureStartTime,
+    captureReadyTime: performance.now(),
+    doorPreviewReady: sourceImages.every((asset) => asset.complete && asset.naturalWidth > 0 && asset.naturalHeight > 0),
+    sourceMounted: frame.isConnected,
+    display: sourceStyle.display,
+    visibility: sourceStyle.visibility,
+    contentVisibility: sourceStyle.contentVisibility,
+  })
+  if (!coverage.nonTransparentPixelCount || coverage.coverageRatio < .0001) {
+    canvas.width = 0
+    canvas.height = 0
+    throw new Error('The configured door source rendered empty.')
+  }
   let outputCanvas = trimTransparentPixels(canvas)
   if (options.targetHeight && outputCanvas.height !== options.targetHeight) {
     const resized = document.createElement('canvas')

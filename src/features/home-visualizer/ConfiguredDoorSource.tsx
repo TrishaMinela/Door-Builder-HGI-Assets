@@ -15,7 +15,10 @@ type CaptureState = {
   height: number
 }
 
-export type DoorSourceState = CaptureState & { error: string; ready: boolean }
+export type DoorSourceState = CaptureState & { error: string; ready: boolean; retry?: () => void }
+const MAX_SOURCE_CAPTURE_ATTEMPTS = 3
+
+const waitForLayout = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
 export function ConfiguredDoorSource({ configurationKey, onStateChange, previewProps }: Props) {
   const captureRootRef = useRef<HTMLDivElement>(null)
@@ -40,7 +43,19 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
       try {
         const root = captureRootRef.current
         if (!root) throw new Error('The configured door preview is unavailable.')
-        const result = await captureDoorPreview(root)
+        let result: Awaited<ReturnType<typeof captureDoorPreview>> | null = null
+        let lastError: unknown = null
+        for (let attempt = 1; attempt <= MAX_SOURCE_CAPTURE_ATTEMPTS; attempt += 1) {
+          await waitForLayout()
+          try {
+            result = await captureDoorPreview(root)
+            break
+          } catch (reason) {
+            lastError = reason
+            if (import.meta.env.DEV) console.warn('CONFIGURED_DOOR_SOURCE_DEBUG', { attempt, maximumAttempts: MAX_SOURCE_CAPTURE_ATTEMPTS, outcome: 'retry', reason })
+          }
+        }
+        if (!result) throw lastError instanceof Error ? lastError : new Error('The configured door source could not be prepared.')
         if (captureRunRef.current !== run) return
         const url = URL.createObjectURL(result.blob)
         outputUrlRef.current = url
@@ -48,7 +63,8 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
       } catch (reason) {
         if (captureRunRef.current !== run) return
         setCapture(null)
-        setError(reason instanceof Error ? reason.message : 'The configured door could not be captured.')
+        if (import.meta.env.DEV) console.error('CONFIGURED_DOOR_SOURCE_DEBUG', { outcome: 'failed-after-retries', reason })
+        setError('We couldn’t prepare your configured door. Please retry rendering.')
       } finally {
         if (captureRunRef.current === run) setLoading(false)
       }
@@ -69,6 +85,7 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
       height: capture?.height ?? 0,
       error,
       ready: Boolean(capture && !loading && !error),
+      retry: () => setRetry((value) => value + 1),
     })
   }, [capture, error, loading, onStateChange])
 
@@ -88,5 +105,5 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         <button type="button" onClick={() => setRetry((value) => value + 1)}><RefreshCw size={16} /> Retry</button>
       </div>}
     </div>
-  </section><div className="configured-door-capture-host" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} placementMode="opening-only" /></div></>
+  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} placementMode="opening-only" /></div></>
 }
