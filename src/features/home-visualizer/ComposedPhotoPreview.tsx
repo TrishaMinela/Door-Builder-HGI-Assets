@@ -78,7 +78,7 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
   useEffect(()=>{onExporterReady?.(exportComposite);return()=>onExporterReady?.(null)},[exportComposite,onExporterReady])
   const updateComparison=(event:ReactPointerEvent)=>{if(comparisonDragRef.current!==event.pointerId)return;const bounds=event.currentTarget.getBoundingClientRect();setComparisonPosition(Math.max(0,Math.min(100,(event.clientX-bounds.left)/bounds.width*100)))}
 
-  return <div ref={editorRef} className="visualizer-editor composed-photo-editor" aria-label="Configured door applied to house photo">
+  return <><div ref={editorRef} className="visualizer-editor composed-photo-editor" aria-label="Configured door applied to house photo">
     <div className={`entrance-image-stage composed-photo-stage ${beforeAfter?'before-after-stage':''} ${zoom>1?'photo-pan-enabled':''} ${isPanning?'photo-panning':''}`} style={stageSize.width ? { width: stageSize.width, height: stageSize.height, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` } : undefined} onWheel={onWheel} onPointerDown={(event)=>{if(!(event.target as Element).closest('.visualizer-comparison-handle'))beginPan(event)}} onPointerMove={(event)=>{if(comparisonDragRef.current===event.pointerId)updateComparison(event);else movePan(event)}} onPointerUp={(event)=>{endPan(event);comparisonDragRef.current=null}} onPointerCancel={(event)=>{endPan(event);comparisonDragRef.current=null}}>
       <img src={showOriginal ? originalImageSrc : imageSrc} alt={imageAlt} onLoad={(event) => {
         naturalSizeRef.current = { width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }
@@ -93,5 +93,5 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
       <button type="button" aria-label="Zoom in" disabled={zoom >= 4} onClick={zoomIn}><ZoomIn size={17} /></button>
       <button type="button" onClick={resetZoom}>Reset Zoom</button>
     </div>}
-  </div>
+  </div>{showZoomControls&&<div className="visualizer-zoom-controls mobile-external-zoom-controls" role="group" aria-label="Photo zoom controls"><button type="button" aria-label="Zoom out" disabled={zoom<=1} onClick={zoomOut}><ZoomOut size={17}/></button><span aria-live="polite">{Math.round(zoom*100)}%</span><button type="button" aria-label="Zoom in" disabled={zoom>=4} onClick={zoomIn}><ZoomIn size={17}/></button><button type="button" onClick={resetZoom}>Reset Zoom</button></div>}</>
 }

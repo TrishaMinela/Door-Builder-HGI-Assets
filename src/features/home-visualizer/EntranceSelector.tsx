@@ -289,5 +289,11 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
         <button type="button" onClick={resetZoom}>Reset Zoom</button>
       </div>
     </div>
+    <div className="visualizer-zoom-controls mobile-external-zoom-controls" role="group" aria-label="Uploaded photo zoom controls">
+      <button type="button" aria-label="Zoom uploaded photo out" disabled={zoom <= 1} onClick={zoomOut}><ZoomOut size={17} /></button>
+      <span aria-live="polite">{Math.round(zoom * 100)}%</span>
+      <button type="button" aria-label="Zoom uploaded photo in" disabled={zoom >= 4} onClick={zoomIn}><ZoomIn size={17} /></button>
+      <button type="button" onClick={resetZoom}>Reset Zoom</button>
+    </div>
   </>
 }

@@ -51,7 +51,7 @@ export function SideliteSelector({imageSrc,door,edges,sides,showSideChoice=false
     ))
   }) : []
   const magnifiedPoint=activeHandle?edges[activeHandle.side]?.[activeHandle.handle]:null
-  return <div ref={editorRef} className="visualizer-editor sidelite-editor">
+  return <><div ref={editorRef} className="visualizer-editor sidelite-editor">
     {magnifiedPoint&&size.width>0&&<button type="button" className="entrance-point-magnifier" aria-label="Drag to move the sidelite corner magnifier" style={{width:magnifierSize,height:magnifierSize,left:`${magnifierPosition.x*100}%`,top:`${magnifierPosition.y*100}%`,bottom:'auto',backgroundImage:`url(${JSON.stringify(imageSrc)})`,backgroundSize:`${size.width*MAGNIFIER_ZOOM}px ${size.height*MAGNIFIER_ZOOM}px`,backgroundPosition:`${magnifierSize/2-magnifiedPoint.x*size.width*MAGNIFIER_ZOOM}px ${magnifierSize/2-magnifiedPoint.y*size.height*MAGNIFIER_ZOOM}px`}} onPointerDown={event=>{event.preventDefault();event.stopPropagation();event.currentTarget.setPointerCapture(event.pointerId);magnifierDragRef.current=event.pointerId}} onPointerMove={moveMagnifier} onPointerUp={endMagnifierDrag} onPointerCancel={endMagnifierDrag}><span className="entrance-magnifier-zoom">3×</span><span className="entrance-magnifier-move"><Move size={13}/></span><i/></button>}
     <div ref={stageRef} className={`entrance-image-stage sidelite-stage ${zoom>1?'photo-pan-enabled':''} ${isPanning?'photo-panning':''}`} style={size.width?{width:size.width,height:size.height,transform:`translate(${pan.x}px, ${pan.y}px) scale(${zoom})`}:undefined} onPointerDown={event=>{if(!(event.target as Element).closest('button'))beginPan(event)}} onPointerMove={event=>{if(!movePan(event))move(event)}} onPointerUp={event=>{endPan(event);dragRef.current=null;snapRef.current=emptySnapState();setSnapGuides({});setActiveHandle(null)}} onPointerCancel={event=>{endPan(event);dragRef.current=null;snapRef.current=emptySnapState();setSnapGuides({});setActiveHandle(null)}} onWheel={onWheel}>
       <img src={imageSrc} alt="Uploaded entrance for sidelite placement" onLoad={event=>{naturalRef.current={width:event.currentTarget.naturalWidth,height:event.currentTarget.naturalHeight};resize()}}/>
@@ -60,7 +60,7 @@ export function SideliteSelector({imageSrc,door,edges,sides,showSideChoice=false
       {handles}
     </div>
     <div className="visualizer-zoom-controls" role="group" aria-label="Uploaded photo zoom controls"><button type="button" aria-label="Zoom uploaded photo out" disabled={zoom<=1} onClick={zoomOut}><ZoomOut size={17}/></button><span aria-live="polite">{Math.round(zoom*100)}%</span><button type="button" aria-label="Zoom uploaded photo in" disabled={zoom>=4} onClick={zoomIn}><ZoomIn size={17}/></button><button type="button" onClick={resetZoom}>Reset Zoom</button></div>
-  </div>
+  </div><div className="visualizer-zoom-controls mobile-external-zoom-controls" role="group" aria-label="Uploaded photo zoom controls"><button type="button" aria-label="Zoom uploaded photo out" disabled={zoom<=1} onClick={zoomOut}><ZoomOut size={17}/></button><span aria-live="polite">{Math.round(zoom*100)}%</span><button type="button" aria-label="Zoom uploaded photo in" disabled={zoom>=4} onClick={zoomIn}><ZoomIn size={17}/></button><button type="button" onClick={resetZoom}>Reset Zoom</button></div></>
 }
 
 export type ProductLayer={kind:'door'|'left-sidelite'|'right-sidelite';corners:EntranceCorners;sourceRect:{x:number;y:number;width:number;height:number};flipX?:boolean}
