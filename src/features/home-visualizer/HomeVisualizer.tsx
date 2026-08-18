@@ -187,6 +187,9 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
     setShowPlacementGuidance(true)
     clearCleanup()
     resetPlacement()
+    const image = new Image()
+    image.onload = () => { if (objectUrlRef.current === objectUrl) setFrameImageSize({ width: image.naturalWidth, height: image.naturalHeight }) }
+    image.src = objectUrl
   }
 
   const openPicker = () => {
@@ -276,9 +279,18 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
       setPhotoSideliteSide('none')
       setSideliteEdges({})
       if(framePlacementMode==='automatic')setOuterFrame(frameImageSize.width?createAutomaticFrame(corners,corners,frameImageSize):expandFrameCorners(corners))
-      setWizardStep(2)
+      setFrameConfirmed(true)
+      setWizardStep(isMobile?4:2)
     }
   }
+
+  const finishSidelitePlacement = () => {
+    setFrameConfirmed(true)
+    if(framePlacementMode==='automatic')setOuterFrame(frameImageSize.width?createAutomaticFrame(entranceBoundary,corners,frameImageSize):expandFrameCorners(entranceBoundary))
+    setWizardStep(typeof window!=='undefined'&&window.matchMedia('(max-width: 767px)').matches?4:2)
+  }
+
+  const returnFromFinal = () => setWizardStep(typeof window!=='undefined'&&window.matchMedia('(max-width: 767px)').matches?(configuredSideliteSides.length?1:0):2)
 
   useEffect(() => {
     if (!import.meta.env.DEV || wizardStep !== 0 || typeof window === 'undefined' || !window.matchMedia('(max-width: 767px)').matches) return
@@ -413,7 +425,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
               <div className="visualizer-step-editor-shell">
                 <SideliteSelector imageSrc={photo.objectUrl} door={corners} edges={sideliteEdges} sides={photoSideliteSides} showSideChoice={configuredSideliteSides.length===1&&!photoSideliteSide} onChooseSide={(side)=>{setPhotoSideliteSide(side);setSideliteEdges(initializeSideliteEdges(corners,[side]));clearCleanup()}} onChange={(edges)=>{setSideliteEdges(edges);clearCleanup()}}/>
                 <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" aria-label="Replace photo" onClick={openPicker}><RefreshCw size={21}/></button><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
-                <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={()=>setWizardStep(0)}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button><button type="button" className="wizard-continue" aria-label="Continue" disabled={configuredSideliteSides.length===1&&!photoSideliteSide} onClick={()=>{setFrameConfirmed(true);setWizardStep(2)}}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button></div>
+                <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={()=>setWizardStep(0)}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button><button type="button" className="wizard-continue" aria-label="Continue" disabled={configuredSideliteSides.length===1&&!photoSideliteSide} onClick={finishSidelitePlacement}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button></div>
               </div>
               {configuredSideliteSides.length===1&&photoSideliteSide&&<div className="wizard-secondary"><button type="button" onClick={()=>{const opposite=photoSideliteSide==='left'?'right':'left';setPhotoSideliteSide(opposite);setSideliteEdges(initializeSideliteEdges(corners,[opposite]));setFrameConfirmed(false);clearCleanup()}}>Switch Sidelite Side</button></div>}
             </>}
@@ -428,7 +440,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
               </div>
               <div className="automatic-frame-actions">{framePlacementMode==='automatic'?<button type="button" onClick={()=>setFramePlacementMode('manual')}>Adjust Frame</button>:<button type="button" onClick={resetFrameArea}><RotateCcw size={15}/> Reset to Automatic</button>}</div>
             </>}
-            {wizardStep===4&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title"><div className="visualizer-final-heading"><span>Visualization complete</span><h2 id="visualizer-final-title">Your new entrance</h2></div><ComposedPhotoPreview corners={entranceBoundary} productLayers={visualizerProductLayers} doorSourceUrl={doorSource.url} imageSrc={recoloredFrameUrl||approvedCleanup?.cleanedUrl||photo.objectUrl} originalImageSrc={photo.objectUrl} imageAlt={`Completed visualization: ${photo.file.name}`} showAfter displayMode="final" showZoomControls beforeAfter onExporterReady={setCompositeExporter}/><div className="visualizer-final-actions"><button type="button" className="visualizer-download-button" aria-label="Download completed home visualization photo" disabled={downloadPreparing} onClick={downloadVisualization}><Download size={18}/>{downloadPreparing?'Preparing Photo…':'Download Photo'}</button><button type="button" className="visualizer-review-button" aria-label="Return to the previous visualizer step" onClick={()=>setWizardStep(2)}>Return to Previous Step</button></div><div className="visualizer-final-text-actions"><button type="button" onClick={onReturnToReview??onBack}>Return to Review</button><button type="button" onClick={()=>setFlipDoorOrientation(value=>!value)}>Hardware on the wrong side? Flip Door Orientation</button></div><span className="visualizer-download-status" role="status" aria-live="polite">{downloadPreparing?'Preparing your full-resolution photo.':''}</span>{downloadError&&<p className="visualizer-error" role="alert">{downloadError}</p>}</section>}
+            {wizardStep===4&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title"><div className="visualizer-final-heading"><span>Visualization complete</span><h2 id="visualizer-final-title">Your new entrance</h2></div>{doorSource.ready?<ComposedPhotoPreview corners={entranceBoundary} productLayers={visualizerProductLayers} doorSourceUrl={doorSource.url} imageSrc={recoloredFrameUrl||approvedCleanup?.cleanedUrl||photo.objectUrl} originalImageSrc={photo.objectUrl} imageAlt={`Completed visualization: ${photo.file.name}`} showAfter displayMode="final" showZoomControls beforeAfter onExporterReady={setCompositeExporter}/>:<div className="visualizer-source-loading" role={doorSource.error?'alert':'status'}>{doorSource.error||'Preparing your configured door…'}</div>}<div className="visualizer-final-actions"><button type="button" className="visualizer-download-button" aria-label="Download completed home visualization photo" disabled={downloadPreparing||!doorSource.ready} onClick={downloadVisualization}><Download size={18}/>{downloadPreparing?'Preparing Photo…':'Download Photo'}</button><button type="button" className="visualizer-review-button" aria-label="Return to the previous visualizer step" onClick={returnFromFinal}>Return to Previous Step</button></div><div className="visualizer-final-text-actions"><button type="button" onClick={onReturnToReview??onBack}>Return to Review</button><button type="button" onClick={()=>setFlipDoorOrientation(value=>!value)}>Hardware on the wrong side? Flip Door Orientation</button></div><span className="visualizer-download-status" role="status" aria-live="polite">{downloadPreparing?'Preparing your full-resolution photo.':''}</span>{downloadError&&<p className="visualizer-error" role="alert">{downloadError}</p>}</section>}
           </>}
 
           <input ref={inputRef} className="visualizer-file-input" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" onChange={onInputChange} />

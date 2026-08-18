@@ -229,15 +229,18 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
       const regionWidth = Math.max(1, maxX - minX)
       const regionHeight = Math.max(1, maxY - minY)
       const regionPixels = regionWidth * regionHeight
+      const mobileRender = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+      const maximumTemporaryPixels = mobileRender ? 5_000_000 : MAX_SUPERSAMPLED_PIXELS
+      const maximumTemporaryDimension = mobileRender ? 2560 : MAX_TEMPORARY_CANVAS_DIMENSION
       let supersampleScale = SUPERSAMPLE_SCALE
-      while (supersampleScale > 1 && (regionPixels * supersampleScale * supersampleScale > MAX_SUPERSAMPLED_PIXELS || regionWidth * supersampleScale > MAX_TEMPORARY_CANVAS_DIMENSION || regionHeight * supersampleScale > MAX_TEMPORARY_CANVAS_DIMENSION)) supersampleScale -= 1
+      while (supersampleScale > 1 && (regionPixels * supersampleScale * supersampleScale > maximumTemporaryPixels || regionWidth * supersampleScale > maximumTemporaryDimension || regionHeight * supersampleScale > maximumTemporaryDimension)) supersampleScale -= 1
       const renderWidth = regionWidth * supersampleScale
       const renderHeight = regionHeight * supersampleScale
       const renderPoints = targetPoints.map((point) => ({
         x: (point.x - minX) * supersampleScale,
         y: (point.y - minY) * supersampleScale,
       }))
-      if (import.meta.env.DEV) console.debug('[home-visualizer:warp-resolution]', { layer: diagnosticName, regionWidth, regionHeight, supersampleScale, renderWidth, renderHeight, maximumTemporaryPixels: MAX_SUPERSAMPLED_PIXELS, maximumTemporaryDimension: MAX_TEMPORARY_CANVAS_DIMENSION })
+      if (import.meta.env.DEV) console.debug('[home-visualizer:warp-resolution]', { layer: diagnosticName, regionWidth, regionHeight, supersampleScale, renderWidth, renderHeight, maximumTemporaryPixels, maximumTemporaryDimension, mobileRender })
       const forward = squareToQuadrilateral(renderPoints)
       const inverse = forward ? invert(forward) : null
       if (!inverse) return
