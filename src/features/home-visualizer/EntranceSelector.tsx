@@ -65,12 +65,14 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
   const dragRef = useRef<DragState | null>(null)
+  const magnifierDragRef = useRef<number | null>(null)
   const pendingCornersRef=useRef<EntranceCorners|null>(null)
   const cornerFrameRef=useRef<number|null>(null)
   const snapRef = useRef<SnapState>(emptySnapState())
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
   const [mode, setMode] = useState<InteractionMode>('edit')
   const [activeCorner, setActiveCorner] = useState<CornerId | null>(null)
+  const [magnifierPosition, setMagnifierPosition] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches ? { x: .17, y: .78 } : { x: .17, y: .5 })
   const [snapGuides,setSnapGuides]=useState<SnapGuides>({})
   const [alignedEdges,setAlignedEdges]=useState<Set<number>>(()=>new Set())
   const magnifierSize=typeof window!=='undefined'&&window.matchMedia('(max-width: 767px)').matches?MOBILE_MAGNIFIER_SIZE:MAGNIFIER_SIZE
@@ -176,7 +178,25 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
     dragRef.current = null
     if(pendingCornersRef.current){if(cornerFrameRef.current!==null)cancelAnimationFrame(cornerFrameRef.current);cornerFrameRef.current=null;const pending=pendingCornersRef.current;pendingCornersRef.current=null;onCornersChange(pending)}
     snapRef.current=emptySnapState();setSnapGuides({})
-    setActiveCorner(null)
+  }
+
+  const moveMagnifier = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (magnifierDragRef.current !== event.pointerId) return
+    const editor = editorRef.current
+    if (!editor) return
+    const bounds = editor.getBoundingClientRect()
+    const insetX = Math.min(.45, magnifierSize / 2 / Math.max(1, bounds.width))
+    const insetY = Math.min(.45, magnifierSize / 2 / Math.max(1, bounds.height))
+    setMagnifierPosition({
+      x: Math.max(insetX, Math.min(1 - insetX, (event.clientX - bounds.left) / bounds.width)),
+      y: Math.max(insetY, Math.min(1 - insetY, (event.clientY - bounds.top) / bounds.height)),
+    })
+  }
+
+  const endMagnifierDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (magnifierDragRef.current !== event.pointerId) return
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    magnifierDragRef.current = null
   }
 
   const polygonPoints = CORNER_ORDER.map((id) => `${corners[id].x * stageSize.width},${corners[id].y * stageSize.height}`).join(' ')
@@ -190,17 +210,33 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
     </div>}
     {showToolbar && <p className="entrance-selector-help">{mode === 'edit' ? 'Drag a corner to outline the complete entrance opening.' : 'Drag inside the highlighted area to move the complete selection.'}</p>}
     <div ref={editorRef} className="visualizer-editor" aria-label="House photo entrance editor">
-      {activeCorner && stageSize.width > 0 && <div
+      {activeCorner && stageSize.width > 0 && <button
+        type="button"
         className="entrance-point-magnifier"
-        aria-hidden="true"
+        aria-label="Drag to move the corner magnifier"
         style={{
           width: magnifierSize,
           height: magnifierSize,
+          left: `${magnifierPosition.x * 100}%`,
+          top: `${magnifierPosition.y * 100}%`,
+          bottom: 'auto',
           backgroundImage: `url(${JSON.stringify(imageSrc)})`,
           backgroundSize: `${stageSize.width * MAGNIFIER_ZOOM}px ${stageSize.height * MAGNIFIER_ZOOM}px`,
           backgroundPosition: `${magnifierSize / 2 - corners[activeCorner].x * stageSize.width * MAGNIFIER_ZOOM}px ${magnifierSize / 2 - corners[activeCorner].y * stageSize.height * MAGNIFIER_ZOOM}px`,
         }}
-      ><span>3×</span><i /></div>}
+        onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); event.currentTarget.setPointerCapture(event.pointerId); magnifierDragRef.current = event.pointerId }}
+        onPointerMove={moveMagnifier}
+        onPointerUp={endMagnifierDrag}
+        onPointerCancel={endMagnifierDrag}
+        onKeyDown={(event) => {
+          if (event.key.startsWith('Arrow')) event.preventDefault()
+          const step = event.shiftKey ? .06 : .025
+          if (event.key === 'ArrowLeft') setMagnifierPosition((value) => ({ ...value, x: Math.max(.08, value.x - step) }))
+          if (event.key === 'ArrowRight') setMagnifierPosition((value) => ({ ...value, x: Math.min(.92, value.x + step) }))
+          if (event.key === 'ArrowUp') setMagnifierPosition((value) => ({ ...value, y: Math.max(.08, value.y - step) }))
+          if (event.key === 'ArrowDown') setMagnifierPosition((value) => ({ ...value, y: Math.min(.92, value.y + step) }))
+        }}
+      ><span className="entrance-magnifier-zoom">3×</span><span className="entrance-magnifier-move"><Move size={13}/></span><i /></button>}
       <div
         ref={stageRef}
         className={`entrance-image-stage entrance-image-stage-${mode} ${zoom > 1 ? 'photo-pan-enabled' : ''} ${isPanning ? 'photo-panning' : ''}`}
