@@ -2371,7 +2371,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .photo-guidance{grid-template-columns:1fr;gap:12px;padding:14px}
   .photo-guidance ul{gap:7px}
   .visualizer-editor,.frame-area-editor,.cleanup-brush-editor,.cleanup-preview-workspace .composed-photo-editor,.cleanup-comparison-editor,.cleanup-sample-editor{width:100%;height:min(62vh,560px);min-height:280px;max-height:none}
-  .visualizer-step-editor-shell{position:relative;margin-bottom:68px}
+  .visualizer-step-editor-shell{position:relative;margin-bottom:12px}
   .visualizer-step-editor-shell .visualizer-editor{overflow:hidden}
   .visualizer-editor>.visualizer-zoom-controls{display:none}
   .visualizer-zoom-controls.mobile-external-zoom-controls{position:relative;inset:auto;z-index:8;width:max-content;max-width:100%;min-height:48px;margin:8px auto 0;display:flex;transform:none;white-space:nowrap}
