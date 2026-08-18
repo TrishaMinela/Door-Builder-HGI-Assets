@@ -16,19 +16,19 @@ function lineIntersection(firstA: Point, firstB: Point, secondA: Point, secondB:
   return{x:firstA.x+ratio*firstX,y:firstA.y+ratio*firstY}
 }
 
-/** Expand the complete assembly using thickness derived only from the central
- * slab width in original-photo pixels. Side-edge endpoint offsets interpolate
- * between the perspective-correct top and bottom thicknesses. */
+/** Expand the complete assembly with one source-space frame thickness derived
+ * from the total entry-unit width. Perspective changes its displayed width
+ * naturally; the authored frame itself remains consistent on all four sides. */
 export function createAutomaticFrame(assembly: EntranceCorners, door: EntranceCorners, imageSize: ImageSize, requestedRatio=AUTO_FRAME_WIDTH_RATIO): EntranceCorners {
   const width=Math.max(1,imageSize.width),height=Math.max(1,imageSize.height),ratio=Math.max(MIN_AUTO_FRAME_RATIO,Math.min(MAX_AUTO_FRAME_RATIO,requestedRatio))
   const sourcePoint=(point:Point)=>({x:point.x*width,y:point.y*height}),distance=(first:Point,second:Point)=>Math.hypot((second.x-first.x)*width,(second.y-first.y)*height)
-  const topDoorWidth=distance(door.topLeft,door.topRight),bottomDoorWidth=distance(door.bottomLeft,door.bottomRight),topThickness=topDoorWidth*ratio,bottomThickness=bottomDoorWidth*ratio
+  const topUnitWidth=distance(assembly.topLeft,assembly.topRight),bottomUnitWidth=distance(assembly.bottomLeft,assembly.bottomRight)
+  const frameThickness=Math.max(4,Math.min(64,(topUnitWidth+bottomUnitWidth)/2*ratio))
   const points=[assembly.topLeft,assembly.topRight,assembly.bottomRight,assembly.bottomLeft].map(sourcePoint)
-  const endpointThickness:[[number,number],[number,number],[number,number],[number,number]]=[[topThickness,topThickness],[topThickness,bottomThickness],[bottomThickness,bottomThickness],[bottomThickness,topThickness]]
-  const lines=points.map((point,index)=>{const next=points[(index+1)%points.length],dx=next.x-point.x,dy=next.y-point.y,length=Math.max(1e-8,Math.hypot(dx,dy)),nx=dy/length,ny=-dx/length,[startThickness,endThickness]=endpointThickness[index];return[{x:point.x+nx*startThickness,y:point.y+ny*startThickness},{x:next.x+nx*endThickness,y:next.y+ny*endThickness}]as const})
+  const lines=points.map((point,index)=>{const next=points[(index+1)%points.length],dx=next.x-point.x,dy=next.y-point.y,length=Math.max(1e-8,Math.hypot(dx,dy)),nx=dy/length,ny=-dx/length;return[{x:point.x+nx*frameThickness,y:point.y+ny*frameThickness},{x:next.x+nx*frameThickness,y:next.y+ny*frameThickness}]as const})
   const expanded=lines.map((line,index)=>lineIntersection(lines[(index+3)%4][0],lines[(index+3)%4][1],line[0],line[1])??line[0])
   const normalized=expanded.map(point=>({x:Math.max(0,Math.min(1,point.x/width)),y:Math.max(0,Math.min(1,point.y/height))}))
-  if(import.meta.env.DEV)console.debug('[home-visualizer:proportional-frame]',{ratio,topDoorWidth,bottomDoorWidth,averageDoorWidth:(topDoorWidth+bottomDoorWidth)/2,topFrameThickness:topThickness,bottomFrameThickness:bottomThickness,imageSize})
+  if(import.meta.env.DEV)console.debug('[home-visualizer:proportional-frame]',{ratio,topUnitWidth,bottomUnitWidth,frameThickness,imageSize,doorReference:door})
   return{topLeft:normalized[0],topRight:normalized[1],bottomRight:normalized[2],bottomLeft:normalized[3]}
 }
 
