@@ -1613,6 +1613,7 @@ export default function App() {
 
           {currentPage === 'review' && !submitted && <>
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
+            {!testMode && <button className="mobile-quote-form-cta" type="button" aria-controls="quote-contact-form" onClick={() => document.getElementById('quote-contact-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Continue to Quote Form <ArrowRight size={17}/></button>}
             {testMode && <button className="floating-visualizer-launch" type="button" onClick={() => showScreen('visualizer')} aria-label="Launch Door Visualizer"><Eye size={19} /><span>Launch Door Visualizer</span><ArrowRight size={16} /></button>}
             <div className="mobile-review-preview">{renderConfiguredPreviewMode()}</div>
             {testMode && <section className="visualizer-promo-card visualizer-promo-card-mobile" aria-labelledby="mobile-visualizer-promo-title">
@@ -1629,7 +1630,7 @@ export default function App() {
                 <span className="attachment-copy"><strong>{configurationPdfName}</strong></span>
                 <button type="button" onClick={downloadPdf}><Download size={16} /> Download PDF</button>
               </div>}
-              <div className="form-card">
+              <div className="form-card" id="quote-contact-form">
                 <h2>Your Contact Information</h2><p>We’ll use your ZIP code to help connect you with the right Home Guard dealer.</p>
                 <QuoteForm values={contact} errors={errors} onChange={updateContact} />
                 <label className="consent"><input type="checkbox" defaultChecked /> <span>I agree to be contacted about this door configuration.</span></label>
