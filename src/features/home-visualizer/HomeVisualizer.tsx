@@ -84,7 +84,8 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const sideliteOpenings = useMemo(() => sideliteOpeningQuads(sideliteEdges), [sideliteEdges])
   const dividerJambs = useMemo(() => dividerJambQuads(corners,sideliteEdges),[corners,sideliteEdges])
   const visualizerProductLayers = useMemo(() => createProductLayers(corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation), [corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation])
-  const canContinueDoorPlacement = doorSource.ready && isValidEntranceCorners(corners) && !autoFitLoading
+  const doorPlacementValid = isValidEntranceCorners(corners)
+  const canContinueDoorPlacement = doorSource.ready && doorPlacementValid && !autoFitLoading
   const updateDoorSource = useCallback((state: DoorSourceState) => setDoorSource(state), [])
   const setCompositeExporter = useCallback((exporter: (() => Promise<Blob>) | null) => { compositeExporterRef.current = exporter }, [])
 
@@ -258,7 +259,11 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
     void runAutoFit(false)
   }
 
-  const continueFromDoorPlacement = () => {
+  const handleContinueDoorPlacement = () => {
+    const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+    if (import.meta.env.DEV && isMobile) console.debug('[home-visualizer:mobileNextTapped]', { currentStep: wizardStep, activeDoorPoints: corners, doorPlacementValid, canContinue: canContinueDoorPlacement, disabled: !canContinueDoorPlacement, autoFitProcessing: autoFitLoading, autoFitProposal: null })
+    if (!canContinueDoorPlacement) return
+    if (import.meta.env.DEV && isMobile) console.debug('[home-visualizer:mobileNextNavigationStarted]', { currentStep: wizardStep })
     if (configuredSideliteSides.length === 2) {
       setPhotoSideliteSide('both')
       if (!sideliteEdges.left || !sideliteEdges.right) setSideliteEdges(initializeSideliteEdges(corners, ['left', 'right']))
@@ -272,6 +277,13 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
       setWizardStep(2)
     }
   }
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || wizardStep !== 0 || typeof window === 'undefined' || !window.matchMedia('(max-width: 767px)').matches) return
+    const nextButton = document.querySelector<HTMLButtonElement>('.visualizer-step-editor-shell > .wizard-navigation .wizard-continue')
+    const styles = nextButton ? window.getComputedStyle(nextButton) : null
+    console.debug('[home-visualizer:mobileNextState]', { currentStep: wizardStep, isMobile: true, activeDoorPoints: corners, doorPlacementValid, canContinue: canContinueDoorPlacement, disabled: nextButton?.disabled ?? true, autoFitProcessing: autoFitLoading, autoFitProposal: null, zIndex: styles?.zIndex ?? null, pointerEvents: styles?.pointerEvents ?? null })
+  }, [wizardStep, corners, doorPlacementValid, canContinueDoorPlacement, autoFitLoading])
 
 
   const adjustAutoFitPoints = () => {
@@ -388,11 +400,11 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
               <div className="visualizer-step-editor-shell">
                 <EntranceSelector key={photo.objectUrl} corners={corners} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightHandles={highlightAutoFitHandles} onAlignmentReadyChange={setAutoFitAlignmentReady}/>
                 <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" aria-label="Replace photo" onClick={openPicker}><RefreshCw size={21}/></button><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
-                <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button><button type="button" className="wizard-continue" aria-label="Continue" disabled={!canContinueDoorPlacement} onClick={continueFromDoorPlacement}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button></div>
+                <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button><button type="button" className="wizard-continue" aria-label="Continue" disabled={!canContinueDoorPlacement} onClick={handleContinueDoorPlacement}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button></div>
               </div>
               {autoFitAlignmentReady&&!autoFitUndo&&<div className="auto-fit-ready-callout" role="status"><strong>All four points are aligned.</strong><span>Use Auto-Fit to precisely refine the door opening.</span><div className="wizard-secondary auto-fit-primary-row"><button type="button" className="auto-fit-entrance-button auto-fit-ready-button" onClick={requestAutoFit} disabled={autoFitLoading}><Crosshair size={18}/> {autoFitLoading?'Finding Entrance…':'Auto-Fit Entrance'}</button></div></div>}{autoFitUndo&&<div className="wizard-secondary auto-fit-undo-only"><button type="button" onClick={()=>{updateCorners(autoFitUndo);setAutoFitUndo(null)}}><RotateCcw size={17}/> Undo Auto-Fit</button></div>}
-              {autoFitUnableToImprove&&<div className="auto-fit-no-improvement" role="status"><strong>Auto-Fit couldn’t improve this placement.</strong><p>You can adjust the points and try again, or continue with your current placement.</p><div><button type="button" onClick={()=>runAutoFit(false)} disabled={autoFitLoading}>{autoFitLoading?'Trying Again…':'Try Again'}</button><button type="button" className="auto-fit-use-manual" onClick={continueFromDoorPlacement} disabled={!canContinueDoorPlacement}>Continue</button></div></div>}
-              {autoFitAlreadyAligned&&<div className="auto-fit-no-improvement auto-fit-already-aligned" role="status"><strong>Your door outline is already well aligned.</strong><p>You can keep the current placement and continue.</p><div><button type="button" className="auto-fit-use-manual" onClick={continueFromDoorPlacement} disabled={!canContinueDoorPlacement}>Keep Current Placement &amp; Continue</button></div></div>}
+              {autoFitUnableToImprove&&<div className="auto-fit-no-improvement" role="status"><strong>Auto-Fit couldn’t improve this placement.</strong><p>You can adjust the points and try again, or continue with your current placement.</p><div><button type="button" onClick={()=>runAutoFit(false)} disabled={autoFitLoading}>{autoFitLoading?'Trying Again…':'Try Again'}</button><button type="button" className="auto-fit-use-manual" onClick={handleContinueDoorPlacement} disabled={!canContinueDoorPlacement}>Continue</button></div></div>}
+              {autoFitAlreadyAligned&&<div className="auto-fit-no-improvement auto-fit-already-aligned" role="status"><strong>Your door outline is already well aligned.</strong><p>You can keep the current placement and continue.</p><div><button type="button" className="auto-fit-use-manual" onClick={handleContinueDoorPlacement} disabled={!canContinueDoorPlacement}>Keep Current Placement &amp; Continue</button></div></div>}
             </>}
             {wizardStep===1&&<>
               <div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>{configuredSideliteSides.length===1&&!photoSideliteSide?'Where Is the Sidelite?':configuredSideliteSides.length===1?'Position the Sidelite Opening':'Position Both Sidelite Openings'}</h3><p>{configuredSideliteSides.length===1&&!photoSideliteSide?'Tap the side where the sidelite appears in your uploaded photo.':configuredSideliteSides.length===1?'Place the four points on the inside corners of the sidelite opening.':'Place each set of points on the inside corners of its sidelite opening.'}</p>{photoSideliteSide&&<p className="entrance-placement-note">{configuredSideliteSides.length===1?'Leave the vertical jamb between the door and sidelite outside the selected sidelite area. It will be colored during the Frame step.':'Keep both divider jambs outside the sidelite selections.'}</p>}</div></div>
