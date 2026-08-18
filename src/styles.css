@@ -2236,6 +2236,7 @@ body:has(.home-app){
 .auto-fit-modal-close:hover{background:#dcecec}.auto-fit-modal-close:focus-visible,.auto-fit-failure-modal button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .auto-fit-examples{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:17px}
 .auto-fit-example{min-width:0;margin:0;border:1px solid #d5e0e1;border-radius:7px;overflow:hidden;background:#f8fbfb}.auto-fit-example figcaption{padding:7px 10px;display:flex;align-items:center;gap:5px;font-size:10px;font-weight:850}.auto-fit-example.correct figcaption{color:#267447}.auto-fit-example.incorrect figcaption{color:#a94035}.auto-fit-example svg{display:block;width:100%;height:auto}.example-wall{fill:#e7e1d8}.example-frame{fill:#f8f5ee;stroke:#819094;stroke-width:2}.example-door{fill:#9f6d45}.example-sidelite{fill:#a9d2d7}.example-outline{fill:#f8d30e18;stroke:var(--gold);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}.example-points circle{fill:var(--gold);stroke:var(--peacock);stroke-width:1.5}
+.auto-fit-example>small{display:block;padding:0 10px 8px;color:#536267;font-size:9px;font-weight:700}.auto-fit-guidance-helper{margin-top:10px!important;border-left:3px solid var(--gold);padding:8px 10px;background:#f3f8f8;color:#264e52!important;font-weight:750}
 .auto-fit-failure-modal ol{margin:16px 0 0;padding-left:23px;color:#344a4e;font-size:11px;line-height:1.65}.auto-fit-failure-modal li+li{margin-top:3px}.auto-fit-failure-modal li::marker{color:var(--peacock);font-weight:900}
 .auto-fit-retry-message{border-radius:5px;padding:9px 11px;background:#fff4c0!important;color:#5d4800!important;font-weight:800}
 .auto-fit-modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:19px}.auto-fit-modal-actions button{min-height:49px;border-radius:5px;padding:0 21px;font-size:11px;font-weight:850;cursor:pointer}.auto-fit-adjust{border:1px solid var(--peacock);background:var(--peacock);color:#fff}.auto-fit-retry{border:1px solid var(--peacock);background:#fff;color:var(--peacock)}
@@ -2265,6 +2266,12 @@ body:has(.home-app){
   .auto-fit-no-improvement>div{align-items:stretch;flex-direction:column}.auto-fit-no-improvement button{width:100%;min-height:50px}
 }
 @media(prefers-reduced-motion:reduce){.entrance-corner-handle.guidance-pulse:before{animation:none;box-shadow:0 0 0 5px #f8d30e70,0 0 0 7px #0d666c55}.auto-fit-ready-button{animation:none;outline:3px solid var(--gold);outline-offset:3px}}
+
+@media(max-width:700px){
+  .auto-fit-guidance-backdrop{align-items:end!important;justify-items:center!important;place-items:end center!important;padding:0!important;background:#05040b99}
+  .auto-fit-guidance-sheet{width:100%!important;max-width:none!important;max-height:min(82dvh,620px)!important;margin:0!important;border-width:1px!important;border-top:6px solid var(--gold)!important;border-radius:16px 16px 0 0!important;padding:19px 17px calc(15px + env(safe-area-inset-bottom))!important;box-shadow:0 -12px 40px #05040b55!important}
+  .auto-fit-guidance-sheet h2{font-size:22px!important}.auto-fit-guidance-sheet>p{line-height:1.4!important}.auto-fit-guidance-sheet .auto-fit-examples{grid-template-columns:1fr;margin-top:12px}.auto-fit-guidance-sheet .auto-fit-example{display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,.72fr);align-items:center}.auto-fit-guidance-sheet .auto-fit-example figcaption,.auto-fit-guidance-sheet .auto-fit-example>small{grid-column:1}.auto-fit-guidance-sheet .auto-fit-example svg{grid-column:2;grid-row:1/3}.auto-fit-guidance-sheet .auto-fit-modal-actions{gap:4px;margin-top:13px}.auto-fit-guidance-sheet .auto-fit-adjust{min-height:50px}.auto-fit-guidance-sheet .auto-fit-retry{min-height:42px;border-color:transparent;background:transparent}
+}
 
 /* Architectural refinement: one restrained surface/control language across builder + visualizer. */
 :root{--surface:#fff;--page:#f5f7f7;--border:#cfd8da;--radius-workspace:7px;--radius-card:5px;--radius-control:5px;--shadow-raised:0 4px 12px #05040b0d}
@@ -2507,4 +2514,10 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .options-grid,.step-1,.builder-options-scroll .door-style-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .configuration-step .builder-options-scroll .door-style-grid.step-0{grid-template-columns:repeat(3,minmax(0,1fr))}
   .visualizer-final-actions,.auto-fit-controls{grid-template-columns:1fr}
+}
+
+/* Mobile Auto-Fit guidance is a compact bottom sheet, independent of shared dialog centering. */
+@media(max-width:700px){
+  .auto-fit-guidance-backdrop{align-items:end!important;justify-items:center!important;place-items:end center!important;padding:0!important}
+  .auto-fit-guidance-sheet{width:100%!important;max-width:none!important;max-height:min(82dvh,620px)!important;margin:0!important;border-radius:16px 16px 0 0!important;padding:19px 17px calc(15px + env(safe-area-inset-bottom))!important}
 }

@@ -35,6 +35,17 @@ type Props = {
   showToolbar?: boolean
   highlightHandles?: boolean
   onAlignmentReadyChange?: (ready: boolean) => void
+  onViewportMetricsChange?: (metrics: EntranceViewportMetrics) => void
+}
+
+export type EntranceViewportMetrics = {
+  naturalSize: { width: number; height: number }
+  displaySize: { width: number; height: number }
+  imageOffset: { x: number; y: number }
+  zoom: number
+  pan: Point
+  displayPoints: EntranceCorners
+  sourcePoints: EntranceCorners
 }
 
 export const cloneEntranceCorners = (corners: EntranceCorners): EntranceCorners => ({
@@ -60,7 +71,7 @@ export function isValidEntranceCorners(corners: EntranceCorners) {
   return turns.every((turn) => turn > 0.0001) || turns.every((turn) => turn < -0.0001)
 }
 
-export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges, showToolbar = true, highlightHandles = false, onAlignmentReadyChange }: Props) {
+export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges, showToolbar = true, highlightHandles = false, onAlignmentReadyChange, onViewportMetricsChange }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
@@ -81,6 +92,18 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   const { zoom, pan, isPanning, onWheel, beginPan, movePan, endPan, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
   useEffect(resetZoom, [imageSrc, resetZoom])
   useEffect(()=>()=>{if(cornerFrameRef.current!==null)cancelAnimationFrame(cornerFrameRef.current)},[])
+  useEffect(() => {
+    if (!onViewportMetricsChange || !stageSize.width || !stageSize.height || !naturalSizeRef.current.width || !stageRef.current || !editorRef.current) return
+    const stageBounds = stageRef.current.getBoundingClientRect()
+    const editorBounds = editorRef.current.getBoundingClientRect()
+    const natural = naturalSizeRef.current
+    onViewportMetricsChange({
+      naturalSize: { ...natural }, displaySize: { width: stageBounds.width, height: stageBounds.height },
+      imageOffset: { x: stageBounds.left - editorBounds.left, y: stageBounds.top - editorBounds.top }, zoom, pan: { ...pan },
+      displayPoints: Object.fromEntries(CORNER_ORDER.map((id) => [id, { x: stageBounds.left + corners[id].x * stageBounds.width, y: stageBounds.top + corners[id].y * stageBounds.height }])) as EntranceCorners,
+      sourcePoints: Object.fromEntries(CORNER_ORDER.map((id) => [id, { x: corners[id].x * natural.width, y: corners[id].y * natural.height }])) as EntranceCorners,
+    })
+  }, [corners, onViewportMetricsChange, pan, stageSize, zoom])
 
   const scheduleCornersChange=(nextCorners:EntranceCorners)=>{
     pendingCornersRef.current=nextCorners

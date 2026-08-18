@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, Crosshair, Download, ImagePlus, RefreshCw, RotateCcw, Trash2, Upload } from 'lucide-react'
-import { cloneEntranceCorners, EntranceSelector, INITIAL_ENTRANCE_CORNERS, isValidEntranceCorners, type CornerId, type EntranceCorners } from './EntranceSelector'
+import { cloneEntranceCorners, EntranceSelector, INITIAL_ENTRANCE_CORNERS, isValidEntranceCorners, type CornerId, type EntranceCorners, type EntranceViewportMetrics } from './EntranceSelector'
 import type { DoorPreviewProps } from '../../components/DoorPreview'
 import { ConfiguredDoorSource, type DoorSourceState } from './ConfiguredDoorSource'
 import { ComposedPhotoPreview } from './ComposedPhotoPreview'
@@ -40,6 +40,9 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const inputRef = useRef<HTMLInputElement>(null)
   const objectUrlRef = useRef<string | null>(null)
   const [corners, setCorners] = useState<EntranceCorners>(() => cloneEntranceCorners(INITIAL_ENTRANCE_CORNERS))
+  const cornersRef = useRef(corners)
+  const entranceViewportMetricsRef = useRef<EntranceViewportMetrics | null>(null)
+  const pendingGuidedAutoFitRef = useRef(false)
   const [wizardStep, setWizardStep] = useState(0)
   const [sideliteEdges, setSideliteEdges] = useState<SideliteEdges>({})
   const [photoSideliteSide, setPhotoSideliteSide] = useState<SideliteSide|'both'|'none'|null>(null)
@@ -103,6 +106,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   useEffect(()=>{if(!showPlacementGuidance)return;placementGuidanceButtonRef.current?.focus();const onKeyDown=(event:KeyboardEvent)=>{if(event.key==='Escape')setShowPlacementGuidance(false)};document.addEventListener('keydown',onKeyDown);return()=>document.removeEventListener('keydown',onKeyDown)},[showPlacementGuidance])
 
   const clearAutoFitFailure = () => {
+    pendingGuidedAutoFitRef.current = false
     setAutoFitApplied(false)
     setShowAutoFitGuidance(false)
     setAutoFitUnableToImprove(false)
@@ -114,7 +118,9 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
 
   const resetPlacement = () => {
     setAutoFitAlignmentReady(false)
-    setCorners(cloneEntranceCorners(INITIAL_ENTRANCE_CORNERS))
+    const initialCorners=cloneEntranceCorners(INITIAL_ENTRANCE_CORNERS)
+    cornersRef.current=initialCorners
+    setCorners(initialCorners)
     setWizardStep(0)
     setSideliteEdges({})
     setPhotoSideliteSide(configuredSideliteSides.length===2?'both':configuredSideliteSides.length===0?'none':null)
@@ -219,13 +225,17 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
 
   const runAutoFit = async (wider=false) => {
     if (!photo || autoFitLoading) return
+    const activeCorners = cloneEntranceCorners(cornersRef.current)
+    const metrics = entranceViewportMetricsRef.current
     setAutoFitLoading(true)
     setAutoFitApplied(false)
     setAutoFitUnableToImprove(false)
     setAutoFitAlreadyAligned(false)
+    if (import.meta.env.DEV) console.debug('MOBILE_AUTOFIT_DEBUG', { lifecycle:'started', mobileViewport:window.matchMedia('(max-width: 767px)').matches?{width:innerWidth,height:innerHeight}:null, naturalImageDimensions:metrics?.naturalSize??frameImageSize, displayedImageDimensions:metrics?.displaySize??null, imageOffsetInsideEditor:metrics?.imageOffset??null, currentZoom:metrics?.zoom??1, currentPan:metrics?.pan??{x:0,y:0}, manualDisplayPoints:metrics?.displayPoints??null, convertedSourcePoints:metrics?.sourcePoints??null, searchRoiSource:(()=>{const points=Object.values(metrics?.sourcePoints??Object.fromEntries(Object.entries(activeCorners).map(([id,point])=>[id,{x:point.x*frameImageSize.width,y:point.y*frameImageSize.height}])) as EntranceCorners);const xs=points.map(point=>point.x),ys=points.map(point=>point.y);return{left:Math.min(...xs),top:Math.min(...ys),right:Math.max(...xs),bottom:Math.max(...ys)}})(), colorMode:'computed-from-original-source-pixels', autoFitLoading:true })
     try {
-      const result = await autoFitEntrance(photo.objectUrl, corners,{wider})
+      const result = await autoFitEntrance(photo.objectUrl, activeCorners,{wider})
       if (import.meta.env.DEV) console.debug('[home-visualizer:autoFitResult]', { success: result.detectedCount > 0, refinedEdgeCount: result.detectedCount, averageMovement: result.averageMovement, geometryValid: isValidEntranceCorners(result.corners), outcome: result.detectedCount > 0 ? 'proposal' : result.alreadyAligned ? 'already-aligned' : 'failure', proposedPoints: result.corners, edgeDiagnostics: result.diagnostics })
+      if (import.meta.env.DEV) console.debug('MOBILE_AUTOFIT_DEBUG', { lifecycle:'result', outcome:result.detectedCount>0?'success':result.alreadyAligned?'already-aligned':'failure', autoFitCandidateResult:result, proposalSourcePoints:Object.fromEntries(Object.entries(result.corners).map(([id,point])=>[id,{x:point.x*frameImageSize.width,y:point.y*frameImageSize.height}])), proposalDisplayPoints:metrics?Object.fromEntries(Object.entries(result.corners).map(([id,point])=>[id,{x:metrics.imageOffset.x+point.x*metrics.displaySize.width,y:metrics.imageOffset.y+point.y*metrics.displaySize.height}])):null })
       if(result.detectedCount>0&&isValidEntranceCorners(result.corners)){setAutoFitApplied(true);setShowAutoFitGuidance(false);setAutoFitUnableToImprove(false);setAutoFitAlreadyAligned(false);updateCorners(cloneEntranceCorners(result.corners))}
       else if(result.alreadyAligned){setAutoFitApplied(true);setAutoFitUnableToImprove(false);setAutoFitAlreadyAligned(true)}
       else{setAutoFitAlreadyAligned(false);setAutoFitUnableToImprove(true)}
@@ -234,12 +244,15 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
       setAutoFitAlreadyAligned(false)
       setAutoFitUnableToImprove(true)
       if (import.meta.env.DEV) console.debug('[home-visualizer:autoFitResult]', { success: false, confidence: null, failureStage: 'processing-error', proposedPoints: null })
+      if (import.meta.env.DEV) console.debug('MOBILE_AUTOFIT_DEBUG', { lifecycle:'result', outcome:'exception', reason })
     } finally {
       setAutoFitLoading(false)
+      if (import.meta.env.DEV) console.debug('MOBILE_AUTOFIT_DEBUG', { lifecycle:'finished', autoFitLoading:false })
     }
   }
 
   const updateCorners = (nextCorners: EntranceCorners) => {
+    cornersRef.current = nextCorners
     setCorners(nextCorners)
     setSideliteEdges(initializeSideliteEdges(nextCorners, photoSideliteSides))
     if(cleanupProposal||approvedCleanup||cleanupStrokes.length||cleanupError||cleanupSampleCenters.length||cleanupSampleAdjusting||recoloredFrameUrl)clearCleanup()
@@ -260,9 +273,16 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
 
   const acknowledgeAndRunAutoFit = () => {
     setHasSeenAutoFitGuidance(true)
+    pendingGuidedAutoFitRef.current = true
     setShowAutoFitGuidance(false)
-    void runAutoFit(false)
   }
+
+  useEffect(() => {
+    if (showAutoFitGuidance || !pendingGuidedAutoFitRef.current) return
+    pendingGuidedAutoFitRef.current = false
+    const frame=requestAnimationFrame(()=>{void runAutoFit(false)})
+    return()=>cancelAnimationFrame(frame)
+  }, [showAutoFitGuidance])
 
   const handleContinueDoorPlacement = () => {
     const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
@@ -412,11 +432,11 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
             {wizardStep===0&&<>
               {!autoFitPlacementComplete&&<div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>Outline the Door</h3><p>Move the four points roughly near the inside corners of the existing door.</p><p className="entrance-placement-note">Then use Auto-Fit to align the outline more precisely.</p></div></div>}
               <div className="visualizer-step-editor-shell">
-                <EntranceSelector key={photo.objectUrl} corners={corners} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightHandles={highlightAutoFitHandles} onAlignmentReadyChange={setAutoFitAlignmentReady}/>
+                <EntranceSelector key={photo.objectUrl} corners={corners} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightHandles={highlightAutoFitHandles} onAlignmentReadyChange={setAutoFitAlignmentReady} onViewportMetricsChange={(metrics)=>{entranceViewportMetricsRef.current=metrics}}/>
                 <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" aria-label="Replace photo" onClick={openPicker}><RefreshCw size={21}/></button><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
                 <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button><button type="button" className="wizard-continue" aria-label="Continue" disabled={!canContinueDoorPlacement} onClick={handleContinueDoorPlacement}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button></div>
               </div>
-              {autoFitAlignmentReady&&!autoFitApplied&&<div className="auto-fit-ready-callout" role="status"><strong>All four points are aligned.</strong><span>Use Auto-Fit to precisely refine the door opening.</span><div className="wizard-secondary auto-fit-primary-row"><button type="button" className="auto-fit-entrance-button auto-fit-ready-button" onClick={requestAutoFit} disabled={autoFitLoading}><Crosshair size={18}/> {autoFitLoading?'Finding Entrance…':'Auto-Fit Entrance'}</button></div></div>}
+              {autoFitAlignmentReady&&!autoFitApplied&&<div className="auto-fit-ready-callout" role="status"><strong>All four points are aligned.</strong><span>Use Auto-Fit to precisely refine the door opening.</span><div className="wizard-secondary auto-fit-primary-row"><button type="button" className="auto-fit-entrance-button auto-fit-ready-button" onPointerDown={(event)=>event.stopPropagation()} onClick={(event)=>{event.stopPropagation();requestAutoFit()}} disabled={autoFitLoading}><Crosshair size={18}/> {autoFitLoading?'Finding edges…':'Auto-Fit Entrance'}</button></div></div>}
               {autoFitUnableToImprove&&<div className="auto-fit-no-improvement" role="status"><strong>Auto-Fit couldn’t improve this placement.</strong><p>You can adjust the points and try again, or continue with your current placement.</p><div><button type="button" onClick={()=>runAutoFit(false)} disabled={autoFitLoading}>{autoFitLoading?'Trying Again…':'Try Again'}</button><button type="button" className="auto-fit-use-manual" onClick={handleContinueDoorPlacement} disabled={!canContinueDoorPlacement}>Continue</button></div></div>}
               {autoFitAlreadyAligned&&<div className="auto-fit-no-improvement auto-fit-already-aligned" role="status"><strong>Your door outline is already well aligned.</strong><p>You can keep the current placement and continue.</p><div><button type="button" className="auto-fit-use-manual" onClick={handleContinueDoorPlacement} disabled={!canContinueDoorPlacement}>Keep Current Placement &amp; Continue</button></div></div>}
             </>}
