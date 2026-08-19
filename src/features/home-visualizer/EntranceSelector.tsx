@@ -21,7 +21,7 @@ export const INITIAL_ENTRANCE_CORNERS: EntranceCorners = {
 const MIN_SEPARATION = 0.025
 
 type DragState =
-  | { kind: 'corner'; corner: CornerId; pointerId: number }
+  | { kind: 'corner'; corner: CornerId; pointerId: number; captureTarget: HTMLButtonElement }
   | { kind: 'selection'; pointerId: number; startPointer: Point; startCorners: EntranceCorners }
 
 type Props = {
@@ -34,6 +34,7 @@ type Props = {
   proposedDetectedEdges?: boolean[]
   showToolbar?: boolean
   highlightHandles?: boolean
+  forceAligned?: boolean
   onAlignmentReadyChange?: (ready: boolean) => void
   onViewportMetricsChange?: (metrics: EntranceViewportMetrics) => void
 }
@@ -71,7 +72,7 @@ export function isValidEntranceCorners(corners: EntranceCorners) {
   return turns.every((turn) => turn > 0.0001) || turns.every((turn) => turn < -0.0001)
 }
 
-export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges, showToolbar = true, highlightHandles = false, onAlignmentReadyChange, onViewportMetricsChange }: Props) {
+export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges, showToolbar = true, highlightHandles = false, forceAligned = false, onAlignmentReadyChange, onViewportMetricsChange }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
@@ -87,7 +88,7 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   const [snapGuides,setSnapGuides]=useState<SnapGuides>({})
   const [alignedEdges,setAlignedEdges]=useState<Set<number>>(()=>new Set())
   const magnifierSize=typeof window!=='undefined'&&window.matchMedia('(max-width: 767px)').matches?MOBILE_MAGNIFIER_SIZE:MAGNIFIER_SIZE
-  const alignmentReady=CORNER_ORDER.every((_id,index)=>alignedEdges.has(index)||alignedEdges.has((index+3)%4))
+  const alignmentReady=forceAligned||CORNER_ORDER.every((_id,index)=>alignedEdges.has(index)||alignedEdges.has((index+3)%4))
   useEffect(()=>onAlignmentReadyChange?.(alignmentReady),[alignmentReady,onAlignmentReadyChange])
   const { zoom, pan, isPanning, onWheel, beginPan, movePan, endPan, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
   useEffect(resetZoom, [imageSrc, resetZoom])
@@ -148,8 +149,8 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   const beginCornerDrag = (corner: CornerId, event: ReactPointerEvent<HTMLButtonElement>) => {
     if (mode !== 'edit') return
     event.preventDefault()
-    stageRef.current?.setPointerCapture(event.pointerId)
-    dragRef.current = { kind: 'corner', corner, pointerId: event.pointerId }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    dragRef.current = { kind: 'corner', corner, pointerId: event.pointerId, captureTarget: event.currentTarget }
     snapRef.current=emptySnapState()
     setActiveCorner(corner)
   }
@@ -166,12 +167,16 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   const moveDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current
     if (!drag || drag.pointerId !== event.pointerId) return
-    const pointer = normalizedPointer(event)
+    const coalesced=(event.nativeEvent as PointerEvent).getCoalescedEvents?.()
+    const latest=coalesced?.length?coalesced[coalesced.length-1]:event
+    const pointer = normalizedPointer(latest)
     if (!pointer) return
     event.preventDefault()
 
     if (drag.kind === 'corner') {
-      const snapped=freeDragWithMagneticSnap(corners,drag.corner,pointer,stageSize,snapRef.current,event.shiftKey);snapRef.current=snapped.state;setSnapGuides(snapped.guides);setAlignedEdges(current=>{const next=new Set(current),cornerIndex=CORNER_ORDER.indexOf(drag.corner),previousEdge=(cornerIndex+3)%4;next.delete(cornerIndex);next.delete(previousEdge);if(snapped.state.primary==='previous')next.add(previousEdge);if(snapped.state.primary==='next')next.add(cornerIndex);if(snapped.state.secondary){next.add(previousEdge);next.add(cornerIndex)}return next})
+      const isTouch=event.pointerType==='touch'||event.pointerType==='pen'
+      const renderedStageSize={width:stageSize.width*zoom,height:stageSize.height*zoom}
+      const snapped=freeDragWithMagneticSnap(corners,drag.corner,pointer,renderedStageSize,snapRef.current,event.shiftKey,undefined,isTouch);snapRef.current=snapped.state;setSnapGuides(snapped.guides);setAlignedEdges(current=>{const next=new Set(current),cornerIndex=CORNER_ORDER.indexOf(drag.corner),previousEdge=(cornerIndex+3)%4;next.delete(cornerIndex);next.delete(previousEdge);if(snapped.state.primary==='previous')next.add(previousEdge);if(snapped.state.primary==='next')next.add(cornerIndex);if(snapped.state.secondary){next.add(previousEdge);next.add(cornerIndex)}return next})
       const candidate = { ...corners, [drag.corner]: snapped.point }
       if (isValidEntranceCorners(candidate)) {
         scheduleCornersChange(candidate)
@@ -196,8 +201,10 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
   }
 
   const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (dragRef.current?.pointerId !== event.pointerId) return
-    if (stageRef.current?.hasPointerCapture(event.pointerId)) stageRef.current.releasePointerCapture(event.pointerId)
+    const drag=dragRef.current
+    if (drag?.pointerId !== event.pointerId) return
+    if (drag.kind==='corner'&&drag.captureTarget.hasPointerCapture(event.pointerId)) drag.captureTarget.releasePointerCapture(event.pointerId)
+    if (drag.kind==='selection'&&stageRef.current?.hasPointerCapture(event.pointerId)) stageRef.current.releasePointerCapture(event.pointerId)
     dragRef.current = null
     if(pendingCornersRef.current){if(cornerFrameRef.current!==null)cancelAnimationFrame(cornerFrameRef.current);cornerFrameRef.current=null;const pending=pendingCornersRef.current;pendingCornersRef.current=null;onCornersChange(pending)}
     snapRef.current=emptySnapState();setSnapGuides({})
@@ -286,7 +293,7 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
           {snapGuides.y!==undefined&&<line className="magnetic-snap-guide" x1="0" y1={snapGuides.y*stageSize.height} x2={stageSize.width} y2={snapGuides.y*stageSize.height}/>}
           {snapGuides.line&&<line className="magnetic-snap-guide" x1={snapGuides.line[0].x*stageSize.width} y1={snapGuides.line[0].y*stageSize.height} x2={snapGuides.line[1].x*stageSize.width} y2={snapGuides.line[1].y*stageSize.height}/>}
           <polygon className={`entrance-selection-polygon ${mode === 'move' ? 'move-enabled' : ''}`} points={polygonPoints} onPointerDown={beginSelectionDrag} />
-          {CORNER_ORDER.map((id,index)=>{const nextId=CORNER_ORDER[(index+1)%CORNER_ORDER.length];return <line key={`edge-${id}`} className={`entrance-connection-edge ${alignedEdges.has(index)?'aligned':''}`} x1={corners[id].x*stageSize.width} y1={corners[id].y*stageSize.height} x2={corners[nextId].x*stageSize.width} y2={corners[nextId].y*stageSize.height}/>})}
+          {CORNER_ORDER.map((id,index)=>{const nextId=CORNER_ORDER[(index+1)%CORNER_ORDER.length];return <line key={`edge-${id}`} className={`entrance-connection-edge ${forceAligned||alignedEdges.has(index)?'aligned':''}`} x1={corners[id].x*stageSize.width} y1={corners[id].y*stageSize.height} x2={corners[nextId].x*stageSize.width} y2={corners[nextId].y*stageSize.height}/>})}
           {proposedCorners && <>
             <polygon className="entrance-selection-proposal-fill" points={proposedPolygonPoints} />
             {CORNER_ORDER.map((id, index) => {
@@ -298,7 +305,7 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
         {CORNER_ORDER.map((id) => <button
           type="button"
           key={id}
-          className={`entrance-corner-handle ${highlightHandles?'guidance-pulse':''} ${alignedEdges.has(CORNER_ORDER.indexOf(id))||alignedEdges.has((CORNER_ORDER.indexOf(id)+3)%4)?'aligned':''}`}
+          className={`entrance-corner-handle ${highlightHandles?'guidance-pulse':''} ${forceAligned||alignedEdges.has(CORNER_ORDER.indexOf(id))||alignedEdges.has((CORNER_ORDER.indexOf(id)+3)%4)?'aligned':''}`}
           style={{ left: `${corners[id].x * 100}%`, top: `${corners[id].y * 100}%` }}
           aria-label={`Move ${id.replace(/([A-Z])/g, ' $1').toLowerCase()} corner`}
           onPointerDown={(event) => beginCornerDrag(id, event)}

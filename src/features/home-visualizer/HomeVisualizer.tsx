@@ -236,8 +236,8 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
       const result = await autoFitEntrance(photo.objectUrl, activeCorners,{wider})
       if (import.meta.env.DEV) console.debug('[home-visualizer:autoFitResult]', { success: result.detectedCount > 0, refinedEdgeCount: result.detectedCount, averageMovement: result.averageMovement, geometryValid: isValidEntranceCorners(result.corners), outcome: result.detectedCount > 0 ? 'proposal' : result.alreadyAligned ? 'already-aligned' : 'failure', proposedPoints: result.corners, edgeDiagnostics: result.diagnostics })
       if (import.meta.env.DEV) console.debug('MOBILE_AUTOFIT_DEBUG', { lifecycle:'result', outcome:result.detectedCount>0?'success':result.alreadyAligned?'already-aligned':'failure', autoFitCandidateResult:result, proposalSourcePoints:Object.fromEntries(Object.entries(result.corners).map(([id,point])=>[id,{x:point.x*frameImageSize.width,y:point.y*frameImageSize.height}])), proposalDisplayPoints:metrics?Object.fromEntries(Object.entries(result.corners).map(([id,point])=>[id,{x:metrics.imageOffset.x+point.x*metrics.displaySize.width,y:metrics.imageOffset.y+point.y*metrics.displaySize.height}])):null })
-      if(result.detectedCount>0&&isValidEntranceCorners(result.corners)){setAutoFitApplied(true);setShowAutoFitGuidance(false);setAutoFitUnableToImprove(false);setAutoFitAlreadyAligned(false);updateCorners(cloneEntranceCorners(result.corners))}
-      else if(result.alreadyAligned){setAutoFitApplied(true);setAutoFitUnableToImprove(false);setAutoFitAlreadyAligned(true)}
+      if(result.detectedCount>0&&isValidEntranceCorners(result.corners)){updateCorners(cloneEntranceCorners(result.corners));setAutoFitApplied(true);setAutoFitAlignmentReady(true);setShowAutoFitGuidance(false);setAutoFitUnableToImprove(false);setAutoFitAlreadyAligned(false)}
+      else if(result.alreadyAligned){setAutoFitApplied(true);setAutoFitAlignmentReady(true);setAutoFitUnableToImprove(false);setAutoFitAlreadyAligned(true)}
       else{setAutoFitAlreadyAligned(false);setAutoFitUnableToImprove(true)}
     } catch (reason) {
       if(import.meta.env.DEV)console.error('[home-visualizer:auto-fit-error]',reason)
@@ -261,7 +261,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
 
   const updateManualCorners=(nextCorners:EntranceCorners)=>{
     const moved=(Object.keys(nextCorners) as CornerId[]).filter(id=>Math.abs(nextCorners[id].x-corners[id].x)>1e-7||Math.abs(nextCorners[id].y-corners[id].y)>1e-7)
-    if(moved.length){setAutoFitUnableToImprove(false);setAutoFitAlreadyAligned(false)}
+    if(moved.length){setAutoFitApplied(false);setAutoFitUnableToImprove(false);setAutoFitAlreadyAligned(false)}
     updateCorners(nextCorners)
   }
 
@@ -432,7 +432,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
             {wizardStep===0&&<>
               {!autoFitPlacementComplete&&<div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>Outline the Door</h3><p>Move the four points roughly near the inside corners of the existing door.</p><p className="entrance-placement-note">Then use Auto-Fit to align the outline more precisely.</p></div></div>}
               <div className="visualizer-step-editor-shell">
-                <EntranceSelector key={photo.objectUrl} corners={corners} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightHandles={highlightAutoFitHandles} onAlignmentReadyChange={setAutoFitAlignmentReady} onViewportMetricsChange={(metrics)=>{entranceViewportMetricsRef.current=metrics}}/>
+                <EntranceSelector key={photo.objectUrl} corners={corners} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightHandles={highlightAutoFitHandles} forceAligned={autoFitPlacementComplete} onAlignmentReadyChange={setAutoFitAlignmentReady} onViewportMetricsChange={(metrics)=>{entranceViewportMetricsRef.current=metrics}}/>
                 <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" aria-label="Replace photo" onClick={openPicker}><RefreshCw size={21}/></button><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
                 <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button><button type="button" className="wizard-continue" aria-label="Continue" disabled={!canContinueDoorPlacement} onClick={handleContinueDoorPlacement}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button></div>
               </div>

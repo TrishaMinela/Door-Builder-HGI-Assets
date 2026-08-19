@@ -2396,7 +2396,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .visualizer-desktop-photo-action{display:none!important}
   .configured-door-checkerboard{min-height:260px}
   .entrance-point-magnifier{transform:translate(-50%,-50%)}
-  .entrance-corner-handle{width:40px;height:40px}
+  .entrance-corner-handle{width:64px;height:64px}
   .entrance-corner-handle:before{width:11px;height:11px}
   .frame-corner-handle,.sidelite-edge-handle{width:56px;height:56px}
   .cleanup-comparison-handle,.visualizer-comparison-handle{width:56px;height:56px}
@@ -2520,4 +2520,97 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
 @media(max-width:700px){
   .auto-fit-guidance-backdrop{align-items:end!important;justify-items:center!important;place-items:end center!important;padding:0!important}
   .auto-fit-guidance-sheet{width:100%!important;max-width:none!important;max-height:min(82dvh,620px)!important;margin:0!important;border-radius:16px 16px 0 0!important;padding:19px 17px calc(15px + env(safe-area-inset-bottom))!important}
+}
+
+/* Tablet and desktop configurator catalogs use the same four-across density as glass. */
+@media(min-width:768px){
+  .configuration-step .builder-options-scroll>.options-grid,
+  .configuration-step .builder-options-scroll>.door-style-grid,
+  .configuration-step .builder-options-scroll>.glass-options-grid{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+  }
+  .configuration-step .builder-options-scroll>.options-grid>.option-card,
+  .configuration-step .builder-options-scroll>.options-grid>.glass-choice-card,
+  .configuration-step .builder-options-scroll>.options-grid>.hardware-option-card{
+    min-width:0;
+    min-height:0;
+    height:auto;
+  }
+  .configuration-step .builder-options-scroll>.options-grid .option-visual,
+  .configuration-step .builder-options-scroll>.options-grid .glass-card-main .option-visual,
+  .configuration-step .builder-options-scroll>.options-grid .hardware-card-main .option-visual{
+    width:100%;
+    height:112px;
+    min-height:112px;
+    padding:6px;
+  }
+  .configuration-step .builder-options-scroll>.options-grid .option-copy,
+  .configuration-step .builder-options-scroll>.options-grid .glass-card-main .option-copy,
+  .configuration-step .builder-options-scroll>.options-grid .hardware-card-main .option-copy{
+    min-height:52px;
+    padding:8px 9px 9px;
+  }
+  .configuration-step .builder-options-scroll>.options-grid .option-copy small{
+    margin-bottom:3px;
+    font-size:7px;
+    line-height:1.2;
+  }
+  .configuration-step .builder-options-scroll>.options-grid .option-copy strong{
+    font-size:12px;
+    line-height:1.2;
+  }
+  .configuration-step .builder-options-scroll>.options-grid .option-copy>span{
+    margin-top:3px;
+    display:-webkit-box;
+    overflow:hidden;
+    font-size:9px;
+    line-height:1.3;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+  }
+  .configuration-step .builder-options-scroll>.options-grid .glass-caming-options,
+  .configuration-step .builder-options-scroll>.options-grid .hardware-finish-options{
+    gap:4px;
+    padding:6px 7px 7px;
+  }
+  .configuration-step .builder-options-scroll>.options-grid .glass-caming-options button,
+  .configuration-step .builder-options-scroll>.options-grid .hardware-finish-options button{
+    min-width:0;
+    padding:4px;
+    font-size:7px;
+  }
+  .configuration-step .builder-options-scroll>.step-0 .door-style-thumbnail{
+    width:100%;
+    height:100%;
+    padding:5px 8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .configuration-step .builder-options-scroll>.step-0 .door-style-thumbnail img{
+    width:auto;
+    height:100%;
+    max-width:100%;
+    max-height:100%;
+    margin:auto;
+    display:block;
+    object-fit:contain;
+    object-position:center;
+  }
+}
+
+/* Finish cards use the entire top preview surface; the card itself owns rounding. */
+.configuration-step .builder-options-scroll .option-visual:has(>.finish-tile-wrap){padding:0!important}
+.configuration-step .builder-options-scroll .option-visual>.finish-tile-wrap{
+  width:100%;
+  height:100%;
+  border-radius:0;
+  box-shadow:none;
+}
+.configuration-step .builder-options-scroll .option-visual>.finish-tile-stain>.finish-tile-image{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
 }
