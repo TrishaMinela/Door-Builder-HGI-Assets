@@ -37,6 +37,12 @@ const timberStainTooltipTitle = 'About TimberStain®'
 const timberStainTooltipText = 'TimberStain® finishes use nature-inspired colors and are hand-applied to enhance the door’s natural texture and grain. Each finish is oven-cured, protected with a durable clear coat, and backed by a 15-year warranty.'
 const proMatchNote = 'Colors may appear differently depending on the material, lighting, and screen. Confirm your final selection with an official color sample.'
 
+function doorCatalogModelName(name: string) {
+  const [code, ...descriptionParts] = name.split(' - ')
+  const description = descriptionParts.join(' - ').toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
+  return description ? `${code} ${description}` : code
+}
+
 function FinishInfoTooltip({ title, body, ariaLabel, tooltipId }: { title: string; body: string; ariaLabel: string; tooltipId: string }) {
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState({ left: 12, top: 12 })
@@ -1526,7 +1532,7 @@ export default function App() {
           })}
         </nav>
         {!(currentPage === 'review' && submitted) && <div className="preview-toolbar">
-          <span>Preview</span>
+          {currentPage !== 'review' && <button type="button" className="preview-reset-design preview-toolbar-reset" aria-label="Reset Design" title="Reset Design" onClick={resetDesign}><RotateCcw size={19} /></button>}
           {selectedStyle && <div className="preview-view-toggle" role="group" aria-label="Preview view">
             {previewModes.map((view) => <button type="button" className={builderPreviewView === view ? 'active' : ''} aria-pressed={builderPreviewView === view} key={view} onClick={() => setBuilderPreviewView(view)}>{view}</button>)}
           </div>}
@@ -1534,7 +1540,7 @@ export default function App() {
       </div>
       <main>
         {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">
-          {currentPage === 'door-style' && <button type="button" className="preview-reset-design" aria-label="Reset Design" title="Reset Design" onClick={resetDesign}><RotateCcw size={19} /></button>}
+          <button type="button" className="preview-reset-design" aria-label="Reset Design" title="Reset Design" onClick={resetDesign}><RotateCcw size={19} /></button>
           {selectedStyle && <div className="preview-view-toggle mobile-preview-view-toggle" role="group" aria-label="Preview view">
             {previewModes.map((view) => <button type="button" className={builderPreviewView === view ? 'active' : ''} aria-pressed={builderPreviewView === view} key={view} onClick={() => setBuilderPreviewView(view)}>{view}</button>)}
           </div>}
@@ -1569,7 +1575,7 @@ export default function App() {
                 </div>
               </div>}
               <div className={`options-grid step-${step} ${currentPage === 'door-style' || currentPage === 'door-grain' || currentPage === 'door-finish' || currentPage === 'jamb-type' || currentPage === 'jamb-finish' || currentPage === 'glass-type' || currentPage === 'glass-variant' || currentPage.startsWith('grid-') || currentPage.startsWith('sidelite-') ? 'door-style-grid' : ''} ${currentPage === 'glass' || currentPage === 'glass-variant' || currentPage === 'sidelite-glass' || currentPage === 'sidelite-glass-variant' ? 'glass-options-grid' : ''}`}>
-                {currentPage === 'door-style' && doorStyles.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.eyebrow} selected={styleId === item.id} onClick={() => selectDoorStyle(item.id)} visual={<DoorStyleThumbnail style={item} />} />)}
+                {currentPage === 'door-style' && doorStyles.map((item) => <OptionCard key={item.id} className="door-catalog-card" title={doorCatalogModelName(item.name)} eyebrow={item.hasGlass ? 'Glass-ready entry door' : 'Solid-panel entry door'} selected={styleId === item.id} onClick={() => selectDoorStyle(item.id)} visual={<DoorStyleThumbnail style={item} />} />)}
                 {currentPage === 'door-line' && availableDoorLines.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Door Line" selected={doorLineId === item.id} onClick={() => selectDoorLine(item.id)} visual={<span className="door-line-card-image"><img src={item.image} alt="" loading="lazy" decoding="async" /></span>} />)}
                 {currentPage === 'door-grain' && signatureGrainOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Signature grain" selected={selectedGrain === item.id} onClick={() => selectGrain(item.id)} visual={<img className="grain-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'sidelites' && sideliteOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Sidelites" selected={sidelites === item.id} onClick={() => selectSidelites(item.id)} visual={<img className="sidelite-option-image" src={item.image} alt="" loading="eager" decoding="async" />} />)}
@@ -1651,7 +1657,6 @@ export default function App() {
 
         {!submitted && <aside className={currentPage === 'review' ? 'review-preview-panel' : undefined}>
           <div className="aside-preview-area">
-            {currentPage === 'door-style' && <button type="button" className="preview-reset-design" aria-label="Reset Design" title="Reset Design" onClick={resetDesign}><RotateCcw size={19} /></button>}
             {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
           </div>
           {testMode && currentPage === 'review' && <section className="visualizer-promo-card visualizer-promo-card-desktop" aria-labelledby="desktop-visualizer-promo-title">

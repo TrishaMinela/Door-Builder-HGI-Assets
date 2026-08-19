@@ -2712,29 +2712,25 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   }
 }
 
-/* Reset belongs to the live preview, not the step heading. */
-.aside-preview-area,.mobile-live-preview{position:relative}
+/* Reset replaces the preview label; mobile keeps it in the same preview corner. */
+.mobile-live-preview{position:relative}
 .preview-reset-design{
-  position:absolute;
-  top:12px;
-  left:12px;
-  z-index:30;
-  width:40px;
-  height:40px;
-  border:1px solid var(--peacock);
-  border-radius:3px;
+  width:34px;
+  height:34px;
+  border:0;
+  border-radius:0;
   padding:0;
   display:grid;
   place-items:center;
-  background:#fffffff0;
+  background:transparent;
   color:var(--peacock);
-  box-shadow:0 3px 10px #05040b1c;
+  box-shadow:none;
 }
-.preview-reset-design svg{display:block}
-.preview-reset-design:hover{background:var(--peacock);color:#fff}
+.preview-reset-design svg{display:block;transition:transform .25s ease}
+.preview-reset-design:hover svg{transform:rotate(-90deg)}
 .preview-reset-design:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 @media(max-width:900px){
-  .preview-reset-design{top:9px;left:9px;width:38px;height:38px}
+  .mobile-live-preview>.preview-reset-design{position:absolute;top:9px;left:9px;z-index:30;width:34px;height:34px}
 }
 
 /* A single restrained segmented control for preview mode. */
@@ -2851,4 +2847,105 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   font-size:9px;
   font-weight:700;
   text-align:right;
+}
+
+/* Desktop catalog/preview balance: more room for selection, persistent preview. */
+@media(min-width:901px){
+  .app:not(.home-app):not(.visualizer-app):not(.review-confirmation-centered)>main,
+  .app:not(.home-app):not(.visualizer-app)>.builder-toolbar:not(.confirmation-toolbar){
+    grid-template-columns:minmax(0,62fr) minmax(360px,38fr);
+  }
+}
+
+/* Door Style reads like an HGI product catalog rather than a generic option card. */
+.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card{
+  height:270px;
+  min-height:270px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:0;
+  border-top:1px solid #bec9cc;
+  border-bottom:1px solid #bec9cc;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card:hover{
+  border-color:var(--peacock);
+  background:#fff;
+}
+.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card.selected{
+  border-color:var(--peacock);
+  outline:2px solid var(--peacock);
+  outline-offset:-2px;
+  box-shadow:inset 3px 0 0 var(--gold);
+}
+.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-copy{
+  order:1;
+  width:100%;
+  height:auto;
+  min-height:64px;
+  padding:12px 12px 8px;
+  display:flex;
+  flex:none;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:flex-start;
+}
+.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-copy strong{
+  order:1;
+  color:var(--black);
+  font-size:14px;
+  font-weight:800;
+  line-height:1.15;
+  text-align:left;
+}
+.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-copy small{
+  order:2;
+  margin:4px 0 0;
+  color:#687479;
+  font-size:8px;
+  font-style:italic;
+  font-weight:550;
+  line-height:1.25;
+  letter-spacing:0;
+  text-align:left;
+  text-transform:none;
+}
+.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-visual{
+  order:2;
+  width:100%;
+  height:auto;
+  min-height:0;
+  flex:1;
+  padding:4px 8px 10px;
+  background:transparent;
+}
+.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .door-style-thumbnail{
+  width:100%;
+  height:100%;
+  padding:0;
+}
+.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .door-style-thumbnail img{
+  width:auto;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
+  margin:auto;
+  object-fit:contain;
+  object-position:center;
+}
+@media(max-width:767px){
+  .configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card{
+    height:190px;
+    min-height:190px;
+  }
+  .configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-copy{
+    min-height:51px;
+    padding:8px 6px 5px;
+  }
+  .configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-copy strong{font-size:9px}
+  .configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-copy small{margin-top:3px;font-size:6px}
+  .configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-visual{padding:2px 4px 7px}
 }
