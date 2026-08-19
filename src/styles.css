@@ -2621,3 +2621,118 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   object-fit:cover;
   object-position:center;
 }
+
+/* Restrained progress navigation: text first, with one strong active state. */
+.builder-toolbar .stepper{
+  gap:0;
+}
+.builder-toolbar .stepper button{
+  min-width:0;
+  gap:0;
+  padding:0 clamp(8px,1.2vw,18px);
+  color:#798386;
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.035em;
+}
+.builder-toolbar .stepper button>span{
+  display:none!important;
+}
+.builder-toolbar .stepper button>em{
+  display:block!important;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.builder-toolbar .stepper button:not(:last-child):after{
+  top:50%;
+  right:0;
+  width:1px;
+  height:18px;
+  background:#d8dfe1;
+  transform:translateY(-50%);
+}
+.builder-toolbar .stepper button.active{
+  color:var(--black);
+  font-weight:850;
+  letter-spacing:.015em;
+}
+.builder-toolbar .stepper button.active:before{
+  content:"";
+  position:absolute;
+  left:clamp(8px,1.2vw,18px);
+  right:clamp(8px,1.2vw,18px);
+  bottom:0;
+  height:3px;
+  background:var(--gold);
+}
+.builder-toolbar .stepper button.done{
+  color:var(--peacock);
+  font-weight:700;
+}
+.builder-toolbar .stepper button:disabled{
+  opacity:1;
+  color:#9aa2a5;
+}
+@media(max-width:760px){
+  .builder-toolbar .stepper button{
+    gap:0;
+  }
+  .builder-toolbar .stepper button>span{
+    display:block!important;
+    width:auto;
+    height:auto;
+    min-width:0;
+    border:0;
+    border-radius:0;
+    background:transparent!important;
+    box-shadow:none!important;
+    color:inherit!important;
+    font-size:.9em;
+    font-weight:850;
+    line-height:1;
+  }
+  .builder-toolbar .stepper button>em{
+    display:none!important;
+  }
+}
+@media(max-width:560px){
+  .builder-toolbar .stepper button{
+    gap:0;
+    padding:0 4px;
+    font-size:7.5px;
+    letter-spacing:0;
+  }
+  .builder-toolbar .stepper button.active:before{
+    left:5px;
+    right:5px;
+  }
+  .builder-toolbar .stepper button:not(:last-child):after{
+    height:15px;
+  }
+}
+
+/* Reset belongs to the live preview, not the step heading. */
+.aside-preview-area,.mobile-live-preview{position:relative}
+.preview-reset-design{
+  position:absolute;
+  top:12px;
+  left:12px;
+  z-index:30;
+  width:40px;
+  height:40px;
+  border:1px solid var(--peacock);
+  border-radius:3px;
+  padding:0;
+  display:grid;
+  place-items:center;
+  background:#fffffff0;
+  color:var(--peacock);
+  box-shadow:0 3px 10px #05040b1c;
+}
+.preview-reset-design svg{display:block}
+.preview-reset-design:hover{background:var(--peacock);color:#fff}
+.preview-reset-design:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+@media(max-width:900px){
+  .preview-reset-design{top:9px;left:9px;width:38px;height:38px}
+}
