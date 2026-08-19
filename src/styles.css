@@ -2713,7 +2713,6 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
 }
 
 /* Reset replaces the preview label; mobile keeps it in the same preview corner. */
-.mobile-live-preview{position:relative}
 .preview-reset-design{
   width:34px;
   height:34px;
