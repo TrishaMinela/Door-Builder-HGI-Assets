@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DoorStyle, DoorSwing, Finish, GlassOption, HardwareView, PreviewHardware, ResolvedDoorProduct, SideliteConfiguration } from '../types'
 import { hardwareOptions, hardwarePreviewAssetUrl } from '../data/hardware'
 import { glassOptions } from '../data/glassOptions'
@@ -242,6 +242,8 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
 }
 
 export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', placementMode }: DoorPreviewProps) {
+  const previewSceneRef = useRef<HTMLDivElement>(null)
+  const [previewAssetsLoading, setPreviewAssetsLoading] = useState(false)
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
   const previewCandidatesKey = previewCandidates.join('|')
   const styleCodes = product?.styleCodes.length ? product.styleCodes : [style.code]
@@ -541,6 +543,64 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   }, [requestedHardwareImage])
 
   useEffect(() => {
+    const scene = previewSceneRef.current
+    if (!scene) return
+
+    let loadingTimer: number | undefined
+    let observedImages = new Set<HTMLImageElement>()
+
+    const clearLoadingTimer = () => {
+      if (loadingTimer !== undefined) window.clearTimeout(loadingTimer)
+      loadingTimer = undefined
+    }
+
+    const updateReadiness = () => {
+      clearLoadingTimer()
+      const images = Array.from(scene.querySelectorAll('img'))
+      const pending = images.some((image) => !image.complete)
+
+      if (!pending) {
+        setPreviewAssetsLoading(false)
+        return
+      }
+
+      // Cached assets normally complete synchronously. Delay the indicator so
+      // it only appears for a genuinely slow layer (usually decorative glass),
+      // rather than flashing for every option click.
+      loadingTimer = window.setTimeout(() => setPreviewAssetsLoading(true), 120)
+    }
+
+    const syncImageListeners = () => {
+      const currentImages = new Set(scene.querySelectorAll<HTMLImageElement>('img'))
+      observedImages.forEach((image) => {
+        if (currentImages.has(image)) return
+        image.removeEventListener('load', updateReadiness)
+        image.removeEventListener('error', updateReadiness)
+      })
+      currentImages.forEach((image) => {
+        if (observedImages.has(image)) return
+        image.addEventListener('load', updateReadiness)
+        image.addEventListener('error', updateReadiness)
+      })
+      observedImages = currentImages
+      updateReadiness()
+    }
+
+    syncImageListeners()
+    const observer = new MutationObserver(syncImageListeners)
+    observer.observe(scene, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] })
+
+    return () => {
+      observer.disconnect()
+      clearLoadingTimer()
+      observedImages.forEach((image) => {
+        image.removeEventListener('load', updateReadiness)
+        image.removeEventListener('error', updateReadiness)
+      })
+    }
+  }, [previewCandidatesKey, previewImage, renderedGlassOverlay, clearNoGridOverlay, hardwareImage, sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, frameSidelites, previewView, finishColor])
+
+  useEffect(() => {
     if (!previewHardware.manufacturer || !previewHardware.style || !previewHardware.finish || requestedHardwareImage) return
     console.warn('[door-preview:missing-hardware-overlay]', {
       manufacturer: previewHardware.manufacturer,
@@ -552,7 +612,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   }, [previewHardware.manufacturer, previewHardware.style, previewHardware.finish, previewView, requestedHardwareImage, doorSwing?.id])
 
   return (
-    <div className={`preview-scene ${compact ? 'compact' : ''}`} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
+    <div ref={previewSceneRef} className={`preview-scene ${compact ? 'compact' : ''}`} aria-busy={previewAssetsLoading} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
       <DoorFrame view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={sideliteGlassSrc} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle}>
         <div className={`door door-${style.panel} ${hasMappedPreview ? 'mapped-preview-door' : ''}${isHrtDoor ? ' door-preview-hrt' : ''}`} data-door-style-id={maskCode} style={{ '--door': finishColor, '--door-dark': finish.accent } as React.CSSProperties}>
@@ -589,6 +649,10 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           </div>}
         </div>
       </DoorFrame>
+      {previewAssetsLoading && <div className="preview-asset-loading" role="status" aria-live="polite">
+        <span className="preview-asset-spinner" aria-hidden="true" />
+        <span className="preview-asset-loading-label">Loading preview</span>
+      </div>}
       {!compact && showViewToggle && previewHardware.manufacturer && previewHardware.asset && <div className="preview-view-toggle" role="group" aria-label="Preview view">
         {(['Exterior', 'Interior'] as const).map((view) => <button type="button" className={previewView === view ? 'active' : ''} aria-pressed={previewView === view} key={view} onClick={() => setPreviewView(view)}>{view}</button>)}
       </div>}
