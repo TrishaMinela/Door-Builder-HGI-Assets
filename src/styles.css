@@ -418,7 +418,7 @@ body:has(.visualizer-app){
 @media(max-width:560px){.selection-path{margin-top:11px}.step-0 .option-card{height:180px;min-height:180px}.door-type-card-visual{width:82px;height:82px}}
 
 /* One hardware card per style, with only its available finish choices. */
-.hardware-option-card{position:relative;overflow:hidden;border:1px solid #dfe3e8;border-radius:7px;background:#fff;box-shadow:0 3px 12px #05040b08;transition:.2s}.hardware-option-card:hover{border-color:var(--peacock);box-shadow:0 10px 25px #0d666c18}.hardware-option-card.selected{border:3px solid var(--gold);box-shadow:inset 5px 0 0 var(--peacock),0 10px 28px #0d666c20}.hardware-card-main{position:relative;width:100%;display:block;border:0;padding:0;background:#fff;text-align:left;color:var(--black)}.hardware-option-card.selected .check{display:grid}.hardware-finish-options{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px 15px;border-top:1px solid #e3e7ea;background:#f8fafb}.hardware-finish-options button{min-width:66px;flex:1;border:1px solid #cdd5d9;border-radius:5px;background:#fff;padding:6px;display:flex;align-items:center;gap:6px;color:#4e575b;font-size:8px;font-weight:700;line-height:1.2}.hardware-finish-options button:hover{border-color:var(--peacock)}.hardware-finish-options button.selected{border:2px solid var(--gold);box-shadow:0 0 0 2px #0d666c22;color:var(--peacock)}.hardware-finish-options img{width:25px;height:25px;flex:none;border-radius:50%;object-fit:cover;box-shadow:inset 0 0 0 1px #0002}.hardware-finish-options span{text-align:left}
+.hardware-option-card{position:relative;overflow:hidden;border:1px solid #dfe3e8;border-radius:7px;background:#fff;box-shadow:0 3px 12px #05040b08;transition:.2s}.hardware-option-card:hover{border-color:var(--peacock);box-shadow:0 10px 25px #0d666c18}.hardware-option-card.selected{border:3px solid var(--gold);box-shadow:inset 5px 0 0 var(--peacock),0 10px 28px #0d666c20}.hardware-card-main{position:relative;width:100%;display:block;border:0;padding:0;background:#fff;text-align:left;color:var(--black)}.hardware-option-card.selected .check{display:grid}.hardware-finish-options{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px 15px;border-top:1px solid #e3e7ea;background:#f8fafb}.hardware-finish-options button{position:relative;width:42px;height:42px;min-width:42px;min-height:42px;flex:0 0 42px;border:0;border-radius:50%;padding:0;display:grid;place-items:center;background:transparent;line-height:0}.hardware-finish-color{display:block;width:28px;height:28px;border:1px solid #05040b30;border-radius:50%;box-shadow:inset 0 0 0 1px #ffffff38}.hardware-finish-options button:hover .hardware-finish-color{box-shadow:0 0 0 2px var(--peacock),inset 0 0 0 1px #ffffff38}.hardware-finish-options button.selected .hardware-finish-color{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold),0 0 0 4px var(--peacock)}.hardware-finish-options button:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
 @media(max-width:560px){.hardware-option-card{display:grid;grid-template-columns:140px minmax(0,1fr);min-height:190px}.hardware-card-main{display:contents}.hardware-card-main .option-visual{grid-row:1/3;height:100%;min-height:190px}.hardware-card-main .option-copy{align-self:center}.hardware-finish-options{align-content:center;border-top:1px solid #e3e7ea;padding:10px}.hardware-finish-options button{min-width:52px}.hardware-finish-options span{display:none}}
 
 /* Clean finish chips: paint and stain swatches stay solid, with no texture lines or patterns. */
@@ -1523,7 +1523,7 @@ body{overflow:hidden}
   .option-card .option-copy{width:auto}
   .glass-card-main,.hardware-card-main{display:contents}
 }
-.glass-caming-options button.selected,.hardware-finish-options button.selected{border-width:1px;outline:1px solid var(--gold);outline-offset:-1px}
+.glass-caming-options button.selected{border-width:1px;outline:1px solid var(--gold);outline-offset:-1px}
 
 /* Glass cards keep one consistent outer height across every grid row,
    including single-option entries such as CR14DL. */
@@ -2281,7 +2281,7 @@ body:has(.home-app){
 }
 
 /* Architectural refinement: one restrained surface/control language across builder + visualizer. */
-:root{--surface:#fff;--page:#f5f7f7;--border:#cfd8da;--radius-workspace:7px;--radius-card:5px;--radius-control:5px;--shadow-raised:0 4px 12px #05040b0d}
+:root{--surface:#fff;--page:#f5f7f7;--border:#cfd8da;--radius-workspace:4px;--radius-card:3px;--radius-control:3px;--shadow-raised:0 4px 12px #05040b0d}
 body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
 .home-hero{background:var(--page)!important}.home-hero-visual{background:#edf1f1}.home-hero-visual:before,.home-hero-visual:after,.home-app .home-hero:after{display:none!important}
 .stepper{box-shadow:none;border-bottom:1px solid var(--border)}
@@ -2296,7 +2296,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
 .next,.success button,.submit-button,.start-building,.visualizer-promo-copy button,.visualizer-download-button,.visualizer-apply-button,.wizard-navigation .wizard-continue,.auto-fit-adjust,.auto-fit-entrance-button{border-radius:var(--radius-control);box-shadow:none!important;transform:none!important}
 .home-return,.section-resets button,.wizard-navigation button,.wizard-secondary button,.visualizer-photo-actions button,.visualizer-back-button,.frame-preview-controls button,.frame-actions button,.frame-tool-controls button,.frame-area-actions>button,.cleanup-preview-toolbar button,.auto-fit-controls button,.auto-fit-no-improvement button,.visualizer-review-button{border-radius:var(--radius-control);box-shadow:none}
 .start-building:hover,.visualizer-promo-copy button:hover{transform:none;box-shadow:none}
-.preview-view-toggle{border-radius:6px;padding:4px;box-shadow:none}.preview-view-toggle button,.selection-path button{border-radius:4px}.visualizer-photo-ready,.cleanup-comparison-label,.visualizer-comparison-label{border-radius:4px}
+.preview-view-toggle{border-radius:3px;padding:4px;box-shadow:none}.preview-view-toggle button,.selection-path button{border-radius:2px}.visualizer-photo-ready,.cleanup-comparison-label,.visualizer-comparison-label{border-radius:3px}
 .quote-fields{gap:11px}.quote-fields input,.quote-fields textarea,select,input,textarea{border-radius:var(--radius-control)}.quote-fields input:focus,.quote-fields textarea:focus,select:focus,input:focus-visible,textarea:focus-visible{outline:none;border-color:var(--peacock);box-shadow:0 0 0 2px #0d666c22}
 .auto-fit-failure-modal{border-radius:var(--radius-workspace);padding:24px 25px 21px;box-shadow:0 10px 28px #05040b35}.auto-fit-example,.configured-door-source-error{border-radius:var(--radius-card)}.promatch-tooltip{border-radius:var(--radius-card)!important;box-shadow:var(--shadow-raised)!important}
 .how-it-works{padding-top:68px;padding-bottom:74px}.home-section-heading{margin-bottom:34px}.how-cards,.explore-cards{gap:14px}.how-card,.explore-cards article{padding:22px 19px}.explore-section{padding-top:54px;padding-bottom:60px}

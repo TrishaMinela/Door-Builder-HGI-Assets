@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react'
-import { finishSwatchAssetUrl, hardwareCardAssetUrl } from '../data/hardware'
+import { hardwareCardAssetUrl } from '../data/hardware'
 import type { HardwareOption } from '../types'
 
 type Props = {
@@ -25,7 +25,15 @@ export function HardwareOptionCard({ options, selectedId, onSelect }: Props) {
         <span className="check"><Check size={15} strokeWidth={3} /></span>
       </button>
       <div className="hardware-finish-options" role="group" aria-label={`${displayOption.manufacturer} ${displayOption.style} finish`}>
-        {options.map((option) => <button type="button" className={option.id === selectedId ? 'selected' : ''} aria-pressed={option.id === selectedId} title={option.finish} key={option.id} onClick={() => onSelect(option)}><img src={finishSwatchAssetUrl(option.finish)} alt="" /><span>{option.finish}</span></button>)}
+        {options.map((option) => <button
+          type="button"
+          className={option.id === selectedId ? 'selected' : ''}
+          aria-label={option.finish}
+          aria-pressed={option.id === selectedId}
+          title={option.finish}
+          key={option.id}
+          onClick={() => onSelect(option)}
+        ><span className="hardware-finish-color" style={{ backgroundColor: option.color }} /></button>)}
       </div>
     </article>
   )
