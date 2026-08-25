@@ -1006,6 +1006,53 @@ export default function App() {
     }
   }, [screen, currentPage, selectedStyle, selectedDoorLine, selectedGrain, sidelites, selectedSideliteStyle, visibleSideliteStyleOptions, visibleSelectedFinish, visibleFinishes, jambType, jambFinish, jambFinishOptions, selectedGlassCategory, availableGlassCategories, selectedGlassGroup, glassOptionGroups, glassVariantConfirmed, selectedGlassGroupKey, gridPathId, availableGridLocations, gridStyle, gridPattern, compatibleGridPatterns, gridColor, compatibleGridColors, gridWidth, compatibleGridWidths, sideliteGlassCategory, selectedSideliteCatalog, selectedSideliteGlassGroup, sideliteGlassOptionGroups, sideliteGlassVariantConfirmed, sideliteGridLocation, sideliteGridStyle, fslGridStyles, sideliteGridPattern, fslPatterns, sideliteGridColor, fslColors, sideliteGridWidth, fslWidths, selectedHardware, hardwareStyleGroups, selectedDoorSwing])
 
+  // Prime each grid choice as soon as its valid options are known. This keeps
+  // the live preview one step ahead of the customer while preserving every
+  // explicit selection they make later in the flow.
+  useEffect(() => {
+    if (!usesGridFlow) return
+    if (!gridPathId) {
+      if (availableGridLocations[0]) setGridPathId(availableGridLocations[0].id)
+      return
+    }
+    if (selectedGridLocationValue === 'Internal' && !gridStyle) {
+      if (lowEGridStyles[0]) setGridStyle(lowEGridStyles[0].id)
+      return
+    }
+    if (!gridPattern) {
+      if (compatibleGridPatterns[0]) setGridPattern(compatibleGridPatterns[0].id)
+      return
+    }
+    if (selectedGridLocationValue === 'Internal' && !gridColor) {
+      if (compatibleGridColors[0]) setGridColor(compatibleGridColors[0])
+      return
+    }
+    if (selectedGridLocationValue === 'Internal' && gridColor && !gridWidth && compatibleGridWidths[0]) {
+      setGridWidth(compatibleGridWidths[0])
+    }
+  }, [usesGridFlow, gridPathId, availableGridLocations, selectedGridLocationValue, gridStyle, gridPattern, compatibleGridPatterns, gridColor, compatibleGridColors, gridWidth, compatibleGridWidths])
+
+  useEffect(() => {
+    if (!usesFslGridFlow) return
+    if (!sideliteGridLocation) {
+      setSideliteGridLocation('internal')
+      return
+    }
+    if (!sideliteGridStyle) {
+      if (fslGridStyles[0]) setSideliteGridStyle(fslGridStyles[0])
+      return
+    }
+    if (!sideliteGridPattern) {
+      if (fslPatterns[0]) setSideliteGridPattern(fslPatterns[0])
+      return
+    }
+    if (!sideliteGridColor) {
+      if (fslColors[0]) setSideliteGridColor(fslColors[0])
+      return
+    }
+    if (!sideliteGridWidth && fslWidths[0]) setSideliteGridWidth(fslWidths[0])
+  }, [usesFslGridFlow, sideliteGridLocation, sideliteGridStyle, fslGridStyles, sideliteGridPattern, fslPatterns, sideliteGridColor, fslColors, sideliteGridWidth, fslWidths])
+
   useEffect(() => {
     if (!selectedFinish || jambFinishOverridden) return
     if (!jambType) setJambType('timber')

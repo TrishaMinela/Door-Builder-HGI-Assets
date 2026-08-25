@@ -122,7 +122,7 @@ function connectedAlphaBounds(image: ImageData, minimumAlpha = 128): PixelBounds
   return regions
 }
 
-function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement) {
+function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement, expandGlassCutout = true) {
   if (mask.naturalWidth !== slab.naturalWidth || mask.naturalHeight !== slab.naturalHeight) return null
   const canvas = document.createElement('canvas')
   canvas.width = slab.naturalWidth
@@ -152,6 +152,33 @@ function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement) {
     glassPixels.data[index + 1] = 255
     glassPixels.data[index + 2] = 255
     glassPixels.data[index + 3] = 255 - maskValue
+  }
+
+  // Treat every authored glass opening as inclusive. Growing the cutout by one
+  // source pixel keeps anti-aliased edge pixels out of the finish layer, so
+  // paint cannot appear beneath Internal, External, or SDL grid artwork.
+  if (expandGlassCutout) {
+    const sourceAlpha = new Uint8ClampedArray(canvas.width * canvas.height)
+    for (let pixel = 0; pixel < sourceAlpha.length; pixel += 1) {
+      sourceAlpha[pixel] = glassPixels.data[pixel * 4 + 3]
+    }
+    for (let y = 0; y < canvas.height; y += 1) {
+      for (let x = 0; x < canvas.width; x += 1) {
+        let glassAlpha = 0
+        for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+          const sampleY = y + offsetY
+          if (sampleY < 0 || sampleY >= canvas.height) continue
+          for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+            const sampleX = x + offsetX
+            if (sampleX < 0 || sampleX >= canvas.width) continue
+            glassAlpha = Math.max(glassAlpha, sourceAlpha[sampleY * canvas.width + sampleX])
+          }
+        }
+        const index = (y * canvas.width + x) * 4
+        glassPixels.data[index + 3] = glassAlpha
+        maskPixels.data[index + 3] = 255 - glassAlpha
+      }
+    }
   }
   context.putImageData(maskPixels, 0, 0)
   const finishUrl = canvas.toDataURL('image/png')
@@ -514,6 +541,9 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity,
     ...(finish.finishType === 'stain' ? { filter: `grayscale(1) contrast(${FINISH_RENDERING.stainContrast})` } : {}),
   } as React.CSSProperties : undefined
+  // Clip every glass layer to the authored opening. This is especially
+  // important for S before its SDL grid layer is added: the slab finish must
+  // stop at the glass mask, while the grid remains a separate layer above it.
   const glassOverlayStyle = glassMask ? {
     ...(maskCode === 'CR14' || maskCode === 'CR14PL' ? { backgroundColor: '#eef1f2' } : {}),
     WebkitMaskImage: `url("${glassMask}")`,
