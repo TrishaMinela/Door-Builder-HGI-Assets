@@ -31,8 +31,13 @@ export type DoorPreviewProps = {
   sharedComparisonCanvas?: boolean
   jambFinish?: Finish | null
   jambType?: 'timber' | 'clad'
+  glassFrameFinish?: Finish | null
   placementMode?: 'opening-only'
 }
+
+const GLASS_FRAME_WIDTH_RATIO = 0.06
+const MIN_GLASS_FRAME_WIDTH_PX = 8
+const MAX_GLASS_FRAME_WIDTH_PX = 40
 
 const FINISH_RENDERING = {
   paintColorBlendMode: 'normal',
@@ -180,12 +185,55 @@ function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement, expan
       }
     }
   }
+  const glassBounds = pixelBounds(glassPixels, (_red, _green, _blue, alpha) => alpha > 0)
+  const glassRegions = connectedAlphaBounds(glassPixels)
+  let glassFrameUrl: string | undefined
+  if (glassBounds && glassRegions.length) {
+    const openingAlpha = new Uint8ClampedArray(canvas.width * canvas.height)
+    for (let pixel = 0; pixel < openingAlpha.length; pixel += 1) openingAlpha[pixel] = glassPixels.data[pixel * 4 + 3]
+    const expandedAlpha = new Uint8ClampedArray(openingAlpha.length)
+    for (const region of glassRegions) {
+      const radius = Math.max(MIN_GLASS_FRAME_WIDTH_PX, Math.min(MAX_GLASS_FRAME_WIDTH_PX, Math.round(Math.min(region.width, region.height) * GLASS_FRAME_WIDTH_RATIO)))
+      const horizontal = new Uint8ClampedArray(openingAlpha.length)
+      const regionRight = region.x + region.width - 1
+      const regionBottom = region.y + region.height - 1
+      for (let y = region.y; y <= regionBottom; y += 1) {
+        for (let x = Math.max(0, region.x - radius); x <= Math.min(canvas.width - 1, regionRight + radius); x += 1) {
+          let alpha = 0
+          for (let offset = -radius; offset <= radius; offset += 1) {
+            const sampleX = x + offset
+            if (sampleX >= region.x && sampleX <= regionRight) alpha = Math.max(alpha, openingAlpha[y * canvas.width + sampleX])
+          }
+          horizontal[y * canvas.width + x] = alpha
+        }
+      }
+      for (let y = Math.max(0, region.y - radius); y <= Math.min(canvas.height - 1, regionBottom + radius); y += 1) {
+        for (let x = Math.max(0, region.x - radius); x <= Math.min(canvas.width - 1, regionRight + radius); x += 1) {
+          let alpha = 0
+          for (let offset = -radius; offset <= radius; offset += 1) {
+            const sampleY = y + offset
+            if (sampleY >= region.y && sampleY <= regionBottom) alpha = Math.max(alpha, horizontal[sampleY * canvas.width + x])
+          }
+          const pixel = y * canvas.width + x
+          expandedAlpha[pixel] = Math.max(expandedAlpha[pixel], alpha)
+        }
+      }
+    }
+    const framePixels = new ImageData(canvas.width, canvas.height)
+    for (let pixel = 0; pixel < openingAlpha.length; pixel += 1) {
+      const index = pixel * 4
+      framePixels.data[index] = 255
+      framePixels.data[index + 1] = 255
+      framePixels.data[index + 2] = 255
+      framePixels.data[index + 3] = Math.max(0, expandedAlpha[pixel] - openingAlpha[pixel])
+    }
+    context.putImageData(framePixels, 0, 0)
+    glassFrameUrl = canvas.toDataURL('image/png')
+  }
   context.putImageData(maskPixels, 0, 0)
   const finishUrl = canvas.toDataURL('image/png')
   context.putImageData(glassPixels, 0, 0)
-  const glassBounds = pixelBounds(glassPixels, (_red, _green, _blue, alpha) => alpha > 0)
-  const glassRegions = connectedAlphaBounds(glassPixels)
-  return { finishUrl, glassUrl: canvas.toDataURL('image/png'), glassBounds, glassRegions, maskWidth: canvas.width, maskHeight: canvas.height }
+  return { finishUrl, glassUrl: canvas.toDataURL('image/png'), glassFrameUrl, glassBounds, glassRegions, maskWidth: canvas.width, maskHeight: canvas.height }
 }
 
 function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height: number, maskBounds: PixelBounds, offsetY = 0, maskRegions?: PixelBounds[], overscan = 1, containWithinMask = false, stretchToMaskWidth = false, stretchToMaskHeight = false) {
@@ -268,7 +316,7 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', placementMode }: DoorPreviewProps) {
+export function DoorPreview({ style, finish, glass, hardware, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', glassFrameFinish = null, placementMode }: DoorPreviewProps) {
   const previewSceneRef = useRef<HTMLDivElement>(null)
   const [previewAssetsLoading, setPreviewAssetsLoading] = useState(false)
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
@@ -286,10 +334,11 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const [previewImage, setPreviewImage] = useState(previewCandidates[0] ?? '')
   const hasMappedPreview = Boolean(previewCandidates.length)
   const finishColor = tintColor ?? finish.color
-  const [processedMask, setProcessedMask] = useState<{ source: string; finishUrl: string; glassUrl?: string; glassBounds?: PixelBounds | null; glassRegions?: PixelBounds[]; maskWidth?: number; maskHeight?: number } | null>(null)
-  const [sideliteFinishMask, setSideliteFinishMask] = useState<{ slab: string; mask: string; url: string } | null>(null)
+  const [processedMask, setProcessedMask] = useState<{ source: string; finishUrl: string; glassUrl?: string; glassFrameUrl?: string; glassBounds?: PixelBounds | null; glassRegions?: PixelBounds[]; maskWidth?: number; maskHeight?: number } | null>(null)
+  const [sideliteFinishMask, setSideliteFinishMask] = useState<{ slab: string; mask: string; url: string; glassFrameUrl?: string } | null>(null)
   const finishMask = previewImage && processedMask?.source === previewImage ? processedMask.finishUrl : undefined
   const glassMask = previewImage && processedMask?.source === previewImage ? processedMask.glassUrl : undefined
+  const glassFrameMask = previewImage && processedMask?.source === previewImage ? processedMask.glassFrameUrl : undefined
   const compatibleGlass = isGlassCapable ? glassOptions.filter((option) => styleCodes.some((code) => option.overlaysByDoorStyle[code])) : []
   const previewGlass = glass && compatibleGlass.some((option) => option.id === glass.id) ? glass : null
   const glassOverlay = previewGlass ? styleCodes.map((code) => previewGlass.overlaysByDoorStyle[code]).find(Boolean) : undefined
@@ -421,7 +470,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
             sideliteMaskSrc,
           })
         }
-        setSideliteFinishMask(processed ? { slab: sideliteAssetSrc, mask: sideliteMaskSrc, url: processed.finishUrl } : null)
+        setSideliteFinishMask(processed ? { slab: sideliteAssetSrc, mask: sideliteMaskSrc, url: processed.finishUrl, glassFrameUrl: processed.glassFrameUrl } : null)
       }
       mask.onerror = () => { if (!cancelled) setSideliteFinishMask(null) }
       mask.src = sideliteMaskSrc
@@ -518,6 +567,18 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
       ...(finish.finishType === 'stain' ? { filter: `saturate(${FINISH_RENDERING.stainSaturation})` } : {}),
     } as React.CSSProperties
   }, [applyFinish, finish.finishType, finishColor, finishMask, hasMappedPreview])
+  const glassFrameStyle = glassFrameFinish && glassFrameMask ? {
+    backgroundColor: glassFrameFinish.color,
+    ...(glassFrameFinish.finishType === 'stain' ? { backgroundImage: `url("${glassFrameFinish.image}")`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
+    WebkitMaskImage: `url("${glassFrameMask}")`,
+    maskImage: `url("${glassFrameMask}")`,
+  } as React.CSSProperties : undefined
+  const sideliteGlassFrameStyle = glassFrameFinish && sideliteFinishMask?.glassFrameUrl ? {
+    backgroundColor: glassFrameFinish.color,
+    ...(glassFrameFinish.finishType === 'stain' ? { backgroundImage: `url("${glassFrameFinish.image}")`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
+    WebkitMaskImage: `url("${sideliteFinishMask.glassFrameUrl}")`,
+    maskImage: `url("${sideliteFinishMask.glassFrameUrl}")`,
+  } as React.CSSProperties : undefined
   const detailLayerStyle = {
     WebkitMaskImage: finishMask ? `url("${finishMask}")` : undefined,
     maskImage: finishMask ? `url("${finishMask}")` : undefined,
@@ -644,7 +705,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   return (
     <div ref={previewSceneRef} className={`preview-scene ${compact ? 'compact' : ''}`} aria-busy={previewAssetsLoading} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
-      <DoorFrame view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={sideliteGlassSrc} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle}>
+      <DoorFrame view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={sideliteGlassSrc} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteGlassFrameStyle={sideliteGlassFrameStyle}>
         <div className={`door door-${style.panel} ${hasMappedPreview ? 'mapped-preview-door' : ''}${isHrtDoor ? ' door-preview-hrt' : ''}`} data-door-style-id={maskCode} style={{ '--door': finishColor, '--door-dark': finish.accent } as React.CSSProperties}>
           {style.hasGlass && <div className="glass glass-clear" />}
           <div className="panels">
@@ -653,6 +714,7 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
           {previewImage && <img className={`door-style-image door-style-image-${finish.finishType}`} src={previewImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {finishLayerStyle && <div className={`door-finish-layer door-finish-layer-${finish.finishType}`} style={finishLayerStyle} />}
           {previewImage && finishLayerStyle && showDetailImage && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+          {glassFrameStyle && <div className="door-glass-frame-layer" style={glassFrameStyle} />}
           {clearNoGridOverlay && <img className="door-glass-overlay door-clear-glass-base" src={fittedClearBase?.source === clearNoGridOverlay && fittedClearBase.maskSource === previewImage ? fittedClearBase.url : clearNoGridOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {isHrtDoor
             ? renderedGlassOverlay && <>

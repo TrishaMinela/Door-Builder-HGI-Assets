@@ -30,6 +30,8 @@ const COMPANY = {
   phone: '1-800-525-1885',
 }
 
+type FinishSummary = { jambType: 'timber' | 'clad'; jambFinishType: 'paint' | 'stain' | 'clad'; jambFinishColor: string; jambFinishOverridden: boolean; glassFrameFinishColor?: string }
+
 let cachedDoorPreview: string | null = null
 
 function cropTransparentCanvas(source: HTMLCanvasElement) {
@@ -215,7 +217,7 @@ async function generateLegacySummaryPdf(
   sidelites: SideliteConfiguration,
   sideliteStyle: string | null,
   sideliteGlass: SideliteGlassConfiguration | null = null,
-  jamb?: { jambType: 'timber' | 'clad'; jambFinishType: 'paint' | 'stain' | 'clad'; jambFinishColor: string; jambFinishOverridden: boolean },
+  jamb?: FinishSummary,
 ) {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   let font = 'helvetica'
@@ -301,6 +303,7 @@ async function generateLegacySummaryPdf(
       { label: 'JAMB TYPE', value: jamb.jambType === 'clad' ? 'Clad' : 'Timber' },
       { label: 'JAMB FINISH TYPE', value: jamb.jambFinishType === 'clad' ? 'Clad' : jamb.jambFinishType === 'stain' ? 'Stain' : 'Paint' },
       { label: 'JAMB FINISH COLOR', value: jamb.jambFinishColor },
+      ...(jamb.glassFrameFinishColor ? [{ label: 'GLASS FRAME COLOR', value: jamb.glassFrameFinishColor }] : []),
     ] : []),
     { label: 'MAIN DOOR GLASS', value: glass?.name ?? 'No glass', icon: summaryIcons[4] },
     ...(grid ? [
@@ -421,7 +424,7 @@ export async function generateSummaryPdf(
   sidelites: SideliteConfiguration,
   sideliteStyle: string | null,
   sideliteGlass: SideliteGlassConfiguration | null = null,
-  jamb?: { jambType: 'timber' | 'clad'; jambFinishType: 'paint' | 'stain' | 'clad'; jambFinishColor: string; jambFinishOverridden: boolean },
+  jamb?: FinishSummary,
 ) {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   let font = 'helvetica'
@@ -490,12 +493,12 @@ export async function generateSummaryPdf(
   return pdf
 }
 
-export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: { jambType: 'timber' | 'clad'; jambFinishType: 'paint' | 'stain' | 'clad'; jambFinishColor: string; jambFinishOverridden: boolean }) {
+export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary) {
   const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb)
   pdf.save(configurationPdfName)
 }
 
-export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: { jambType: 'timber' | 'clad'; jambFinishType: 'paint' | 'stain' | 'clad'; jambFinishColor: string; jambFinishOverridden: boolean }) {
+export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary) {
   const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb)
   const dataUri = pdf.output('datauristring')
   return {

@@ -119,6 +119,9 @@ export type DoorConfiguration = {
   finish: Finish
   doorFinishType?: 'paint' | 'stain'
   doorFinishColor?: string
+  glassFrameColorMode?: 'match-door' | 'custom'
+  glassFrameFinishId?: string
+  glassFrameFinishColor?: string
   jambType?: 'timber' | 'clad'
   jambFinishType?: 'paint' | 'stain' | 'clad'
   jambFinishColor?: string
