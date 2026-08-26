@@ -1,4 +1,3 @@
-import { Check } from 'lucide-react'
 import { hardwareCardAssetUrl } from '../data/hardware'
 import type { HardwareOption } from '../types'
 
@@ -22,7 +21,6 @@ export function HardwareOptionCard({ options, selectedId, onSelect }: Props) {
           <strong>{displayOption.style}</strong>
           <span>Choose an available finish below.</span>
         </span>
-        <span className="check"><Check size={15} strokeWidth={3} /></span>
       </button>
       <div className="hardware-finish-options" role="group" aria-label={`${displayOption.manufacturer} ${displayOption.style} finish`}>
         {options.map((option) => <button

@@ -1,4 +1,3 @@
-import { Check } from 'lucide-react'
 import type { SideliteGlassOption } from '../data/fslGlass'
 import { glassSelectionThumbnail } from '../data/glassOptions'
 
@@ -28,7 +27,6 @@ export function SideliteGlassOptionCard({ groupKey, title, options, selectedId, 
         <span className="option-copy">
           <strong>{title}</strong>
         </span>
-        <span className="check"><Check size={15} strokeWidth={3} /></span>
       </button>
     </article>
   )

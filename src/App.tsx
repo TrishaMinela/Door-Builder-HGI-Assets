@@ -132,10 +132,10 @@ function TimberStainInfo() {
 }
 
 const sideliteOptions: { id: SideliteConfiguration; name: string; image: string }[] = [
-  { id: 'none', name: 'No Sidelites', image: '/assets/hgi-assets/Sidelites/options/No Side Lite.png' },
-  { id: 'hinge-side', name: 'Hinge-Side Sidelite', image: '/assets/hgi-assets/Sidelites/options/Hinge Side - Sidelite.png' },
-  { id: 'lock-side', name: 'Lock-Side Sidelite', image: '/assets/hgi-assets/Sidelites/options/Lock Side - Sidelite.png' },
-  { id: 'both-sides', name: 'Sidelites on Both Sides', image: '/assets/hgi-assets/Sidelites/options/Both Sides - Sidelite.png' },
+  { id: 'none', name: 'No Sidelites', image: '/assets/hgi-assets/Sidelites/options/No Sidelites.png' },
+  { id: 'hinge-side', name: 'Hinge-Side Sidelite', image: '/assets/hgi-assets/Sidelites/options/Hinge-Side Sidelite.png' },
+  { id: 'lock-side', name: 'Lock-Side Sidelite', image: '/assets/hgi-assets/Sidelites/options/Lock-Side Sidelite.png' },
+  { id: 'both-sides', name: 'Sidelites on Both Sides', image: '/assets/hgi-assets/Sidelites/options/Both-Sides Sidelites.png' },
 ]
 const sideliteLabels = Object.fromEntries(sideliteOptions.map((option) => [option.id, option.name])) as Record<SideliteConfiguration, string>
 const sideliteStyleOptions = [
@@ -394,7 +394,7 @@ function EmptyDoorPreview() {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<'home' | 'builder' | 'visualizer'>('home')
+  const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>('home')
   const [step, setStep] = useState(0)
   const [showEntrywayGuidance, setShowEntrywayGuidance] = useState(false)
   const [hasShownEntrywayGuidance, setHasShownEntrywayGuidance] = useState(false)
@@ -438,6 +438,9 @@ export default function App() {
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [pendingCustomerAction, setPendingCustomerAction] = useState<null | 'download-pdf' | 'open-visualizer'>(null)
+  const [completedCustomerAction, setCompletedCustomerAction] = useState<null | 'download-pdf' | 'open-visualizer'>(null)
+  const [customerFormCompleted, setCustomerFormCompleted] = useState(false)
   const [testMode, setTestMode] = useState(true)
   const [homeDemoIndex, setHomeDemoIndex] = useState(0)
   const [heroImageError, setHeroImageError] = useState('')
@@ -508,7 +511,6 @@ export default function App() {
     ? glassOptions.filter((option) => selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])) && !(selectedStyleCodes.includes('F') && legacyFullLiteGlassIds.has(option.id)) && !(selectedStyleCodes.includes('S') && legacySHalfLiteClearGlassIds.has(option.id)) && !((selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && legacyF48ClearGlassIds.has(option.id)) && (!(selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) || f48GlassOptionIds.has(option.id)))
     : []
   const supportsGlass = Boolean(compatibilitySupportsGlass && availableGlass.length > 0)
-  const supportsGlassFrameColor = supportsGlass && Boolean(glass) && selectedStyleCodes.some((code) => glassDoorCodes.has(code))
   const supportsGlassFrameStain = availableFinishes.some((item) => item.finishType === 'stain')
   const glassFrameFinishOptions = availableFinishes.filter((item) => item.finishType === 'paint' || supportsGlassFrameStain)
   const glassFrameFinishTypes = (['paint', 'stain'] as const).filter((type) => glassFrameFinishOptions.some((item) => item.finishType === type))
@@ -524,6 +526,8 @@ export default function App() {
   const isOakSignatureSidelite = selectedDoorLine?.id === signatureSeriesId && selectedGrain === 'Oak'
   const supportsSideliteLine = selectedDoorLine?.id === '20-gauge-smooth-steel' || selectedDoorLine?.id === '22-gauge-steel' || selectedDoorLine?.id === 'brushed-smooth-fiberglass' || selectedDoorLine?.id === 'textured-fiberglass' || isCherrySignatureSidelite || isFirSignatureSidelite || isMahoganySignatureSidelite || isOakSignatureSidelite
   const hasSideliteGlass = supportsSideliteLine && Boolean(sidelites && sidelites !== 'none' && sideliteStyleId)
+  const hasMainDoorGlassFrame = supportsGlass && Boolean(glass) && selectedStyleCodes.some((code) => glassDoorCodes.has(code))
+  const supportsGlassFrameColor = hasMainDoorGlassFrame || hasSideliteGlass
   const steps = supportsGlass || hasSideliteGlass ? glassSteps : noGlassSteps
   const selectedGlass = supportsGlass ? glass : null
   const clearOnlyGlass = !supportsGlass && compatibilitySupportsGlass
@@ -554,10 +558,12 @@ export default function App() {
         ? `/assets/hgi-assets/Sidelites/Signature/Oak/${selectedSideliteStyle.id.toUpperCase()}.png`
       : isCherrySignatureSidelite
       ? `/assets/hgi-assets/Sidelites/Signature/Cherry/${selectedSideliteStyle.id.toUpperCase()}.png`
-      : selectedDoorLine?.id === '22-gauge-steel' && selectedSideliteStyle.id === 'ssl'
-        ? '/assets/hgi-assets/Sidelites/Signature/Mahogany/SSL.png'
       : `/assets/hgi-assets/Sidelites/${selectedDoorLine?.id === '20-gauge-smooth-steel' || selectedDoorLine?.id === 'brushed-smooth-fiberglass' ? '20 Gauge' : '22 Gauge'}/${selectedSideliteStyle.id.toUpperCase()}.png`
     : undefined
+  const selectedSideliteMask = selectedSideliteStyle?.id === 'f48sl'
+    && (selectedDoorLine?.id === '20-gauge-smooth-steel' || selectedDoorLine?.id === 'brushed-smooth-fiberglass')
+    ? '/assets/masks/Sidelites/Smooth-F48SL.png'
+    : selectedSideliteStyle?.mask
   const selectedSideliteCatalog = selectedSideliteStyle ? sideliteGlassCatalogs[selectedSideliteStyle.id] : null
   const usesFslGlassFlow = Boolean(selectedSideliteCatalog)
   const visibleFslGlass = sideliteGlassCategory ? selectedSideliteCatalog?.options.filter((option) => option.category === sideliteGlassCategory) ?? [] : []
@@ -778,7 +784,7 @@ export default function App() {
     showViewToggle: false,
     sidelites: sidelites || 'none',
     sideliteAssetSrc: selectedSidelitePreview,
-    sideliteMaskSrc: selectedSideliteStyle?.mask,
+    sideliteMaskSrc: selectedSideliteMask,
     sideliteGlassSrc: sideliteGlassPreview,
     sideliteClearGlassBase: usesFslGridFlow || selectedFslGlass?.id === 'clear-no-grids',
     sideliteGridMatchesFinish: sideliteSdlMatchesFinish,
@@ -1203,6 +1209,9 @@ export default function App() {
     setSubmitted(false)
     setSubmitting(false)
     setSubmitError('')
+    setPendingCustomerAction(null)
+    setCompletedCustomerAction(null)
+    setCustomerFormCompleted(false)
     setScreen('builder')
     goTo(0)
   }
@@ -1226,7 +1235,15 @@ export default function App() {
     return targetPage >= 0 && targetPage <= step
   }
 
-  const showScreen = (next: 'home' | 'builder' | 'visualizer') => {
+  const showScreen = (next: 'home' | 'builder' | 'customer-form' | 'visualizer') => {
+    if (next === 'visualizer' && !customerFormCompleted) {
+      setPendingCustomerAction('open-visualizer')
+      setSubmitted(false)
+      setScreen('customer-form')
+      goTo(pages.indexOf('review'))
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
     if (next === 'builder') setBuilderPreviewView('Exterior')
     if (next === 'builder' && screen === 'home') {
       // Starting again from Home begins a fresh pass through the workflow while
@@ -1242,6 +1259,20 @@ export default function App() {
     }
     if (next !== 'builder') setShowEntrywayGuidance(false)
     setScreen(next)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const requestCustomerAction = (action: 'download-pdf' | 'open-visualizer') => {
+    if (customerFormCompleted) {
+      if (action === 'download-pdf') void downloadPdf()
+      else showScreen('visualizer')
+      return
+    }
+    setPendingCustomerAction(action)
+    setCompletedCustomerAction(null)
+    setSubmitted(false)
+    setSubmitError('')
+    setScreen('customer-form')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -1454,7 +1485,18 @@ export default function App() {
       const jambSummary = { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' as const : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }
       const attachment = await generateSummaryAttachment(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, jambSummary)
       await submitQuote({ configuration: { product, style, grain: selectedGrain, finish, doorFinishType: finish.finishType, doorFinishColor: finish.name, glassFrameColorMode: glassFrameColorMode || undefined, glassFrameFinishId: glassFrameColorMode === 'custom' ? resolvedGlassFrameFinish.id : undefined, ...jambSummary, glass: configuredGlass, mainDoorGlass: configuredGlass, grid: gridConfiguration, hardware: selectedHardware, doorSwing: selectedDoorSwing, sidelites: sidelites || 'none', sidelitePlacement: sidelites || 'none', ...(selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}), ...(sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}) }, contact, attachment, submittedAt: new Date().toISOString() })
-      setSubmitted(true)
+      const completedAction = pendingCustomerAction
+      setCustomerFormCompleted(true)
+      setPendingCustomerAction(null)
+      setCompletedCustomerAction(completedAction)
+      if (completedAction === 'download-pdf') {
+        await downloadPdf()
+        setSubmitted(true)
+      } else if (completedAction === 'open-visualizer') {
+        setSubmitted(true)
+      } else {
+        setSubmitted(true)
+      }
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Something went wrong. Please try again.')
     } finally {
@@ -1586,6 +1628,21 @@ export default function App() {
             </div>
           </div>
         </section>
+      </main> : screen === 'customer-form' ? <main className="customer-form-page">
+        <section className="customer-form-screen" aria-labelledby="customer-form-title">
+          <button type="button" className="back" onClick={() => { setPendingCustomerAction(null); setCompletedCustomerAction(null); setSubmitted(false); goTo(pages.indexOf('review')); showScreen('builder') }}><ArrowLeft size={17} /> Back to Review</button>
+          {!submitted ? <div className="form-card" id="quote-contact-form">
+            <span className="form-screen-eyebrow">Home Guard Door Builder</span>
+            <h1 id="customer-form-title">Complete Your Information</h1>
+            <p>{pendingCustomerAction === 'download-pdf' ? 'Enter your details to download your configured door quote.' : pendingCustomerAction === 'open-visualizer' ? 'Enter your details to view your configured door on your home.' : 'Enter your details to send your configured door to Home Guard.'}</p>
+            {pendingCustomerAction === 'open-visualizer' && <div className="visualizer-form-guide"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="Example of a configured door shown on a customer's house" /><div><strong>Next: Add a photo of your home</strong><p>After submitting, we’ll guide you through uploading a clear picture of your entrance and placing your configured door on it.</p></div></div>}
+            <QuoteForm values={contact} errors={errors} onChange={updateContact} />
+            <label className="consent"><input type="checkbox" defaultChecked /> <span>I agree to be contacted about this door configuration.</span></label>
+            {submitError && <p className="submit-error" role="alert">{submitError}</p>}
+            <button className="submit-button" type="button" disabled={submitting} onClick={submit}><Send size={18} /> {submitting ? 'Preparing & Sending...' : pendingCustomerAction === 'open-visualizer' ? 'Continue to Visualizer' : pendingCustomerAction === 'download-pdf' ? 'Submit & Download PDF' : 'Send My Door Configuration'}</button>
+            <p className="privacy"><ShieldCheck size={15} /> Your information is kept private and never sold.</p>
+          </div> : completedCustomerAction === 'open-visualizer' ? <div className="success visualizer-form-confirmation"><span><Check size={32} /></span><small>Information received</small><h1>Your door is ready to view on your home.</h1><p>Next, upload a photo of your entrance. We’ll guide you through positioning your configured door on the picture.</p><div className="visualizer-confirmation-graphic"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="A configured door visualized on a home entrance" /></div><button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Continue to Home Visualizer <ArrowRight size={17} /></button></div> : <div className="success"><span><Check size={32} /></span><small>Configuration received</small><h1>Thanks, {contact.fullName}.</h1><p>Your configuration PDF has been prepared.</p><button type="button" onClick={() => { setSubmitted(false); setCompletedCustomerAction(null); goTo(pages.indexOf('review')); showScreen('builder') }}>Return to Review</button></div>}
+        </section>
       </main> : screen === 'visualizer' ? <HomeVisualizer
         onBack={() => showScreen('builder')}
         onReturnToReview={() => { goTo(pages.indexOf('review')); showScreen('builder') }}
@@ -1647,12 +1704,12 @@ export default function App() {
                 <div className="finish-tabs" role="tablist" aria-label="Glass frame finish type">{glassFrameFinishTypes.map((type) => <button type="button" role="tab" aria-selected={glassFrameFinishType === type} className={glassFrameFinishType === type ? 'active' : ''} key={type} onClick={() => setGlassFrameFinishType(type)}>{type === 'paint' ? 'Paint' : 'Stain'}</button>)}</div>
                 <div className="finish-logo-slot">{glassFrameFinishType === 'paint' ? <div className="promatch-group"><div className="promatch-brand"><img src="/assets/branding/pro-match-logo.png" alt="ProMatch paint colors" /><ProMatchInfo /></div></div> : <div className="timberstain-group"><div className="timberstain-brand"><img src="/assets/branding/timberstain-logo.png" alt="TimberStain®" /><TimberStainInfo /></div></div>}</div>
               </div>}
-              <div className={`options-grid step-${step} ${currentPage === 'door-style' || currentPage === 'door-grain' || currentPage === 'door-finish' || currentPage === 'jamb-type' || currentPage === 'jamb-finish' || currentPage === 'glass-type' || currentPage === 'glass-variant' || currentPage.startsWith('grid-') || currentPage.startsWith('sidelite-') ? 'door-style-grid' : ''} ${currentPage === 'glass' || currentPage === 'glass-variant' || currentPage === 'sidelite-glass' || currentPage === 'sidelite-glass-variant' ? 'glass-options-grid' : ''}`}>
+              <div className={`options-grid step-${step} ${currentPage === 'door-style' || currentPage === 'door-grain' || currentPage === 'door-finish' || currentPage === 'jamb-type' || currentPage === 'jamb-finish' || currentPage === 'glass-type' || currentPage === 'glass-variant' || currentPage.startsWith('grid-') || currentPage.startsWith('sidelite-') ? 'door-style-grid' : ''} ${currentPage === 'sidelites' || currentPage === 'sidelite-style' ? 'sidelite-catalog-grid' : ''} ${currentPage === 'glass' || currentPage === 'glass-variant' || currentPage === 'sidelite-glass' || currentPage === 'sidelite-glass-variant' ? 'glass-options-grid' : ''}`}>
                 {currentPage === 'door-style' && doorStyles.map((item) => <OptionCard key={item.id} className="door-catalog-card" title={doorCatalogModelName(item.name)} eyebrow={item.hasGlass ? 'Glass-ready entry door' : 'Solid-panel entry door'} selected={styleId === item.id} onClick={() => selectDoorStyle(item.id)} visual={<DoorStyleThumbnail style={item} />} />)}
                 {currentPage === 'door-line' && availableDoorLines.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Door Line" selected={doorLineId === item.id} onClick={() => selectDoorLine(item.id)} visual={<span className="door-line-card-image"><img src={item.image} alt="" loading="lazy" decoding="async" /></span>} />)}
                 {currentPage === 'door-grain' && signatureGrainOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Signature grain" selected={selectedGrain === item.id} onClick={() => selectGrain(item.id)} visual={<img className="grain-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
-                {currentPage === 'sidelites' && sideliteOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Sidelites" selected={sidelites === item.id} onClick={() => selectSidelites(item.id)} visual={<img className="sidelite-option-image" src={item.image} alt="" loading="eager" decoding="async" />} />)}
-                {currentPage === 'sidelite-style' && visibleSideliteStyleOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow={`${selectedDoorLine?.name ?? 'Door'} Sidelite`} selected={sideliteStyleId === item.id} onClick={() => selectSideliteStyle(item.id)} visual={<img className="sidelite-style-image" src={item.image} alt="" loading="eager" decoding="async" />} />)}
+                {currentPage === 'sidelites' && sideliteOptions.map((item) => <OptionCard key={item.id} className="sidelite-catalog-card" title={item.name} eyebrow="Entry layout" selected={sidelites === item.id} onClick={() => selectSidelites(item.id)} visual={<img className="sidelite-option-image sidelite-option-image-unflipped" src={item.image} alt="" loading="eager" decoding="async" />} />)}
+                {currentPage === 'sidelite-style' && visibleSideliteStyleOptions.map((item) => <OptionCard key={item.id} className="sidelite-catalog-card" title={item.name} eyebrow={`${selectedDoorLine?.name ?? 'Door'} sidelite`} selected={sideliteStyleId === item.id} onClick={() => selectSideliteStyle(item.id)} visual={<img className="sidelite-style-image" src={item.image} alt="" loading="eager" decoding="async" />} />)}
                 {currentPage === 'door-finish' && visibleFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => selectFinish(item.id, item.finishType)} visual={<span className={`finish-tile-wrap${item.finishType === 'paint' ? ' finish-tile-flat' : ' finish-tile-stain'}`} style={{ '--fallback-finish': item.color } as CSSProperties}>{item.proMatch && <img src="/assets/branding/pro-match-logo.png" className="pro-match-swatch-logo" alt="" loading="eager" decoding="async" />}{item.finishType === 'stain' && <img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}</span>} />)}
                 {currentPage === 'jamb-type' && <>
                   <OptionCard title="Timber" description="Choose from available paint and stain finishes. The jamb defaults to match your door but can be changed." eyebrow="Jamb type" selected={jambType === 'timber'} onClick={() => selectJambType('timber')} visual={<span className="jamb-type-card-image"><img src="/assets/jamb/timber-frame-card.png" alt="Timber-framed entry door" loading="lazy" decoding="async" /></span>} />
@@ -1692,30 +1749,22 @@ export default function App() {
 
           {currentPage === 'review' && !submitted && <>
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
-            {!testMode && <button className="mobile-quote-form-cta" type="button" aria-controls="quote-contact-form" onClick={() => document.getElementById('quote-contact-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Continue to Quote Form <ArrowRight size={17}/></button>}
-            {testMode && <button className="floating-visualizer-launch" type="button" onClick={() => showScreen('visualizer')} aria-label="Launch Door Visualizer"><Eye size={19} /><span>Launch Door Visualizer</span><ArrowRight size={16} /></button>}
+            {!testMode && <button className="mobile-quote-form-cta" type="button" onClick={() => { setPendingCustomerAction(null); setSubmitted(false); showScreen('customer-form') }}>Continue to Quote Form <ArrowRight size={17}/></button>}
+            <button className="floating-visualizer-launch" type="button" onClick={() => requestCustomerAction('open-visualizer')} aria-label="Launch Door Visualizer"><Eye size={19} /><span>Launch Door Visualizer</span><ArrowRight size={16} /></button>
             <div className="mobile-review-preview">{renderConfiguredPreviewMode()}</div>
-            {testMode && <section className="visualizer-promo-card visualizer-promo-card-mobile" aria-labelledby="mobile-visualizer-promo-title">
+            <section className="visualizer-promo-card visualizer-promo-card-mobile" aria-labelledby="mobile-visualizer-promo-title">
               <div className="visualizer-promo-graphic" aria-hidden="true"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="" /></div>
-              <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow">Home Visualizer</span><h2 id="mobile-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => showScreen('visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
-            </section>}
+              <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow">Home Visualizer</span><h2 id="mobile-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => requestCustomerAction('open-visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
+            </section>
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
               {configurationSummaryRows.map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span>{target >= 0 && <button onClick={() => goTo(target)}>Edit</button>}</div>)}
             </div>
             <div className={`review-download-form ${testMode ? '' : 'form-only'}`}>
-              {testMode && <div className="attachment-card">
+              <div className="attachment-card">
                 <span className="attachment-icon"><FileText size={25} /></span>
                 <span className="attachment-copy"><strong>{configurationPdfName}</strong></span>
-                <button type="button" onClick={downloadPdf}><Download size={16} /> Download PDF</button>
-              </div>}
-              <div className="form-card" id="quote-contact-form">
-                <h2>Your Contact Information</h2><p>We’ll use your ZIP code to help connect you with the right Home Guard dealer.</p>
-                <QuoteForm values={contact} errors={errors} onChange={updateContact} />
-                <label className="consent"><input type="checkbox" defaultChecked /> <span>I agree to be contacted about this door configuration.</span></label>
-                {submitError && <p className="submit-error" role="alert">{submitError}</p>}
-                <button className="submit-button" type="button" disabled={submitting} onClick={submit}><Send size={18} /> {submitting ? 'Preparing & Sending...' : 'Send My Door Configuration'}</button>
-                <p className="privacy"><ShieldCheck size={15} /> Your information is kept private and never sold.</p>
+                <button type="button" onClick={() => requestCustomerAction('download-pdf')}><Download size={16} /> Download PDF</button>
               </div>
             </div>
           </>}
@@ -1734,9 +1783,9 @@ export default function App() {
           <div className="aside-preview-area">
             {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
           </div>
-          {testMode && currentPage === 'review' && <section className="visualizer-promo-card visualizer-promo-card-desktop" aria-labelledby="desktop-visualizer-promo-title">
+          {currentPage === 'review' && <section className="visualizer-promo-card visualizer-promo-card-desktop" aria-labelledby="desktop-visualizer-promo-title">
             <div className="visualizer-promo-graphic" aria-hidden="true"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="" /></div>
-            <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow">Home Visualizer</span><h2 id="desktop-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => showScreen('visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
+            <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow">Home Visualizer</span><h2 id="desktop-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => requestCustomerAction('open-visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
           </section>}
           {currentPage !== 'review' && <div className="mini-summary">
             <span><b>Door Style</b><strong>{selectedStyle?.code ?? 'Not selected'}</strong></span>

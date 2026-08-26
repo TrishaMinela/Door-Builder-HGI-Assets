@@ -32,8 +32,6 @@ const COMPANY = {
 
 type FinishSummary = { jambType: 'timber' | 'clad'; jambFinishType: 'paint' | 'stain' | 'clad'; jambFinishColor: string; jambFinishOverridden: boolean; glassFrameFinishColor?: string }
 
-let cachedDoorPreview: string | null = null
-
 function cropTransparentCanvas(source: HTMLCanvasElement) {
   const context = source.getContext('2d', { willReadFrequently: true })
   if (!context) return source
@@ -57,6 +55,70 @@ function cropTransparentCanvas(source: HTMLCanvasElement) {
   cropped.height = bottom - top + 1
   cropped.getContext('2d')?.drawImage(source, left, top, cropped.width, cropped.height, 0, 0, cropped.width, cropped.height)
   return cropped
+}
+
+const PREVIEW_READY_TIMEOUT_MS = 12000
+const PREVIEW_STABLE_WINDOW_MS = 180
+
+function nextAnimationFrame() {
+  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+}
+
+async function waitForComposedDoorPreview(assembly: HTMLElement) {
+  const scene = assembly.closest<HTMLElement>('.preview-scene') ?? assembly
+  const startedAt = performance.now()
+  let lastMutationAt = performance.now()
+  const observer = new MutationObserver(() => { lastMutationAt = performance.now() })
+  observer.observe(scene, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ['src', 'style', 'class', 'aria-busy'],
+  })
+
+  try {
+    if ('fonts' in document) await document.fonts.ready
+
+    // DoorPreview can add glass, grid, hardware, and sidelite layers over
+    // several React commits. Wait until its own readiness flag is clear, all
+    // rendered images are decoded, and the scene has remained stable briefly.
+    while (performance.now() - startedAt < PREVIEW_READY_TIMEOUT_MS) {
+      const images = Array.from(scene.querySelectorAll<HTMLImageElement>('img'))
+      await Promise.all(images.map(async (image) => {
+        if (!image.complete) {
+          await new Promise<void>((resolve) => {
+            const finish = () => {
+              window.clearTimeout(timeout)
+              image.removeEventListener('load', finish)
+              image.removeEventListener('error', finish)
+              resolve()
+            }
+            const timeout = window.setTimeout(finish, 250)
+            image.addEventListener('load', finish, { once: true })
+            image.addEventListener('error', finish, { once: true })
+          })
+        }
+        if (image.complete && image.naturalWidth > 0) {
+          try { await image.decode() } catch { /* The decoded pixels may already be available. */ }
+        }
+      }))
+
+      await nextAnimationFrame()
+      await nextAnimationFrame()
+
+      const hasPendingImage = Array.from(scene.querySelectorAll<HTMLImageElement>('img'))
+        .some((image) => !image.complete)
+      const isBusy = scene.getAttribute('aria-busy') === 'true'
+      const isStable = performance.now() - lastMutationAt >= PREVIEW_STABLE_WINDOW_MS
+      if (!hasPendingImage && !isBusy && isStable) return
+
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 50))
+    }
+
+    throw new Error('The configured door preview did not finish loading in time.')
+  } finally {
+    observer.disconnect()
+  }
 }
 
 async function loadImage(path: string) {
@@ -84,7 +146,7 @@ async function applyBrandFont(pdf: jsPDF) {
 }
 
 async function captureComposedDoorPreview() {
-  if (typeof document === 'undefined') return cachedDoorPreview
+  if (typeof document === 'undefined') return null
   // Capture the complete procedural assembly rather than only the center slab.
   // DoorFrame contains the jambs, sidelites, mullions, and threshold.
   const selectors = [
@@ -94,20 +156,21 @@ async function captureComposedDoorPreview() {
   ]
   const candidates = selectors.flatMap((selector) => Array.from(document.querySelectorAll<HTMLElement>(selector)))
   const assembly = candidates.find((candidate) => candidate.offsetWidth > 0 && candidate.offsetHeight > 0)
-  if (!assembly) return cachedDoorPreview
+  if (!assembly) return null
 
   try {
+    await waitForComposedDoorPreview(assembly)
     const canvas = await html2canvas(assembly, {
       backgroundColor: null,
       logging: false,
       scale: 3,
       useCORS: true,
     })
-    cachedDoorPreview = cropTransparentCanvas(canvas).toDataURL('image/png')
+    return cropTransparentCanvas(canvas).toDataURL('image/png')
   } catch (error) {
     console.warn('[pdf:composed-preview-capture-failed]', error)
+    return null
   }
-  return cachedDoorPreview
 }
 
 function addImageContained(pdf: jsPDF, dataUrl: string, x: number, y: number, width: number, height: number) {

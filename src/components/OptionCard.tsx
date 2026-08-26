@@ -1,4 +1,3 @@
-import { Check } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 type Props = {
@@ -24,7 +23,6 @@ export function OptionCard({ title, description, eyebrow, selected, onClick, vis
         <strong>{title}</strong>
         {description && <span>{description}</span>}
       </span>
-      <span className="check"><Check size={15} strokeWidth={3} /></span>
     </button>
   )
 }

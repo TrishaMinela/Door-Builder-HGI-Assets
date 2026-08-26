@@ -461,7 +461,11 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
       const mask = new Image()
       mask.onload = () => {
         if (cancelled) return
-        const processed = buildPreviewMasks(mask, slab)
+        // Sidelite masks are authored against the exact 80 x 549 sidelite
+        // slabs. Do not grow their glass cutout: even a one-source-pixel
+        // expansion creates a visible finish gap along the tall FSL opening.
+        // Main-door masks continue using the protective grid expansion above.
+        const processed = buildPreviewMasks(mask, slab, false)
         if (!processed) {
           console.error('[door-preview:sidelite-mask-dimension-mismatch]', {
             slab: `${slab.naturalWidth}x${slab.naturalHeight}`,

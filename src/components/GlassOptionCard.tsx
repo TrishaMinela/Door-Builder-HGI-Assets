@@ -1,4 +1,3 @@
-import { Check } from 'lucide-react'
 import type { GlassOption } from '../types'
 
 type GlassOptionGroup = {
@@ -27,7 +26,6 @@ export function GlassOptionCard({ group, selectedId, onSelect }: Props) {
         <span className="option-copy">
           <strong>{group.title}</strong>
         </span>
-        <span className="check"><Check size={15} strokeWidth={3} /></span>
       </button>
     </article>
   )
