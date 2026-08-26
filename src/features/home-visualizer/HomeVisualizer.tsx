@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import { ArrowLeft, ArrowRight, Check, Crosshair, Download, ImagePlus, RefreshCw, RotateCcw, Trash2, Upload } from 'lucide-react'
 import { cloneEntranceCorners, EntranceSelector, INITIAL_ENTRANCE_CORNERS, isValidEntranceCorners, type CornerId, type EntranceCorners, type EntranceViewportMetrics } from './EntranceSelector'
 import type { DoorPreviewProps } from '../../components/DoorPreview'
+import { sidelitePlacement } from '../../data/sideliteConfigurations'
 import { ConfiguredDoorSource, type DoorSourceState } from './ConfiguredDoorSource'
 import { ComposedPhotoPreview } from './ComposedPhotoPreview'
 import { autoFitEntrance } from './computerVision'
@@ -79,8 +80,10 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const [recoloredFrameUrl, setRecoloredFrameUrl] = useState('')
   const frameUrlRef = useRef('')
   const activeJambFinish = configuredDoorPreview.jambFinish ?? configuredDoorPreview.finish
-  const hingeSide: SideliteSide = configuredDoorPreview.doorSwing?.id.startsWith('R') ? 'right' : 'left'
-  const configuredSideliteSides = useMemo<SideliteSide[]>(() => configuredDoorPreview.sidelites === 'both-sides' ? ['left', 'right'] : configuredDoorPreview.sidelites === 'hinge-side' ? [hingeSide] : configuredDoorPreview.sidelites === 'lock-side' ? [hingeSide === 'left' ? 'right' : 'left'] : [], [configuredDoorPreview.sidelites, hingeSide])
+  const configuredSideliteSides = useMemo<SideliteSide[]>(() => {
+    const placement = sidelitePlacement(configuredDoorPreview.sidelites)
+    return placement === 'both' ? ['left', 'right'] : placement === 'left' || placement === 'right' ? [placement] : []
+  }, [configuredDoorPreview.sidelites])
   const visualizerProgressSteps = useMemo(() => configuredSideliteSides.length ? [{label:'Door',step:0},{label:'Sidelites',step:1},{label:'Frame',step:2}] : [{label:'Door',step:0},{label:'Frame',step:2}], [configuredSideliteSides.length])
   const photoSideliteSides = useMemo<SideliteSide[]>(() => photoSideliteSide==='both'?['left','right']:photoSideliteSide==='left'||photoSideliteSide==='right'?[photoSideliteSide]:[], [photoSideliteSide])
   const entranceBoundary = useMemo(() => completeEntranceBoundary(corners, sideliteEdges), [corners, sideliteEdges])

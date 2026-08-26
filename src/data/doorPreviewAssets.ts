@@ -5,7 +5,10 @@ import { doorStyleThumbnailAssets } from './doorStyleThumbnailAssets'
 const slabUrl = (folder: string, fileName: string) => `/assets/hgi-assets/Preview Slabs/${folder}/${fileName}`
 
 const smoothPaintDoorPreviewAssets: Record<string, string> = {
-  '2PHD': slabUrl('Smooth', '2P HD Flat Top - Smooth.png'),
+  // The supplied smooth 2PHD file is an opaque-black export rather than usable
+  // neutral slab artwork. Use the matching neutral 2PHD source so the default
+  // first style renders correctly for single, French, and Savannah assemblies.
+  '2PHD': slabUrl('Textured', '2P HD Flat Top - Textured.png'),
   '3LT': slabUrl('Smooth', 'Stacked 3 Lite - Smooth.png'),
   '3PNG': slabUrl('Smooth', '3 Panel No Glass - Smooth.png'),
   '3PNGSS': slabUrl('Smooth', '3 Panel No Glass - Smooth.png'),

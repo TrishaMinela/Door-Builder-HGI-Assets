@@ -388,6 +388,12 @@ body:has(.visualizer-app){
   overflow:hidden;
 }
 .door-frame-door-slot{position:relative;min-width:0;min-height:0;grid-column:3}
+.door-frame[data-door-configuration=french] .door-frame-door-slot,
+.door-frame[data-door-configuration=savannah] .door-frame-door-slot{display:grid;grid-template-columns:minmax(0,1fr) 7px minmax(0,1fr);background:linear-gradient(90deg,#232522,#090a09 50%,#3d403b);overflow:hidden}
+.door-frame[data-door-configuration=french] .door-leaf-left,
+.door-frame[data-door-configuration=savannah] .door-leaf-left{grid-column:1}
+.door-frame[data-door-configuration=french] .door-leaf-right,
+.door-frame[data-door-configuration=savannah] .door-leaf-right{grid-column:3}
 .door-frame-sidelite-slot{position:relative;min-width:0;min-height:0}
 .door-frame-sidelite-slot-left{grid-column:1}
 .door-frame-sidelite-slot-right{grid-column:5}
@@ -420,6 +426,27 @@ body:has(.visualizer-app){
 .sidelite-option-image-unflipped{transform:none}
 .option-visual:has(.sidelite-style-image){display:flex;align-items:center;justify-content:center}
 .sidelite-style-image{display:block;width:auto;height:auto;max-width:70%;max-height:78%;margin:auto;object-fit:contain;object-position:center}
+
+.door-configuration-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.door-configuration-card .option-visual{height:220px;background:#eef1ef}
+.door-configuration-card-image{display:block;width:100%;height:100%;object-fit:contain;object-position:center}
+.configuration-step .builder-options-scroll .door-style-catalog-grid>.door-configuration-card .option-visual{padding:4px 8px 10px;overflow:hidden}
+.configuration-step .builder-options-scroll .door-style-catalog-grid>.door-configuration-card .door-configuration-card-image{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;object-position:center}
+.door-configuration-visual{position:relative;height:176px;display:flex;align-items:stretch;justify-content:center;gap:4px}
+.door-configuration-visual i{display:block;width:70px;background:linear-gradient(90deg,#f7f8f7,#dfe3e2 52%,#f7f8f7);border:5px solid #343936;box-shadow:inset 0 0 0 2px #aeb5b2}
+.door-configuration-visual i:after{content:"";display:block;height:100%;background:linear-gradient(#0000 48%,#aeb5b255 49% 50%,#0000 51%)}
+.door-configuration-visual-single i:nth-child(2){display:none}
+.door-configuration-visual b{position:absolute;right:7px;bottom:8px;background:#fff;color:#0e676c;padding:3px 5px;font-size:8px;letter-spacing:.08em;text-transform:uppercase}
+@media(max-width:767px){
+  .door-configuration-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .door-configuration-card .option-visual{height:128px}
+  .door-configuration-visual{height:105px;gap:2px}
+  .door-configuration-visual i{width:36px;border-width:3px;box-shadow:inset 0 0 0 1px #aeb5b2}
+  .door-configuration-card .option-copy{padding:8px}
+  .door-configuration-card .option-copy strong{font-size:10px}
+  .door-configuration-card .option-copy>span{font-size:8px}
+  .door-configuration-visual b{display:none}
+}
 
 /* Hardware cards must display the complete source PNG, including transparent padding. */
 .option-visual:has(.hardware-card-image){display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0}
@@ -2516,16 +2543,16 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .entryway-guidance-dialog>p,.auto-fit-failure-modal>p{font-size:12px;line-height:1.5}
   .entryway-guidance-note{margin-top:13px!important;padding:10px 11px}
   .entryway-guidance-actions,.auto-fit-modal-actions{margin-top:16px}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.option-card{min-height:0}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.option-card .option-visual{height:118px;min-height:118px;padding:5px}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.option-card .door-style-thumbnail{padding:3px 1px}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.option-card .door-style-thumbnail img{max-width:100%;max-height:100%}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.option-card .option-copy{min-height:62px;padding:8px 7px 9px}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.option-card .option-copy small{margin-bottom:3px;font-size:6px;line-height:1.2;letter-spacing:.08em}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.option-card .option-copy strong{font-size:10px;line-height:1.2;-webkit-line-clamp:3}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.option-card .option-copy>span{display:none}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.option-card .check{width:20px;height:20px;top:6px;right:6px}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.option-card{min-height:0}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.option-card .option-visual{height:118px;min-height:118px;padding:5px}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.option-card .door-style-thumbnail{padding:3px 1px}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.option-card .door-style-thumbnail img{max-width:100%;max-height:100%}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.option-card .option-copy{min-height:62px;padding:8px 7px 9px}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.option-card .option-copy small{margin-bottom:3px;font-size:6px;line-height:1.2;letter-spacing:.08em}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.option-card .option-copy strong{font-size:10px;line-height:1.2;-webkit-line-clamp:3}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.option-card .option-copy>span{display:none}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.option-card .check{width:20px;height:20px;top:6px;right:6px}
 }
 
 @media (max-width:430px){
@@ -2540,7 +2567,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
 
 @media (max-width:374px){
   .options-grid,.step-1,.builder-options-scroll .door-style-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .visualizer-final-actions,.auto-fit-controls{grid-template-columns:1fr}
 }
 
@@ -2878,7 +2905,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
 }
 
 /* Door Style reads like an HGI product catalog rather than a generic option card. */
-.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card{
+.configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card{
   height:270px;
   min-height:270px;
   display:flex;
@@ -2891,17 +2918,17 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   background:transparent;
   box-shadow:none;
 }
-.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card:hover{
+.configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card:hover{
   border-color:var(--peacock);
   background:#fff;
 }
-.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card.selected{
+.configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card.selected{
   border-color:var(--peacock);
   outline:2px solid var(--peacock);
   outline-offset:-2px;
   box-shadow:inset 3px 0 0 var(--gold);
 }
-.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-copy{
+.configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .option-copy{
   order:1;
   width:100%;
   height:auto;
@@ -2913,7 +2940,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   align-items:flex-start;
   justify-content:flex-start;
 }
-.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-copy strong{
+.configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .option-copy strong{
   order:1;
   color:var(--black);
   font-size:14px;
@@ -2921,7 +2948,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   line-height:1.15;
   text-align:left;
 }
-.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-copy small{
+.configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .option-copy small{
   order:2;
   margin:4px 0 0;
   color:#687479;
@@ -2933,7 +2960,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   text-align:left;
   text-transform:none;
 }
-.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-visual{
+.configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .option-visual{
   order:2;
   width:100%;
   height:auto;
@@ -2942,12 +2969,12 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   padding:4px 8px 10px;
   background:transparent;
 }
-.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .door-style-thumbnail{
+.configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .door-style-thumbnail{
   width:100%;
   height:100%;
   padding:0;
 }
-.configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .door-style-thumbnail img{
+.configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .door-style-thumbnail img{
   width:auto;
   height:100%;
   max-width:100%;
@@ -2957,17 +2984,17 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   object-position:center;
 }
 @media(max-width:767px){
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card{
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card{
     height:190px;
     min-height:190px;
   }
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-copy{
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .option-copy{
     min-height:51px;
     padding:8px 6px 5px;
   }
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-copy strong{font-size:9px}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-copy small{margin-top:3px;font-size:6px}
-  .configuration-step .builder-options-scroll .door-style-grid.step-0>.door-catalog-card .option-visual{padding:2px 4px 7px}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .option-copy strong{font-size:9px}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .option-copy small{margin-top:3px;font-size:6px}
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .option-visual{padding:2px 4px 7px}
 }
 
 /* Sidelite layout and slab choices use the same restrained HGI catalog card

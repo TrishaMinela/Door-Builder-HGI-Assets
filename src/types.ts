@@ -113,6 +113,7 @@ export type ResolvedDoorProduct = {
 }
 
 export type DoorConfiguration = {
+  doorConfigurationType: DoorConfigurationType
   product: ResolvedDoorProduct
   style: DoorStyle
   grain: string | null
@@ -133,10 +134,15 @@ export type DoorConfiguration = {
   doorSwing: DoorSwing
   sidelites: SideliteConfiguration
   sidelitePlacement?: SideliteConfiguration
+  sideliteConfigurationCode?: SideliteProductCode
+  sideliteConfigurationLabel?: string
   sideliteStyle?: string
   sideliteSlab?: 'fsl' | 'f48sl' | 'ssl' | 's2sl' | 'cr14sl'
   sideliteGlass?: SideliteGlassConfiguration
 }
+
+export type DoorConfigurationType = 'single' | 'french' | 'savannah'
+export type SideliteProductCode = 'NOSIDE' | 'BOTHSIDES' | 'LEFTSIDE' | 'RIGHTSIDE'
 
 export type SideliteConfiguration = 'none' | 'hinge-side' | 'lock-side' | 'both-sides'
 
