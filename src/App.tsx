@@ -454,6 +454,7 @@ export default function App() {
   const builderOptionsRef = useRef<HTMLDivElement | null>(null)
   const entrywayDialogRef = useRef<HTMLDivElement | null>(null)
   const entrywayStartButtonRef = useRef<HTMLButtonElement | null>(null)
+  const pdfPreviewDataUrlRef = useRef<string | null>(null)
 
   const closeEntrywayGuidance = () => {
     setShowEntrywayGuidance(false)
@@ -1263,13 +1264,26 @@ export default function App() {
     return targetPage >= 0 && targetPage <= step
   }
 
+  const cacheReviewPreviewForPdf = async () => {
+    const { captureCanonicalDoorPreview } = await import('./utils/pdf')
+    const captured = await captureCanonicalDoorPreview({
+      doorConfigurationType: selectedDoorConfigurationType || 'single',
+      sidelites: sidelites || 'none',
+    })
+    pdfPreviewDataUrlRef.current = captured
+    return captured
+  }
+
   const showScreen = (next: 'home' | 'builder' | 'customer-form' | 'visualizer') => {
     if (next === 'visualizer' && !customerFormCompleted) {
-      setPendingCustomerAction('open-visualizer')
-      setSubmitted(false)
-      setScreen('customer-form')
-      goTo(pages.indexOf('review'))
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      void (async () => {
+        await cacheReviewPreviewForPdf()
+        setPendingCustomerAction('open-visualizer')
+        setSubmitted(false)
+        setScreen('customer-form')
+        goTo(pages.indexOf('review'))
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      })()
       return
     }
     if (next === 'builder') setBuilderPreviewView('Exterior')
@@ -1292,12 +1306,15 @@ export default function App() {
       else showScreen('visualizer')
       return
     }
-    setPendingCustomerAction(action)
-    setCompletedCustomerAction(null)
-    setSubmitted(false)
-    setSubmitError('')
-    setScreen('customer-form')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    void (async () => {
+      await cacheReviewPreviewForPdf()
+      setPendingCustomerAction(action)
+      setCompletedCustomerAction(null)
+      setSubmitted(false)
+      setSubmitError('')
+      setScreen('customer-form')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    })()
   }
 
   const updateContact = (key: keyof ContactForm, value: string) => {
@@ -1511,7 +1528,7 @@ export default function App() {
       if (!selectedDoorSwing) throw new Error('Please select a door swing before sending your configuration.')
       const { generateSummaryAttachment } = await import('./utils/pdf')
       const jambSummary = { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' as const : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }
-      const attachment = await generateSummaryAttachment(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, jambSummary, selectedDoorConfigurationType || 'single')
+      const attachment = await generateSummaryAttachment(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, jambSummary, selectedDoorConfigurationType || 'single', pdfPreviewDataUrlRef.current)
       await submitQuote({ configuration: { doorConfigurationType: selectedDoorConfigurationType || 'single', ...(doorConfigurationProductOption ? { doorConfigurationProductOption } : {}), product, style, grain: selectedGrain, finish, doorFinishType: finish.finishType, doorFinishColor: finish.name, glassFrameColorMode: glassFrameColorMode || undefined, glassFrameFinishId: glassFrameColorMode === 'custom' ? resolvedGlassFrameFinish.id : undefined, ...jambSummary, glass: configuredGlass, mainDoorGlass: configuredGlass, grid: gridConfiguration, hardware: selectedHardware, doorSwing: selectedDoorSwing, sidelites: sidelites || 'none', sidelitePlacement: sidelites || 'none', sideliteConfigurationCode: sideliteProductCode(sidelites || 'none'), sideliteConfigurationLabel: sideliteProductLabel(sidelites || 'none'), ...(selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}), ...(sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}) }, contact, attachment, submittedAt: new Date().toISOString() })
       const completedAction = pendingCustomerAction
       setCustomerFormCompleted(true)
@@ -1535,7 +1552,8 @@ export default function App() {
   const downloadPdf = async () => {
     if (!selectedHardware || !selectedDoorSwing) return
     const { downloadSummary } = await import('./utils/pdf')
-    await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }, selectedDoorConfigurationType || 'single')
+    const previewDataUrl = screen === 'builder' ? await cacheReviewPreviewForPdf() : pdfPreviewDataUrlRef.current
+    await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }, selectedDoorConfigurationType || 'single', previewDataUrl)
   }
 
   const configurationSummaryRows: [string, string, number][] = [
@@ -1734,7 +1752,7 @@ export default function App() {
                 <div className="finish-logo-slot">{glassFrameFinishType === 'paint' ? <div className="promatch-group"><div className="promatch-brand"><img src="/assets/branding/pro-match-logo.png" alt="ProMatch paint colors" /><ProMatchInfo /></div></div> : <div className="timberstain-group"><div className="timberstain-brand"><img src="/assets/branding/timberstain-logo.png" alt="TimberStain®" /><TimberStainInfo /></div></div>}</div>
               </div>}
               <div className={`options-grid step-${step} ${currentPage === 'door-configuration' ? 'door-configuration-grid door-style-catalog-grid' : ''} ${currentPage === 'door-style' ? 'door-style-catalog-grid ' : ''}${currentPage === 'door-style' || currentPage === 'door-grain' || currentPage === 'door-finish' || currentPage === 'jamb-type' || currentPage === 'jamb-finish' || currentPage === 'glass-type' || currentPage === 'glass-variant' || currentPage.startsWith('grid-') || currentPage.startsWith('sidelite-') ? 'door-style-grid' : ''} ${currentPage === 'sidelites' || currentPage === 'sidelite-style' ? 'sidelite-catalog-grid' : ''} ${currentPage === 'glass' || currentPage === 'glass-variant' || currentPage === 'sidelite-glass' || currentPage === 'sidelite-glass-variant' ? 'glass-options-grid' : ''}`}>
-                {currentPage === 'door-configuration' && doorConfigurationOptions.map((item) => <OptionCard key={item.id} className="door-catalog-card door-configuration-card" title={item.name} description={item.description} eyebrow="Entry configuration" selected={selectedDoorConfigurationType === item.id} onClick={() => selectDoorConfiguration(item.id)} visual={<img className="door-configuration-card-image" src={item.image} alt="" loading="eager" decoding="async" />} />)}
+                {currentPage === 'door-configuration' && doorConfigurationOptions.map((item) => <OptionCard key={item.id} className="door-catalog-card door-configuration-card" title={item.name} description={item.description} eyebrow="Entry configuration" selected={selectedDoorConfigurationType === item.id} onClick={() => selectDoorConfiguration(item.id)} visual={<div className="door-configuration-preview"><img className="door-configuration-card-image" src={item.image} alt="" loading="eager" decoding="async" /></div>} />)}
                 {currentPage === 'door-style' && doorStyles.map((item) => <OptionCard key={item.id} className="door-catalog-card" title={doorCatalogModelName(item.name)} eyebrow={item.hasGlass ? 'Glass-ready entry door' : 'Solid-panel entry door'} selected={styleId === item.id} onClick={() => selectDoorStyle(item.id)} visual={<DoorStyleThumbnail style={item} />} />)}
                 {currentPage === 'door-line' && availableDoorLines.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Door Line" selected={doorLineId === item.id} onClick={() => selectDoorLine(item.id)} visual={<span className="door-line-card-image"><img src={item.image} alt="" loading="lazy" decoding="async" /></span>} />)}
                 {currentPage === 'door-grain' && signatureGrainOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Signature grain" selected={selectedGrain === item.id} onClick={() => selectGrain(item.id)} visual={<img className="grain-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
