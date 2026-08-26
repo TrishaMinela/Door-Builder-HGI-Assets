@@ -1,4 +1,4 @@
-import type { SideliteConfiguration, SideliteProductCode } from '../types'
+import type { DoorConfigurationType, SideliteConfiguration, SideliteProductCode } from '../types'
 
 export type { SideliteProductCode } from '../types'
 export type SideliteInput = SideliteConfiguration | SideliteProductCode | 'both' | 'left' | 'right' | '' | null | undefined
@@ -17,6 +17,29 @@ export const sideliteProductOptions: readonly SideliteProductOption[] = [
   { code: 'LEFTSIDE', label: 'LEFTSIDE - SIDELITE ON LEFT OSLI', legacyValue: 'hinge-side', placement: 'left', image: '/assets/hgi-assets/Sidelites/options/Left Side OSLI.png' },
   { code: 'RIGHTSIDE', label: 'RIGHTSIDE - SIDELITE ON RIGHT OSLI', legacyValue: 'lock-side', placement: 'right', image: '/assets/hgi-assets/Sidelites/options/Right Side OSLI.png' },
 ] as const
+
+export type SideliteBuilderOption = {
+  id: SideliteConfiguration
+  name: string
+  image: string
+}
+
+const singleDoorBuilderOptions: readonly SideliteBuilderOption[] = [
+  { id: 'none', name: 'No Sidelite', image: '/assets/hgi-assets/Sidelites/options/No Sidelites.png' },
+  { id: 'both-sides', name: 'Both Sidelites', image: '/assets/hgi-assets/Sidelites/options/Both-Sides Sidelites.png' },
+  { id: 'lock-side', name: 'Lock Side', image: '/assets/hgi-assets/Sidelites/options/Lock-Side Sidelite.png' },
+  { id: 'hinge-side', name: 'Hinge Side', image: '/assets/hgi-assets/Sidelites/options/Hinge-Side Sidelite.png' },
+]
+
+const doubleDoorBuilderOptions: readonly SideliteBuilderOption[] = sideliteProductOptions.map((option) => ({
+  id: option.legacyValue,
+  name: option.label,
+  image: option.code === 'NOSIDE' ? '/assets/hgi-assets/Sidelites/options/SingleFS.png' : option.image,
+}))
+
+export function sideliteBuilderOptions(configurationType: DoorConfigurationType | '' | null | undefined): readonly SideliteBuilderOption[] {
+  return configurationType === 'french' || configurationType === 'savannah' ? doubleDoorBuilderOptions : singleDoorBuilderOptions
+}
 
 const optionByCode = new Map(sideliteProductOptions.map((option) => [option.code, option]))
 const codeByInput: Record<string, SideliteProductCode> = {

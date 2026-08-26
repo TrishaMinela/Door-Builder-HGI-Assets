@@ -113,7 +113,11 @@ export type ResolvedDoorProduct = {
 }
 
 export type DoorConfiguration = {
-  doorConfigurationType: DoorConfigurationType
+  doorConfigurationType?: DoorConfigurationType
+  doorConfigurationProductOption?: {
+    code: 'HINGEOJ'
+    label: 'HINGEOJ - HINGE OFF OUTER JAMB'
+  }
   product: ResolvedDoorProduct
   style: DoorStyle
   grain: string | null

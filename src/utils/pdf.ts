@@ -4,6 +4,7 @@ import type { ContactForm, DoorConfigurationType, DoorStyle, DoorSwing, Finish, 
 import { hardwareDisplayName } from '../data/hardware'
 import { configurationPdfName } from './pdfConfig'
 import { sideliteProductLabel } from '../data/sideliteConfigurations'
+import { doorConfigurationLabel, requiredDoorConfigurationProductOption } from '../data/doorConfigurationRules'
 
 const COLORS = {
   dark: [5, 4, 11] as const,
@@ -32,7 +33,6 @@ const COMPANY = {
 }
 
 type FinishSummary = { jambType: 'timber' | 'clad'; jambFinishType: 'paint' | 'stain' | 'clad'; jambFinishColor: string; jambFinishOverridden: boolean; glassFrameFinishColor?: string }
-const doorConfigurationLabels: Record<DoorConfigurationType, string> = { single: 'Single Door', french: 'French Door', savannah: 'Savannah Door' }
 
 function cropTransparentCanvas(source: HTMLCanvasElement) {
   const context = source.getContext('2d', { willReadFrequently: true })
@@ -350,7 +350,8 @@ async function generateLegacySummaryPdf(
     }
   }))
   const rows: SummaryRow[] = [
-    { label: 'DOOR CONFIGURATION', value: doorConfigurationLabels[doorConfigurationType] },
+    { label: 'DOOR CONFIGURATION', value: doorConfigurationLabel(doorConfigurationType) },
+    ...(requiredDoorConfigurationProductOption(doorConfigurationType) ? [{ label: 'SAVANNAH PRODUCT OPTION', value: requiredDoorConfigurationProductOption(doorConfigurationType)!.label }] : []),
     { label: 'DOOR LINE', value: grain ? `${material} - ${grain}` : material, icon: summaryIcons[0] },
     { label: 'DOOR STYLE', value: style.name, icon: summaryIcons[1] },
     { label: 'SIDELITE CONFIGURATION', value: sideliteProductLabel(sidelites) },
@@ -516,7 +517,12 @@ export async function generateSummaryPdf(
   pdf.setFont(font, 'bold')
   pdf.setFontSize(8)
   pdf.setTextColor(...COLORS.teal)
-  pdf.text(`DOOR CONFIGURATION: ${doorConfigurationLabels[doorConfigurationType]}`, 346, 170)
+  pdf.text(`DOOR CONFIGURATION: ${doorConfigurationLabel(doorConfigurationType)}`, 346, 170)
+  const requiredProductOption = requiredDoorConfigurationProductOption(doorConfigurationType)
+  if (requiredProductOption) {
+    pdf.setFontSize(6.5)
+    pdf.text(`PRODUCT OPTION: ${requiredProductOption.label}`, 346, 181)
+  }
 
   const material = product.doorTypes.map((doorType) => grain ? doorType.replace(` - ${grain}`, '') : doorType).join(' / ')
   const placement = sideliteProductLabel(sidelites)

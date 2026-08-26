@@ -3,6 +3,7 @@ import type { DoorConfigurationType, DoorStyle, DoorSwing, Finish, GlassOption, 
 import { hardwareOptions, hardwarePreviewAssetUrl } from '../data/hardware'
 import { glassOptions } from '../data/glassOptions'
 import { resolveDoorPreviewCandidates } from '../data/doorPreviewAssets'
+import { doorConfigurationLeafCount, doorHardwarePlacements } from '../data/doorConfigurationRules'
 import { glassDoorCodes } from '../data/productCatalog'
 import { resolveGlassMaskAsset } from '../data/glassMaskAssets'
 import { DoorFrame } from './preview/DoorFrame'
@@ -393,11 +394,10 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
   const hardwareSideInterior = hardwarePlacement?.hardwareSideInterior ?? 'left'
   const hardwareSide = previewView === 'Exterior' ? hardwareSideExterior : hardwareSideInterior
   const hardwareSourceSide = sourceHardwareSideByView[previewView]
-  const hardwareMovesSides = hardwareSide !== hardwareSourceSide
   const keepHardwareReadable = preservesReadableHardware(hardware)
-  const hardwareImagePlacementClass = hardwareMovesSides
+  const hardwareImagePlacementClassForSide = (targetSide: HardwareSide) => targetSide !== hardwareSourceSide
     ? keepHardwareReadable
-      ? `hardware-image-shift-${hardwareSide}`
+      ? `hardware-image-shift-${targetSide}`
       : 'hardware-image-mirrored'
     : ''
   const selectedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView, doorSwing)
@@ -737,7 +737,13 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
     <div ref={previewSceneRef} className={`preview-scene ${compact ? 'compact' : ''}`} aria-busy={previewAssetsLoading} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
       <DoorFrame doorConfigurationType={doorConfigurationType} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={sideliteGlassSrc} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteGlassFrameStyle={sideliteGlassFrameStyle}>
-        {Array.from({ length: doorConfigurationType === 'single' ? 1 : 2 }).map((_, leafIndex) => <div key={leafIndex} className={`door door-leaf door-leaf-${leafIndex === 0 ? 'left' : 'right'} door-${style.panel} ${hasMappedPreview ? 'mapped-preview-door' : ''}${isHrtDoor ? ' door-preview-hrt' : ''}`} data-door-style-id={maskCode} style={{ '--door': finishColor, '--door-dark': finish.accent } as React.CSSProperties}>
+        {Array.from({ length: doorConfigurationLeafCount(doorConfigurationType) }).map((_, leafIndex) => {
+          const hardwarePlacementForLeaf = doorHardwarePlacements(doorConfigurationType, hardwareSide).find((placement) => placement.leafIndex === leafIndex)
+          const leafHardwareSide = hardwarePlacementForLeaf?.side ?? hardwareSide
+          const showHardwareOnLeaf = Boolean(hardwarePlacementForLeaf)
+          const leafHardwareImagePlacementClass = hardwareImagePlacementClassForSide(leafHardwareSide)
+
+          return <div key={leafIndex} className={`door door-leaf door-leaf-${leafIndex === 0 ? 'left' : 'right'} door-${style.panel} ${hasMappedPreview ? 'mapped-preview-door' : ''}${isHrtDoor ? ' door-preview-hrt' : ''}`} data-door-style-id={maskCode} style={{ '--door': finishColor, '--door-dark': finish.accent } as React.CSSProperties}>
           {style.hasGlass && <div className="glass glass-clear" />}
           <div className="panels">
             {Array.from({ length: style.panel === 'classic' ? 6 : style.panel === 'craftsman' ? 3 : 4 }).map((_, index) => <span key={index} />)}
@@ -757,8 +763,8 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
             : renderedGlassOverlay && (gridMatchesFinish
               ? <div className="door-glass-overlay door-grid-finish-overlay" style={{ backgroundColor: applyFinish ? finishColor : '#d9d9d9', WebkitMaskImage: `url("${renderedGlassOverlay}")`, maskImage: `url("${renderedGlassOverlay}")` }} />
               : <img className="door-glass-overlay" src={renderedGlassOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />)}
-          {hardwareImage && (doorConfigurationType === 'single' || leafIndex === (hardwareSide === 'right' ? 0 : 1)) && <div className={`hardware hardware-${previewHardware.type} hardware-side-${hardwareSide}${isHrtDoor ? ' hardware-hrt' : ''}`} data-hardware-side={hardwareSide} data-hardware-side-exterior={hardwareSideExterior} data-hardware-side-interior={hardwareSideInterior} style={{ '--metal': previewHardware.color } as React.CSSProperties}>
-            <img className={hardwareImagePlacementClass} src={hardwareImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => {
+          {hardwareImage && showHardwareOnLeaf && <div className={`hardware hardware-${previewHardware.type} hardware-side-${leafHardwareSide}${isHrtDoor ? ' hardware-hrt' : ''}`} data-hardware-side={leafHardwareSide} data-hardware-side-exterior={hardwareSideExterior} data-hardware-side-interior={hardwareSideInterior} style={{ '--metal': previewHardware.color } as React.CSSProperties}>
+            <img className={leafHardwareImagePlacementClass} src={hardwareImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => {
               console.warn('[door-preview:failed-hardware-overlay]', {
                 manufacturer: previewHardware.manufacturer,
                 style: previewHardware.style,
@@ -770,7 +776,8 @@ export function DoorPreview({ style, finish, glass, hardware, compact = false, g
               event.currentTarget.style.display = 'none'
             }} />
           </div>}
-        </div>)}
+        </div>
+        })}
       </DoorFrame>
       {previewAssetsLoading && <div className="preview-asset-loading" role="status" aria-live="polite">
         <span className="preview-asset-spinner" aria-hidden="true" />

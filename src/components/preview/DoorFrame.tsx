@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { DoorConfigurationType } from '../../types'
+import { doorConfigurationLeafCount, hasCenterMeetingStile } from '../../data/doorConfigurationRules'
 
 export type DoorFrameSidelites = 'none' | 'left' | 'right' | 'both'
 export type DoorFrameView = 'Exterior' | 'Interior'
@@ -104,8 +105,7 @@ export function DoorFrame({
   const rightWidth = hasRight ? SIDELITE_WIDTH : 0
   const leftMullionWidth = hasLeft ? mullionWidth : 0
   const rightMullionWidth = hasRight ? mullionWidth : 0
-  const isDoubleDoor = doorConfigurationType !== 'single'
-  const doorAssemblyWidth = isDoubleDoor ? DOOR_WIDTH * 2 + CENTER_MEETING_STILE : DOOR_WIDTH
+  const doorAssemblyWidth = DOOR_WIDTH * doorConfigurationLeafCount(doorConfigurationType) + (hasCenterMeetingStile(doorConfigurationType) ? CENTER_MEETING_STILE : 0)
   const openingWidth = leftWidth + leftMullionWidth + doorAssemblyWidth + rightMullionWidth + rightWidth
   const sharedMullionWidth = FRAME_PROFILES.exterior.mullion
   const sharedOpeningWidth = leftWidth + (hasLeft ? sharedMullionWidth : 0) + doorAssemblyWidth + (hasRight ? sharedMullionWidth : 0) + rightWidth
@@ -119,6 +119,7 @@ export function DoorFrame({
   const outerRight = openingRight + frameSide
   const outerTop = openingTop - frameHead
   const doorLeft = openingLeft + leftWidth + leftMullionWidth
+  const centerMeetingStileLeft = doorLeft + DOOR_WIDTH
   const isInterior = view === 'Interior'
   const frameFill = finishColor
   const edgeAmount = variant === 'exterior' ? 0.035 : finishType === 'stain' ? 0.075 : 0.055
@@ -194,7 +195,7 @@ export function DoorFrame({
   } as CSSProperties
 
   return (
-    <div ref={frameRef} className={`door-frame door-frame-${view.toLowerCase()} door-frame-variant-${variant} ${openingOnly ? 'door-frame-opening-only' : ''} ${className}`.trim()} data-door-configuration={doorConfigurationType} data-sidelites={sidelites} data-view={view} data-variant={variant} data-shared-canvas={sharedComparisonCanvas ? 'true' : 'false'} data-frame={openingOnly ? 'opening-only' : showFrame ? 'visible' : 'hidden'} data-finish-type={finishType} data-finish-surface={finishSurface} data-scale={showFrame || openingOnly ? unitScale.toFixed(4) : undefined} style={layoutStyle}>
+    <div ref={frameRef} className={`door-frame door-frame-${view.toLowerCase()} door-frame-variant-${variant} ${openingOnly ? 'door-frame-opening-only' : ''} ${className}`.trim()} data-door-configuration={doorConfigurationType} data-double-door={doorConfigurationLeafCount(doorConfigurationType) === 2 ? 'true' : 'false'} data-sidelites={sidelites} data-view={view} data-variant={variant} data-shared-canvas={sharedComparisonCanvas ? 'true' : 'false'} data-frame={openingOnly ? 'opening-only' : showFrame ? 'visible' : 'hidden'} data-finish-type={finishType} data-finish-surface={finishSurface} data-scale={showFrame || openingOnly ? unitScale.toFixed(4) : undefined} style={layoutStyle}>
       <div className="door-frame-openings door-unit-canvas" aria-hidden="true">
         <div className="door-frame-sidelite-slot door-frame-sidelite-slot-left">
           {hasLeft && leftSideliteSrc && <><img className="door-frame-sidelite door-frame-sidelite-left" src={leftSideliteSrc} data-glass-mask={sideliteMaskSrc} alt="" decoding="async" />{sideliteFinishStyle && <div className={`door-frame-sidelite-finish door-frame-sidelite-finish-${finishType}`} style={sideliteFinishStyle} />}{sideliteDetailStyle && <img className="door-frame-sidelite-detail" src={leftSideliteSrc} alt="" decoding="async" style={sideliteDetailStyle} />}{sideliteGlassFrameStyle && <div className="door-frame-sidelite-glass-frame" style={sideliteGlassFrameStyle} />}{sideliteHighlightStyle && <div className="door-frame-sidelite-highlight" style={sideliteHighlightStyle} />}{sideliteClearGlassBase && <div className="door-frame-sidelite-clear-glass" style={sideliteGlassMaskStyle} />}{renderSideliteGlass()}</>}
@@ -239,8 +240,9 @@ export function DoorFrame({
         {!openingOnly && variant === 'exterior' && <path d={`M${outerLeft + profile.profileInset} ${thresholdTop}V${outerTop + profile.profileInset}H${outerRight - profile.profileInset}V${thresholdTop}`} fill="none" stroke={frameHighlight} strokeWidth={profile.profileStroke} opacity="0.35" />}
         {!openingOnly && <path d={`M${openingLeft - profile.profileInset} ${thresholdTop}V${openingTop - profile.profileInset}H${openingRight + profile.profileInset}V${thresholdTop}`} fill="none" stroke={frameEdge} strokeWidth={profile.profileStroke} opacity="0.32" />}
         {!openingOnly && <path d={`M${openingLeft} ${thresholdTop}V${openingTop}H${openingRight}V${thresholdTop}`} fill="none" stroke={frameEdge} strokeWidth={variant === 'exterior' ? 2.5 : 1.25} opacity={variant === 'exterior' ? 0.42 : 0.32} />}
-        {hasLeft && !openingOnly && <rect x={openingLeft + leftWidth} y={openingTop} width={mullionWidth} height={HEIGHT} fill={`url(#${mullionGradientId})`} stroke={frameEdge} strokeWidth={variant === 'exterior' ? 1.5 : 1} strokeOpacity="0.4" />}
-        {hasRight && !openingOnly && <rect x={doorLeft + doorAssemblyWidth} y={openingTop} width={mullionWidth} height={HEIGHT} fill={`url(#${mullionGradientId})`} stroke={frameEdge} strokeWidth={variant === 'exterior' ? 1.5 : 1} strokeOpacity="0.4" />}
+        {hasLeft && <rect className="door-frame-divider door-frame-divider-left" x={openingLeft + leftWidth} y={openingTop} width={mullionWidth} height={HEIGHT} fill={`url(#${mullionGradientId})`} stroke={frameEdge} strokeWidth={variant === 'exterior' ? 1.5 : 1} strokeOpacity="0.4" />}
+        {hasCenterMeetingStile(doorConfigurationType) && <rect className="door-frame-divider door-frame-center-meeting-stile" x={centerMeetingStileLeft} y={openingTop} width={CENTER_MEETING_STILE} height={HEIGHT} fill={`url(#${mullionGradientId})`} stroke={frameEdge} strokeWidth={variant === 'exterior' ? 1.5 : 1} strokeOpacity="0.4" />}
+        {hasRight && <rect className="door-frame-divider door-frame-divider-right" x={doorLeft + doorAssemblyWidth} y={openingTop} width={mullionWidth} height={HEIGHT} fill={`url(#${mullionGradientId})`} stroke={frameEdge} strokeWidth={variant === 'exterior' ? 1.5 : 1} strokeOpacity="0.4" />}
         {!openingOnly && <rect x={outerLeft} y={thresholdTop} width={outerRight - outerLeft} height={THRESHOLD} rx="1" fill="#111211" />}
         {!openingOnly && <path d={`M${outerLeft + 3} ${thresholdTop + 2}H${outerRight - 3}`} stroke="#3c3d3b" strokeWidth="2" />}
         {!openingOnly && isInterior && <path d={`M${openingLeft - 2} ${thresholdTop}V${openingTop - 2}H${openingRight + 2}V${thresholdTop}`} fill="none" stroke={frameHighlight} strokeWidth="1" opacity="0.35" />}
