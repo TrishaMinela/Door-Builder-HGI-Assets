@@ -740,7 +740,7 @@ export default function App() {
         ...(sideliteGridLocation === 'internal' && sideliteGridColor && fslWidths.length ? ['sidelite-grid-width' as const] : []),
       ] : []),
     ] : []),
-    ...(selectedDoorConfigurationType && selectedDoorConfigurationType !== 'single' ? ['lock-setup' as const] : []),
+    ...(selectedDoorConfigurationType === 'french' ? ['lock-setup' as const] : []),
     'hardware',
     'door-swing',
     'review',
@@ -774,7 +774,7 @@ export default function App() {
   const previewModes = ['Exterior', 'Interior', 'Both'] as const
   const configuredDoorPreview: DoorPreviewProps = {
     doorConfigurationType: selectedDoorConfigurationType || 'single',
-    doubleDoorLockPrep: selectedDoorConfigurationType !== 'single' ? doubleDoorLockPrep || 'DDLLBO' : null,
+    doubleDoorLockPrep: selectedDoorConfigurationType === 'french' ? doubleDoorLockPrep || 'DDLLBO' : null,
     style,
     finish: previewConfig.finish,
     glass: previewConfig.glass,
@@ -1181,7 +1181,7 @@ export default function App() {
 
   const selectDoorConfiguration = (configurationType: DoorConfigurationType) => {
     setSelectedDoorConfigurationType(configurationType)
-    setDoubleDoorLockPrep(configurationType !== 'single' ? 'DDLLBO' : '')
+    setDoubleDoorLockPrep(configurationType === 'french' ? 'DDLLBO' : '')
     // Give the customer an immediate configured preview. Door Style remains
     // the next editable step, with the first catalog option selected there.
     if (doorStyles[0]) setStyleId(doorStyles[0].id)
@@ -1531,8 +1531,8 @@ export default function App() {
       const previewDataUrl = pdfPreviewDataUrlRef.current ?? await cacheReviewPreviewForPdf()
       const { generateSummaryAttachment } = await import('./utils/pdf')
       const jambSummary = { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' as const : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }
-      const attachment = await generateSummaryAttachment(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, jambSummary, selectedDoorConfigurationType || 'single', previewDataUrl, selectedDoorConfigurationType !== 'single' ? doubleDoorLockPrep || 'DDLLBO' : null)
-      await submitQuote({ configuration: { doorConfigurationType: selectedDoorConfigurationType || 'single', ...(doorConfigurationProductOption ? { doorConfigurationProductOption } : {}), ...(selectedDoorConfigurationType !== 'single' && selectedDoubleDoorLockPrep ? { doubleDoorLockPrep: selectedDoubleDoorLockPrep } : {}), product, style, grain: selectedGrain, finish, doorFinishType: finish.finishType, doorFinishColor: finish.name, glassFrameColorMode: glassFrameColorMode || undefined, glassFrameFinishId: glassFrameColorMode === 'custom' ? resolvedGlassFrameFinish.id : undefined, ...jambSummary, glass: configuredGlass, mainDoorGlass: configuredGlass, grid: gridConfiguration, hardware: selectedHardware, doorSwing: selectedDoorSwing, sidelites: sidelites || 'none', sidelitePlacement: sidelites || 'none', sideliteConfigurationCode: sideliteProductCode(sidelites || 'none'), sideliteConfigurationLabel: sideliteProductLabel(sidelites || 'none'), ...(selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}), ...(sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}) }, contact, attachment, submittedAt: new Date().toISOString() })
+      const attachment = await generateSummaryAttachment(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, jambSummary, selectedDoorConfigurationType || 'single', previewDataUrl, selectedDoorConfigurationType === 'french' ? doubleDoorLockPrep || 'DDLLBO' : null)
+      await submitQuote({ configuration: { doorConfigurationType: selectedDoorConfigurationType || 'single', ...(doorConfigurationProductOption ? { doorConfigurationProductOption } : {}), ...(selectedDoorConfigurationType === 'french' && selectedDoubleDoorLockPrep ? { doubleDoorLockPrep: selectedDoubleDoorLockPrep } : {}), product, style, grain: selectedGrain, finish, doorFinishType: finish.finishType, doorFinishColor: finish.name, glassFrameColorMode: glassFrameColorMode || undefined, glassFrameFinishId: glassFrameColorMode === 'custom' ? resolvedGlassFrameFinish.id : undefined, ...jambSummary, glass: configuredGlass, mainDoorGlass: configuredGlass, grid: gridConfiguration, hardware: selectedHardware, doorSwing: selectedDoorSwing, sidelites: sidelites || 'none', sidelitePlacement: sidelites || 'none', sideliteConfigurationCode: sideliteProductCode(sidelites || 'none'), sideliteConfigurationLabel: sideliteProductLabel(sidelites || 'none'), ...(selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}), ...(sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}) }, contact, attachment, submittedAt: new Date().toISOString() })
       const completedAction = pendingCustomerAction
       setCustomerFormCompleted(true)
       setPendingCustomerAction(null)
@@ -1556,12 +1556,12 @@ export default function App() {
     if (!selectedHardware || !selectedDoorSwing) return
     const { downloadSummary } = await import('./utils/pdf')
     const previewDataUrl = screen === 'builder' ? await cacheReviewPreviewForPdf() : pdfPreviewDataUrlRef.current
-    await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }, selectedDoorConfigurationType || 'single', previewDataUrl, selectedDoorConfigurationType !== 'single' ? doubleDoorLockPrep || 'DDLLBO' : null)
+    await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }, selectedDoorConfigurationType || 'single', previewDataUrl, selectedDoorConfigurationType === 'french' ? doubleDoorLockPrep || 'DDLLBO' : null)
   }
 
   const configurationSummaryRows: [string, string, number][] = [
     ['Door Configuration', doorConfigurationLabel(selectedDoorConfigurationType), pages.indexOf('door-configuration')],
-    ...(selectedDoorConfigurationType !== 'single' && selectedDoubleDoorLockPrep ? [['Lock Setup', selectedDoubleDoorLockPrep.name, pages.indexOf('lock-setup')] as [string, string, number]] : []),
+    ...(selectedDoorConfigurationType === 'french' && selectedDoubleDoorLockPrep ? [['Lock Setup', selectedDoubleDoorLockPrep.name, pages.indexOf('lock-setup')] as [string, string, number]] : []),
     ['Door style', style.name, pages.indexOf('door-style')],
     ['Door Line', selectedDoorLine?.name ?? product.doorType, pages.indexOf('door-line')],
     ['Sidelite Configuration', sideliteProductLabel(sidelites || 'none'), pages.indexOf('sidelites')],
@@ -1849,7 +1849,7 @@ export default function App() {
             <span><b>Finish</b><strong>{selectedFinish?.name ?? 'Not selected'}</strong></span>
             <span><b>Glass</b><strong>{compatibilitySupportsGlass ? (configuredGlass?.name ?? 'Clear') : 'Not applicable'}</strong></span>
             <span><b>Sidelites</b><strong>{sideliteProductLabel(sidelites || 'none')}</strong></span>
-            {selectedDoorConfigurationType !== 'single' && <span><b>Lock Setup</b><strong>{selectedDoubleDoorLockPrep?.name ?? 'Not selected'}</strong></span>}
+            {selectedDoorConfigurationType === 'french' && <span><b>Lock Setup</b><strong>{selectedDoubleDoorLockPrep?.name ?? 'Not selected'}</strong></span>}
             <span><b>Hardware</b><strong>{selectedHardware ? hardwareDisplayName(selectedHardware) : 'Not selected'}</strong></span>
             <span><b>Door Swing</b><strong>{selectedDoorSwing ? `${selectedDoorSwing.id} — ${selectedDoorSwing.name}` : 'Not selected'}</strong></span>
           </div>}

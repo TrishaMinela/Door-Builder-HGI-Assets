@@ -588,7 +588,7 @@ export async function generateSummaryPdf(
     jamb?.jambFinishType === 'clad' ? 'Clad' : jamb?.jambFinishType === 'stain' ? 'Stain' : 'Paint',
     jamb?.jambFinishColor || 'Not selected',
     [glass?.name ?? 'No glass', gridDetails].filter(Boolean).join(' - '),
-    [hardwareDisplayName(hardware), doorConfigurationType !== 'single' ? `Lock Setup: ${doubleDoorLockPrepOption(doubleDoorLockPrep)?.name ?? 'Locks on Both Doors'}` : null].filter(Boolean).join(' — '),
+    [hardwareDisplayName(hardware), doorConfigurationType === 'french' ? `Lock Setup: ${doubleDoorLockPrepOption(doubleDoorLockPrep)?.name ?? 'Locks on Both Doors'}` : null].filter(Boolean).join(' — '),
     doorSwing.name,
   ]
   const rowBaselines = [214, 259.5, 305, 350.5, 396, 441.5, 487, 532.5, 578, 623.5, 669, 714.5, 760]
