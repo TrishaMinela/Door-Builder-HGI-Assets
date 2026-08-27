@@ -1,6 +1,24 @@
-import type { DoorConfigurationType } from '../types'
+import type { DoorConfigurationType, DoubleDoorLockPrepCode } from '../types'
 
 export type DoorHardwareSide = 'left' | 'right'
+export type DoorHardwareRenderMode = 'full' | 'knob-only'
+export type DoubleDoorLockPrepOption = {
+  code: DoubleDoorLockPrepCode
+  label: string
+  name: string
+  description: string
+  thumbnail: string
+}
+
+export const doubleDoorLockPrepOptions: DoubleDoorLockPrepOption[] = [
+  { code: 'DDLLBO', label: 'DDLLBO — Double Door — Locks in Both Panels', name: 'Locks on Both Doors', description: 'Lock hardware on both doors.', thumbnail: '/assets/hardware/lock-setup/locks-on-both-doors.png' },
+  { code: 'DDLLAC', label: 'DDLLAC — Double Door — Lock on the Active Panel', name: 'Lock on Main Door Only', description: 'Lock hardware only on the Main Door.', thumbnail: '/assets/hardware/lock-setup/lock-on-main-door-only.png' },
+  { code: 'DDLLKP', label: 'DDLLKP — Double Door Knob Prep Only', name: 'Knob Prep Only', description: 'Prepare the doors for knob hardware without a full lockset.', thumbnail: '/assets/hardware/lock-setup/knob-prep-only.png' },
+]
+
+export function doubleDoorLockPrepOption(code?: string | null) {
+  return doubleDoorLockPrepOptions.find((option) => option.code === code)
+}
 export type DoorConfigurationProductOption = {
   code: 'HINGEOJ'
   label: 'HINGEOJ - HINGE OFF OUTER JAMB'
@@ -58,11 +76,23 @@ export function doorHardwarePlacements(
   value: string | null | undefined,
   displayedHardwareSide: DoorHardwareSide,
   operatingLeafSide: DoorHardwareSide = displayedHardwareSide,
-): { leafIndex: number; side: DoorHardwareSide }[] {
+  doubleDoorLockPrep?: DoubleDoorLockPrepCode | null,
+): { leafIndex: number; side: DoorHardwareSide; mode: DoorHardwareRenderMode }[] {
   const rule = doorConfigurationRule(value)
-  if (rule.hardwareMode === 'both') return [{ leafIndex: 0, side: 'right' }, { leafIndex: 1, side: 'left' }]
-  if (rule.hardwareMode === 'operating-leaf') {
-    return [{ leafIndex: operatingLeafSide === 'right' ? 0 : 1, side: displayedHardwareSide }]
+  if (rule.leafCount === 2 && doubleDoorLockPrep) {
+    const activeLeafIndex = operatingLeafSide === 'right' ? 0 : 1
+    const inactiveLeafIndex = activeLeafIndex === 0 ? 1 : 0
+    const sideForLeaf = (leafIndex: number): DoorHardwareSide => leafIndex === 0 ? 'right' : 'left'
+    if (doubleDoorLockPrep === 'DDLLAC') return [{ leafIndex: activeLeafIndex, side: sideForLeaf(activeLeafIndex), mode: 'full' }]
+    if (doubleDoorLockPrep === 'DDLLKP') return [
+      { leafIndex: activeLeafIndex, side: sideForLeaf(activeLeafIndex), mode: 'full' },
+      { leafIndex: inactiveLeafIndex, side: sideForLeaf(inactiveLeafIndex), mode: 'knob-only' },
+    ]
+    return [{ leafIndex: 0, side: 'right', mode: 'full' }, { leafIndex: 1, side: 'left', mode: 'full' }]
   }
-  return [{ leafIndex: 0, side: displayedHardwareSide }]
+  if (rule.hardwareMode === 'both') return [{ leafIndex: 0, side: 'right', mode: 'full' }, { leafIndex: 1, side: 'left', mode: 'full' }]
+  if (rule.hardwareMode === 'operating-leaf') {
+    return [{ leafIndex: operatingLeafSide === 'right' ? 0 : 1, side: displayedHardwareSide, mode: 'full' }]
+  }
+  return [{ leafIndex: 0, side: displayedHardwareSide, mode: 'full' }]
 }

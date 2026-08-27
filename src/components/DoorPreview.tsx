@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { DoorConfigurationType, DoorStyle, DoorSwing, Finish, GlassOption, HardwareView, PreviewHardware, ResolvedDoorProduct, SideliteConfiguration } from '../types'
+import type { DoorConfigurationType, DoorStyle, DoorSwing, DoubleDoorLockPrepCode, Finish, GlassOption, HardwareView, PreviewHardware, ResolvedDoorProduct, SideliteConfiguration } from '../types'
 import { hardwareOptions, hardwarePreviewAssetUrl } from '../data/hardware'
 import { glassOptions } from '../data/glassOptions'
 import { resolveDoorPreviewCandidates } from '../data/doorPreviewAssets'
@@ -39,6 +39,7 @@ export type DoorPreviewProps = {
   glassFrameFinish?: Finish | null
   placementMode?: 'opening-only'
   doorConfigurationType?: DoorConfigurationType
+  doubleDoorLockPrep?: DoubleDoorLockPrepCode | null
 }
 
 const GLASS_FRAME_WIDTH_RATIO = 0.035
@@ -366,7 +367,7 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-export function DoorPreview({ style, finish, glass, hardware, showHardware = true, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, sideliteGlassIsGrid = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', glassFrameFinish = null, placementMode, doorConfigurationType = 'single' }: DoorPreviewProps) {
+export function DoorPreview({ style, finish, glass, hardware, showHardware = true, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, sideliteGlassIsGrid = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', glassFrameFinish = null, placementMode, doorConfigurationType = 'single', doubleDoorLockPrep = null }: DoorPreviewProps) {
   const previewSceneRef = useRef<HTMLDivElement>(null)
   const [previewAssetsLoading, setPreviewAssetsLoading] = useState(false)
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
@@ -792,7 +793,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
           // The Savannah operating leaf is a physical leaf and must not switch
           // when Interior reverses the visible hardware side. Anchor the leaf
           // to the exterior handedness, then mirror only the hardware artwork.
-          const hardwarePlacementForLeaf = doorHardwarePlacements(doorConfigurationType, hardwareSide, hardwareSideExterior).find((placement) => placement.leafIndex === leafIndex)
+          const hardwarePlacementForLeaf = doorHardwarePlacements(doorConfigurationType, hardwareSide, hardwareSideExterior, doubleDoorLockPrep).find((placement) => placement.leafIndex === leafIndex)
           const leafHardwareSide = hardwarePlacementForLeaf?.side ?? hardwareSide
           const showHardwareOnLeaf = Boolean(hardwarePlacementForLeaf)
           const leafHardwareImagePlacementClass = hardwareImagePlacementClassForSide(leafHardwareSide)
@@ -821,8 +822,8 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
               ? <div className="door-glass-overlay door-grid-finish-overlay" style={{ backgroundColor: applyFinish ? finishColor : '#d9d9d9', WebkitMaskImage: `url("${renderedGlassOverlay}")`, maskImage: `url("${renderedGlassOverlay}")` }} />
               : <img className="door-glass-overlay" src={renderedGlassOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />)}
           </div>
-          {showHardware && hardwareImage && showHardwareOnLeaf && <div className={`hardware hardware-${previewHardware.type} hardware-side-${leafHardwareSide}${isHrtDoor ? ' hardware-hrt' : ''}`} data-hardware-side={leafHardwareSide} data-hardware-side-exterior={hardwareSideExterior} data-hardware-side-interior={hardwareSideInterior} style={{ '--metal': previewHardware.color } as React.CSSProperties}>
-            <img className={leafHardwareImagePlacementClass} src={hardwareImage} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => {
+          {showHardware && hardwareImage && showHardwareOnLeaf && <div className={`hardware hardware-${previewHardware.type} hardware-side-${leafHardwareSide}${hardwarePlacementForLeaf?.mode === 'knob-only' ? ' hardware-crop-knob-only' : ''}${isHrtDoor ? ' hardware-hrt' : ''}`} data-hardware-side={leafHardwareSide} data-hardware-mode={hardwarePlacementForLeaf?.mode} data-hardware-side-exterior={hardwareSideExterior} data-hardware-side-interior={hardwareSideInterior} style={{ '--metal': previewHardware.color } as React.CSSProperties}>
+            <img className={leafHardwareImagePlacementClass} src={hardwareImage} alt="" decoding="async" style={hardwarePlacementForLeaf?.mode === 'knob-only' && previewHardware.crop?.knobOnly ? { clipPath: `inset(${previewHardware.crop.knobOnly.top}% ${previewHardware.crop.knobOnly.right}% ${previewHardware.crop.knobOnly.bottom}% ${previewHardware.crop.knobOnly.left}%)` } : undefined} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => {
               console.warn('[door-preview:failed-hardware-overlay]', {
                 manufacturer: previewHardware.manufacturer,
                 style: previewHardware.style,

@@ -1,10 +1,10 @@
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
-import type { ContactForm, DoorConfigurationType, DoorStyle, DoorSwing, Finish, GlassOption, GridConfiguration, HardwareOption, ResolvedDoorProduct, SideliteConfiguration, SideliteGlassConfiguration } from '../types'
+import type { ContactForm, DoorConfigurationType, DoorStyle, DoorSwing, DoubleDoorLockPrepCode, Finish, GlassOption, GridConfiguration, HardwareOption, ResolvedDoorProduct, SideliteConfiguration, SideliteGlassConfiguration } from '../types'
 import { hardwareDisplayName } from '../data/hardware'
 import { configurationPdfName } from './pdfConfig'
 import { sideliteProductLabel } from '../data/sideliteConfigurations'
-import { doorConfigurationLabel, requiredDoorConfigurationProductOption } from '../data/doorConfigurationRules'
+import { doorConfigurationLabel, doubleDoorLockPrepOption, requiredDoorConfigurationProductOption } from '../data/doorConfigurationRules'
 
 const COLORS = {
   dark: [5, 4, 11] as const,
@@ -535,6 +535,7 @@ export async function generateSummaryPdf(
   jamb?: FinishSummary,
   doorConfigurationType: DoorConfigurationType = 'single',
   previewDataUrl: string | null = null,
+  doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null,
 ) {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   let font = 'helvetica'
@@ -587,7 +588,7 @@ export async function generateSummaryPdf(
     jamb?.jambFinishType === 'clad' ? 'Clad' : jamb?.jambFinishType === 'stain' ? 'Stain' : 'Paint',
     jamb?.jambFinishColor || 'Not selected',
     [glass?.name ?? 'No glass', gridDetails].filter(Boolean).join(' - '),
-    hardwareDisplayName(hardware),
+    [hardwareDisplayName(hardware), doorConfigurationType !== 'single' ? `Lock Setup: ${doubleDoorLockPrepOption(doubleDoorLockPrep)?.name ?? 'Locks on Both Doors'}` : null].filter(Boolean).join(' — '),
     doorSwing.name,
   ]
   const rowBaselines = [214, 259.5, 305, 350.5, 396, 441.5, 487, 532.5, 578, 623.5, 669, 714.5, 760]
@@ -619,13 +620,13 @@ export async function generateSummaryPdf(
   return pdf
 }
 
-export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary, doorConfigurationType: DoorConfigurationType = 'single', previewDataUrl: string | null = null) {
-  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb, doorConfigurationType, previewDataUrl)
+export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary, doorConfigurationType: DoorConfigurationType = 'single', previewDataUrl: string | null = null, doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null) {
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb, doorConfigurationType, previewDataUrl, doubleDoorLockPrep)
   pdf.save(configurationPdfName)
 }
 
-export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary, doorConfigurationType: DoorConfigurationType = 'single', previewDataUrl: string | null = null) {
-  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb, doorConfigurationType, previewDataUrl)
+export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary, doorConfigurationType: DoorConfigurationType = 'single', previewDataUrl: string | null = null, doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null) {
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb, doorConfigurationType, previewDataUrl, doubleDoorLockPrep)
   const dataUri = pdf.output('datauristring')
   return {
     fileName: configurationPdfName,

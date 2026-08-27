@@ -35,6 +35,9 @@ export function resolveHardwareOption(manufacturer: HardwareManufacturer, style:
     id: `${slug(manufacturer)}-${slug(style)}-${slug(finish)}-${preferredHanding.toLowerCase()}`,
     color: finishColors[finish] ?? '#666666',
     type: style.includes('Knob') ? 'round' : style.includes('Lever') ? 'lever' : 'long',
+    // Preview overlays use the full door canvas. Keep the original image and
+    // describe the reusable lock/knob crop in that same normalized canvas.
+    crop: { knobOnly: { top: 37, right: 0, bottom: 49, left: 0 } },
   }
 }
 

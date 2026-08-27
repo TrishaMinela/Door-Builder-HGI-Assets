@@ -61,9 +61,14 @@ export type HardwareOption = HardwareAsset & {
   cardImage?: string
   exteriorPreviewImage?: string
   interiorPreviewImage?: string
+  crop?: {
+    knobOnly: { top: number; right: number; bottom: number; left: number }
+  }
 }
 
 export type PreviewHardware = Pick<HardwareOption, 'color' | 'type'> & Partial<HardwareOption>
+
+export type DoubleDoorLockPrepCode = 'DDLLBO' | 'DDLLAC' | 'DDLLKP'
 
 export type HardwareStyleOption = {
   id: string
