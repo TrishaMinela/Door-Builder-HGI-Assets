@@ -163,19 +163,16 @@ function countVisiblePixels(canvas: HTMLCanvasElement) {
   return visible
 }
 
-export async function captureCanonicalDoorPreview(debug: PdfPreviewDebug = {}) {
+export async function captureCanonicalDoorPreview(debug: PdfPreviewDebug = {}, previewRoot: HTMLElement | null = null) {
   if (typeof document === 'undefined') return null
   // Capture the complete procedural assembly rather than only the center slab.
   // DoorFrame contains the jambs, sidelites, mullions, and threshold.
-  const selectors = [
-    '.aside-preview-area .door-frame[data-frame="visible"]',
-    '.mobile-review-preview .door-frame[data-frame="visible"]',
-    '.mobile-live-preview .door-frame[data-frame="visible"]',
-  ]
-  const candidates = selectors.flatMap((selector) => Array.from(document.querySelectorAll<HTMLElement>(selector)))
+  const candidates = previewRoot
+    ? Array.from(previewRoot.querySelectorAll<HTMLElement>('.door-frame[data-frame="visible"]'))
+    : Array.from(document.querySelectorAll<HTMLElement>('.pdf-door-capture-host .door-frame[data-frame="visible"]'))
   const assembly = candidates.find((candidate) => candidate.offsetWidth > 0 && candidate.offsetHeight > 0)
   if (!assembly) {
-    if (import.meta.env.DEV) console.error('PDF_PREVIEW_DEBUG', { ...debug, previewSourceType: 'review-dom', previewReady: false, reason: 'No mounted, visible Review preview was found.' })
+    if (import.meta.env.DEV) console.error('PDF_PREVIEW_DEBUG', { ...debug, previewSourceType: 'canonical-exterior-dom', previewReady: false, reason: 'No mounted canonical Exterior preview was found.' })
     return null
   }
 
@@ -197,7 +194,7 @@ export async function captureCanonicalDoorPreview(debug: PdfPreviewDebug = {}) {
       const dataUrl = cropped.toDataURL('image/png')
       if (import.meta.env.DEV) console.info('PDF_PREVIEW_DEBUG', {
         ...debug,
-        previewSourceType: 'review-dom/html2canvas',
+        previewSourceType: 'canonical-exterior-dom/html2canvas',
         previewWidth: assembly.offsetWidth,
         previewHeight: assembly.offsetHeight,
         canvasWidth: cropped.width,
@@ -553,6 +550,12 @@ export async function generateSummaryPdf(
   const template = await loadImage('/assets/pdf/home-guard-door-configuration-template.png')
   pdf.addImage(template, 'PNG', 0, 0, pageWidth, pageHeight)
 
+  // The supplied raster template includes a large gray rounded placeholder in
+  // the preview column. Restore that area to the page background so the final
+  // configured assembly reads directly on white rather than inside a UI card.
+  pdf.setFillColor(255, 255, 255)
+  pdf.rect(329, 178, 245, 254, 'F')
+
   const generatedDate = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date())
   pdf.setFont(font, 'bold')
   pdf.setFontSize(10)
@@ -561,11 +564,11 @@ export async function generateSummaryPdf(
   pdf.setFont(font, 'bold')
   pdf.setFontSize(8)
   pdf.setTextColor(...COLORS.teal)
-  pdf.text(`DOOR CONFIGURATION: ${doorConfigurationLabel(doorConfigurationType)}`, 346, 170)
+  pdf.text(`DOOR CONFIGURATION: ${doorConfigurationLabel(doorConfigurationType)}`, 346, 164)
   const requiredProductOption = requiredDoorConfigurationProductOption(doorConfigurationType)
   if (requiredProductOption) {
     pdf.setFontSize(6.5)
-    pdf.text(`PRODUCT OPTION: ${requiredProductOption.label}`, 346, 181)
+    pdf.text(`PRODUCT OPTION: ${requiredProductOption.label}`, 346, 180)
   }
 
   const material = product.doorTypes.map((doorType) => grain ? doorType.replace(` - ${grain}`, '') : doorType).join(' / ')
@@ -603,14 +606,14 @@ export async function generateSummaryPdf(
   })
 
   const composedPreview = previewDataUrl ?? await captureCanonicalDoorPreview({ doorConfigurationType, sidelites })
-  if (composedPreview) addImageContained(pdf, composedPreview, 346, 190, 209, 218)
+  if (composedPreview) addImageContained(pdf, composedPreview, 358, 218, 186, 166)
   if (import.meta.env.DEV) console.info('PDF_PREVIEW_DEBUG', { doorConfigurationType, sidelites, previewSourceType: previewDataUrl ? 'cached-review-png' : 'live-review-dom', dataUrlLength: composedPreview?.length ?? 0, pdfInsertionResult: composedPreview ? 'inserted' : 'missing' })
 
   if (contact.fullName) {
     pdf.setFont(font, 'normal')
     pdf.setFontSize(6.5)
     pdf.setTextColor(92, 99, 103)
-    pdf.text(`Prepared for ${contact.fullName}`, 451, 425, { align: 'center' })
+    pdf.text(`Prepared for ${contact.fullName}`, 451, 422, { align: 'center' })
   }
 
   return pdf

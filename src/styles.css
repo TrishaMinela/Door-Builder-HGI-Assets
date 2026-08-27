@@ -168,6 +168,7 @@ body:has(.visualizer-app){
 
 /* Phase 2B configured exterior door source */
 .configured-door-source{position:relative;width:100%;margin-top:24px;border:1px solid #d9e2e5;border-radius:8px;padding:clamp(18px,3vw,30px);background:#fff;box-shadow:0 14px 36px #05040b12;overflow:hidden}.configured-door-source-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px}.configured-door-source-heading span{color:var(--peacock);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.18em}.configured-door-source-heading h2{margin:5px 0 0;color:var(--black);font-size:22px}.configured-door-source-heading small{color:#657176;font-size:10px;font-weight:700;white-space:nowrap}.configured-door-checkerboard{min-height:360px;border:1px solid #cbdadd;border-radius:7px;padding:22px;display:flex;align-items:center;justify-content:center;background-color:#fff;background-image:linear-gradient(45deg,#dfe5e7 25%,transparent 25%),linear-gradient(-45deg,#dfe5e7 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#dfe5e7 75%),linear-gradient(-45deg,transparent 75%,#dfe5e7 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}.configured-door-checkerboard>img{display:block;width:auto;height:auto;max-width:100%;max-height:620px;object-fit:contain}.configured-door-checkerboard>p{margin:0;border-radius:4px;padding:10px 14px;background:#ffffffdf;color:var(--peacock);font-size:11px;font-weight:700}.configured-door-source-error{max-width:560px;border:1px solid #e5bdb5;border-radius:5px;padding:16px;background:#faeeeb;text-align:center;color:#8b3125}.configured-door-source-error p{margin:0 0 12px;font-size:11px;line-height:1.6;font-weight:650}.configured-door-source-error button{min-height:44px;margin:0 auto;border:0;border-radius:4px;padding:0 18px;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--peacock);color:#fff;font-size:11px;font-weight:700}.configured-door-capture-host,.visualizer-door-source{position:fixed!important;left:-10000px!important;top:0!important;width:1000px!important;height:900px!important;min-width:1000px!important;min-height:900px!important;display:block!important;visibility:visible!important;content-visibility:visible!important;overflow:hidden;pointer-events:none;opacity:1;transform:none!important}.configured-door-capture-host .preview-scene{width:1000px!important;height:900px!important;max-width:none!important;padding:0;display:flex!important;visibility:visible!important;align-items:center;justify-content:center;background:transparent}.configured-door-capture-host .preview-glow{display:none}.configured-door-capture-host .door-frame{transform:scale(1)!important}
+.pdf-door-capture-host{position:fixed!important;left:-10000px!important;top:0!important;width:1000px!important;height:900px!important;min-width:1000px!important;min-height:900px!important;display:block!important;visibility:visible!important;content-visibility:visible!important;overflow:hidden;pointer-events:none;opacity:1;transform:none!important}.pdf-door-capture-host .preview-scene{width:1000px!important;height:900px!important;max-width:none!important;padding:0;display:flex!important;visibility:visible!important;align-items:center;justify-content:center;background:transparent}.pdf-door-capture-host .preview-glow,.pdf-door-capture-host .preview-asset-loading{display:none!important}.pdf-door-capture-host .door-frame{transform:scale(1)!important}
 @media(max-width:560px){.configured-door-source{padding:16px}.configured-door-source-heading{align-items:flex-start;flex-direction:column}.configured-door-checkerboard{min-height:280px;padding:14px}.configured-door-checkerboard>img{max-height:480px}}
 
 /* Phase 2A entrance placement */
@@ -342,9 +343,12 @@ body:has(.visualizer-app){
 .door-detail-image{position:absolute;inset:0;z-index:3;width:100%;height:100%;object-fit:contain;filter:grayscale(1) contrast(1.12);-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;pointer-events:none}
 .door-stain-highlight{position:absolute;inset:0;width:100%;height:100%;z-index:3;background:linear-gradient(108deg,transparent 0 20%,rgba(255,255,255,.08) 23%,rgba(255,255,255,.42) 25%,rgba(255,255,255,.72) 26.5%,rgba(255,255,255,.28) 28%,rgba(255,255,255,.05) 31%,transparent 34% 62%,rgba(255,255,255,.04) 65%,rgba(255,255,255,.3) 67%,rgba(255,255,255,.08) 69%,transparent 72%);mix-blend-mode:screen;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;transform-origin:center;pointer-events:none}
 .door-stain-highlight:before,.door-frame-sidelite-highlight:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(116deg,transparent 0 43%,rgba(255,255,255,.04) 45%,rgba(255,255,255,.48) 47%,rgba(255,255,255,.78) 48%,rgba(255,255,255,.22) 49.5%,transparent 52%),radial-gradient(ellipse at 22% 9%,rgba(255,255,255,.34),transparent 22%);mix-blend-mode:screen;opacity:.82;filter:blur(.25px)}
-.door-glass-overlay{position:absolute;inset:0;z-index:4;width:100%;height:100%;object-fit:contain;pointer-events:none}
-.door-glass-frame-layer{position:absolute;inset:0;z-index:3;width:100%;height:100%;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;pointer-events:none}
-.door-frame-sidelite-glass-frame{position:absolute;inset:0;z-index:3;width:100%;height:100%;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0;mask-position:0 0;pointer-events:none}
+.door-glass-assembly,.door-frame-sidelite-glass-assembly{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transform:none;transform-origin:0 0}
+.door-glass-assembly{z-index:4}
+.door-frame-sidelite-glass-assembly{z-index:4}
+.door-glass-overlay{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:fill;pointer-events:none}
+.door-glass-frame-material,.door-glass-frame-tint,.door-glass-frame-detail{position:absolute;inset:0;z-index:3;width:100%;height:100%;object-fit:contain;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;pointer-events:none}
+.door-frame-sidelite-glass-frame-material,.door-frame-sidelite-glass-frame-tint,.door-frame-sidelite-glass-frame-detail{position:absolute;inset:0;z-index:3;width:100%;height:100%;object-fit:fill;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0;mask-position:0 0;pointer-events:none}
 .door-preview-hrt>.door-style-image{z-index:1}
 .door-preview-hrt>.door-finish-layer{z-index:2}
 .door-preview-hrt>.door-detail-image,.door-preview-hrt>.door-stain-highlight{z-index:3}
@@ -411,13 +415,11 @@ body:has(.visualizer-app){
 .door-stain-highlight:after,.door-frame-sidelite-highlight:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.2),transparent 9% 88%,rgba(255,255,255,.1)),radial-gradient(ellipse at 72% 58%,rgba(255,255,255,.18),transparent 15%);box-shadow:inset 0 0 5px rgba(255,255,255,.16);mix-blend-mode:screen;opacity:.7}
 .door-frame-sidelite-clear-glass{position:absolute;inset:0;z-index:4;width:100%;height:100%;pointer-events:none;background:linear-gradient(145deg,#f8fcfd 0%,#dce9ed 43%,#f7fbfc 62%,#cbdde2 100%);box-shadow:inset 0 0 16px #6f8f9829;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
 .door-frame-sidelite-glass-clip{position:absolute;inset:0;z-index:5;overflow:hidden;pointer-events:none;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0;mask-position:0 0}
-.door-frame-sidelite-glass{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;object-fit:fill;transform-origin:center;pointer-events:none}
-.door-frame-sidelite-glass-fsl{transform:scale(1.16,1.02)}
-.door-frame-sidelite-glass-f48sl{transform:scale(1.16,1.1)}
-.door-frame-sidelite-glass-ssl{transform:scale(1.28,1.02)}
-.door-frame-sidelite-glass-cr14sl{transform:scale(1,1.04);transform-origin:50% 17%}
+.door-frame-sidelite-glass{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;object-fit:fill;transform:none;transform-origin:center;pointer-events:none}
 .door-frame-sidelite-grid-clip{position:absolute;inset:0;z-index:5;overflow:hidden;pointer-events:none;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0;mask-position:0 0}
-.door-frame-sidelite-grid-art{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;transform:scaleX(1.14);transform-origin:center;pointer-events:none}
+.door-frame-sidelite-grid-art{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;transform:none;transform-origin:center;pointer-events:none}
+.door-frame-sidelite-glass-assembly>.door-frame-sidelite-clear-glass{z-index:1}
+.door-frame-sidelite-glass-assembly>.door-frame-sidelite-glass-clip,.door-frame-sidelite-glass-assembly>.door-frame-sidelite-grid-clip{z-index:2}
 .door-frame-sidelite-grid-finish,.door-grid-finish-overlay{-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0;mask-position:0 0;pointer-events:none}
 .door-frame-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 .door-frame-svg-base{z-index:0}
@@ -2195,6 +2197,20 @@ body:has(.home-app){
   font-size:13px;
   line-height:1.15;
 }
+.glass-options-grid .option-card .option-visual:has(.caming-finish-thumbnail){
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.glass-options-grid .option-card .caming-finish-thumbnail{
+  width:100%;
+  height:100%;
+  max-width:none;
+  max-height:none;
+  object-fit:cover;
+  object-position:center;
+}
 .glass-options-grid .glass-choice-card .option-copy{
   min-height:40px;
   padding:7px 9px 8px;
@@ -3124,4 +3140,35 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   margin:0 auto;
   object-fit:contain;
   object-position:center bottom;
+}
+
+/* Keep configuration artwork at one deliberate scale through tablet and
+   small-laptop widths. The card columns may remain fluid, but the artwork no
+   longer grows with them; max-width only lets it shrink when a column cannot
+   physically contain the fixed preview box. Desktop and phone sizing retain
+   their existing rules on either side of this range. */
+@media(min-width:768px) and (max-width:1279px){
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-configuration-card .option-copy{
+    height:76px;
+    min-height:76px;
+    flex:0 0 76px;
+  }
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-configuration-card .option-visual{
+    height:196px;
+    min-height:196px;
+    flex:0 0 196px;
+  }
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-configuration-card .door-configuration-preview{
+    width:180px;
+    max-width:calc(100% - 16px);
+    height:182px;
+    flex:0 1 180px;
+  }
+  .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-configuration-card .door-configuration-card-image{
+    width:auto;
+    height:auto;
+    max-width:100%;
+    max-height:182px;
+    object-fit:contain;
+  }
 }

@@ -24,6 +24,7 @@ import { HomeVisualizer } from './features/home-visualizer/HomeVisualizer'
 import { HERO_PRESETS, heroDoorFilename, type HeroPreset } from './data/heroPresets'
 import { HeroDoorGenerator } from './features/hero/HeroDoorGenerator'
 import { sideliteBuilderOptions, sideliteProductCode, sideliteProductLabel } from './data/sideliteConfigurations'
+import { sideliteAssetFamilyForSlab, sideliteGlassMask, sideliteSlabAsset, sideliteStylesForFamily, type SideliteStyleId } from './data/sideliteAssets'
 
 const glassSteps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
 const noGlassSteps = ['Door Style', 'Finish', 'Hardware', 'Review & Quote']
@@ -139,11 +140,11 @@ function TimberStainInfo() {
 }
 
 const sideliteStyleOptions = [
-  { id: 'fsl', name: 'FSL', image: '/assets/hgi-assets/Sidelites/22 Gauge/options/FSL.png', mask: '/assets/masks/Sidelites/FSL.png' },
-  { id: 'f48sl', name: 'F48SL', image: '/assets/hgi-assets/Sidelites/22 Gauge/options/F48SL.png', mask: '/assets/masks/Sidelites/F48SL.png' },
-  { id: 'ssl', name: 'SSL', image: '/assets/hgi-assets/Sidelites/22 Gauge/options/SSL.png', mask: '/assets/masks/Sidelites/SSL.png' },
-  { id: 's2sl', name: 'S2SL', image: '/assets/hgi-assets/Sidelites/22 Gauge/options/S2SL.png', mask: '/assets/masks/Sidelites/S2SL.png' },
-  { id: 'cr14sl', name: 'CR14SL', image: '/assets/hgi-assets/Sidelites/Signature/options/CR14SL.png', mask: '/assets/masks/Sidelites/CR14SL.png' },
+  { id: 'fsl', name: 'FSL' },
+  { id: 'f48sl', name: 'F48SL' },
+  { id: 'ssl', name: 'SSL' },
+  { id: 's2sl', name: 'S2SL' },
+  { id: 'cr14sl', name: 'CR14SL' },
 ] as const
 const sideliteGlassCatalogs = {
   fsl: { categories: fslGlassCategories, options: fslGlassOptions, standardRules: fslStandardStyleRules, lowERules: fslLowEStyleRules, gridAsset: fslGridAsset, prairiePattern: '5 Lite' as GridPattern, sdlPatterns: ['3 Lite', '4 Lite', '5 Lite'] as GridPattern[] },
@@ -455,6 +456,7 @@ export default function App() {
   const entrywayDialogRef = useRef<HTMLDivElement | null>(null)
   const entrywayStartButtonRef = useRef<HTMLButtonElement | null>(null)
   const pdfPreviewDataUrlRef = useRef<string | null>(null)
+  const pdfPreviewRootRef = useRef<HTMLDivElement | null>(null)
 
   const closeEntrywayGuidance = () => {
     setShowEntrywayGuidance(false)
@@ -527,11 +529,12 @@ export default function App() {
   const customGlassFrameFinish = glassFrameFinishOptions.find((item) => item.id === glassFrameFinishId)
   const resolvedGlassFrameFinish = glassFrameColorMode === 'custom' ? customGlassFrameFinish ?? compatibleGlassFrameDefault : matchedGlassFrameFinish
   const appliedGlassFrameFinish = glassFrameColorMode ? resolvedGlassFrameFinish : null
-  const isCherrySignatureSidelite = selectedDoorLine?.id === signatureSeriesId && selectedGrain === 'Cherry'
-  const isFirSignatureSidelite = selectedDoorLine?.id === signatureSeriesId && selectedGrain === 'Fir'
-  const isMahoganySignatureSidelite = selectedDoorLine?.id === signatureSeriesId && selectedGrain === 'Mahogany'
-  const isOakSignatureSidelite = selectedDoorLine?.id === signatureSeriesId && selectedGrain === 'Oak'
-  const supportsSideliteLine = selectedDoorLine?.id === '20-gauge-smooth-steel' || selectedDoorLine?.id === '22-gauge-steel' || selectedDoorLine?.id === 'brushed-smooth-fiberglass' || selectedDoorLine?.id === 'textured-fiberglass' || isCherrySignatureSidelite || isFirSignatureSidelite || isMahoganySignatureSidelite || isOakSignatureSidelite
+  const sideliteAssetFamily = sideliteAssetFamilyForSlab({
+    doorLineId: selectedDoorLine?.id,
+    grain: selectedGrain,
+    doorStyleCode: selectedStyle?.code,
+  })
+  const supportsSideliteLine = Boolean(sideliteAssetFamily)
   const hasSideliteGlass = supportsSideliteLine && Boolean(sidelites && sidelites !== 'none' && sideliteStyleId)
   const hasMainDoorGlassFrame = supportsGlass && Boolean(glass) && selectedStyleCodes.some((code) => glassDoorCodes.has(code))
   const supportsGlassFrameColor = hasMainDoorGlassFrame || hasSideliteGlass
@@ -548,29 +551,11 @@ export default function App() {
   const usesGridFlow = usesFullLiteGridFlow || usesF48GridFlow || usesSGridFlow
   const availableGridLocations = gridLocations.filter((item) => !usesF48GridFlow || item.id !== 'external')
   const usesMappedSidelites = supportsSideliteLine && Boolean(sidelites && sidelites !== 'none')
-  const visibleSideliteStyleOptions = isFirSignatureSidelite
-    ? sideliteStyleOptions.filter((option) => option.id === 'cr14sl' || option.id === 'fsl')
-    : isOakSignatureSidelite
-      ? sideliteStyleOptions.filter((option) => option.id === 'f48sl' || option.id === 'ssl')
-    : selectedDoorLine?.id === 'brushed-smooth-fiberglass' || isCherrySignatureSidelite || isMahoganySignatureSidelite
-    ? sideliteStyleOptions.filter((option) => option.id === 'fsl' || option.id === 'f48sl' || option.id === 'ssl')
-    : sideliteStyleOptions.filter((option) => option.id !== 'cr14sl')
-  const selectedSideliteStyle = sideliteStyleOptions.find((option) => option.id === sideliteStyleId)
-  const selectedSidelitePreview = selectedSideliteStyle && supportsSideliteLine
-    ? isFirSignatureSidelite
-      ? `/assets/hgi-assets/Sidelites/Signature/Fir/${selectedSideliteStyle.id.toUpperCase()}.png`
-      : isMahoganySignatureSidelite
-        ? `/assets/hgi-assets/Sidelites/Signature/Mahogany/${selectedSideliteStyle.id.toUpperCase()}.png`
-      : isOakSignatureSidelite
-        ? `/assets/hgi-assets/Sidelites/Signature/Oak/${selectedSideliteStyle.id.toUpperCase()}.png`
-      : isCherrySignatureSidelite
-      ? `/assets/hgi-assets/Sidelites/Signature/Cherry/${selectedSideliteStyle.id.toUpperCase()}.png`
-      : `/assets/hgi-assets/Sidelites/${selectedDoorLine?.id === '20-gauge-smooth-steel' || selectedDoorLine?.id === 'brushed-smooth-fiberglass' ? '20 Gauge' : '22 Gauge'}/${selectedSideliteStyle.id.toUpperCase()}.png`
-    : undefined
-  const selectedSideliteMask = selectedSideliteStyle?.id === 'f48sl'
-    && (selectedDoorLine?.id === '20-gauge-smooth-steel' || selectedDoorLine?.id === 'brushed-smooth-fiberglass')
-    ? '/assets/masks/Sidelites/Smooth-F48SL.png'
-    : selectedSideliteStyle?.mask
+  const availableSideliteStyleIds = sideliteStylesForFamily(sideliteAssetFamily)
+  const visibleSideliteStyleOptions = sideliteStyleOptions.filter((option) => availableSideliteStyleIds.includes(option.id))
+  const selectedSideliteStyle = visibleSideliteStyleOptions.find((option) => option.id === sideliteStyleId)
+  const selectedSidelitePreview = sideliteSlabAsset(sideliteAssetFamily, selectedSideliteStyle?.id ?? null)
+  const selectedSideliteMask = sideliteGlassMask(sideliteAssetFamily, selectedSideliteStyle?.id ?? null)
   const selectedSideliteCatalog = selectedSideliteStyle ? sideliteGlassCatalogs[selectedSideliteStyle.id] : null
   const defaultSideliteGlass = defaultClearSideliteGlass(selectedSideliteCatalog)
   const usesFslGlassFlow = Boolean(selectedSideliteCatalog)
@@ -790,6 +775,7 @@ export default function App() {
     finish: previewConfig.finish,
     glass: previewConfig.glass,
     hardware: previewConfig.hardware,
+    showHardware: Boolean(selectedHardware),
     grain: selectedGrain,
     product,
     tintColor: previewConfig.tintColor,
@@ -801,7 +787,10 @@ export default function App() {
     sideliteAssetSrc: selectedSidelitePreview,
     sideliteMaskSrc: selectedSideliteMask,
     sideliteGlassSrc: sideliteGlassPreview,
-    sideliteClearGlassBase: usesFslGridFlow || (selectedFslGlass ?? defaultSideliteGlass)?.category === 'clear',
+    // Every sidelite glass selection needs a full clear-glass underlayer so
+    // transparent decorative/grid artwork never exposes the painted slab.
+    sideliteClearGlassBase: Boolean(selectedFslGlass ?? defaultSideliteGlass),
+    sideliteGlassIsGrid: usesFslGridFlow,
     sideliteGridMatchesFinish: sideliteSdlMatchesFinish,
     jambFinish,
     jambType: jambType || 'timber',
@@ -824,6 +813,11 @@ export default function App() {
     jambFinish: jambFinish?.id,
     jambType,
   })
+  useEffect(() => {
+    // A cached PDF preview belongs to one exact configuration. Any product,
+    // finish, glass, hardware, sidelite, or jamb change must be recaptured.
+    pdfPreviewDataUrlRef.current = null
+  }, [configuredDoorKey])
   const renderConfiguredDoorPreview = (previewView: HardwareView, sharedComparisonCanvas = false) => <DoorPreview {...configuredDoorPreview} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} />
   const renderConfiguredPreviewMode = () => builderPreviewView === 'Both'
     ? <div className="preview-comparison" aria-label="Exterior and interior door previews">
@@ -1269,7 +1263,8 @@ export default function App() {
     const captured = await captureCanonicalDoorPreview({
       doorConfigurationType: selectedDoorConfigurationType || 'single',
       sidelites: sidelites || 'none',
-    })
+    }, pdfPreviewRootRef.current)
+    if (!captured) throw new Error('The complete configured door preview is not ready yet. Please try again.')
     pdfPreviewDataUrlRef.current = captured
     return captured
   }
@@ -1526,9 +1521,10 @@ export default function App() {
     try {
       if (!selectedHardware) throw new Error('Please select hardware before sending your configuration.')
       if (!selectedDoorSwing) throw new Error('Please select a door swing before sending your configuration.')
+      const previewDataUrl = pdfPreviewDataUrlRef.current ?? await cacheReviewPreviewForPdf()
       const { generateSummaryAttachment } = await import('./utils/pdf')
       const jambSummary = { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' as const : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }
-      const attachment = await generateSummaryAttachment(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, jambSummary, selectedDoorConfigurationType || 'single', pdfPreviewDataUrlRef.current)
+      const attachment = await generateSummaryAttachment(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, jambSummary, selectedDoorConfigurationType || 'single', previewDataUrl)
       await submitQuote({ configuration: { doorConfigurationType: selectedDoorConfigurationType || 'single', ...(doorConfigurationProductOption ? { doorConfigurationProductOption } : {}), product, style, grain: selectedGrain, finish, doorFinishType: finish.finishType, doorFinishColor: finish.name, glassFrameColorMode: glassFrameColorMode || undefined, glassFrameFinishId: glassFrameColorMode === 'custom' ? resolvedGlassFrameFinish.id : undefined, ...jambSummary, glass: configuredGlass, mainDoorGlass: configuredGlass, grid: gridConfiguration, hardware: selectedHardware, doorSwing: selectedDoorSwing, sidelites: sidelites || 'none', sidelitePlacement: sidelites || 'none', sideliteConfigurationCode: sideliteProductCode(sidelites || 'none'), sideliteConfigurationLabel: sideliteProductLabel(sidelites || 'none'), ...(selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}), ...(sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}) }, contact, attachment, submittedAt: new Date().toISOString() })
       const completedAction = pendingCustomerAction
       setCustomerFormCompleted(true)
@@ -1619,6 +1615,10 @@ export default function App() {
           <div className="header-dealer-cta"><span>Want this door? <strong>Connect with a Dealer</strong></span><a href="https://homeguardindustries.com/find-a-home-guard-dealer-hub/" target="_blank" rel="noreferrer">Find a Dealer <ExternalLink size={14} /></a></div>
         </div>
       </header>
+
+      {selectedStyle && <div ref={pdfPreviewRootRef} className="pdf-door-capture-host" aria-hidden="true">
+        <DoorPreview {...configuredDoorPreview} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} />
+      </div>}
 
       {showEntrywayGuidance && <div className="entryway-guidance-backdrop" role="presentation">
         <div ref={entrywayDialogRef} className="entryway-guidance-dialog" role="dialog" aria-modal="true" aria-labelledby="entryway-guidance-title" aria-describedby="entryway-guidance-description">
@@ -1757,7 +1757,7 @@ export default function App() {
                 {currentPage === 'door-line' && availableDoorLines.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Door Line" selected={doorLineId === item.id} onClick={() => selectDoorLine(item.id)} visual={<span className="door-line-card-image"><img src={item.image} alt="" loading="lazy" decoding="async" /></span>} />)}
                 {currentPage === 'door-grain' && signatureGrainOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Signature grain" selected={selectedGrain === item.id} onClick={() => selectGrain(item.id)} visual={<img className="grain-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'sidelites' && sideliteOptions.map((item) => <OptionCard key={item.id} className="sidelite-catalog-card" title={item.name} eyebrow="Entry layout" selected={sidelites === item.id} onClick={() => selectSidelites(item.id)} visual={<img className="sidelite-option-image sidelite-option-image-unflipped" src={item.image} alt="" loading="eager" decoding="async" />} />)}
-                {currentPage === 'sidelite-style' && visibleSideliteStyleOptions.map((item) => <OptionCard key={item.id} className="sidelite-catalog-card" title={item.name} eyebrow={`${selectedDoorLine?.name ?? 'Door'} sidelite`} selected={sideliteStyleId === item.id} onClick={() => selectSideliteStyle(item.id)} visual={<img className="sidelite-style-image" src={item.image} alt="" loading="eager" decoding="async" />} />)}
+                {currentPage === 'sidelite-style' && visibleSideliteStyleOptions.map((item) => <OptionCard key={item.id} className="sidelite-catalog-card" title={item.name} eyebrow={`${selectedDoorLine?.name ?? 'Door'} sidelite`} selected={sideliteStyleId === item.id} onClick={() => selectSideliteStyle(item.id)} visual={<img className="sidelite-style-image" src={sideliteSlabAsset(sideliteAssetFamily, item.id as SideliteStyleId)} alt="" loading="eager" decoding="async" />} />)}
                 {currentPage === 'door-finish' && visibleFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => selectFinish(item.id, item.finishType)} visual={<span className={`finish-tile-wrap${item.finishType === 'paint' ? ' finish-tile-flat' : ' finish-tile-stain'}`} style={{ '--fallback-finish': item.color } as CSSProperties}>{item.proMatch && <img src="/assets/branding/pro-match-logo.png" className="pro-match-swatch-logo" alt="" loading="eager" decoding="async" />}{item.finishType === 'stain' && <img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}</span>} />)}
                 {currentPage === 'jamb-type' && <>
                   <OptionCard title="Timber" description="Choose from available paint and stain finishes. The jamb defaults to match your door but can be changed." eyebrow="Jamb type" selected={jambType === 'timber'} onClick={() => selectJambType('timber')} visual={<span className="jamb-type-card-image"><img src="/assets/jamb/timber-frame-card.png" alt="Timber-framed entry door" loading="lazy" decoding="async" /></span>} />
@@ -1769,7 +1769,7 @@ export default function App() {
                   const displayOption = group.options.find((item) => item.id === glassId) ?? group.options[0]
                   return <OptionCard key={group.key} title={group.title} eyebrow="Glass" selected={selectedGlassGroupKey === group.key} onClick={() => selectGlassGroup(group)} visual={displayOption.thumbnailPath ? <img className="glass-option-thumbnail" src={displayOption.thumbnailPath} alt="" loading="lazy" decoding="async" /> : undefined} />
                 })}
-                {currentPage === 'glass-variant' && selectedGlassGroup?.options.map((item) => <OptionCard key={item.id} title={glassVariantLabel(item.name)} eyebrow={selectedGlassGroup.title} selected={glassVariantConfirmed && glassId === item.id} onClick={() => selectGlassVariant(item.id)} visual={item.thumbnailPath ? <img className="glass-option-thumbnail" src={item.thumbnailPath} alt="" loading="lazy" decoding="async" /> : undefined} />)}
+                {currentPage === 'glass-variant' && selectedGlassGroup?.options.map((item) => <OptionCard key={item.id} title={glassVariantLabel(item.name)} eyebrow={selectedGlassGroup.title} selected={glassVariantConfirmed && glassId === item.id} onClick={() => selectGlassVariant(item.id)} visual={item.thumbnailPath ? <img className={`glass-option-thumbnail${selectedGlassCategory === 'decorative' ? ' caming-finish-thumbnail' : ''}`} src={item.thumbnailPath} alt="" loading="lazy" decoding="async" /> : undefined} />)}
                 {currentPage === 'glass-frame-color' && <OptionCard title="Match Door" eyebrow="Glass frame" selected={glassFrameColorMode === 'match-door'} onClick={() => { setGlassFrameColorMode('match-door'); setGlassFrameFinishType(matchedGlassFrameFinish.finishType) }} visual={<span className={`finish-tile-wrap${matchedGlassFrameFinish.finishType === 'paint' ? ' finish-tile-flat' : ' finish-tile-stain'}`} style={{ '--fallback-finish': matchedGlassFrameFinish.color } as CSSProperties}>{matchedGlassFrameFinish.finishType === 'stain' && <img className="finish-tile-image" src={matchedGlassFrameFinish.image} alt="" />}</span>} />}
                 {currentPage === 'glass-frame-color' && visibleGlassFrameFinishes.map((item) => <OptionCard key={`glass-frame-${item.id}`} title={item.name} eyebrow={`Custom glass frame · ${item.finishType}`} selected={glassFrameColorMode === 'custom' && glassFrameFinishId === item.id} onClick={() => { setGlassFrameColorMode('custom'); setGlassFrameFinishId(item.id) }} visual={<span className={`finish-tile-wrap${item.finishType === 'paint' ? ' finish-tile-flat' : ' finish-tile-stain'}`} style={{ '--fallback-finish': item.color } as CSSProperties}>{item.proMatch && <img src="/assets/branding/pro-match-logo.png" className="pro-match-swatch-logo" alt="" />}{item.finishType === 'stain' && <img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}</span>} />)}
                 {currentPage === 'grid-location' && availableGridLocations.map((item) => <OptionCard key={item.id} title={item.name} selected={gridPathId === item.id} onClick={() => selectGridLocation(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" loading="eager" decoding="async" />} />)}
@@ -1783,7 +1783,7 @@ export default function App() {
                   const thumbnail = glassSelectionThumbnail(displayOption.name) ?? displayOption.asset ?? (displayOption.id === 'clear-grids' ? '/assets/grid-options/Internal Grids.png' : '/assets/glass/thumbnails/Clear-option.png')
                   return <OptionCard key={group.key} title={group.title} eyebrow={`${selectedSideliteStyle?.name ?? ''} Glass`} selected={sideliteGlassGroupKey === group.key} onClick={() => selectSideliteGlassGroup(group)} visual={<img className={`glass-option-thumbnail${group.title.toLowerCase().startsWith('clic') ? ' clic-glass-thumbnail' : ''}`} src={thumbnail} alt="" loading="lazy" decoding="async" />} />
                 })}
-                {currentPage === 'sidelite-glass-variant' && selectedSideliteGlassGroup?.options.map((item) => <OptionCard key={item.id} title={glassVariantLabel(item.name)} eyebrow={selectedSideliteGlassGroup.title} selected={sideliteGlassVariantConfirmed && sideliteGlassId === item.id} onClick={() => selectSideliteGlassVariant(item.id)} visual={item.asset ? <img className="glass-option-thumbnail" src={item.asset} alt="" loading="lazy" decoding="async" /> : undefined} />)}
+                {currentPage === 'sidelite-glass-variant' && selectedSideliteGlassGroup?.options.map((item) => <OptionCard key={item.id} title={glassVariantLabel(item.name)} eyebrow={selectedSideliteGlassGroup.title} selected={sideliteGlassVariantConfirmed && sideliteGlassId === item.id} onClick={() => selectSideliteGlassVariant(item.id)} visual={item.asset ? <img className={`glass-option-thumbnail${sideliteGlassCategory === 'decorative' ? ' caming-finish-thumbnail' : ''}`} src={item.asset} alt="" loading="lazy" decoding="async" /> : undefined} />)}
                 {currentPage === 'sidelite-grid-location' && ([{ id: 'internal', name: 'Internal Grids', image: '/assets/grid-options/Internal Grids.png' }, { id: 'sdl', name: 'SDL Grids', image: '/assets/grid-options/SDL Grids.png' }] as const).map((item) => <OptionCard key={item.id} title={item.name} selected={sideliteGridLocation === item.id} onClick={() => selectSideliteGridLocation(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" />} />)}
                 {currentPage === 'sidelite-grid-style' && fslGridStyles.map((item) => <OptionCard key={item} title={item} selected={sideliteGridStyle === item} onClick={() => selectSideliteGridStyle(item)} visual={<img className="grid-option-thumbnail" src={`/assets/grid-options/${item === 'Arts & Crafts' ? 'Arts & Crafts Grid' : `${item} Grids`}.png`} alt="" />} />)}
                 {currentPage === 'sidelite-grid-pattern' && fslPatterns.map((item) => <OptionCard key={item} title={item} selected={sideliteGridPattern === item} onClick={() => selectSideliteGridPattern(item)} visual={<img className="grid-pattern-thumbnail" src="/assets/grid-options/All Lites.png" alt="" />} />)}

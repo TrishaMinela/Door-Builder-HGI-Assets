@@ -14,10 +14,14 @@ type DoorFrameProps = {
   sideliteMaskSrc?: string
   sideliteGlassSrc?: string
   sideliteClearGlassBase?: boolean
+  sideliteGlassIsGrid?: boolean
   sideliteGridMatchesFinish?: boolean
   sideliteFinishStyle?: CSSProperties
   sideliteDetailStyle?: CSSProperties
-  sideliteGlassFrameStyle?: CSSProperties
+  sideliteGlassOpeningStyle?: CSSProperties
+  sideliteGlassFrameMaskStyle?: CSSProperties
+  sideliteGlassFrameTintStyle?: CSSProperties
+  sideliteGlassFrameDetailStyle?: CSSProperties
   sideliteHighlightStyle?: CSSProperties
   view?: DoorFrameView
   variant?: DoorFrameVariant
@@ -76,10 +80,14 @@ export function DoorFrame({
   sideliteMaskSrc,
   sideliteGlassSrc,
   sideliteClearGlassBase = false,
+  sideliteGlassIsGrid = false,
   sideliteGridMatchesFinish = false,
   sideliteFinishStyle,
   sideliteDetailStyle,
-  sideliteGlassFrameStyle,
+  sideliteGlassOpeningStyle,
+  sideliteGlassFrameMaskStyle,
+  sideliteGlassFrameTintStyle,
+  sideliteGlassFrameDetailStyle,
   sideliteHighlightStyle,
   view = 'Exterior',
   variant = view === 'Interior' ? 'interior' : 'exterior',
@@ -129,9 +137,8 @@ export function DoorFrame({
   const faceGradientId = `door-frame-face-${frameId}`
   const mullionGradientId = `door-frame-mullion-${frameId}`
   const sideliteMaskId = sideliteMaskSrc?.split('/').pop()?.replace(/\.png$/i, '').toLowerCase() ?? 'default'
-  const sideliteGlassMaskStyle = sideliteMaskSrc ? {
-    WebkitMaskImage: `url("${sideliteMaskSrc}")`,
-    maskImage: `url("${sideliteMaskSrc}")`,
+  const sideliteGlassMaskStyle = sideliteGlassOpeningStyle ? {
+    ...sideliteGlassOpeningStyle,
     WebkitMaskSize: '100% 100%',
     maskSize: '100% 100%',
     WebkitMaskPosition: '0 0',
@@ -140,8 +147,8 @@ export function DoorFrame({
     maskRepeat: 'no-repeat',
   } as CSSProperties : undefined
   const renderSideliteGlass = () => {
-    if (!sideliteGlassSrc) return null
-    if (!sideliteClearGlassBase) {
+    if (!sideliteGlassSrc || !sideliteGlassMaskStyle) return null
+    if (!sideliteGlassIsGrid) {
       return <div className="door-frame-sidelite-glass-clip" data-glass-mask={sideliteMaskSrc} style={sideliteGlassMaskStyle}>
         <img className={`door-frame-sidelite-glass door-frame-sidelite-glass-${sideliteMaskId}`} src={sideliteGlassSrc} alt="" decoding="async" />
       </div>
@@ -152,6 +159,11 @@ export function DoorFrame({
         : <img className="door-frame-sidelite-grid-art" src={sideliteGlassSrc} alt="" decoding="async" />}
     </div>
   }
+  const renderSideliteGlassFrame = (source: string) => sideliteGlassFrameMaskStyle ? <>
+    <img className="door-frame-sidelite-glass-frame-material" src={source} alt="" decoding="async" style={sideliteGlassFrameMaskStyle} />
+    {sideliteGlassFrameTintStyle && <div className="door-frame-sidelite-glass-frame-tint" style={sideliteGlassFrameTintStyle} />}
+    {sideliteGlassFrameDetailStyle && <img className="door-frame-sidelite-glass-frame-detail" src={source} alt="" decoding="async" style={sideliteGlassFrameDetailStyle} />}
+  </> : null
 
   useLayoutEffect(() => {
     if (!showFrame) return
@@ -198,13 +210,13 @@ export function DoorFrame({
     <div ref={frameRef} className={`door-frame door-frame-${view.toLowerCase()} door-frame-variant-${variant} ${openingOnly ? 'door-frame-opening-only' : ''} ${className}`.trim()} data-door-configuration={doorConfigurationType} data-double-door={doorConfigurationLeafCount(doorConfigurationType) === 2 ? 'true' : 'false'} data-sidelites={sidelites} data-view={view} data-variant={variant} data-shared-canvas={sharedComparisonCanvas ? 'true' : 'false'} data-frame={openingOnly ? 'opening-only' : showFrame ? 'visible' : 'hidden'} data-finish-type={finishType} data-finish-surface={finishSurface} data-scale={showFrame || openingOnly ? unitScale.toFixed(4) : undefined} style={layoutStyle}>
       <div className="door-frame-openings door-unit-canvas" aria-hidden="true">
         <div className="door-frame-sidelite-slot door-frame-sidelite-slot-left">
-          {hasLeft && leftSideliteSrc && <><img className="door-frame-sidelite door-frame-sidelite-left" src={leftSideliteSrc} data-glass-mask={sideliteMaskSrc} alt="" decoding="async" />{sideliteFinishStyle && <div className={`door-frame-sidelite-finish door-frame-sidelite-finish-${finishType}`} style={sideliteFinishStyle} />}{sideliteDetailStyle && <img className="door-frame-sidelite-detail" src={leftSideliteSrc} alt="" decoding="async" style={sideliteDetailStyle} />}{sideliteGlassFrameStyle && <div className="door-frame-sidelite-glass-frame" style={sideliteGlassFrameStyle} />}{sideliteHighlightStyle && <div className="door-frame-sidelite-highlight" style={sideliteHighlightStyle} />}{sideliteClearGlassBase && <div className="door-frame-sidelite-clear-glass" style={sideliteGlassMaskStyle} />}{renderSideliteGlass()}</>}
+          {hasLeft && leftSideliteSrc && <><img className="door-frame-sidelite door-frame-sidelite-left" src={leftSideliteSrc} data-glass-mask={sideliteMaskSrc} alt="" decoding="async" />{sideliteFinishStyle && <div className={`door-frame-sidelite-finish door-frame-sidelite-finish-${finishType}`} style={sideliteFinishStyle} />}{sideliteDetailStyle && <img className="door-frame-sidelite-detail" src={leftSideliteSrc} alt="" decoding="async" style={sideliteDetailStyle} />}<div className="door-frame-sidelite-glass-assembly">{renderSideliteGlassFrame(leftSideliteSrc)}{sideliteClearGlassBase && <div className="door-frame-sidelite-clear-glass" style={sideliteGlassMaskStyle} />}{renderSideliteGlass()}</div>{sideliteHighlightStyle && <div className="door-frame-sidelite-highlight" style={sideliteHighlightStyle} />}</>}
         </div>
         {hasLeft && <div className="door-frame-mullion-space door-frame-mullion-space-left" />}
         <div className="door-frame-door-slot">{children}</div>
         {hasRight && <div className="door-frame-mullion-space door-frame-mullion-space-right" />}
         <div className="door-frame-sidelite-slot door-frame-sidelite-slot-right">
-          {hasRight && rightSideliteSrc && <><img className="door-frame-sidelite door-frame-sidelite-right" src={rightSideliteSrc} data-glass-mask={sideliteMaskSrc} alt="" decoding="async" />{sideliteFinishStyle && <div className={`door-frame-sidelite-finish door-frame-sidelite-finish-${finishType}`} style={sideliteFinishStyle} />}{sideliteDetailStyle && <img className="door-frame-sidelite-detail" src={rightSideliteSrc} alt="" decoding="async" style={sideliteDetailStyle} />}{sideliteGlassFrameStyle && <div className="door-frame-sidelite-glass-frame" style={sideliteGlassFrameStyle} />}{sideliteHighlightStyle && <div className="door-frame-sidelite-highlight" style={sideliteHighlightStyle} />}{sideliteClearGlassBase && <div className="door-frame-sidelite-clear-glass" style={sideliteGlassMaskStyle} />}{renderSideliteGlass()}</>}
+          {hasRight && rightSideliteSrc && <><img className="door-frame-sidelite door-frame-sidelite-right" src={rightSideliteSrc} data-glass-mask={sideliteMaskSrc} alt="" decoding="async" />{sideliteFinishStyle && <div className={`door-frame-sidelite-finish door-frame-sidelite-finish-${finishType}`} style={sideliteFinishStyle} />}{sideliteDetailStyle && <img className="door-frame-sidelite-detail" src={rightSideliteSrc} alt="" decoding="async" style={sideliteDetailStyle} />}<div className="door-frame-sidelite-glass-assembly">{renderSideliteGlassFrame(rightSideliteSrc)}{sideliteClearGlassBase && <div className="door-frame-sidelite-clear-glass" style={sideliteGlassMaskStyle} />}{renderSideliteGlass()}</div>{sideliteHighlightStyle && <div className="door-frame-sidelite-highlight" style={sideliteHighlightStyle} />}</>}
         </div>
       </div>
       {showFrame && !openingOnly && <svg className="door-frame-svg door-frame-svg-base" viewBox={`0 0 ${totalWidth} ${totalHeight}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">

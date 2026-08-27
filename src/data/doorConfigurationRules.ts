@@ -54,9 +54,15 @@ export function requiredDoorConfigurationProductOption(value?: string | null): D
   return doorConfigurationRule(value).requiredProductOption
 }
 
-export function doorHardwarePlacements(value: string | null | undefined, operatingSide: DoorHardwareSide): { leafIndex: number; side: DoorHardwareSide }[] {
+export function doorHardwarePlacements(
+  value: string | null | undefined,
+  displayedHardwareSide: DoorHardwareSide,
+  operatingLeafSide: DoorHardwareSide = displayedHardwareSide,
+): { leafIndex: number; side: DoorHardwareSide }[] {
   const rule = doorConfigurationRule(value)
   if (rule.hardwareMode === 'both') return [{ leafIndex: 0, side: 'right' }, { leafIndex: 1, side: 'left' }]
-  if (rule.hardwareMode === 'operating-leaf') return [{ leafIndex: operatingSide === 'right' ? 0 : 1, side: operatingSide }]
-  return [{ leafIndex: 0, side: operatingSide }]
+  if (rule.hardwareMode === 'operating-leaf') {
+    return [{ leafIndex: operatingLeafSide === 'right' ? 0 : 1, side: displayedHardwareSide }]
+  }
+  return [{ leafIndex: 0, side: displayedHardwareSide }]
 }
