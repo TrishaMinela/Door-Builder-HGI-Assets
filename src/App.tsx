@@ -615,7 +615,9 @@ export default function App() {
       gridLocation: sideliteGridLocation === 'sdl' ? 'SDL' as const : sideliteGridLocation === 'external' ? 'External' as const : 'Internal' as const,
       ...(sideliteGridStyle ? { gridStyle: sideliteGridStyle } : {}),
       ...(sideliteGridPattern ? { gridPattern: sideliteGridPattern } : {}),
-      ...(sideliteGridLocation === 'sdl' ? { gridColor: 'Bronze' as const } : sideliteGridColor ? { gridColor: sideliteGridColor } : {}),
+      // SDL uses the Flat-grid PNG only as geometry; its visible finish is
+      // inherited from the selected slab rather than the template artwork.
+      ...(sideliteGridLocation !== 'sdl' && sideliteGridColor ? { gridColor: sideliteGridColor } : {}),
       ...(sideliteGridWidth ? { gridWidth: sideliteGridWidth } : {}),
     } : {}),
   } : null
@@ -783,10 +785,10 @@ export default function App() {
     doorSwing: selectedDoorSwing,
   }
   const doorConfigurationProductOption = requiredDoorConfigurationProductOption(selectedDoorConfigurationType || 'single')
-  // Main-door SDL bars follow the slab finish. FSL SDL intentionally reuses
-  // the matching internal Flat grid artwork in its authored Bronze finish.
+  // SDL bars use the compatible Flat-grid artwork as a reusable mask and
+  // always inherit the selected slab finish on both doors and sidelites.
   const mainDoorSdlMatchesFinish = usesGridFlow && gridPathId === 'sdl'
-  const sideliteSdlMatchesFinish = false
+  const sideliteSdlMatchesFinish = usesFslGridFlow && sideliteGridLocation === 'sdl'
   const previewModes = ['Exterior', 'Interior', 'Both'] as const
   const configuredDoorPreview: DoorPreviewProps = {
     doorConfigurationType: selectedDoorConfigurationType || 'single',

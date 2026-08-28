@@ -87,5 +87,11 @@ export const fslSdlPatterns: Record<FslGridCoatingId, GridPattern[]> = {
 const patternCodes: Partial<Record<GridPattern, string>> = { '2 Lite': '2L', '3 Lite': '3L', '4 Lite': '4L', '5 Lite': '5L' }
 const colorCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Black: 'BL', Bronze: 'BZ', 'Bronze/White': 'WH', Champagne: 'CH', Tan: 'TA', White: 'WH' }
 export const fslGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Sidelites/FSL/Internal Grids/FSLINT${patternCodes[pattern]}${colorCodes[color]}.png`
-export const fslPrairieGridAsset = (_color: GridColor) => '/assets/hgi-assets/Glass/FSL/CLEAR STOCK/FPRAINTSL.png'
+const fslPrairieGridAssets: Partial<Record<GridColor, string>> = {
+  Champagne: '/assets/hgi-assets/Glass/FSL/CLEAR STOCK/FSL Prairie Champagne.png',
+  Tan: '/assets/hgi-assets/Glass/FSL/CLEAR STOCK/FSL Prairie Tan.png',
+  White: '/assets/hgi-assets/Glass/FSL/CLEAR STOCK/FSL Prairie White.png',
+}
+
+export const fslPrairieGridAsset = (color: GridColor) => fslPrairieGridAssets[color] ?? fslPrairieGridAssets.White!
 export const fslArtsAndCraftsGridAsset = (_color: GridColor) => '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FART3LWH.png'

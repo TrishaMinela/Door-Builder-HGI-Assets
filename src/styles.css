@@ -419,7 +419,6 @@ body:has(.visualizer-app){
 .door-frame-sidelite-grid-clip{position:absolute;inset:0;z-index:5;overflow:hidden;pointer-events:none;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0;mask-position:0 0}
 .door-frame-sidelite-grid-art{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;transform:none;transform-origin:center;pointer-events:none}
 .door-frame-sidelite-grid-art-centered-cover{object-fit:cover;object-position:center}
-.door-frame-sidelite-grid-art-prairie{object-fit:contain;object-position:50% 50%}
 .door-frame-sidelite-glass-assembly>.door-frame-sidelite-clear-glass{z-index:1}
 .door-frame-sidelite-glass-assembly>.door-frame-sidelite-glass-clip,.door-frame-sidelite-glass-assembly>.door-frame-sidelite-grid-clip{z-index:2}
 .door-frame-sidelite-grid-finish,.door-grid-finish-overlay{-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:0 0;mask-position:0 0;pointer-events:none}
@@ -3100,6 +3099,11 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   margin:auto;
   object-fit:contain;
   object-position:center;
+}
+.configuration-step .builder-options-scroll .sidelite-catalog-grid>.sidelite-catalog-card .sidelite-option-image{
+  flex:none;
+  height:120px;
+  width:auto;
 }
 @media(min-width:1024px) and (max-width:1279px){
   .builder-options-scroll .sidelite-catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}

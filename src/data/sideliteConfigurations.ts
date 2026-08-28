@@ -34,7 +34,13 @@ const singleDoorBuilderOptions: readonly SideliteBuilderOption[] = [
 const doubleDoorBuilderOptions: readonly SideliteBuilderOption[] = sideliteProductOptions.map((option) => ({
   id: option.legacyValue,
   name: option.label,
-  image: option.code === 'NOSIDE' ? '/assets/hgi-assets/Sidelites/options/SingleFS.png' : option.image,
+  image: option.code === 'NOSIDE'
+    ? '/assets/hgi-assets/Sidelites/options/Double Door No Side.png'
+    : option.code === 'BOTHSIDES'
+      ? '/assets/hgi-assets/Sidelites/options/Double Door Both Sides.png'
+      : option.code === 'LEFTSIDE'
+        ? '/assets/hgi-assets/Sidelites/options/Double Door Left Side.png'
+        : '/assets/hgi-assets/Sidelites/options/Double Door Right Side.png',
 }))
 
 export function sideliteBuilderOptions(configurationType: DoorConfigurationType | '' | null | undefined): readonly SideliteBuilderOption[] {
