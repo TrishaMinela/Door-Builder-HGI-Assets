@@ -22,6 +22,7 @@ export function doubleDoorLockPrepOption(code?: string | null) {
 export type DoorConfigurationProductOption = {
   code: 'HINGEOJ'
   label: 'HINGEOJ - HINGE OFF OUTER JAMB'
+  customerLabel: 'Hinge Off Outer Jamb'
 }
 
 type DoorConfigurationRule = {
@@ -36,6 +37,7 @@ type DoorConfigurationRule = {
 export const savannahRequiredProductOption: DoorConfigurationProductOption = {
   code: 'HINGEOJ',
   label: 'HINGEOJ - HINGE OFF OUTER JAMB',
+  customerLabel: 'Hinge Off Outer Jamb',
 }
 
 export const doorConfigurationRules: Record<DoorConfigurationType, DoorConfigurationRule> = {
@@ -70,6 +72,10 @@ export function hasCenterMeetingStile(value?: string | null): boolean {
 
 export function requiredDoorConfigurationProductOption(value?: string | null): DoorConfigurationProductOption | undefined {
   return doorConfigurationRule(value).requiredProductOption
+}
+
+export function doorConfigurationHingeOptionLabel(value?: string | null): string | undefined {
+  return requiredDoorConfigurationProductOption(value)?.customerLabel
 }
 
 export function doorHardwarePlacements(

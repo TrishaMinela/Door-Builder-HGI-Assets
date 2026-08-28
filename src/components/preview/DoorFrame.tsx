@@ -15,6 +15,7 @@ type DoorFrameProps = {
   sideliteGlassSrc?: string
   sideliteClearGlassBase?: boolean
   sideliteGlassIsGrid?: boolean
+  sideliteGridIsPrairie?: boolean
   sideliteGridMatchesFinish?: boolean
   sideliteFinishStyle?: CSSProperties
   sideliteDetailStyle?: CSSProperties
@@ -81,6 +82,7 @@ export function DoorFrame({
   sideliteGlassSrc,
   sideliteClearGlassBase = false,
   sideliteGlassIsGrid = false,
+  sideliteGridIsPrairie = false,
   sideliteGridMatchesFinish = false,
   sideliteFinishStyle,
   sideliteDetailStyle,
@@ -156,7 +158,7 @@ export function DoorFrame({
     return <div className={`door-frame-sidelite-grid-clip door-frame-sidelite-grid-clip-${sideliteMaskId}`} style={sideliteGlassMaskStyle}>
       {sideliteGridMatchesFinish
         ? <div className="door-frame-sidelite-grid-art door-frame-sidelite-grid-finish" style={{ backgroundColor: finishColor, WebkitMaskImage: `url("${sideliteGlassSrc}")`, maskImage: `url("${sideliteGlassSrc}")` }} />
-        : <img className="door-frame-sidelite-grid-art" src={sideliteGlassSrc} alt="" decoding="async" />}
+        : <img className={`door-frame-sidelite-grid-art${sideliteGlassSrc.includes('/FART3LWH.png') ? ' door-frame-sidelite-grid-art-centered-cover' : ''}${sideliteGridIsPrairie ? ' door-frame-sidelite-grid-art-prairie' : ''}`} src={sideliteGlassSrc} alt="" decoding="async" />}
     </div>
   }
   const renderSideliteGlassFrame = (source: string) => sideliteGlassFrameMaskStyle ? <>

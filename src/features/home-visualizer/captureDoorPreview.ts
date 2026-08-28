@@ -6,6 +6,88 @@ function nextFrame() {
   return new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 }
 
+function cssImageUrl(value: string) {
+  const match = value.match(/^url\(["']?(.*?)["']?\)$/)
+  return match?.[1] ?? ''
+}
+
+function loadCaptureImage(source: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = () => reject(new Error(`A masked preview asset could not be loaded: ${source}`))
+    image.src = source
+  })
+}
+
+async function materializeMaskedLayers(root: HTMLElement) {
+  const restorers: (() => void)[] = []
+  const candidates = Array.from(root.querySelectorAll<HTMLElement>('*')).filter((element) => {
+    const style = window.getComputedStyle(element)
+    return cssImageUrl(style.maskImage) || cssImageUrl(style.webkitMaskImage)
+  })
+
+  for (const element of candidates) {
+    const style = window.getComputedStyle(element)
+    const maskSource = cssImageUrl(style.maskImage) || cssImageUrl(style.webkitMaskImage)
+    if (!maskSource) continue
+    const width = Math.max(1, Math.round(element.offsetWidth))
+    const height = Math.max(1, Math.round(element.offsetHeight))
+    const canvas = document.createElement('canvas')
+    canvas.width = width * CAPTURE_SCALE
+    canvas.height = height * CAPTURE_SCALE
+    const context = canvas.getContext('2d')
+    if (!context) continue
+    context.imageSmoothingEnabled = true
+    context.imageSmoothingQuality = 'high'
+    context.scale(CAPTURE_SCALE, CAPTURE_SCALE)
+
+    if (element instanceof HTMLImageElement && element.complete && element.naturalWidth) {
+      context.drawImage(element, 0, 0, width, height)
+    } else {
+      if (style.backgroundColor && style.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+        context.fillStyle = style.backgroundColor
+        context.fillRect(0, 0, width, height)
+      }
+      const backgroundSource = cssImageUrl(style.backgroundImage)
+      if (backgroundSource) {
+        const background = await loadCaptureImage(backgroundSource)
+        context.drawImage(background, 0, 0, width, height)
+      }
+    }
+
+    const mask = await loadCaptureImage(maskSource)
+    context.globalCompositeOperation = 'destination-in'
+    context.drawImage(mask, 0, 0, width, height)
+    context.globalCompositeOperation = 'source-over'
+    const rasterized = canvas.toDataURL('image/png')
+    canvas.width = 0
+    canvas.height = 0
+
+    const originalStyle = element.getAttribute('style')
+    const originalSource = element instanceof HTMLImageElement ? element.getAttribute('src') : null
+    if (element instanceof HTMLImageElement) {
+      element.src = rasterized
+    } else {
+      element.style.backgroundColor = 'transparent'
+      element.style.backgroundImage = `url("${rasterized}")`
+      element.style.backgroundSize = '100% 100%'
+      element.style.backgroundPosition = '0 0'
+      element.style.backgroundRepeat = 'no-repeat'
+    }
+    element.style.maskImage = 'none'
+    element.style.webkitMaskImage = 'none'
+    restorers.push(() => {
+      if (originalStyle === null) element.removeAttribute('style')
+      else element.setAttribute('style', originalStyle)
+      if (element instanceof HTMLImageElement && originalSource !== null) element.src = originalSource
+    })
+  }
+
+  await nextFrame()
+  return () => restorers.reverse().forEach((restore) => restore())
+}
+
 function alphaCoverage(canvas: HTMLCanvasElement) {
   const context = canvas.getContext('2d', { willReadFrequently: true })
   if (!context) return { nonTransparentPixelCount: 0, coverageRatio: 0 }
@@ -13,98 +95,6 @@ function alphaCoverage(canvas: HTMLCanvasElement) {
   let nonTransparentPixelCount = 0
   for (let offset = 3; offset < pixels.length; offset += 4) if (pixels[offset] > 0) nonTransparentPixelCount += 1
   return { nonTransparentPixelCount, coverageRatio: nonTransparentPixelCount / Math.max(1, canvas.width * canvas.height) }
-}
-
-function cssUrl(value: string) {
-  return value.match(/url\(["']?([^"')]+)["']?\)/)?.[1] ?? ''
-}
-
-function loadCanvasImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image()
-    image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error(`A configured door layer could not be rendered: ${src}`))
-    image.src = src
-  })
-}
-
-async function loadSvgImage(element: SVGSVGElement) {
-  const markup = new XMLSerializer().serializeToString(element)
-  const url = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }))
-  try {
-    return await loadCanvasImage(url)
-  } finally {
-    URL.revokeObjectURL(url)
-  }
-}
-
-async function renderDoorLayers(frame: HTMLElement, width: number, height: number) {
-  const canvas = document.createElement('canvas')
-  canvas.width = width * CAPTURE_SCALE
-  canvas.height = height * CAPTURE_SCALE
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error('The browser could not create the configured door image.')
-  context.imageSmoothingEnabled = true
-  context.imageSmoothingQuality = 'high'
-  const frameBounds = frame.getBoundingClientRect()
-  const candidates = Array.from(frame.querySelectorAll<HTMLElement | SVGSVGElement>('*')).filter((element) => {
-    const style = window.getComputedStyle(element)
-    if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false
-    if (element instanceof HTMLImageElement) return element.complete && element.naturalWidth > 0
-    if (element instanceof SVGSVGElement) return true
-    const color = style.backgroundColor
-    return color !== 'rgba(0, 0, 0, 0)' && color !== 'transparent' || element.classList.contains('door-frame-sidelite-clear-glass')
-  })
-
-  for (const element of candidates) {
-    const bounds = element.getBoundingClientRect()
-    const x = (bounds.left - frameBounds.left) * CAPTURE_SCALE
-    const y = (bounds.top - frameBounds.top) * CAPTURE_SCALE
-    const layerWidth = bounds.width * CAPTURE_SCALE
-    const layerHeight = bounds.height * CAPTURE_SCALE
-    if (layerWidth <= 0 || layerHeight <= 0) continue
-    const style = window.getComputedStyle(element)
-    const layer = document.createElement('canvas')
-    layer.width = canvas.width
-    layer.height = canvas.height
-    const layerContext = layer.getContext('2d')
-    if (!layerContext) continue
-    layerContext.imageSmoothingEnabled = true
-    layerContext.imageSmoothingQuality = 'high'
-    if (element instanceof HTMLImageElement) {
-      const matrix = style.transform === 'none' ? null : new DOMMatrix(style.transform)
-      if (matrix && matrix.a < 0) {
-        layerContext.save()
-        layerContext.translate(x + layerWidth, y)
-        layerContext.scale(-1, 1)
-        layerContext.drawImage(element, 0, 0, layerWidth, layerHeight)
-        layerContext.restore()
-      } else layerContext.drawImage(element, x, y, layerWidth, layerHeight)
-    } else if (element instanceof SVGSVGElement) {
-      const svgImage = await loadSvgImage(element)
-      layerContext.drawImage(svgImage, x, y, layerWidth, layerHeight)
-    }
-    else {
-      layerContext.fillStyle = element.classList.contains('door-frame-sidelite-clear-glass') ? '#dce9ed' : style.backgroundColor
-      layerContext.fillRect(x, y, layerWidth, layerHeight)
-    }
-    const maskSource = element instanceof HTMLElement ? cssUrl(style.maskImage || style.getPropertyValue('-webkit-mask-image')) : ''
-    if (maskSource) {
-      const mask = await loadCanvasImage(maskSource)
-      layerContext.globalCompositeOperation = 'destination-in'
-      layerContext.drawImage(mask, x, y, layerWidth, layerHeight)
-      layerContext.globalCompositeOperation = 'source-over'
-    }
-    const blendMode = style.mixBlendMode
-    context.globalCompositeOperation = blendMode === 'multiply' || blendMode === 'screen' || blendMode === 'overlay' ? blendMode : 'source-over'
-    context.globalAlpha = Math.max(0, Math.min(1, Number(style.opacity) || 1))
-    context.drawImage(layer, 0, 0)
-    context.globalAlpha = 1
-    context.globalCompositeOperation = 'source-over'
-    layer.width = 0
-    layer.height = 0
-  }
-  return canvas
 }
 
 async function waitForRenderedAssets(root: HTMLElement) {
@@ -196,16 +186,39 @@ export async function captureDoorPreview(previewRoot: HTMLElement, options: Capt
     throw new Error('A configured sidelite finish asset did not finish loading. Please retry.')
   }
 
-  const width = Math.ceil(Number.parseFloat(frame.style.width) || frame.offsetWidth)
-  const height = Math.ceil(Number.parseFloat(frame.style.height) || frame.offsetHeight)
+  // Capture the stable preview scene rather than clipping directly to the
+  // door-frame box. Frame strokes, threshold edges, sidelites, hardware, and
+  // anti-aliased pixels can extend to the frame boundary. The surrounding
+  // scene provides safe transparent capture space; trimTransparentPixels then
+  // removes only pixels that are truly empty.
+  const captureTarget = previewRoot.querySelector<HTMLElement>('.preview-scene') ?? frame
+  const width = Math.ceil(Number.parseFloat(captureTarget.style.width) || captureTarget.offsetWidth)
+  const height = Math.ceil(Number.parseFloat(captureTarget.style.height) || captureTarget.offsetHeight)
   if (!width || !height) throw new Error('The configured door assembly has invalid dimensions.')
 
-  const sourceBounds = frame.getBoundingClientRect()
-  const sourceStyle = window.getComputedStyle(frame)
-  const sourceImages = Array.from(frame.querySelectorAll('img'))
+  const sourceBounds = captureTarget.getBoundingClientRect()
+  const sourceStyle = window.getComputedStyle(captureTarget)
+  const sourceImages = Array.from(captureTarget.querySelectorAll('img'))
   if (!sourceBounds.width || !sourceBounds.height) throw new Error('The configured door source has no measurable layout dimensions.')
 
-  const canvas = await renderDoorLayers(frame, width, height)
+  // Flatten the completed DoorPreview DOM itself. This deliberately avoids a
+  // second export-only compositor making independent decisions about masks,
+  // finishes, spacing, hardware, or frame geometry.
+  const { default: html2canvas } = await import('html2canvas')
+  const restoreMaskedLayers = await materializeMaskedLayers(captureTarget)
+  let canvas: HTMLCanvasElement
+  try {
+    canvas = await html2canvas(captureTarget, {
+      backgroundColor: null,
+      logging: false,
+      scale: CAPTURE_SCALE,
+      useCORS: true,
+      width,
+      height,
+    })
+  } finally {
+    restoreMaskedLayers()
+  }
   const coverage = alphaCoverage(canvas)
   if (import.meta.env.DEV) console.debug('CONFIGURED_DOOR_SOURCE_DEBUG', {
     viewportWidth: window.innerWidth,

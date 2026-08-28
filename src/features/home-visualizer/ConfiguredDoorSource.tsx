@@ -17,7 +17,6 @@ type CaptureState = {
 
 export type DoorSourceState = CaptureState & { error: string; ready: boolean; retry?: () => void }
 const MAX_SOURCE_CAPTURE_ATTEMPTS = 3
-
 const waitForLayout = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
 export function ConfiguredDoorSource({ configurationKey, onStateChange, previewProps }: Props) {
@@ -48,7 +47,7 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         for (let attempt = 1; attempt <= MAX_SOURCE_CAPTURE_ATTEMPTS; attempt += 1) {
           await waitForLayout()
           try {
-            result = await captureDoorPreview(root)
+            result = await captureDoorPreview(root, { frameMode: 'visible' })
             break
           } catch (reason) {
             lastError = reason
@@ -105,5 +104,5 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         <button type="button" onClick={() => setRetry((value) => value + 1)}><RefreshCw size={16} /> Retry</button>
       </div>}
     </div>
-  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} placementMode="opening-only" /></div></>
+  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} /></div></>
 }

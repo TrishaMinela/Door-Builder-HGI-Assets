@@ -53,7 +53,10 @@ const SIDELITE_GLASS_MASKS: Record<SideliteStyleId, string> = {
  * builder, captures, and exports cannot independently choose a texture.
  */
 export function sideliteAssetFamilyForSlab({ doorLineId, grain, doorStyleCode }: SideliteFamilySelection): SideliteAssetFamily | null {
-  if (doorLineId === 'signature-fiberglass') {
+  // The current builder-facing Door Line uses `signature-series`; retain the
+  // older `signature-fiberglass` identifier for saved configurations that
+  // still resolve through this shared asset helper.
+  if (doorLineId === 'signature-series' || doorLineId === 'signature-fiberglass') {
     const normalizedGrain = grain?.toLowerCase()
     if (normalizedGrain === 'cherry' || normalizedGrain === 'fir' || normalizedGrain === 'mahogany' || normalizedGrain === 'oak') return normalizedGrain
     return null

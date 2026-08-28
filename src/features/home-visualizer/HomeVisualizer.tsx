@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
-import { ArrowLeft, ArrowRight, Check, Crosshair, Download, ImagePlus, RefreshCw, RotateCcw, Trash2, Upload } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Crosshair, Download, FileText, ImagePlus, RefreshCw, RotateCcw, Trash2, Upload } from 'lucide-react'
 import { cloneEntranceCorners, EntranceSelector, INITIAL_ENTRANCE_CORNERS, isValidEntranceCorners, type CornerId, type EntranceCorners, type EntranceViewportMetrics } from './EntranceSelector'
 import type { DoorPreviewProps } from '../../components/DoorPreview'
 import { sidelitePlacement } from '../../data/sideliteConfigurations'
+import { doorConfigurationLeafCount } from '../../data/doorConfigurationRules'
 import { ConfiguredDoorSource, type DoorSourceState } from './ConfiguredDoorSource'
 import { ComposedPhotoPreview } from './ComposedPhotoPreview'
 import { autoFitEntrance } from './computerVision'
@@ -25,6 +26,7 @@ type SelectedPhoto = {
 type Props = {
   onBack: () => void
   onReturnToReview?: () => void
+  onDownloadPdf?: () => Promise<void>
   configuredDoorPreview: DoorPreviewProps
   configurationKey: string
 }
@@ -35,7 +37,7 @@ function fileError(file: File) {
   return ''
 }
 
-export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview, configurationKey }: Props) {
+export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, configuredDoorPreview, configurationKey }: Props) {
   const [photo, setPhoto] = useState<SelectedPhoto | null>(null)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -50,6 +52,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const [flipDoorOrientation, setFlipDoorOrientation] = useState(false)
   const [downloadPreparing, setDownloadPreparing] = useState(false)
   const [downloadError, setDownloadError] = useState('')
+  const [pdfDownloadPreparing, setPdfDownloadPreparing] = useState(false)
   const [showPlacementGuidance, setShowPlacementGuidance] = useState(false)
   const placementGuidanceButtonRef = useRef<HTMLButtonElement>(null)
   const compositeExporterRef = useRef<(() => Promise<Blob>) | null>(null)
@@ -84,12 +87,12 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
     const placement = sidelitePlacement(configuredDoorPreview.sidelites)
     return placement === 'both' ? ['left', 'right'] : placement === 'left' || placement === 'right' ? [placement] : []
   }, [configuredDoorPreview.sidelites])
-  const visualizerProgressSteps = useMemo(() => configuredSideliteSides.length ? [{label:'Door',step:0},{label:'Sidelites',step:1},{label:'Frame',step:2}] : [{label:'Door',step:0},{label:'Frame',step:2}], [configuredSideliteSides.length])
+  const visualizerProgressSteps = useMemo(() => [{label:'Complete Entry',step:0}], [])
   const photoSideliteSides = useMemo<SideliteSide[]>(() => photoSideliteSide==='both'?['left','right']:photoSideliteSide==='left'||photoSideliteSide==='right'?[photoSideliteSide]:[], [photoSideliteSide])
   const entranceBoundary = useMemo(() => completeEntranceBoundary(corners, sideliteEdges), [corners, sideliteEdges])
   const sideliteOpenings = useMemo(() => sideliteOpeningQuads(sideliteEdges), [sideliteEdges])
   const dividerJambs = useMemo(() => dividerJambQuads(corners,sideliteEdges),[corners,sideliteEdges])
-  const visualizerProductLayers = useMemo(() => createProductLayers(corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation), [corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation])
+  const visualizerProductLayers = useMemo(() => createProductLayers(corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation, doorConfigurationLeafCount(configuredDoorPreview.doorConfigurationType), outerFrame), [corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation, configuredDoorPreview.doorConfigurationType, outerFrame])
   const doorPlacementValid = isValidEntranceCorners(corners)
   const canContinueDoorPlacement = doorPlacementValid && !autoFitLoading
   const autoFitPlacementComplete = autoFitApplied || autoFitAlreadyAligned
@@ -104,6 +107,14 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
       link.href=url;link.download=`home-guard-door-visualization-${date}.jpg`;document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000)
     } catch (reason) { setDownloadError(reason instanceof Error?reason.message:'The completed photo could not be downloaded.') }
     finally { setDownloadPreparing(false) }
+  }
+
+  const downloadConfigurationPdf = async () => {
+    if (!onDownloadPdf || pdfDownloadPreparing) return
+    setPdfDownloadPreparing(true);setDownloadError('')
+    try { await onDownloadPdf() }
+    catch (reason) { setDownloadError(reason instanceof Error ? reason.message : 'The configuration PDF could not be downloaded.') }
+    finally { setPdfDownloadPreparing(false) }
   }
 
   useEffect(()=>{if(!showPlacementGuidance)return;placementGuidanceButtonRef.current?.focus();const onKeyDown=(event:KeyboardEvent)=>{if(event.key==='Escape')setShowPlacementGuidance(false)};document.addEventListener('keydown',onKeyDown);return()=>document.removeEventListener('keydown',onKeyDown)},[showPlacementGuidance])
@@ -153,11 +164,11 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const automaticFrame=useMemo(()=>frameImageSize.width?createAutomaticFrame(entranceBoundary,corners,frameImageSize):expandFrameCorners(entranceBoundary),[entranceBoundary,corners,frameImageSize])
   const resetFrameArea = () => { clearRecoloredFrame(); setFramePlacementMode('automatic');setOuterFrame(automaticFrame); setFrameSides({ top: true, left: true, right: true, bottom: true }); setFrameCorrections({ add: [], remove: [] }); setFrameConfirmed(true) }
 
-  useEffect(()=>{if(framePlacementMode!=='automatic')return;setOuterFrame(automaticFrame);setFrameConfirmed(true);setFrameCorrections({add:[],remove:[]})},[automaticFrame,framePlacementMode])
+  useEffect(()=>{if(wizardStep!==2||framePlacementMode!=='automatic')return;setOuterFrame(automaticFrame);setFrameConfirmed(true);setFrameCorrections({add:[],remove:[]})},[automaticFrame,framePlacementMode,wizardStep])
   useEffect(()=>{if(!import.meta.env.DEV||!photo||!frameImageSize.width)return;console.debug('[home-visualizer:automatic-frame]',{doorPolygon:corners,leftSidelitePolygon:sideliteEdges.left?sideliteOpenings[0]??null:null,rightSidelitePolygon:sideliteEdges.right?sideliteOpenings[sideliteEdges.left?1:0]??null:null,assemblyEnvelope:entranceBoundary,frameWidthRatio:AUTO_FRAME_WIDTH_RATIO,sourceImageSize:frameImageSize,outerFramePolygon:outerFrame,framePlacementMode,dividerJambRegions:dividerJambs,frameMaskOpenings:[corners,...sideliteOpenings]})},[photo,corners,sideliteEdges,sideliteOpenings,entranceBoundary,frameImageSize,outerFrame,framePlacementMode,dividerJambs])
 
   useEffect(() => {
-    if (!photo || !frameConfirmed) { clearRecoloredFrame(); return }
+    if (!photo || wizardStep !== 2 || !frameConfirmed) { clearRecoloredFrame(); return }
     let cancelled = false
     const base = approvedCleanup?.cleanedUrl ?? photo.objectUrl
     void recolorPhotoFrame(base, entranceBoundary, outerFrame, frameSides, frameCorrections, activeJambFinish.color, configuredDoorPreview.jambType === 'clad' ? 'clad' : activeJambFinish.finishType, [corners, ...sideliteOpenings]).then((blob) => {
@@ -165,7 +176,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
       clearRecoloredFrame(); const url = URL.createObjectURL(blob); frameUrlRef.current = url; setRecoloredFrameUrl(url)
     }).catch(() => { if (!cancelled) clearRecoloredFrame() })
     return () => { cancelled = true }
-  }, [photo, approvedCleanup?.cleanedUrl, frameConfirmed, outerFrame, frameSides, frameCorrections, activeJambFinish.id, configuredDoorPreview.jambType, entranceBoundary, corners, sideliteOpenings])
+  }, [photo, approvedCleanup?.cleanedUrl, wizardStep, frameConfirmed, outerFrame, frameSides, frameCorrections, activeJambFinish.id, configuredDoorPreview.jambType, entranceBoundary, corners, sideliteOpenings])
 
   const clearCleanup = () => {
     cleanupUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
@@ -257,9 +268,9 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
   const updateCorners = (nextCorners: EntranceCorners) => {
     cornersRef.current = nextCorners
     setCorners(nextCorners)
-    setSideliteEdges(initializeSideliteEdges(nextCorners, photoSideliteSides))
+    setSideliteEdges({})
     if(cleanupProposal||approvedCleanup||cleanupStrokes.length||cleanupError||cleanupSampleCenters.length||cleanupSampleAdjusting||recoloredFrameUrl)clearCleanup()
-    if(framePlacementMode==='automatic'){setOuterFrame(frameImageSize.width?createAutomaticFrame(completeEntranceBoundary(nextCorners,initializeSideliteEdges(nextCorners,photoSideliteSides)),nextCorners,frameImageSize):expandFrameCorners(nextCorners));setFrameCorrections({ add: [], remove: [] })} clearRecoloredFrame()
+    if(framePlacementMode==='automatic'){setOuterFrame(frameImageSize.width?createAutomaticFrame(nextCorners,nextCorners,frameImageSize):expandFrameCorners(nextCorners));setFrameCorrections({ add: [], remove: [] })} clearRecoloredFrame()
   }
 
   const updateManualCorners=(nextCorners:EntranceCorners)=>{
@@ -292,19 +303,13 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
     if (import.meta.env.DEV && isMobile) console.debug('[home-visualizer:mobileNextTapped]', { currentStep: wizardStep, activeDoorPoints: corners, doorPlacementValid, canContinue: canContinueDoorPlacement, disabled: !canContinueDoorPlacement, autoFitProcessing: autoFitLoading, autoFitApplied, autoFitProposal: null })
     if (!canContinueDoorPlacement) return
     if (import.meta.env.DEV && isMobile) console.debug('[home-visualizer:mobileNextNavigationStarted]', { currentStep: wizardStep })
-    if (configuredSideliteSides.length === 2) {
-      setPhotoSideliteSide('both')
-      if (!sideliteEdges.left || !sideliteEdges.right) setSideliteEdges(initializeSideliteEdges(corners, ['left', 'right']))
-      setWizardStep(1)
-    } else if (configuredSideliteSides.length === 1) {
-      setWizardStep(1)
-    } else {
-      setPhotoSideliteSide('none')
-      setSideliteEdges({})
-      if(framePlacementMode==='automatic')setOuterFrame(frameImageSize.width?createAutomaticFrame(corners,corners,frameImageSize):expandFrameCorners(corners))
-      setFrameConfirmed(true)
-      setWizardStep(isMobile?4:2)
-    }
+    setPhotoSideliteSide(configuredSideliteSides.length===2?'both':configuredSideliteSides.length===1?configuredSideliteSides[0]:'none')
+    setSideliteEdges(configuredSideliteSides.length ? initializeSideliteEdges(corners, configuredSideliteSides) : {})
+    setFrameConfirmed(false)
+    // A configured sidelite always needs its own photo-opening placement,
+    // regardless of whether the entry is Single, French, or Savannah. Only a
+    // true no-sidelite configuration may skip directly to the next stage.
+    setWizardStep(configuredSideliteSides.length ? 1 : (isMobile ? 4 : 2))
   }
 
   const finishSidelitePlacement = () => {
@@ -313,7 +318,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
     setWizardStep(typeof window!=='undefined'&&window.matchMedia('(max-width: 767px)').matches?4:2)
   }
 
-  const returnFromFinal = () => setWizardStep(typeof window!=='undefined'&&window.matchMedia('(max-width: 767px)').matches?(configuredSideliteSides.length?1:0):2)
+  const returnFromFinal = () => setWizardStep(0)
 
   useEffect(() => {
     if (!import.meta.env.DEV || wizardStep !== 0 || typeof window === 'undefined' || !window.matchMedia('(max-width: 767px)').matches) return
@@ -381,7 +386,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
 
   return (
     <main className="visualizer-page">
-      {showPlacementGuidance&&<div className="entryway-guidance-backdrop" role="presentation"><div className="entryway-guidance-dialog visualizer-placement-dialog" role="dialog" aria-modal="true" aria-labelledby="visualizer-placement-guidance-title" aria-describedby="visualizer-placement-guidance-description"><span>Door placement</span><h2 id="visualizer-placement-guidance-title">Roughly Outline the Door</h2><p id="visualizer-placement-guidance-description">Place the four points around the existing door. They can be a little inside or outside the exact edges.</p><p className="entryway-guidance-note">Keep the door roughly inside the outline, then use Auto-Fit to align it precisely.</p><div className="entryway-guidance-actions"><button ref={placementGuidanceButtonRef} type="button" className="entryway-guidance-start" onClick={()=>setShowPlacementGuidance(false)}>Start Placing Points <Crosshair size={17}/></button></div></div></div>}
+      {showPlacementGuidance&&<div className="entryway-guidance-backdrop" role="presentation"><div className="entryway-guidance-dialog visualizer-placement-dialog" role="dialog" aria-modal="true" aria-labelledby="visualizer-placement-guidance-title" aria-describedby="visualizer-placement-guidance-description"><span>Entry placement</span><h2 id="visualizer-placement-guidance-title">Roughly Outline the Door</h2><p id="visualizer-placement-guidance-description">Place the four points around the center door opening{configuredDoorPreview.doorConfigurationType==='single'?'':', including both middle door leaves'}.</p><p className="entryway-guidance-note">Sidelites are positioned separately in the next step so each part lands on the correct opening.</p><div className="entryway-guidance-actions"><button ref={placementGuidanceButtonRef} type="button" className="entryway-guidance-start" onClick={()=>setShowPlacementGuidance(false)}>Start Placing Points <Crosshair size={17}/></button></div></div></div>}
       <div className="visualizer-shell">
         <div className="visualizer-heading">
           <span>View on Your Home</span>
@@ -393,7 +398,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
           <div className="visualizer-card-heading">
             <div>
               <span>{photo ? 'Guided visualizer' : 'Step 1'}</span>
-              <h2 id="visualizer-photo-title">{photo ? ['Door Placement','Sidelite Placement','Frame Selection','Cleanup','Completed Visualization'][wizardStep] : 'Add your house photo'}</h2>
+              <h2 id="visualizer-photo-title">{photo ? ['Entry Placement','Sidelite Placement','Frame Selection','Cleanup','Completed Visualization'][wizardStep] : 'Add your house photo'}</h2>
             </div>
             {photo && <span className="visualizer-photo-ready"><Check size={15} /> Photo ready</span>}
           </div>
@@ -433,7 +438,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
           </> : <>
             {wizardStep<4&&<ol className="visualizer-progress" aria-label="Visualizer progress" style={{gridTemplateColumns:`repeat(${visualizerProgressSteps.length},minmax(0,1fr))`}}>{visualizerProgressSteps.map(({label,step},index)=><li key={label} className={wizardStep===step?'active':wizardStep>step?'complete':''}><span>{index+1}</span>{label}</li>)}</ol>}
             {wizardStep===0&&<>
-              {!autoFitPlacementComplete&&<div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>Outline the Door</h3><p>Move the four points roughly near the inside corners of the existing door.</p><p className="entrance-placement-note">Then use Auto-Fit to align the outline more precisely.</p></div></div>}
+              {!autoFitPlacementComplete&&<div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>Outline the Door</h3><p>Move the four points near the corners of the center door opening{configuredDoorPreview.doorConfigurationType==='single'?'':', around both door leaves'}.</p><p className="entrance-placement-note">Sidelites will be positioned separately in the next step.</p></div></div>}
               <div className="visualizer-step-editor-shell">
                 <EntranceSelector key={photo.objectUrl} corners={corners} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightHandles={highlightAutoFitHandles} forceAligned={autoFitPlacementComplete} onAlignmentReadyChange={setAutoFitAlignmentReady} onViewportMetricsChange={(metrics)=>{entranceViewportMetricsRef.current=metrics}}/>
                 <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" aria-label="Replace photo" onClick={openPicker}><RefreshCw size={21}/></button><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
@@ -463,7 +468,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, configuredDoorPreview
               </div>
               <div className="automatic-frame-actions">{framePlacementMode==='automatic'?<button type="button" onClick={()=>setFramePlacementMode('manual')}>Adjust Frame</button>:<button type="button" onClick={resetFrameArea}><RotateCcw size={15}/> Reset to Automatic</button>}</div>
             </>}
-            {wizardStep===4&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title"><div className="visualizer-final-heading"><span>Visualization complete</span><h2 id="visualizer-final-title">Your new entrance</h2></div>{doorSource.ready?<ComposedPhotoPreview corners={entranceBoundary} productLayers={visualizerProductLayers} doorSourceUrl={doorSource.url} imageSrc={recoloredFrameUrl||approvedCleanup?.cleanedUrl||photo.objectUrl} originalImageSrc={photo.objectUrl} imageAlt={`Completed visualization: ${photo.file.name}`} showAfter displayMode="final" showZoomControls beforeAfter onExporterReady={setCompositeExporter}/>:<div className="visualizer-source-loading" role={doorSource.error?'alert':'status'}><span>{doorSource.error||'Preparing your configured door…'}</span>{doorSource.error&&doorSource.retry&&<button type="button" onClick={doorSource.retry}><RefreshCw size={16}/> Retry Rendering</button>}</div>}<div className="visualizer-final-actions"><button type="button" className="visualizer-download-button" aria-label="Download completed home visualization photo" disabled={downloadPreparing||!doorSource.ready} onClick={downloadVisualization}><Download size={18}/>{downloadPreparing?'Preparing Photo…':'Download Photo'}</button><button type="button" className="visualizer-review-button" aria-label="Return to the previous visualizer step" onClick={returnFromFinal}>Return to Previous Step</button></div><div className="visualizer-final-text-actions"><button type="button" onClick={onReturnToReview??onBack}>Return to Review</button><button type="button" onClick={()=>setFlipDoorOrientation(value=>!value)}>Hardware on the wrong side? Flip Door Orientation</button></div><span className="visualizer-download-status" role="status" aria-live="polite">{downloadPreparing?'Preparing your full-resolution photo.':''}</span>{downloadError&&<p className="visualizer-error" role="alert">{downloadError}</p>}</section>}
+            {wizardStep===4&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title"><div className="visualizer-final-heading"><span>Visualization complete</span><h2 id="visualizer-final-title">Your new entrance</h2></div>{doorSource.ready?<ComposedPhotoPreview corners={entranceBoundary} productLayers={visualizerProductLayers} doorSourceUrl={doorSource.url} imageSrc={approvedCleanup?.cleanedUrl||photo.objectUrl} originalImageSrc={photo.objectUrl} imageAlt={`Completed visualization: ${photo.file.name}`} showAfter displayMode="final" showZoomControls beforeAfter onExporterReady={setCompositeExporter}/>:<div className="visualizer-source-loading" role={doorSource.error?'alert':'status'}><span>{doorSource.error||'Preparing your configured door…'}</span>{doorSource.error&&doorSource.retry&&<button type="button" onClick={doorSource.retry}><RefreshCw size={16}/> Retry Rendering</button>}</div>}<div className="visualizer-final-actions"><button type="button" className="visualizer-download-button" aria-label="Download completed home visualization photo" disabled={downloadPreparing||!doorSource.ready} onClick={downloadVisualization}><Download size={18}/>{downloadPreparing?'Preparing Photo…':'Download Photo'}</button>{onDownloadPdf&&<button type="button" className="visualizer-download-button" aria-label="Download configured door PDF" disabled={pdfDownloadPreparing} onClick={downloadConfigurationPdf}><FileText size={18}/>{pdfDownloadPreparing?'Preparing PDF…':'Download Configuration PDF'}</button>}<button type="button" className="visualizer-review-button" aria-label="Return to the previous visualizer step" onClick={returnFromFinal}>Return to Previous Step</button></div><div className="visualizer-final-text-actions"><button type="button" onClick={onReturnToReview??onBack}>Return to Review</button><button type="button" onClick={()=>setFlipDoorOrientation(value=>!value)}>Hardware on the wrong side? Flip Door Orientation</button></div><span className="visualizer-download-status" role="status" aria-live="polite">{downloadPreparing?'Preparing your full-resolution photo.':pdfDownloadPreparing?'Preparing your configuration PDF.':''}</span>{downloadError&&<p className="visualizer-error" role="alert">{downloadError}</p>}</section>}
           </>}
 
           <input ref={inputRef} className="visualizer-file-input" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" onChange={onInputChange} />

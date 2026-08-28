@@ -35,7 +35,7 @@ const allFslGlassOptions: SideliteGlassOption[] = [
   option('CUM', 'Cumulus', 'privacy'), option('LIN', 'Linen', 'privacy'), option('MIC', 'Micro Granite', 'privacy'),
   option('RAI', 'Rain', 'privacy'), option('VAP', 'Vapor', 'privacy'),
   option('ENTL', 'CLiC – Left', 'clic'), option('ENTR', 'CLiC – Right', 'clic'),
-  option('FRLBSL', 'Mini Blinds – Raise, Lower & Tilt', 'blinds'), option('RLB', 'Mini Blinds – Raise & Lower', 'blinds'),
+  option('FRLBSL', 'Mini Blinds', 'blinds'),
 ]
 
 export const fslGlassOptions = allFslGlassOptions.filter((glass) =>
@@ -44,18 +44,17 @@ export const fslGlassOptions = allFslGlassOptions.filter((glass) =>
 )
 
 export type SideliteGridRules = Partial<Record<GridPattern, Partial<Record<GridColor, GridWidth[]>>>>
-const both: GridWidth[] = ['5/8"', '7/8"']
 export const fslStandardFlatRules: SideliteGridRules = {
   '2 Lite': { Bronze: ['5/8"'], White: ['7/8"'] },
   '3 Lite': { Bronze: ['5/8"'], White: ['7/8"'] },
-  '4 Lite': { Bronze: ['5/8"'], Champagne: ['5/8"'], Tan: ['7/8"'], White: both },
-  '5 Lite': { Beige: ['5/8"'], Bronze: ['5/8"'], Champagne: both, Tan: ['7/8"'], White: both },
+  '4 Lite': { Bronze: ['5/8"'], Champagne: ['5/8"'], Tan: ['7/8"'], White: ['5/8"', '7/8"'] },
+  '5 Lite': { Beige: ['5/8"'], Bronze: ['5/8"'], Champagne: ['5/8"', '7/8"'], Tan: ['7/8"'], White: ['5/8"', '7/8"'] },
 }
 export const fslLowEFlatRules: SideliteGridRules = {
-  '2 Lite': { Black: both, Bronze: ['5/8"'], 'Bronze/White': both, White: both },
-  '3 Lite': { Beige: both, Black: both, 'Bronze/White': both, White: both },
-  '4 Lite': { Black: both, Bronze: ['5/8"'], 'Bronze/White': both, Champagne: ['5/8"'], Tan: ['7/8"'], White: both },
-  '5 Lite': { Beige: both, Black: both, Bronze: ['5/8"'], 'Bronze/White': both, Champagne: ['5/8"'], Tan: ['7/8"'], White: both },
+  '2 Lite': { Black: ['5/8"', '7/8"'], Bronze: ['5/8"'], 'Bronze/White': ['5/8"', '7/8"'], White: ['5/8"', '7/8"'] },
+  '3 Lite': { Beige: ['5/8"', '7/8"'], Black: ['5/8"', '7/8"'], 'Bronze/White': ['5/8"', '7/8"'], White: ['5/8"', '7/8"'] },
+  '4 Lite': { Black: ['5/8"', '7/8"'], Bronze: ['5/8"'], 'Bronze/White': ['5/8"', '7/8"'], Champagne: ['5/8"'], Tan: ['7/8"'], White: ['5/8"', '7/8"'] },
+  '5 Lite': { Beige: ['5/8"', '7/8"'], Black: ['5/8"', '7/8"'], Bronze: ['5/8"'], 'Bronze/White': ['5/8"', '7/8"'], Champagne: ['5/8"'], Tan: ['7/8"'], White: ['5/8"', '7/8"'] },
 }
 export const fslStandardStyleRules: Partial<Record<GridStyle, SideliteGridRules>> = {
   'Arts & Crafts': { '3 Lite': { White: ['5/8"'] } },
@@ -70,6 +69,23 @@ export const fslLowEStyleRules: Partial<Record<GridStyle, SideliteGridRules>> = 
   Prairie: { '5 Lite': { Champagne: ['5/8"', '11/16"'], Tan: ['7/8"'], White: ['5/8"', '7/8"', '11/16"'] } },
 }
 
+export type FslGridCoatingId = 'standard' | 'low-e' | 'low-e-plus'
+export type FslGridLocationId = 'external' | 'internal' | 'sdl'
+
+export const fslExternalPatterns: Record<FslGridCoatingId, GridPattern[]> = {
+  standard: [],
+  'low-e': [],
+  'low-e-plus': [],
+}
+
+export const fslSdlPatterns: Record<FslGridCoatingId, GridPattern[]> = {
+  standard: ['3 Lite', '4 Lite', '5 Lite'],
+  'low-e': ['3 Lite', '4 Lite', '5 Lite'],
+  'low-e-plus': [],
+}
+
 const patternCodes: Partial<Record<GridPattern, string>> = { '2 Lite': '2L', '3 Lite': '3L', '4 Lite': '4L', '5 Lite': '5L' }
 const colorCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Black: 'BL', Bronze: 'BZ', 'Bronze/White': 'WH', Champagne: 'CH', Tan: 'TA', White: 'WH' }
 export const fslGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Sidelites/FSL/Internal Grids/FSLINT${patternCodes[pattern]}${colorCodes[color]}.png`
+export const fslPrairieGridAsset = (_color: GridColor) => '/assets/hgi-assets/Glass/FSL/CLEAR STOCK/FPRAINTSL.png'
+export const fslArtsAndCraftsGridAsset = (_color: GridColor) => '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FART3LWH.png'

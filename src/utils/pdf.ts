@@ -1,10 +1,9 @@
-import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import type { ContactForm, DoorConfigurationType, DoorStyle, DoorSwing, DoubleDoorLockPrepCode, Finish, GlassOption, GridConfiguration, HardwareOption, ResolvedDoorProduct, SideliteConfiguration, SideliteGlassConfiguration } from '../types'
 import { hardwareDisplayName } from '../data/hardware'
 import { configurationPdfName } from './pdfConfig'
 import { sideliteProductLabel } from '../data/sideliteConfigurations'
-import { doorConfigurationLabel, doubleDoorLockPrepOption, requiredDoorConfigurationProductOption } from '../data/doorConfigurationRules'
+import { doorConfigurationHingeOptionLabel, doorConfigurationLabel, doubleDoorLockPrepOption } from '../data/doorConfigurationRules'
 
 const COLORS = {
   dark: [5, 4, 11] as const,
@@ -34,95 +33,6 @@ const COMPANY = {
 
 type FinishSummary = { jambType: 'timber' | 'clad'; jambFinishType: 'paint' | 'stain' | 'clad'; jambFinishColor: string; jambFinishOverridden: boolean; glassFrameFinishColor?: string }
 
-function cropTransparentCanvas(source: HTMLCanvasElement) {
-  const context = source.getContext('2d', { willReadFrequently: true })
-  if (!context) return source
-  const pixels = context.getImageData(0, 0, source.width, source.height).data
-  let left = source.width
-  let top = source.height
-  let right = -1
-  let bottom = -1
-  for (let y = 0; y < source.height; y += 1) {
-    for (let x = 0; x < source.width; x += 1) {
-      if (pixels[(y * source.width + x) * 4 + 3] <= 4) continue
-      left = Math.min(left, x)
-      top = Math.min(top, y)
-      right = Math.max(right, x)
-      bottom = Math.max(bottom, y)
-    }
-  }
-  if (right < left || bottom < top) return source
-  const cropped = document.createElement('canvas')
-  cropped.width = right - left + 1
-  cropped.height = bottom - top + 1
-  cropped.getContext('2d')?.drawImage(source, left, top, cropped.width, cropped.height, 0, 0, cropped.width, cropped.height)
-  return cropped
-}
-
-const PREVIEW_READY_TIMEOUT_MS = 12000
-const PREVIEW_STABLE_WINDOW_MS = 180
-
-function nextAnimationFrame() {
-  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-}
-
-async function waitForComposedDoorPreview(assembly: HTMLElement) {
-  const scene = assembly.closest<HTMLElement>('.preview-scene') ?? assembly
-  const startedAt = performance.now()
-  let lastMutationAt = performance.now()
-  const observer = new MutationObserver(() => { lastMutationAt = performance.now() })
-  observer.observe(scene, {
-    subtree: true,
-    childList: true,
-    attributes: true,
-    attributeFilter: ['src', 'style', 'class', 'aria-busy'],
-  })
-
-  try {
-    if ('fonts' in document) await document.fonts.ready
-
-    // DoorPreview can add glass, grid, hardware, and sidelite layers over
-    // several React commits. Wait until its own readiness flag is clear, all
-    // rendered images are decoded, and the scene has remained stable briefly.
-    while (performance.now() - startedAt < PREVIEW_READY_TIMEOUT_MS) {
-      const images = Array.from(scene.querySelectorAll<HTMLImageElement>('img'))
-      await Promise.all(images.map(async (image) => {
-        if (!image.complete) {
-          await new Promise<void>((resolve) => {
-            const finish = () => {
-              window.clearTimeout(timeout)
-              image.removeEventListener('load', finish)
-              image.removeEventListener('error', finish)
-              resolve()
-            }
-            const timeout = window.setTimeout(finish, 250)
-            image.addEventListener('load', finish, { once: true })
-            image.addEventListener('error', finish, { once: true })
-          })
-        }
-        if (image.complete && image.naturalWidth > 0) {
-          try { await image.decode() } catch { /* The decoded pixels may already be available. */ }
-        }
-      }))
-
-      await nextAnimationFrame()
-      await nextAnimationFrame()
-
-      const hasPendingImage = Array.from(scene.querySelectorAll<HTMLImageElement>('img'))
-        .some((image) => !image.complete)
-      const isBusy = scene.getAttribute('aria-busy') === 'true'
-      const isStable = performance.now() - lastMutationAt >= PREVIEW_STABLE_WINDOW_MS
-      if (!hasPendingImage && !isBusy && isStable) return
-
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 50))
-    }
-
-    throw new Error('The configured door preview did not finish loading in time.')
-  } finally {
-    observer.disconnect()
-  }
-}
-
 async function loadImage(path: string) {
   const response = await fetch(path)
   if (!response.ok) throw new Error(`Unable to load image: ${path}`)
@@ -145,74 +55,6 @@ async function applyBrandFont(pdf: jsPDF) {
   pdf.addFont('Montserrat.ttf', 'Montserrat', 'normal')
   pdf.addFont('Montserrat.ttf', 'Montserrat', 'bold')
   pdf.setFont('Montserrat', 'normal')
-}
-
-type PdfPreviewDebug = {
-  doorConfigurationType?: DoorConfigurationType
-  sidelites?: SideliteConfiguration
-}
-
-function countVisiblePixels(canvas: HTMLCanvasElement) {
-  const context = canvas.getContext('2d', { willReadFrequently: true })
-  if (!context || canvas.width <= 0 || canvas.height <= 0) return 0
-  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
-  let visible = 0
-  for (let index = 3; index < pixels.length; index += 4) {
-    if (pixels[index] > 8) visible += 1
-  }
-  return visible
-}
-
-export async function captureCanonicalDoorPreview(debug: PdfPreviewDebug = {}, previewRoot: HTMLElement | null = null) {
-  if (typeof document === 'undefined') return null
-  // Capture the complete procedural assembly rather than only the center slab.
-  // DoorFrame contains the jambs, sidelites, mullions, and threshold.
-  const candidates = previewRoot
-    ? Array.from(previewRoot.querySelectorAll<HTMLElement>('.door-frame[data-frame="visible"]'))
-    : Array.from(document.querySelectorAll<HTMLElement>('.pdf-door-capture-host .door-frame[data-frame="visible"]'))
-  const assembly = candidates.find((candidate) => candidate.offsetWidth > 0 && candidate.offsetHeight > 0)
-  if (!assembly) {
-    if (import.meta.env.DEV) console.error('PDF_PREVIEW_DEBUG', { ...debug, previewSourceType: 'canonical-exterior-dom', previewReady: false, reason: 'No mounted canonical Exterior preview was found.' })
-    return null
-  }
-
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    try {
-      await waitForComposedDoorPreview(assembly)
-      // Keep the PDF source crisp and viewport-independent. A narrow mobile
-      // Review preview receives a larger backing scale than the desktop view.
-      const captureScale = Math.max(3, Math.min(6, 1400 / Math.max(assembly.offsetWidth, assembly.offsetHeight)))
-      const canvas = await html2canvas(assembly, {
-        backgroundColor: null,
-        logging: false,
-        scale: captureScale,
-        useCORS: true,
-      })
-      const cropped = cropTransparentCanvas(canvas)
-      const visiblePixels = countVisiblePixels(cropped)
-      if (cropped.width <= 0 || cropped.height <= 0 || visiblePixels === 0) throw new Error('Captured preview canvas is empty.')
-      const dataUrl = cropped.toDataURL('image/png')
-      if (import.meta.env.DEV) console.info('PDF_PREVIEW_DEBUG', {
-        ...debug,
-        previewSourceType: 'canonical-exterior-dom/html2canvas',
-        previewWidth: assembly.offsetWidth,
-        previewHeight: assembly.offsetHeight,
-        canvasWidth: cropped.width,
-        canvasHeight: cropped.height,
-        captureScale,
-        dataUrlLength: dataUrl.length,
-        nonTransparentPixelCount: visiblePixels,
-        previewReady: true,
-        imageDecodeState: 'complete',
-        attempt,
-      })
-      return dataUrl
-    } catch (error) {
-      console.warn('[pdf:composed-preview-capture-failed]', { attempt, error })
-      if (attempt < 3) await new Promise<void>((resolve) => window.setTimeout(resolve, 180 * attempt))
-    }
-  }
-  return null
 }
 
 function addImageContained(pdf: jsPDF, dataUrl: string, x: number, y: number, width: number, height: number) {
@@ -309,6 +151,8 @@ function drawFooterIcon(pdf: jsPDF, x: number, y: number, type: 'website' | 'ema
   }
 }
 
+/* Legacy template renderer intentionally removed from the export path. The
+ * current PDF is generated below from one validated offscreen-canvas PNG. */
 async function generateLegacySummaryPdf(
   contact: ContactForm,
   product: ResolvedDoorProduct,
@@ -363,7 +207,7 @@ async function generateLegacySummaryPdf(
   pdf.rect(0, 106, 595.28, 4, 'F')
 
   // Main summary and composed door: 135–535 pt
-  pdf.setFont(font, 'normal')
+  pdf.setFont(font, 'bold')
   pdf.setFontSize(20)
   pdf.setTextColor(...COLORS.muted)
   pdf.text('Your', 40, 151)
@@ -391,7 +235,7 @@ async function generateLegacySummaryPdf(
   }))
   const rows: SummaryRow[] = [
     { label: 'DOOR CONFIGURATION', value: doorConfigurationLabel(doorConfigurationType) },
-    ...(requiredDoorConfigurationProductOption(doorConfigurationType) ? [{ label: 'SAVANNAH PRODUCT OPTION', value: requiredDoorConfigurationProductOption(doorConfigurationType)!.label }] : []),
+    ...(doorConfigurationHingeOptionLabel(doorConfigurationType) ? [{ label: 'HINGE OPTION', value: doorConfigurationHingeOptionLabel(doorConfigurationType)! }] : []),
     { label: 'DOOR LINE', value: grain ? `${material} - ${grain}` : material, icon: summaryIcons[0] },
     { label: 'DOOR STYLE', value: style.name, icon: summaryIcons[1] },
     { label: 'SIDELITE CONFIGURATION', value: sideliteProductLabel(sidelites) },
@@ -434,15 +278,8 @@ async function generateLegacySummaryPdf(
   pdf.roundedRect(367, 135, 188, 399, 8, 8, 'F')
   pdf.setFillColor(useDarkPreviewBackground ? 20 : 242, useDarkPreviewBackground ? 22 : 244, useDarkPreviewBackground ? 27 : 243)
   pdf.circle(461, 315, 82, 'F')
-  const composedPreview = await captureCanonicalDoorPreview({ doorConfigurationType, sidelites })
-  if (composedPreview) {
-    addImageContained(pdf, composedPreview, 398, 151, 126, 315)
-  } else {
-    pdf.setFont(font, 'normal')
-    pdf.setFontSize(8)
-    pdf.setTextColor(...COLORS.muted)
-    pdf.text('Composed preview unavailable', 461, 315, { align: 'center' })
-  }
+  // This renderer is retained only for historical layout reference and is not
+  // invoked. It deliberately has no DOM-preview capture fallback.
   // Custom-made callout: 550–650 pt
   pdf.setFillColor(...COLORS.pale)
   pdf.roundedRect(40, 550, 515, 92, 8, 8, 'F')
@@ -534,9 +371,10 @@ export async function generateSummaryPdf(
   sideliteGlass: SideliteGlassConfiguration | null = null,
   jamb?: FinishSummary,
   doorConfigurationType: DoorConfigurationType = 'single',
-  previewDataUrl: string | null = null,
+  previewDataUrl?: string,
   doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null,
 ) {
+  if (!previewDataUrl) throw new Error('The completed configured-door preview is required for PDF export.')
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   let font = 'helvetica'
   try {
@@ -551,32 +389,20 @@ export async function generateSummaryPdf(
   const template = await loadImage('/assets/pdf/home-guard-door-configuration-template.png')
   pdf.addImage(template, 'PNG', 0, 0, pageWidth, pageHeight)
 
-  // The supplied raster template includes a large gray rounded placeholder in
-  // the preview column. Restore that area to the page background so the final
-  // configured assembly reads directly on white rather than inside a UI card.
-  pdf.setFillColor(255, 255, 255)
-  pdf.rect(329, 178, 245, 254, 'F')
-
   const generatedDate = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date())
   pdf.setFont(font, 'bold')
   pdf.setFontSize(10)
   pdf.setTextColor(...COLORS.teal)
   pdf.text(generatedDate, 114, 135)
-  pdf.setFont(font, 'bold')
-  pdf.setFontSize(8)
-  pdf.setTextColor(...COLORS.teal)
-  pdf.text(`DOOR CONFIGURATION: ${doorConfigurationLabel(doorConfigurationType)}`, 346, 164)
-  const requiredProductOption = requiredDoorConfigurationProductOption(doorConfigurationType)
-  if (requiredProductOption) {
-    pdf.setFontSize(6.5)
-    pdf.text(`PRODUCT OPTION: ${requiredProductOption.label}`, 346, 180)
-  }
+  // The entry configuration is already listed in the left specification
+  // column. Keep the right side exclusively for the configured-door image.
 
   const material = product.doorTypes.map((doorType) => grain ? doorType.replace(` - ${grain}`, '') : doorType).join(' / ')
   const placement = sideliteProductLabel(sidelites)
   const gridDetails = grid ? [grid.glassCoating !== 'Standard / No Low-E' ? grid.glassCoating : '', grid.gridLocation, grid.gridStyle, grid.gridPattern, grid.gridColor, grid.gridWidth].filter(Boolean).join(' / ') : ''
   const sideliteGridDetails = sideliteGlass ? [sideliteGlass.glassCoating, sideliteGlass.gridLocation, sideliteGlass.gridStyle, sideliteGlass.gridPattern, sideliteGlass.gridColor, sideliteGlass.gridWidth].filter(Boolean).join(' / ') : ''
   const rowValues = [
+    doorConfigurationLabel(doorConfigurationType),
     grain ? `${material} - ${grain}` : material,
     style.name,
     placement,
@@ -591,7 +417,9 @@ export async function generateSummaryPdf(
     [hardwareDisplayName(hardware), doorConfigurationType === 'french' ? `Lock Setup: ${doubleDoorLockPrepOption(doubleDoorLockPrep)?.name ?? 'Locks on Both Doors'}` : null].filter(Boolean).join(' — '),
     doorSwing.name,
   ]
-  const rowBaselines = [214, 259.5, 305, 350.5, 396, 441.5, 487, 532.5, 578, 623.5, 669, 714.5, 760]
+  // Each value sits immediately above its corresponding divider in the exact
+  // order printed by the supplied template.
+  const rowBaselines = [214, 259.5, 305, 350.5, 396, 441.5, 487, 532.5, 578, 623.5, 669, 714.5, 760, 805.5]
   pdf.setFont(font, 'bold')
   pdf.setTextColor(...COLORS.dark)
   rowValues.forEach((value, index) => {
@@ -606,26 +434,20 @@ export async function generateSummaryPdf(
     pdf.text(lines[0], 39, rowBaselines[index])
   })
 
-  const composedPreview = previewDataUrl ?? await captureCanonicalDoorPreview({ doorConfigurationType, sidelites })
-  if (composedPreview) addImageContained(pdf, composedPreview, 358, 218, 186, 166)
-  if (import.meta.env.DEV) console.info('PDF_PREVIEW_DEBUG', { doorConfigurationType, sidelites, previewSourceType: previewDataUrl ? 'cached-review-png' : 'live-review-dom', dataUrlLength: composedPreview?.length ?? 0, pdfInsertionResult: composedPreview ? 'inserted' : 'missing' })
-
-  if (contact.fullName) {
-    pdf.setFont(font, 'normal')
-    pdf.setFontSize(6.5)
-    pdf.setTextColor(92, 99, 103)
-    pdf.text(`Prepared for ${contact.fullName}`, 451, 422, { align: 'center' })
-  }
+  addImageContained(pdf, previewDataUrl, 350, 214, 210, 340)
+  if (import.meta.env.DEV) console.info('PDF_PREVIEW_DEBUG', { doorConfigurationType, sidelites, previewSourceType: 'captured-door-preview', dataUrlLength: previewDataUrl.length, pdfInsertionResult: 'inserted-without-recoloring' })
 
   return pdf
 }
 
-export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary, doorConfigurationType: DoorConfigurationType = 'single', previewDataUrl: string | null = null, doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null) {
+export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary, doorConfigurationType: DoorConfigurationType = 'single', previewDataUrl?: string, doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null) {
+  if (!previewDataUrl) throw new Error('The completed configured-door preview is required for PDF export.')
   const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb, doorConfigurationType, previewDataUrl, doubleDoorLockPrep)
   pdf.save(configurationPdfName)
 }
 
-export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary, doorConfigurationType: DoorConfigurationType = 'single', previewDataUrl: string | null = null, doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null) {
+export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary, doorConfigurationType: DoorConfigurationType = 'single', previewDataUrl?: string, doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null) {
+  if (!previewDataUrl) throw new Error('The completed configured-door preview is required for PDF export.')
   const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb, doorConfigurationType, previewDataUrl, doubleDoorLockPrep)
   const dataUri = pdf.output('datauristring')
   return {

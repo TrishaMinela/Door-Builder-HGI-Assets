@@ -175,8 +175,8 @@ export type SideliteGlassConfiguration = {
   glass: string
   glassCategory: 'Clear Glass' | 'Decorative Glass' | 'Privacy Glass' | 'CLiC Glass' | 'Mini Blinds'
   glassAsset?: string
-  glassCoating?: 'Standard / No Low-E' | 'Low-E' | 'Standard / No Low-E or Low-E'
-  gridLocation?: 'Internal' | 'SDL'
+  glassCoating?: 'Standard / No Low-E' | 'Low-E' | 'Low-E Plus' | 'Standard / No Low-E or Low-E' | 'Standard / No Low-E, Low-E or Low-E Plus'
+  gridLocation?: 'External' | 'Internal' | 'SDL'
   gridStyle?: GridStyle
   gridPattern?: GridPattern
   gridColor?: GridColor

@@ -10,6 +10,12 @@ import { glassFrameMaskForOpening, type GlassFrameMaskDefinition, type GlassFram
 import { DoorFrame } from './preview/DoorFrame'
 import { sidelitePlacement } from '../data/sideliteConfigurations'
 
+const hexToRgb = (hex: string) => {
+  const normalized = hex.replace('#', '')
+  const value = Number.parseInt(normalized.length === 3 ? normalized.split('').map((part) => part + part).join('') : normalized, 16)
+  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 }
+}
+
 export type DoorPreviewProps = {
   style: DoorStyle
   finish: Finish
@@ -31,6 +37,8 @@ export type DoorPreviewProps = {
   sideliteGlassSrc?: string
   sideliteClearGlassBase?: boolean
   sideliteGlassIsGrid?: boolean
+  sideliteGridColor?: string
+  sideliteGridIsPrairie?: boolean
   gridMatchesFinish?: boolean
   sideliteGridMatchesFinish?: boolean
   sharedComparisonCanvas?: boolean
@@ -367,7 +375,7 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-export function DoorPreview({ style, finish, glass, hardware, showHardware = true, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, sideliteGlassIsGrid = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', glassFrameFinish = null, placementMode, doorConfigurationType = 'single', doubleDoorLockPrep = null }: DoorPreviewProps) {
+export function DoorPreview({ style, finish, glass, hardware, showHardware = true, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, sideliteGlassIsGrid = false, sideliteGridColor, sideliteGridIsPrairie = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', glassFrameFinish = null, placementMode, doorConfigurationType = 'single', doubleDoorLockPrep = null }: DoorPreviewProps) {
   const previewSceneRef = useRef<HTMLDivElement>(null)
   const [previewAssetsLoading, setPreviewAssetsLoading] = useState(false)
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
@@ -400,10 +408,14 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const [fittedGlassOverlay, setFittedGlassOverlay] = useState<{ source: string; maskSource: string; url: string } | null>(null)
   const [fittedClearBase, setFittedClearBase] = useState<{ source: string; maskSource: string; url: string } | null>(null)
   const [fittedSideliteGlass, setFittedSideliteGlass] = useState<{ source: string; slab: string; mask: string; url: string } | null>(null)
+  const [tintedPrairieGrid, setTintedPrairieGrid] = useState<{ source: string; color: string; url: string } | null>(null)
   const renderedGlassOverlay = glassOverlay && fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage ? fittedGlassOverlay.url : glassOverlay
-  const renderedSideliteGlass = sideliteGlassSrc && fittedSideliteGlass?.source === sideliteGlassSrc && fittedSideliteGlass.slab === sideliteAssetSrc && fittedSideliteGlass.mask === sideliteMaskSrc
+  const fittedOrSourceSideliteGlass = sideliteGlassSrc && fittedSideliteGlass?.source === sideliteGlassSrc && fittedSideliteGlass.slab === sideliteAssetSrc && fittedSideliteGlass.mask === sideliteMaskSrc
     ? fittedSideliteGlass.url
     : sideliteGlassSrc
+  const renderedSideliteGlass = fittedOrSourceSideliteGlass && sideliteGridIsPrairie && sideliteGridColor && tintedPrairieGrid?.source === fittedOrSourceSideliteGlass && tintedPrairieGrid.color === sideliteGridColor
+    ? tintedPrairieGrid.url
+    : fittedOrSourceSideliteGlass
   const [internalPreviewView, setInternalPreviewView] = useState<HardwareView>('Exterior')
   const previewView = view ?? internalPreviewView
   const setPreviewView = onViewChange ?? setInternalPreviewView
@@ -531,6 +543,16 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
 
   useEffect(() => {
     let cancelled = false
+    // FSL grid artwork is already authored in the same 80 x 549 source
+    // coordinate system as the sidelite slab and opening mask. Cropping its
+    // sparse transparent pixels and stretching them to the glass bounds moves
+    // the bars out of position (and can make them appear absent). Preserve the
+    // supplied artwork at its authored size and let DoorFrame apply the shared
+    // glass-opening clip.
+    if (sideliteGlassIsGrid) {
+      setFittedSideliteGlass(null)
+      return () => { cancelled = true }
+    }
     if (!sideliteGlassSrc || !sideliteAssetSrc || !sideliteMaskSrc || sideliteFinishMask?.slab !== sideliteAssetSrc || sideliteFinishMask.mask !== sideliteMaskSrc || !sideliteFinishMask.glassBounds || !sideliteFinishMask.maskWidth || !sideliteFinishMask.maskHeight) {
       setFittedSideliteGlass(null)
       return () => { cancelled = true }
@@ -538,6 +560,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
     const overlay = new Image()
     overlay.onload = () => {
       if (cancelled) return
+      const isFullLiteSidelite = /\/FSL\.png(?:$|[?#])/i.test(sideliteMaskSrc)
       const url = fitGlassOverlayToMask(
         overlay,
         sideliteFinishMask.maskWidth!,
@@ -546,13 +569,57 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
         0,
         sideliteFinishMask.glassRegions,
         GLASS_EDGE_OVERLAP_PX,
+        false,
+        isFullLiteSidelite,
+        isFullLiteSidelite,
       )
       setFittedSideliteGlass(url ? { source: sideliteGlassSrc, slab: sideliteAssetSrc, mask: sideliteMaskSrc, url } : null)
     }
     overlay.onerror = () => { if (!cancelled) setFittedSideliteGlass(null) }
     overlay.src = sideliteGlassSrc
     return () => { cancelled = true }
-  }, [sideliteAssetSrc, sideliteGlassSrc, sideliteMaskSrc, sideliteFinishMask])
+  }, [sideliteAssetSrc, sideliteGlassSrc, sideliteMaskSrc, sideliteFinishMask, sideliteGlassIsGrid])
+
+  useEffect(() => {
+    let cancelled = false
+    const source = fittedOrSourceSideliteGlass
+    if (!sideliteGridIsPrairie || !sideliteGridColor || !source) {
+      setTintedPrairieGrid(null)
+      return () => { cancelled = true }
+    }
+    const image = new Image()
+    image.onload = () => {
+      if (cancelled) return
+      const canvas = document.createElement('canvas')
+      canvas.width = image.naturalWidth
+      canvas.height = image.naturalHeight
+      const context = canvas.getContext('2d', { willReadFrequently: true })
+      if (!context) return
+      context.drawImage(image, 0, 0)
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height)
+      const target = hexToRgb(sideliteGridColor)
+      for (let index = 0; index < pixels.data.length; index += 4) {
+        const red = pixels.data[index]
+        const green = pixels.data[index + 1]
+        const blue = pixels.data[index + 2]
+        const lightness = (red + green + blue) / 3
+        const neutrality = Math.max(red, green, blue) - Math.min(red, green, blue)
+        // The supplied Prairie artwork includes its clear-glass shading. Only
+        // recolor the bright neutral muntin pixels and retain their antialiasing.
+        if (pixels.data[index + 3] > 0 && lightness > 226 && neutrality < 18) {
+          const edgeStrength = Math.min(1, Math.max(0, (lightness - 226) / 29))
+          pixels.data[index] = Math.round(red + (target.r - red) * edgeStrength)
+          pixels.data[index + 1] = Math.round(green + (target.g - green) * edgeStrength)
+          pixels.data[index + 2] = Math.round(blue + (target.b - blue) * edgeStrength)
+        }
+      }
+      context.putImageData(pixels, 0, 0)
+      setTintedPrairieGrid({ source, color: sideliteGridColor, url: canvas.toDataURL('image/png') })
+    }
+    image.onerror = () => { if (!cancelled) setTintedPrairieGrid(null) }
+    image.src = source
+    return () => { cancelled = true }
+  }, [fittedOrSourceSideliteGlass, sideliteGridColor, sideliteGridIsPrairie])
 
   useEffect(() => {
     let cancelled = false
@@ -788,7 +855,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   return (
     <div ref={previewSceneRef} className={`preview-scene ${compact ? 'compact' : ''}`} aria-busy={previewAssetsLoading} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
-      <DoorFrame doorConfigurationType={doorConfigurationType} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={renderedSideliteGlass} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGlassIsGrid={sideliteGlassIsGrid} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteGlassOpeningStyle={sideliteGlassOpeningStyle} sideliteGlassFrameMaskStyle={sideliteGlassFrameMaskStyle} sideliteGlassFrameTintStyle={sideliteGlassFrameTintStyle} sideliteGlassFrameDetailStyle={sideliteGlassFrameDetailStyle}>
+      <DoorFrame doorConfigurationType={doorConfigurationType} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={renderedSideliteGlass} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGlassIsGrid={sideliteGlassIsGrid} sideliteGridIsPrairie={sideliteGridIsPrairie} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteGlassOpeningStyle={sideliteGlassOpeningStyle} sideliteGlassFrameMaskStyle={sideliteGlassFrameMaskStyle} sideliteGlassFrameTintStyle={sideliteGlassFrameTintStyle} sideliteGlassFrameDetailStyle={sideliteGlassFrameDetailStyle}>
         {Array.from({ length: doorConfigurationLeafCount(doorConfigurationType) }).map((_, leafIndex) => {
           // The Savannah operating leaf is a physical leaf and must not switch
           // when Interior reverses the visible hardware side. Anchor the leaf

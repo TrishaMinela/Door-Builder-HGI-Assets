@@ -27,6 +27,14 @@ export function resolveHardwareOption(manufacturer: HardwareManufacturer, style:
   )
   if (!asset) return undefined
   const schlageOption = manufacturer === 'Schlage' ? resolveSchlageHardware(style, finish) : undefined
+  const hardwareType = style.includes('Knob') ? 'round' : style.includes('Lever') ? 'lever' : 'long'
+  const knobOnlyCrop = hardwareType === 'long'
+    // Handlesets use a tall lower pull. Start below the integrated upper lock
+    // and stop at the bottom of the handle artwork.
+    ? { top: 52, right: 0, bottom: 27, left: 0 }
+    // Knob/lever assets place the deadbolt above a compact control. Use a
+    // tight middle band so no antialiased edge of the deadbolt remains.
+    : { top: 50, right: 0, bottom: 42, left: 0 }
   return {
     ...asset,
     cardImage: schlageOption?.cardImage,
@@ -34,10 +42,10 @@ export function resolveHardwareOption(manufacturer: HardwareManufacturer, style:
     interiorPreviewImage: schlageOption?.interiorPreviewImage,
     id: `${slug(manufacturer)}-${slug(style)}-${slug(finish)}-${preferredHanding.toLowerCase()}`,
     color: finishColors[finish] ?? '#666666',
-    type: style.includes('Knob') ? 'round' : style.includes('Lever') ? 'lever' : 'long',
-    // Preview overlays use the full door canvas. Keep the original image and
-    // describe the reusable lock/knob crop in that same normalized canvas.
-    crop: { knobOnly: { top: 37, right: 0, bottom: 49, left: 0 } },
+    type: hardwareType,
+    // Preview overlays use the full door canvas. Keep the source intact and
+    // clip only the reusable secondary-leaf copy for DDLLKP.
+    crop: { knobOnly: knobOnlyCrop },
   }
 }
 
