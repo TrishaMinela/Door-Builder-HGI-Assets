@@ -34,6 +34,8 @@ type Props = {
   proposedDetectedEdges?: boolean[]
   showToolbar?: boolean
   highlightHandles?: boolean
+  highlightedCorners?: CornerId[]
+  forcedAlignedEdges?: boolean[] | null
   forceAligned?: boolean
   onAlignmentReadyChange?: (ready: boolean) => void
   onViewportMetricsChange?: (metrics: EntranceViewportMetrics) => void
@@ -72,7 +74,7 @@ export function isValidEntranceCorners(corners: EntranceCorners) {
   return turns.every((turn) => turn > 0.0001) || turns.every((turn) => turn < -0.0001)
 }
 
-export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges, showToolbar = true, highlightHandles = false, forceAligned = false, onAlignmentReadyChange, onViewportMetricsChange }: Props) {
+export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange, onReset, proposedCorners, proposedDetectedEdges, showToolbar = true, highlightHandles = false, highlightedCorners = [], forcedAlignedEdges = null, forceAligned = false, onAlignmentReadyChange, onViewportMetricsChange }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
@@ -293,7 +295,7 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
           {snapGuides.y!==undefined&&<line className="magnetic-snap-guide" x1="0" y1={snapGuides.y*stageSize.height} x2={stageSize.width} y2={snapGuides.y*stageSize.height}/>}
           {snapGuides.line&&<line className="magnetic-snap-guide" x1={snapGuides.line[0].x*stageSize.width} y1={snapGuides.line[0].y*stageSize.height} x2={snapGuides.line[1].x*stageSize.width} y2={snapGuides.line[1].y*stageSize.height}/>}
           <polygon className={`entrance-selection-polygon ${mode === 'move' ? 'move-enabled' : ''}`} points={polygonPoints} onPointerDown={beginSelectionDrag} />
-          {CORNER_ORDER.map((id,index)=>{const nextId=CORNER_ORDER[(index+1)%CORNER_ORDER.length];return <line key={`edge-${id}`} className={`entrance-connection-edge ${forceAligned||alignedEdges.has(index)?'aligned':''}`} x1={corners[id].x*stageSize.width} y1={corners[id].y*stageSize.height} x2={corners[nextId].x*stageSize.width} y2={corners[nextId].y*stageSize.height}/>})}
+          {CORNER_ORDER.map((id,index)=>{const nextId=CORNER_ORDER[(index+1)%CORNER_ORDER.length];const aligned=forceAligned||forcedAlignedEdges?.[index]||(!forcedAlignedEdges&&alignedEdges.has(index));return <line key={`edge-${id}`} className={`entrance-connection-edge ${aligned?'aligned':''} ${forcedAlignedEdges&&!forcedAlignedEdges[index]?'needs-adjustment':''}`} x1={corners[id].x*stageSize.width} y1={corners[id].y*stageSize.height} x2={corners[nextId].x*stageSize.width} y2={corners[nextId].y*stageSize.height}/>})}
           {proposedCorners && <>
             <polygon className="entrance-selection-proposal-fill" points={proposedPolygonPoints} />
             {CORNER_ORDER.map((id, index) => {
@@ -302,15 +304,15 @@ export function EntranceSelector({ corners, imageAlt, imageSrc, onCornersChange,
             })}
           </>}
         </svg>}
-        {CORNER_ORDER.map((id) => <button
+        {CORNER_ORDER.map((id) => {const cornerIndex=CORNER_ORDER.indexOf(id);const forcedCornerAligned=Boolean(forcedAlignedEdges?.[cornerIndex]&&forcedAlignedEdges?.[(cornerIndex+3)%4]);return <button
           type="button"
           key={id}
-          className={`entrance-corner-handle ${highlightHandles?'guidance-pulse':''} ${forceAligned||alignedEdges.has(CORNER_ORDER.indexOf(id))||alignedEdges.has((CORNER_ORDER.indexOf(id)+3)%4)?'aligned':''}`}
+          className={`entrance-corner-handle ${highlightHandles?'guidance-pulse':''} ${highlightedCorners.includes(id)?'needs-adjustment':''} ${forceAligned||forcedCornerAligned||(!forcedAlignedEdges&&(alignedEdges.has(cornerIndex)||alignedEdges.has((cornerIndex+3)%4)))?'aligned':''}`}
           style={{ left: `${corners[id].x * 100}%`, top: `${corners[id].y * 100}%` }}
           aria-label={`Move ${id.replace(/([A-Z])/g, ' $1').toLowerCase()} corner`}
           onPointerDown={(event) => beginCornerDrag(id, event)}
           disabled={mode !== 'edit'}
-        />)}
+        />})}
       </div>
       <div className="visualizer-zoom-controls" role="group" aria-label="Uploaded photo zoom controls">
         <button type="button" aria-label="Zoom uploaded photo out" disabled={zoom <= 1} onClick={zoomOut}><ZoomOut size={17} /></button>

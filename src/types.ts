@@ -119,11 +119,13 @@ export type ResolvedDoorProduct = {
 
 export type DoorConfiguration = {
   doorConfigurationType?: DoorConfigurationType
+  doubleDoorLockPrep?: DoubleDoorLockPrepCode
   doorConfigurationProductOption?: {
     code: 'HINGEOJ'
     label: 'HINGEOJ - HINGE OFF OUTER JAMB'
   }
   product: ResolvedDoorProduct
+  doorLine?: string
   style: DoorStyle
   grain: string | null
   finish: Finish
@@ -188,4 +190,5 @@ export type ContactForm = {
   email: string
   phone: string
   zip: string
+  notes: string
 }

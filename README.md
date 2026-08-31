@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Set `VITE_QUOTE_WEBHOOK_URL` in a `.env` file to send submitted quote requests to a webhook. Without it, the app completes the local success flow without sending data.
+Set the server-only Vercel environment variable `ZAPIER_DOOR_BUILDER_WEBHOOK_URL` to the Zapier Catch Hook URL. Customer submissions are posted by the browser to `/api/submit-door-builder`; the Vercel function forwards the normalized flat payload to Zapier. Do not expose this value through a `VITE_` environment variable.
 
 ## Replace placeholder visuals
 

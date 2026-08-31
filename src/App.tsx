@@ -9,10 +9,10 @@ import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
 import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
 import { approvedPrivacyGlassIds } from './data/privacyGlass'
-import type { ContactForm, DoorConfigurationType, DoorSwing, DoubleDoorLockPrepCode, GlassCoating, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, HardwareView, PreviewHardware, SideliteConfiguration, SideliteGlassConfiguration } from './types'
+import type { ContactForm, DoorConfiguration, DoorConfigurationType, DoorSwing, DoubleDoorLockPrepCode, GlassCoating, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, HardwareView, PreviewHardware, SideliteConfiguration, SideliteGlassConfiguration } from './types'
 import { doorConfigurationLabel, doubleDoorLockPrepOption, doubleDoorLockPrepOptions, requiredDoorConfigurationProductOption } from './data/doorConfigurationRules'
 import { configurationPdfName } from './utils/pdfConfig'
-import { submitQuote } from './utils/submission'
+import { buildDoorBuilderSubmissionPayload, submitQuote } from './utils/submission'
 import { fslArtsAndCraftsGridAsset, fslGlassCategories, fslGlassOptions, fslGridAsset, fslLowEStyleRules, fslPrairieGridAsset, fslSdlPatterns, fslStandardStyleRules, type FslGridLocationId, type SideliteGlassCategory, type SideliteGlassOption } from './data/fslGlass'
 import { f48slGlassCategories, f48slGlassOptions, f48slGridAsset, f48slLowEStyleRules, f48slStandardStyleRules } from './data/f48slGlass'
 import { sslGlassCategories, sslGlassOptions, sslGridAsset, sslLowEStyleRules, sslStandardStyleRules } from './data/sslGlass'
@@ -21,7 +21,7 @@ import { cr14slGlassCategories, cr14slGlassOptions, cr14slGridAsset, cr14slStyle
 import { glassSelectionThumbnail } from './data/glassOptions'
 import { cladColors } from './data/finishes'
 import { HomeVisualizer } from './features/home-visualizer/HomeVisualizer'
-import { captureDoorPreview } from './features/home-visualizer/captureDoorPreview'
+import { captureFinalDoorPreview } from './features/home-visualizer/captureDoorPreview'
 import { HERO_PRESETS, heroDoorFilename, type HeroPreset } from './data/heroPresets'
 import { HeroDoorGenerator } from './features/hero/HeroDoorGenerator'
 import { sideliteBuilderOptions, sideliteProductCode, sideliteProductLabel } from './data/sideliteConfigurations'
@@ -33,7 +33,7 @@ type BuilderPage = 'door-configuration' | 'door-style' | 'door-line' | 'door-gra
 const mainDoorGlassPages = new Set<BuilderPage>(['glass-type', 'glass', 'glass-variant', 'grid-location', 'grid-style', 'grid-pattern', 'grid-color', 'grid-width'])
 const sideliteGlassPages = new Set<BuilderPage>(['sidelite-glass-type', 'sidelite-glass', 'sidelite-glass-variant', 'sidelite-grid-location', 'sidelite-grid-style', 'sidelite-grid-pattern', 'sidelite-grid-color', 'sidelite-grid-width'])
 type GlassCategory = 'clear' | 'decorative' | 'privacy' | 'blinds' | 'clic' | 'retro'
-const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '' }
+const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '', notes: '' }
 const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
 const proMatchTooltipTitle = 'About ProMatch® Colors'
 const proMatchTooltipText = 'ProMatch® colors are custom-blended to coordinate across select HGI products. Each painted door is carefully prepared, finished with two coats of enamel, and oven-baked for a smooth, durable finish backed by a 15-year warranty.'
@@ -827,7 +827,13 @@ export default function App() {
     finish: previewConfig.finish.id,
     tint: previewConfig.tintColor,
     glass: previewConfig.glass?.id,
+    gridPathId,
+    gridStyle,
+    gridPattern,
+    gridColor,
+    gridWidth,
     hardware: previewConfig.hardware.id,
+    showHardware: Boolean(selectedHardware),
     grain: selectedGrain,
     product: product?.styleCodes.join('|'),
     swing: previewConfig.doorSwing?.id,
@@ -835,6 +841,11 @@ export default function App() {
     sideliteStyle: selectedSideliteStyle?.id,
     sideliteGlass: selectedFslGlass?.id,
     sideliteGlassPreview,
+    sideliteGridLocation,
+    sideliteGridStyle,
+    sideliteGridPattern,
+    sideliteGridColor,
+    sideliteGridWidth,
     jambFinish: jambFinish?.id,
     jambType,
     // The flattened source is shared by the visualizer and PDF. Include the
@@ -845,6 +856,14 @@ export default function App() {
     glassFrameFinishType: appliedGlassFrameFinish?.finishType,
     glassFrameFinishColor: appliedGlassFrameFinish?.color,
   })
+  useEffect(() => {
+    if (!supportsGlassFrameColor || glassFrameColorMode) return
+    // Match Door is the first glass-frame option. Apply it as soon as glass
+    // frame coloring becomes relevant so the preview and downstream summary
+    // always have a valid default without requiring an extra click.
+    setGlassFrameColorMode('match-door')
+    setGlassFrameFinishType(matchedGlassFrameFinish.finishType)
+  }, [supportsGlassFrameColor, glassFrameColorMode, matchedGlassFrameFinish.finishType])
   useEffect(() => setPdfPreviewDataUrl(''), [configuredDoorKey])
   const renderConfiguredDoorPreview = (previewView: HardwareView, sharedComparisonCanvas = false) => <DoorPreview {...configuredDoorPreview} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} />
   const renderConfiguredPreviewMode = () => builderPreviewView === 'Both'
@@ -1344,7 +1363,7 @@ export default function App() {
   const captureExactExteriorPreview = async () => {
     const source = pdfDoorSourceRef.current
     if (!source) throw new Error('The configured door preview is unavailable.')
-    const captured = await captureDoorPreview(source, { frameMode: 'visible' })
+    const captured = await captureFinalDoorPreview(source, { frameMode: 'visible' })
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = () => resolve(String(reader.result))
@@ -1565,11 +1584,34 @@ export default function App() {
     try {
       if (!selectedHardware) throw new Error('Please select hardware before sending your configuration.')
       if (!selectedDoorSwing) throw new Error('Please select a door swing before sending your configuration.')
-      const { generateSummaryAttachment } = await import('./utils/pdf')
       const jambSummary = { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' as const : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }
-      const exactPreview = pdfPreviewDataUrl || await captureExactExteriorPreview()
-      const attachment = await generateSummaryAttachment(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, jambSummary, selectedDoorConfigurationType || 'single', exactPreview, selectedDoorConfigurationType === 'french' ? doubleDoorLockPrep || 'DDLLBO' : null)
-      await submitQuote({ configuration: { doorConfigurationType: selectedDoorConfigurationType || 'single', ...(doorConfigurationProductOption ? { doorConfigurationProductOption } : {}), ...(selectedDoorConfigurationType === 'french' && selectedDoubleDoorLockPrep ? { doubleDoorLockPrep: selectedDoubleDoorLockPrep } : {}), product, style, grain: selectedGrain, finish, doorFinishType: finish.finishType, doorFinishColor: finish.name, glassFrameColorMode: glassFrameColorMode || undefined, glassFrameFinishId: glassFrameColorMode === 'custom' ? resolvedGlassFrameFinish.id : undefined, ...jambSummary, glass: configuredGlass, mainDoorGlass: configuredGlass, grid: gridConfiguration, hardware: selectedHardware, doorSwing: selectedDoorSwing, sidelites: sidelites || 'none', sidelitePlacement: sidelites || 'none', sideliteConfigurationCode: sideliteProductCode(sidelites || 'none'), sideliteConfigurationLabel: sideliteProductLabel(sidelites || 'none'), ...(selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}), ...(sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}) }, contact, attachment, submittedAt: new Date().toISOString() })
+      const configuration: DoorConfiguration = {
+        doorConfigurationType: selectedDoorConfigurationType || 'single',
+        ...(doorConfigurationProductOption ? { doorConfigurationProductOption } : {}),
+        ...(selectedDoorConfigurationType !== 'single' && doubleDoorLockPrep ? { doubleDoorLockPrep } : {}),
+        product,
+        doorLine: selectedDoorLine?.name ?? product.doorType,
+        style,
+        grain: selectedGrain,
+        finish,
+        doorFinishType: finish.finishType,
+        doorFinishColor: finish.name,
+        glassFrameColorMode: glassFrameColorMode || undefined,
+        glassFrameFinishId: glassFrameColorMode === 'custom' ? resolvedGlassFrameFinish.id : undefined,
+        ...jambSummary,
+        glass: configuredGlass,
+        mainDoorGlass: configuredGlass,
+        grid: gridConfiguration,
+        hardware: selectedHardware,
+        doorSwing: selectedDoorSwing,
+        sidelites: sidelites || 'none',
+        sidelitePlacement: sidelites || 'none',
+        sideliteConfigurationCode: sideliteProductCode(sidelites || 'none'),
+        sideliteConfigurationLabel: sideliteProductLabel(sidelites || 'none'),
+        ...((sidelites || 'none') !== 'none' && selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}),
+        ...((sidelites || 'none') !== 'none' && sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}),
+      }
+      await submitQuote(buildDoorBuilderSubmissionPayload({ configuration, contact }))
       const completedAction = pendingCustomerAction
       setCustomerFormCompleted(true)
       setPendingCustomerAction(null)
@@ -1583,7 +1625,7 @@ export default function App() {
         setSubmitted(true)
       }
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Something went wrong. Please try again.')
+      setSubmitError(error instanceof Error ? error.message : "We couldn't submit your information. Please try again.")
     } finally {
       setSubmitting(false)
     }

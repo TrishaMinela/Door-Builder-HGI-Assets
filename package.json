@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test:submission": "tsx scripts/verifySubmissionPayload.ts",
     "lint": "eslint .",
     "generate:hero": "tsx scripts/generateHeroDoorImages.ts"
   },

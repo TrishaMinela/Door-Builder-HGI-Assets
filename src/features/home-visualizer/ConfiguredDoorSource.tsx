@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { DoorPreview, type DoorPreviewProps } from '../../components/DoorPreview'
-import { captureDoorPreview } from './captureDoorPreview'
+import { captureFinalDoorPreview } from './captureDoorPreview'
 
 type Props = {
   configurationKey: string
@@ -42,12 +42,12 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
       try {
         const root = captureRootRef.current
         if (!root) throw new Error('The configured door preview is unavailable.')
-        let result: Awaited<ReturnType<typeof captureDoorPreview>> | null = null
+        let result: Awaited<ReturnType<typeof captureFinalDoorPreview>> | null = null
         let lastError: unknown = null
         for (let attempt = 1; attempt <= MAX_SOURCE_CAPTURE_ATTEMPTS; attempt += 1) {
           await waitForLayout()
           try {
-            result = await captureDoorPreview(root, { frameMode: 'visible' })
+            result = await captureFinalDoorPreview(root, { frameMode: 'visible' })
             break
           } catch (reason) {
             lastError = reason

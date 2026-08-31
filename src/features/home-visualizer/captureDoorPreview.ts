@@ -88,6 +88,65 @@ async function materializeMaskedLayers(root: HTMLElement) {
   return () => restorers.reverse().forEach((restore) => restore())
 }
 
+function parseInsetClipPath(value: string) {
+  const match = value.match(/^inset\(\s*([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s*\)$/i)
+  if (!match) return null
+  return { top: Number(match[1]), right: Number(match[2]), bottom: Number(match[3]), left: Number(match[4]) }
+}
+
+/** html2canvas does not consistently preserve percentage inset clip paths on
+ * transformed images. Flatten those layers before capture so partial hardware
+ * (for example DDLLKP knob-only artwork) is identical to DoorPreview. */
+async function materializeClippedImages(root: HTMLElement) {
+  const restorers: (() => void)[] = []
+  const images = Array.from(root.querySelectorAll<HTMLImageElement>('img')).filter((image) => {
+    const style = window.getComputedStyle(image)
+    return Boolean(parseInsetClipPath(image.style.clipPath || image.style.getPropertyValue('-webkit-clip-path') || style.clipPath || style.getPropertyValue('-webkit-clip-path')))
+  })
+
+  for (const image of images) {
+    const style = window.getComputedStyle(image)
+    const inset = parseInsetClipPath(image.style.clipPath || image.style.getPropertyValue('-webkit-clip-path') || style.clipPath || style.getPropertyValue('-webkit-clip-path'))
+    if (!inset || !image.complete || !image.naturalWidth) continue
+    const width = Math.max(1, Math.round(image.offsetWidth))
+    const height = Math.max(1, Math.round(image.offsetHeight))
+    const canvas = document.createElement('canvas')
+    canvas.width = width * CAPTURE_SCALE
+    canvas.height = height * CAPTURE_SCALE
+    const context = canvas.getContext('2d')
+    if (!context) continue
+    context.imageSmoothingEnabled = true
+    context.imageSmoothingQuality = 'high'
+    context.scale(CAPTURE_SCALE, CAPTURE_SCALE)
+    const clipX = width * inset.left / 100
+    const clipY = height * inset.top / 100
+    const clipWidth = width * (100 - inset.left - inset.right) / 100
+    const clipHeight = height * (100 - inset.top - inset.bottom) / 100
+    context.beginPath()
+    context.rect(clipX, clipY, clipWidth, clipHeight)
+    context.clip()
+    context.drawImage(image, 0, 0, width, height)
+    const rasterized = canvas.toDataURL('image/png')
+    canvas.width = 0
+    canvas.height = 0
+
+    const originalStyle = image.getAttribute('style')
+    const originalSource = image.getAttribute('src')
+    image.src = rasterized
+    image.style.clipPath = 'none'
+    image.style.setProperty('-webkit-clip-path', 'none')
+    await image.decode()
+    restorers.push(() => {
+      if (originalStyle === null) image.removeAttribute('style')
+      else image.setAttribute('style', originalStyle)
+      if (originalSource !== null) image.src = originalSource
+    })
+  }
+
+  await nextFrame()
+  return () => restorers.reverse().forEach((restore) => restore())
+}
+
 function alphaCoverage(canvas: HTMLCanvasElement) {
   const context = canvas.getContext('2d', { willReadFrequently: true })
   if (!context) return { nonTransparentPixelCount: 0, coverageRatio: 0 }
@@ -170,7 +229,7 @@ type CaptureDoorPreviewOptions = {
   quality?: number
 }
 
-export async function captureDoorPreview(previewRoot: HTMLElement, options: CaptureDoorPreviewOptions = {}): Promise<CapturedDoorSource> {
+export async function captureFinalDoorPreview(previewRoot: HTMLElement, options: CaptureDoorPreviewOptions = {}): Promise<CapturedDoorSource> {
   const captureStartTime = performance.now()
   await waitForRenderedAssets(previewRoot)
   const frameMode = options.frameMode ?? 'opening-only'
@@ -206,6 +265,7 @@ export async function captureDoorPreview(previewRoot: HTMLElement, options: Capt
   // finishes, spacing, hardware, or frame geometry.
   const { default: html2canvas } = await import('html2canvas')
   const restoreMaskedLayers = await materializeMaskedLayers(captureTarget)
+  const restoreClippedImages = await materializeClippedImages(captureTarget)
   let canvas: HTMLCanvasElement
   try {
     canvas = await html2canvas(captureTarget, {
@@ -217,6 +277,7 @@ export async function captureDoorPreview(previewRoot: HTMLElement, options: Capt
       height,
     })
   } finally {
+    restoreClippedImages()
     restoreMaskedLayers()
   }
   const coverage = alphaCoverage(canvas)
@@ -268,3 +329,7 @@ export async function captureDoorPreview(previewRoot: HTMLElement, options: Capt
   outputCanvas.height = 0
   return output
 }
+
+// Retained for non-PDF callers while all final-door consumers migrate to the
+// explicit single-source capture API above.
+export const captureDoorPreview = captureFinalDoorPreview
