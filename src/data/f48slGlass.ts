@@ -60,3 +60,12 @@ export const f48slLowEStyleRules: Partial<Record<GridStyle, SideliteGridRules>> 
 const patternCodes: Partial<Record<GridPattern, string>> = { '2 Lite': '2L', '3 Lite': '3L', '4 Lite': '4L' }
 const colorCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Black: 'BL', Bronze: 'BZ', 'Bronze/White': 'WH', Champagne: 'CH', Tan: 'TA', White: 'WH' }
 export const f48slGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Sidelites/F48SL/Internal Grids/F48SLINT${patternCodes[pattern]}${colorCodes[color]}.png`
+
+const f48slPrairieGridAssets: Partial<Record<GridColor, string>> = {
+  Champagne: '/assets/hgi-assets/Glass/F48SL/CLEAR STOCK/F48SL Prairie Champagne.png',
+  Tan: '/assets/hgi-assets/Glass/F48SL/CLEAR STOCK/F48SL Prairie Tan.png',
+  White: '/assets/hgi-assets/Glass/F48SL/CLEAR STOCK/F48SL Prairie White.png',
+}
+
+export const f48slPrairieGridAsset = (color: GridColor) => f48slPrairieGridAssets[color] ?? f48slPrairieGridAssets.White!
+export const f48slArtsAndCraftsGridAsset = (_color: GridColor) => '/assets/hgi-assets/Glass/Sidelites/F48SL SSL Arts Crafts White.png'

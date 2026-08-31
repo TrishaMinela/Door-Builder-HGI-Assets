@@ -548,7 +548,9 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
     // different: they include their own visible glass pane inside transparent
     // padding, so fit that pane to the canonical opening to avoid exposed
     // clear-glass strips above or below it.
-    if (sideliteGlassIsGrid && !sideliteGridIsPrairie) {
+    const usesAuthoredArtsAndCraftsGlass = sideliteGlassSrc?.includes('/F48SL%20SSL%20Arts%20Crafts%20White.png')
+      || sideliteGlassSrc?.includes('/F48SL SSL Arts Crafts White.png')
+    if (sideliteGlassIsGrid && !sideliteGridIsPrairie && !usesAuthoredArtsAndCraftsGlass) {
       setFittedSideliteGlass(null)
       return () => { cancelled = true }
     }
@@ -582,8 +584,8 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   useEffect(() => {
     let cancelled = false
     const source = fittedOrSourceSideliteGlass
-    const usesAuthoredFslPrairieColor = sideliteGlassSrc?.includes('/FSL%20Prairie%20') || sideliteGlassSrc?.includes('/FSL Prairie ')
-    if (!sideliteGridIsPrairie || !sideliteGridColor || !source || usesAuthoredFslPrairieColor) {
+    const usesAuthoredPrairieColor = /\/(?:FSL|F48SL|SSL)(?:%20| )Prairie(?:%20| )/i.test(sideliteGlassSrc ?? '')
+    if (!sideliteGridIsPrairie || !sideliteGridColor || !source || usesAuthoredPrairieColor) {
       setTintedPrairieGrid(null)
       return () => { cancelled = true }
     }

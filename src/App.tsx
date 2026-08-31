@@ -14,8 +14,8 @@ import { doorConfigurationLabel, doubleDoorLockPrepOption, doubleDoorLockPrepOpt
 import { configurationPdfName } from './utils/pdfConfig'
 import { buildDoorBuilderSubmissionPayload, submitQuote } from './utils/submission'
 import { fslArtsAndCraftsGridAsset, fslGlassCategories, fslGlassOptions, fslGridAsset, fslLowEStyleRules, fslPrairieGridAsset, fslSdlPatterns, fslStandardStyleRules, type FslGridLocationId, type SideliteGlassCategory, type SideliteGlassOption } from './data/fslGlass'
-import { f48slGlassCategories, f48slGlassOptions, f48slGridAsset, f48slLowEStyleRules, f48slStandardStyleRules } from './data/f48slGlass'
-import { sslGlassCategories, sslGlassOptions, sslGridAsset, sslLowEStyleRules, sslStandardStyleRules } from './data/sslGlass'
+import { f48slArtsAndCraftsGridAsset, f48slGlassCategories, f48slGlassOptions, f48slGridAsset, f48slLowEStyleRules, f48slPrairieGridAsset, f48slStandardStyleRules } from './data/f48slGlass'
+import { sslArtsAndCraftsGridAsset, sslGlassCategories, sslGlassOptions, sslGridAsset, sslLowEStyleRules, sslPrairieGridAsset, sslStandardStyleRules } from './data/sslGlass'
 import { s2slGlassCategories, s2slGlassOptions, s2slStyleRules } from './data/s2slGlass'
 import { cr14slGlassCategories, cr14slGlassOptions, cr14slGridAsset, cr14slStyleRules } from './data/cr14slGlass'
 import { glassSelectionThumbnail } from './data/glassOptions'
@@ -149,8 +149,8 @@ const sideliteStyleOptions = [
 ] as const
 const sideliteGlassCatalogs = {
   fsl: { categories: fslGlassCategories, options: fslGlassOptions, standardRules: fslStandardStyleRules, lowERules: fslLowEStyleRules, gridAsset: fslGridAsset, prairieGridAsset: fslPrairieGridAsset, artsAndCraftsGridAsset: fslArtsAndCraftsGridAsset, prairiePattern: '5 Lite' as GridPattern, sdlPatterns: ['3 Lite', '4 Lite', '5 Lite'] as GridPattern[] },
-  f48sl: { categories: f48slGlassCategories, options: f48slGlassOptions, standardRules: f48slStandardStyleRules, lowERules: f48slLowEStyleRules, gridAsset: f48slGridAsset, prairiePattern: '4 Lite' as GridPattern, sdlPatterns: ['2 Lite', '3 Lite', '4 Lite'] as GridPattern[] },
-  ssl: { categories: sslGlassCategories, options: sslGlassOptions, standardRules: sslStandardStyleRules, lowERules: sslLowEStyleRules, gridAsset: sslGridAsset, prairiePattern: '3 Lite' as GridPattern, sdlPatterns: ['3 Lite'] as GridPattern[] },
+  f48sl: { categories: f48slGlassCategories, options: f48slGlassOptions, standardRules: f48slStandardStyleRules, lowERules: f48slLowEStyleRules, gridAsset: f48slGridAsset, prairieGridAsset: f48slPrairieGridAsset, artsAndCraftsGridAsset: f48slArtsAndCraftsGridAsset, prairiePattern: '4 Lite' as GridPattern, sdlPatterns: ['2 Lite', '3 Lite', '4 Lite'] as GridPattern[] },
+  ssl: { categories: sslGlassCategories, options: sslGlassOptions, standardRules: sslStandardStyleRules, lowERules: sslLowEStyleRules, gridAsset: sslGridAsset, prairieGridAsset: sslPrairieGridAsset, artsAndCraftsGridAsset: sslArtsAndCraftsGridAsset, prairiePattern: '3 Lite' as GridPattern, sdlPatterns: ['3 Lite'] as GridPattern[] },
   s2sl: { categories: s2slGlassCategories, options: s2slGlassOptions, standardRules: s2slStyleRules, lowERules: s2slStyleRules, gridAsset: () => '', prairiePattern: '3 Lite' as GridPattern, sdlPatterns: [] as GridPattern[] },
   cr14sl: { categories: cr14slGlassCategories, options: cr14slGlassOptions, standardRules: cr14slStyleRules, lowERules: cr14slStyleRules, gridAsset: cr14slGridAsset, prairiePattern: '3 Lite' as GridPattern, sdlPatterns: [] as GridPattern[] },
 }
