@@ -78,9 +78,9 @@ const hardwarePlacementByDoorSwing: Record<DoorSwing['id'], {
   hardwareSideInterior: HardwareSide
 }> = {
   LHI: { hardwareSideExterior: 'right', hardwareSideInterior: 'left' },
-  LHO: { hardwareSideExterior: 'right', hardwareSideInterior: 'left' },
+  LHO: { hardwareSideExterior: 'left', hardwareSideInterior: 'right' },
   RHI: { hardwareSideExterior: 'left', hardwareSideInterior: 'right' },
-  RHO: { hardwareSideExterior: 'left', hardwareSideInterior: 'right' },
+  RHO: { hardwareSideExterior: 'right', hardwareSideInterior: 'left' },
 }
 
 const sourceHardwareSideByView: Record<HardwareView, HardwareSide> = {
