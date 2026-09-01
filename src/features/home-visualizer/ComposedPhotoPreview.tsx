@@ -53,7 +53,7 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
   const showDoor = displayMode ? displayMode === 'final' : showAfter
   useEffect(() => {
     if (!import.meta.env.DEV || !naturalSizeRef.current.width || !naturalSizeRef.current.height) return
-    const activeLayers = productLayers?.length ? productLayers : [{ kind: 'door' as const, corners, sourceRect: { x: 0, y: 0, width: 1, height: 1 } }]
+    const activeLayers = productLayers?.length ? productLayers : [{ kind: 'assembled-entry' as const, corners, sourceRect: { x: 0, y: 0, width: 1, height: 1 } }]
     const diagnostic = buildEntranceRegionMap(naturalSizeRef.current.width, naturalSizeRef.current.height, corners, activeLayers)
     console.debug('[home-visualizer:entrance-region-map]', {
       processingResolution: `${naturalSizeRef.current.width}×${naturalSizeRef.current.height}`,

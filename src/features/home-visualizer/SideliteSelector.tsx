@@ -66,18 +66,10 @@ export function SideliteSelector({imageSrc,door,edges,sides,showSideChoice=false
   </div><div className="visualizer-zoom-controls mobile-external-zoom-controls" role="group" aria-label="Uploaded photo zoom controls"><button type="button" aria-label="Zoom uploaded photo out" disabled={zoom<=1} onClick={zoomOut}><ZoomOut size={17}/></button><span aria-live="polite">{Math.round(zoom*100)}%</span><button type="button" aria-label="Zoom uploaded photo in" disabled={zoom>=4} onClick={zoomIn}><ZoomIn size={17}/></button><button type="button" onClick={resetZoom}>Reset Zoom</button></div></>
 }
 
-export type ProductLayer={kind:'door'|'left-sidelite'|'right-sidelite';corners:EntranceCorners;sourceRect:{x:number;y:number;width:number;height:number};flipX?:boolean}
-export function productLayers(door:EntranceCorners,edges:SideliteEdges,sourceSides:SideliteSide[],flipDoor=false,doorLeafCount:1|2=1):ProductLayer[]{
-  // Opening-only source geometry. These normalized crops retain the placement
-  // math that maps the center door and each independently selected sidelite
-  // directly to their user-confirmed quadrilaterals.
-  const doorWidth=242*doorLeafCount+(doorLeafCount===2?7:0),sideWidth=80,mullionWidth=11
-  const totalWidth=doorWidth+sourceSides.length*(sideWidth+mullionWidth)
-  const doorX=sourceSides.includes('left')?sideWidth+mullionWidth:0
-  const sourceSide=(target:SideliteSide)=>sourceSides.length===2?target:sourceSides[0]??target
-  const sourceX=(target:SideliteSide)=>sourceSide(target)==='left'?0:totalWidth-sideWidth
-  const layers:ProductLayer[]=[{kind:'door',corners:door,sourceRect:{x:doorX/totalWidth,y:0,width:doorWidth/totalWidth,height:1},flipX:flipDoor}]
-  if(edges.left)layers.push({kind:'left-sidelite',corners:sideliteQuadrilateral('left',edges.left),sourceRect:{x:sourceX('left')/totalWidth,y:0,width:sideWidth/totalWidth,height:1}})
-  if(edges.right)layers.push({kind:'right-sidelite',corners:sideliteQuadrilateral('right',edges.right),sourceRect:{x:sourceX('right')/totalWidth,y:0,width:sideWidth/totalWidth,height:1}})
-  return layers
+export type ProductLayer={kind:'assembled-entry';corners:EntranceCorners;sourceRect:{x:number;y:number;width:number;height:number};flipX?:boolean}
+export function productLayers(_door:EntranceCorners,_edges:SideliteEdges,_sourceSides:SideliteSide[],outerFrame:EntranceCorners,flipDoor=false,_doorLeafCount:1|2=1):ProductLayer[]{
+  // DoorFrame has already assembled and flattened the complete rectangular
+  // elevation. Preserve its straight frame, equal mullions, shared baseline,
+  // glass, and hardware by applying exactly one full-source homography.
+  return [{kind:'assembled-entry',corners:outerFrame,sourceRect:{x:0,y:0,width:1,height:1},flipX:flipDoor}]
 }

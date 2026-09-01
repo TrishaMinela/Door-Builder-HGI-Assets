@@ -18,7 +18,7 @@ export function buildEntranceRegionMap(width: number, height: number, outer: Ent
   const map = new Uint8Array(width * height)
   const outerPolygon = points(outer)
   const layerPolygons = layers.map((layer) => ({
-    region: layer.kind === 'door' ? ENTRANCE_REGION.door : layer.kind === 'left-sidelite' ? ENTRANCE_REGION.leftSidelite : ENTRANCE_REGION.rightSidelite,
+    region: ENTRANCE_REGION.frame,
     polygon: points(layer.corners),
   }))
   const xs = outerPolygon.map((point) => point.x * width); const ys = outerPolygon.map((point) => point.y * height)

@@ -1,6 +1,7 @@
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { DoorConfigurationType } from '../../types'
 import { doorConfigurationLeafCount, hasCenterMeetingStile } from '../../data/doorConfigurationRules'
+import { VISUALIZER_FRAME_WIDTH_PX } from '../../features/home-visualizer/entranceGeometry'
 
 export type DoorFrameSidelites = 'none' | 'left' | 'right' | 'both'
 export type DoorFrameView = 'Exterior' | 'Interior'
@@ -48,6 +49,8 @@ const DOOR_WIDTH = HEIGHT * (SOURCE_GEOMETRY.door.width / SOURCE_GEOMETRY.door.h
 const SIDELITE_WIDTH = HEIGHT * (SOURCE_GEOMETRY.fsl.width / SOURCE_GEOMETRY.fsl.height)
 const CENTER_MEETING_STILE = 7
 const THRESHOLD = 12
+const VISUALIZER_FRAME = VISUALIZER_FRAME_WIDTH_PX
+const FRAME_SEAM_UNDERLAP = 1
 const FRAME_PROFILES = {
   exterior: {
     side: 19,
@@ -121,11 +124,11 @@ export function DoorFrame({
   const openingWidth = leftWidth + leftMullionWidth + doorAssemblyWidth + rightMullionWidth + rightWidth
   const sharedMullionWidth = FRAME_PROFILES.exterior.mullion
   const sharedOpeningWidth = leftWidth + (hasLeft ? sharedMullionWidth : 0) + doorAssemblyWidth + (hasRight ? sharedMullionWidth : 0) + rightWidth
-  const totalWidth = openingOnly ? openingWidth : sharedComparisonCanvas ? sharedOpeningWidth + FRAME_PROFILES.exterior.side * 2 : openingWidth + frameSide * 2
-  const totalHeight = openingOnly ? HEIGHT : HEIGHT + (sharedComparisonCanvas ? FRAME_PROFILES.exterior.head : frameHead) + THRESHOLD
-  const openingLeft = openingOnly ? 0 : (totalWidth - openingWidth) / 2
+  const totalWidth = openingOnly ? openingWidth + VISUALIZER_FRAME * 2 : sharedComparisonCanvas ? sharedOpeningWidth + FRAME_PROFILES.exterior.side * 2 : openingWidth + frameSide * 2
+  const totalHeight = openingOnly ? HEIGHT + VISUALIZER_FRAME * 2 : HEIGHT + (sharedComparisonCanvas ? FRAME_PROFILES.exterior.head : frameHead) + THRESHOLD
+  const openingLeft = openingOnly ? VISUALIZER_FRAME : (totalWidth - openingWidth) / 2
   const openingRight = openingLeft + openingWidth
-  const openingTop = openingOnly ? 0 : sharedComparisonCanvas ? FRAME_PROFILES.exterior.head : frameHead
+  const openingTop = openingOnly ? VISUALIZER_FRAME : sharedComparisonCanvas ? FRAME_PROFILES.exterior.head : frameHead
   const thresholdTop = openingTop + HEIGHT
   const outerLeft = openingLeft - frameSide
   const outerRight = openingRight + frameSide
@@ -223,7 +226,7 @@ export function DoorFrame({
           {hasRight && rightSideliteSrc && <><img className="door-frame-sidelite door-frame-sidelite-right" src={rightSideliteSrc} data-glass-mask={sideliteMaskSrc} alt="" decoding="async" />{sideliteFinishStyle && <div className={`door-frame-sidelite-finish door-frame-sidelite-finish-${finishType}`} style={sideliteFinishStyle} />}{sideliteDetailStyle && <img className="door-frame-sidelite-detail" src={rightSideliteSrc} alt="" decoding="async" style={sideliteDetailStyle} />}<div className="door-frame-sidelite-glass-assembly">{renderSideliteGlassFrame(rightSideliteSrc)}{sideliteClearGlassBase && <div className="door-frame-sidelite-clear-glass" style={sideliteGlassMaskStyle} />}{renderSideliteGlass()}</div>{sideliteHighlightStyle && <div className="door-frame-sidelite-highlight" style={sideliteHighlightStyle} />}</>}
         </div>
       </div>
-      {showFrame && !openingOnly && <svg className="door-frame-svg door-frame-svg-base" viewBox={`0 0 ${totalWidth} ${totalHeight}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      {(showFrame || openingOnly) && <svg className="door-frame-svg door-frame-svg-base" viewBox={`0 0 ${totalWidth} ${totalHeight}`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
         <defs>
           <linearGradient id={faceGradientId} x1="0" x2="1">
             <stop offset="0" stopColor={frameEdge} />
@@ -234,7 +237,12 @@ export function DoorFrame({
           </linearGradient>
         </defs>
         <path
-          d={`M${outerLeft} ${outerTop}H${outerRight}V${thresholdTop}H${outerLeft}Z M${openingLeft} ${openingTop}V${thresholdTop}H${openingRight}V${openingTop}Z`}
+          d={openingOnly
+            // Contract the transparent opening by one hidden source pixel.
+            // Product layers sit above this SVG, so the frame tucks beneath
+            // their edges without changing the visible opening dimensions.
+            ? `M${outerLeft} ${outerTop}H${outerRight}V${totalHeight}H${outerLeft}Z M${openingLeft + FRAME_SEAM_UNDERLAP} ${openingTop + FRAME_SEAM_UNDERLAP}V${thresholdTop - FRAME_SEAM_UNDERLAP}H${openingRight - FRAME_SEAM_UNDERLAP}V${openingTop + FRAME_SEAM_UNDERLAP}Z`
+            : `M${outerLeft} ${outerTop}H${outerRight}V${thresholdTop}H${outerLeft}Z M${openingLeft} ${openingTop}V${thresholdTop}H${openingRight}V${openingTop}Z`}
           fill={`url(#${faceGradientId})`}
           fillRule="evenodd"
           clipRule="evenodd"

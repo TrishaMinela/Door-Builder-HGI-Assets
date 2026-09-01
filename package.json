@@ -13,6 +13,7 @@
   "dependencies": {
     "@techstark/opencv-js": "^5.0.0-release.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "heic2any": "^0.0.4",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.2",
     "lucide-react": "^0.468.0",

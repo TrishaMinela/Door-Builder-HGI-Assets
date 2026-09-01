@@ -11,11 +11,13 @@ import { CleanupBrushEditor, type CleanupStroke } from './CleanupBrushEditor'
 import { createBrushCleanup, type CleanupDiagnosticComponent } from './brushCleanup'
 import { CleanupComparisonSlider } from './CleanupComparisonSlider'
 import { FrameAreaEditor } from './FrameAreaEditor'
-import { AUTO_FRAME_WIDTH_RATIO, createAutomaticFrame, expandFrameCorners, recolorPhotoFrame, type FrameMaskCorrections, type FrameSides } from './frameRecolor'
+import { AUTO_FRAME_EXPANSION_PX, createAutomaticFrame, expandFrameCorners, recolorPhotoFrame, type FrameMaskCorrections, type FrameSides } from './frameRecolor'
 import { completeEntranceBoundary, dividerJambQuads, initializeSideliteEdges, productLayers as createProductLayers, sideliteOpeningQuads, SideliteSelector, type SideliteEdges, type SideliteSide } from './SideliteSelector'
 
 const MAX_PHOTO_SIZE = 15 * 1024 * 1024
-const SUPPORTED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const SUPPORTED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/heic', 'image/heif'])
+const SUPPORTED_PHOTO_EXTENSIONS = /\.(?:jpe?g|png|webp|avif|heic|heif)$/i
+const HEIC_PHOTO_TYPES = new Set(['image/heic', 'image/heif'])
 
 type SelectedPhoto = {
   file: File
@@ -31,9 +33,21 @@ type Props = {
 }
 
 function fileError(file: File) {
-  if (!SUPPORTED_PHOTO_TYPES.has(file.type)) return 'Please choose a JPG, PNG, or WebP image.'
+  if (!SUPPORTED_PHOTO_TYPES.has(file.type.toLowerCase()) && !SUPPORTED_PHOTO_EXTENSIONS.test(file.name)) return 'Please choose a JPG, PNG, WebP, AVIF, HEIC, or HEIF image.'
   if (file.size > MAX_PHOTO_SIZE) return 'That photo is larger than 15 MB. Please choose a smaller image.'
   return ''
+}
+
+function isHeicPhoto(file: File) {
+  return HEIC_PHOTO_TYPES.has(file.type.toLowerCase()) || /\.(?:heic|heif)$/i.test(file.name)
+}
+
+async function normalizePhoto(file: File) {
+  if (!isHeicPhoto(file)) return file
+  const { default: heic2any } = await import('heic2any')
+  const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: .94 })
+  const blob = Array.isArray(converted) ? converted[0] : converted
+  return new File([blob], file.name.replace(/\.(?:heic|heif)$/i, '.jpg'), { type: 'image/jpeg', lastModified: file.lastModified })
 }
 
 export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, configuredDoorPreview, configurationKey }: Props) {
@@ -89,7 +103,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   const entranceBoundary = useMemo(() => completeEntranceBoundary(corners, sideliteEdges), [corners, sideliteEdges])
   const sideliteOpenings = useMemo(() => sideliteOpeningQuads(sideliteEdges), [sideliteEdges])
   const dividerJambs = useMemo(() => dividerJambQuads(corners,sideliteEdges),[corners,sideliteEdges])
-  const visualizerProductLayers = useMemo(() => createProductLayers(corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation, doorConfigurationLeafCount(configuredDoorPreview.doorConfigurationType)), [corners, sideliteEdges, configuredSideliteSides, flipDoorOrientation, configuredDoorPreview.doorConfigurationType])
+  const visualizerProductLayers = useMemo(() => createProductLayers(corners, sideliteEdges, configuredSideliteSides, outerFrame, flipDoorOrientation, doorConfigurationLeafCount(configuredDoorPreview.doorConfigurationType)), [corners, sideliteEdges, configuredSideliteSides, outerFrame, flipDoorOrientation, configuredDoorPreview.doorConfigurationType])
   const doorPlacementValid = isValidEntranceCorners(corners)
   const canContinueDoorPlacement = doorPlacementValid && !autoFitLoading
   const autoFitPlacementComplete = autoFitApplied || autoFitAlreadyAligned
@@ -167,7 +181,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     setFrameConfirmed(true)
     setFrameCorrections({add:[],remove:[]})
   },[automaticFrame,framePlacementMode,wizardStep])
-  useEffect(()=>{if(!import.meta.env.DEV||!photo||!frameImageSize.width)return;console.debug('[home-visualizer:automatic-frame]',{doorPolygon:corners,leftSidelitePolygon:sideliteEdges.left?sideliteOpenings[0]??null:null,rightSidelitePolygon:sideliteEdges.right?sideliteOpenings[sideliteEdges.left?1:0]??null:null,assemblyEnvelope:entranceBoundary,frameWidthRatio:AUTO_FRAME_WIDTH_RATIO,sourceImageSize:frameImageSize,outerFramePolygon:outerFrame,framePlacementMode,dividerJambRegions:dividerJambs,frameMaskOpenings:[corners,...sideliteOpenings]})},[photo,corners,sideliteEdges,sideliteOpenings,entranceBoundary,frameImageSize,outerFrame,framePlacementMode,dividerJambs])
+  useEffect(()=>{if(!import.meta.env.DEV||!photo||!frameImageSize.width)return;console.debug('[home-visualizer:automatic-frame]',{doorPolygon:corners,leftSidelitePolygon:sideliteEdges.left?sideliteOpenings[0]??null:null,rightSidelitePolygon:sideliteEdges.right?sideliteOpenings[sideliteEdges.left?1:0]??null:null,assemblyEnvelope:entranceBoundary,frameExpansionPx:AUTO_FRAME_EXPANSION_PX,sourceImageSize:frameImageSize,outerFramePolygon:outerFrame,framePlacementMode,dividerJambRegions:dividerJambs,frameMaskOpenings:[corners,...sideliteOpenings]})},[photo,corners,sideliteEdges,sideliteOpenings,entranceBoundary,frameImageSize,outerFrame,framePlacementMode,dividerJambs])
 
   useEffect(() => {
     // Keep the native-resolution recolored photo alive for the completed
@@ -195,7 +209,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     clearRecoloredFrame()
   }
 
-  const choosePhoto = (file?: File) => {
+  const choosePhoto = async (file?: File) => {
     if (!file) return
     const nextError = fileError(file)
     if (nextError) {
@@ -204,10 +218,18 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     }
 
     setError('')
+    let displayFile: File
+    try {
+      displayFile = await normalizePhoto(file)
+    } catch (reason) {
+      console.error('[home-visualizer:photo-conversion]', reason)
+      setError('That HEIC photo could not be opened. Please try another photo.')
+      return
+    }
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
-    const objectUrl = URL.createObjectURL(file)
+    const objectUrl = URL.createObjectURL(displayFile)
     objectUrlRef.current = objectUrl
-    setPhoto({ file, objectUrl })
+    setPhoto({ file: displayFile, objectUrl })
     setShowAutoFitHelp(false)
     setShowPlacementGuidance(true)
     clearCleanup()
@@ -419,7 +441,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
               <span className="photo-drop-icon"><ImagePlus size={30} /></span>
               <strong>Upload a photo of your entrance</strong>
               <span>Drag and drop or choose a file</span>
-              <small>JPG, PNG, or WebP · Maximum 15 MB</small>
+              <small>JPG, PNG, WebP, AVIF, or HEIC · Maximum 15 MB</small>
               <span className="photo-picker-button"><Upload size={17} /> Choose Photo</span>
             </div>
           </> : <>
@@ -458,7 +480,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
             {wizardStep===4&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title"><div className="visualizer-final-heading"><span>Visualization complete</span><h2 id="visualizer-final-title">Your new entrance</h2></div>{doorSource.ready?<ComposedPhotoPreview corners={entranceBoundary} productLayers={visualizerProductLayers} doorSourceUrl={doorSource.url} imageSrc={recoloredFrameUrl||approvedCleanup?.cleanedUrl||photo.objectUrl} originalImageSrc={photo.objectUrl} imageAlt={`Completed visualization: ${photo.file.name}`} showAfter displayMode="final" showZoomControls beforeAfter onExporterReady={setCompositeExporter}/>:<div className="visualizer-source-loading" role={doorSource.error?'alert':'status'}><span>{doorSource.error||'Preparing your configured door…'}</span>{doorSource.error&&doorSource.retry&&<button type="button" onClick={doorSource.retry}><RefreshCw size={16}/> Retry Rendering</button>}</div>}<div className="visualizer-final-actions"><button type="button" className="visualizer-download-button" aria-label="Download completed home visualization photo" disabled={downloadPreparing||!doorSource.ready} onClick={downloadVisualization}><Download size={18}/>{downloadPreparing?'Preparing Photo…':'Download Photo'}</button>{onDownloadPdf&&<button type="button" className="visualizer-download-button" aria-label="Download configured door PDF" disabled={pdfDownloadPreparing} onClick={downloadConfigurationPdf}><FileText size={18}/>{pdfDownloadPreparing?'Preparing PDF…':'Download Configuration PDF'}</button>}<button type="button" className="visualizer-review-button" aria-label="Return to the previous visualizer step" onClick={returnFromFinal}>Return to Previous Step</button></div><div className="visualizer-final-text-actions"><button type="button" onClick={onReturnToReview??onBack}>Return to Review</button><button type="button" onClick={()=>setFlipDoorOrientation(value=>!value)}>Hardware on the wrong side? Flip Door Orientation</button></div><span className="visualizer-download-status" role="status" aria-live="polite">{downloadPreparing?'Preparing your full-resolution photo.':pdfDownloadPreparing?'Preparing your configuration PDF.':''}</span>{downloadError&&<p className="visualizer-error" role="alert">{downloadError}</p>}</section>}
           </>}
 
-          <input ref={inputRef} className="visualizer-file-input" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" onChange={onInputChange} />
+          <input ref={inputRef} className="visualizer-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.avif,.heic,.heif" onChange={onInputChange} />
           {error && <p className="visualizer-error" role="alert">{error}</p>}
 
           {photo && wizardStep !== 4 && <div className="visualizer-photo-actions">

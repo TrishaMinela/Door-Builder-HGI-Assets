@@ -1,11 +1,10 @@
 import type { CleanupStroke } from './CleanupBrushEditor'
 import type { EntranceCorners, Point } from './EntranceSelector'
+import { VISUALIZER_FRAME_WIDTH_PX } from './entranceGeometry'
 
 export type FrameSides = { top: boolean; left: boolean; right: boolean; bottom: boolean }
 export type FrameMaskCorrections = { add: CleanupStroke[]; remove: CleanupStroke[] }
-export const MIN_AUTO_FRAME_RATIO = .025
-export const AUTO_FRAME_WIDTH_RATIO = .06
-export const MAX_AUTO_FRAME_RATIO = .06
+export const AUTO_FRAME_EXPANSION_PX = VISUALIZER_FRAME_WIDTH_PX
 
 type ImageSize = { width: number; height: number }
 
@@ -16,19 +15,18 @@ function lineIntersection(firstA: Point, firstB: Point, secondA: Point, secondB:
   return{x:firstA.x+ratio*firstX,y:firstA.y+ratio*firstY}
 }
 
-/** Expand the complete assembly with one source-space frame thickness derived
- * from the total entry-unit width. Perspective changes its displayed width
- * naturally; the authored frame itself remains consistent on all four sides. */
-export function createAutomaticFrame(assembly: EntranceCorners, door: EntranceCorners, imageSize: ImageSize, requestedRatio=AUTO_FRAME_WIDTH_RATIO): EntranceCorners {
-  const width=Math.max(1,imageSize.width),height=Math.max(1,imageSize.height),ratio=Math.max(MIN_AUTO_FRAME_RATIO,Math.min(MAX_AUTO_FRAME_RATIO,requestedRatio))
-  const sourcePoint=(point:Point)=>({x:point.x*width,y:point.y*height}),distance=(first:Point,second:Point)=>Math.hypot((second.x-first.x)*width,(second.y-first.y)*height)
-  const topUnitWidth=distance(assembly.topLeft,assembly.topRight),bottomUnitWidth=distance(assembly.bottomLeft,assembly.bottomRight)
-  const frameThickness=Math.max(4,Math.min(64,(topUnitWidth+bottomUnitWidth)/2*ratio))
+/** Expand the complete assembly by one fixed source-image distance.
+ * Perspective changes its displayed width naturally while every selected
+ * door/sidelite assembly receives the same restrained default frame. */
+export function createAutomaticFrame(assembly: EntranceCorners, door: EntranceCorners, imageSize: ImageSize): EntranceCorners {
+  const width=Math.max(1,imageSize.width),height=Math.max(1,imageSize.height)
+  const sourcePoint=(point:Point)=>({x:point.x*width,y:point.y*height})
+  const frameThickness=AUTO_FRAME_EXPANSION_PX
   const points=[assembly.topLeft,assembly.topRight,assembly.bottomRight,assembly.bottomLeft].map(sourcePoint)
   const lines=points.map((point,index)=>{const next=points[(index+1)%points.length],dx=next.x-point.x,dy=next.y-point.y,length=Math.max(1e-8,Math.hypot(dx,dy)),nx=dy/length,ny=-dx/length;return[{x:point.x+nx*frameThickness,y:point.y+ny*frameThickness},{x:next.x+nx*frameThickness,y:next.y+ny*frameThickness}]as const})
   const expanded=lines.map((line,index)=>lineIntersection(lines[(index+3)%4][0],lines[(index+3)%4][1],line[0],line[1])??line[0])
   const normalized=expanded.map(point=>({x:Math.max(0,Math.min(1,point.x/width)),y:Math.max(0,Math.min(1,point.y/height))}))
-  if(import.meta.env.DEV)console.debug('[home-visualizer:proportional-frame]',{ratio,topUnitWidth,bottomUnitWidth,frameThickness,imageSize,doorReference:door})
+  if(import.meta.env.DEV)console.debug('[home-visualizer:automatic-frame-expansion]',{frameThickness,imageSize,doorReference:door})
   return{topLeft:normalized[0],topRight:normalized[1],bottomRight:normalized[2],bottomLeft:normalized[3]}
 }
 
