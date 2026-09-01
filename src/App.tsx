@@ -453,8 +453,9 @@ export default function App() {
   const [homeDemoIndex, setHomeDemoIndex] = useState(0)
   const [heroImageError, setHeroImageError] = useState('')
   const [builderPreviewView, setBuilderPreviewView] = useState<'Exterior' | 'Interior' | 'Both'>('Exterior')
-  const [pdfPreviewDataUrl, setPdfPreviewDataUrl] = useState('')
+  const [pdfPreviewCapture, setPdfPreviewCapture] = useState<{ configurationKey: string; dataUrl: string } | null>(null)
   const pdfDoorSourceRef = useRef<HTMLDivElement | null>(null)
+  const configuredDoorKeyRef = useRef('')
   const builderPanelRef = useRef<HTMLElement | null>(null)
   const builderOptionsRef = useRef<HTMLDivElement | null>(null)
   const entrywayDialogRef = useRef<HTMLDivElement | null>(null)
@@ -825,20 +826,25 @@ export default function App() {
     doubleDoorLockPrep,
     style: style.id,
     finish: previewConfig.finish.id,
+    finishType: previewConfig.finish.finishType,
+    finishColor: previewConfig.finish.color,
+    finishImage: previewConfig.finish.image,
     tint: previewConfig.tintColor,
-    glass: previewConfig.glass?.id,
+    glass: previewConfig.glass,
     gridPathId,
     gridStyle,
     gridPattern,
     gridColor,
     gridWidth,
-    hardware: previewConfig.hardware.id,
+    hardware: previewConfig.hardware,
     showHardware: Boolean(selectedHardware),
     grain: selectedGrain,
     product: product?.styleCodes.join('|'),
     swing: previewConfig.doorSwing?.id,
     sidelites,
     sideliteStyle: selectedSideliteStyle?.id,
+    sideliteAsset: selectedSidelitePreview,
+    sideliteMask: selectedSideliteMask,
     sideliteGlass: selectedFslGlass?.id,
     sideliteGlassPreview,
     sideliteGridLocation,
@@ -847,6 +853,9 @@ export default function App() {
     sideliteGridColor,
     sideliteGridWidth,
     jambFinish: jambFinish?.id,
+    jambFinishType: jambFinish?.finishType,
+    jambFinishColor: jambFinish?.color,
+    jambFinishImage: jambFinish?.image,
     jambType,
     // The flattened source is shared by the visualizer and PDF. Include the
     // complete insert-trim selection so neither consumer can reuse a capture
@@ -856,7 +865,8 @@ export default function App() {
     glassFrameFinishType: appliedGlassFrameFinish?.finishType,
     glassFrameFinishColor: appliedGlassFrameFinish?.color,
   })
-  useEffect(() => setPdfPreviewDataUrl(''), [configuredDoorKey])
+  configuredDoorKeyRef.current = configuredDoorKey
+  useEffect(() => setPdfPreviewCapture(null), [configuredDoorKey])
   const renderConfiguredDoorPreview = (previewView: HardwareView, sharedComparisonCanvas = false) => <DoorPreview {...configuredDoorPreview} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} />
   const renderConfiguredPreviewMode = () => builderPreviewView === 'Both'
     ? <div className="preview-comparison" aria-label="Exterior and interior door previews">
@@ -1362,6 +1372,7 @@ export default function App() {
   }
 
   const captureExactExteriorPreview = async () => {
+    const captureConfigurationKey = configuredDoorKey
     const source = pdfDoorSourceRef.current
     if (!source) throw new Error('The configured door preview is unavailable.')
     const captured = await captureFinalDoorPreview(source, { frameMode: 'visible' })
@@ -1371,7 +1382,8 @@ export default function App() {
       reader.onerror = () => reject(new Error('The configured door preview could not be encoded.'))
       reader.readAsDataURL(captured.blob)
     })
-    setPdfPreviewDataUrl(dataUrl)
+    if (configuredDoorKeyRef.current !== captureConfigurationKey) throw new Error('The door configuration changed while the preview was being prepared. Please try again.')
+    setPdfPreviewCapture({ configurationKey: captureConfigurationKey, dataUrl })
     if (import.meta.env.DEV) Object.assign(window, { __HGI_LAST_FLATTENED_PREVIEW__: dataUrl })
     return dataUrl
   }
@@ -1635,7 +1647,9 @@ export default function App() {
   const downloadPdf = async () => {
     if (!selectedHardware || !selectedDoorSwing) return
     const { downloadSummary } = await import('./utils/pdf')
-    const exactPreview = pdfPreviewDataUrl || await captureExactExteriorPreview()
+    const exactPreview = pdfPreviewCapture?.configurationKey === configuredDoorKey
+      ? pdfPreviewCapture.dataUrl
+      : await captureExactExteriorPreview()
     await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }, selectedDoorConfigurationType || 'single', exactPreview, selectedDoorConfigurationType === 'french' ? doubleDoorLockPrep || 'DDLLBO' : null)
   }
 
