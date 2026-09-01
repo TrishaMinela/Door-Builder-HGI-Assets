@@ -5,6 +5,7 @@ import { DoorStyleThumbnail } from './components/DoorStyleThumbnail'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
 import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
+import { BetaFeedback } from './components/BetaFeedback'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
 import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
@@ -1690,6 +1691,21 @@ export default function App() {
     ['Hardware', selectedHardware ? hardwareDisplayName(selectedHardware) : 'Not selected', pages.indexOf('hardware')],
     ['Door swing', selectedDoorSwing?.name ?? 'Not selected', pages.indexOf('door-swing')],
   ]
+  const feedbackConfiguration = {
+    doorStyle: selectedStyle?.name ?? 'Not selected',
+    doorConfiguration: selectedDoorConfigurationType ? doorConfigurationLabel(selectedDoorConfigurationType) : 'Not selected',
+    sidelites: sideliteProductLabel(sidelites || 'none'),
+    glass: configuredGlass?.name ?? (compatibilitySupportsGlass ? 'Not selected' : 'Not applicable'),
+    sideliteGlass: selectedFslGlass?.name ?? ((sidelites || 'none') === 'none' ? 'Not applicable' : 'Not selected'),
+    doorFinish: selectedFinish?.name ?? 'Not selected',
+    jambType: jambType || 'Not selected',
+    jambFinish: jambFinish?.name ?? 'Not selected',
+    glassFrameFinish: appliedGlassFrameFinish?.name ?? 'Not selected',
+    hardware: selectedHardware ? hardwareDisplayName(selectedHardware) : 'Not selected',
+    lockSetup: selectedDoubleDoorLockPrep?.name ?? 'Not applicable',
+    doorSwing: selectedDoorSwing?.name ?? 'Not selected',
+  }
+  const feedbackStep = screen === 'builder' ? `${currentStep}: ${currentPage}` : screen
 
   const heroGenerationParam = new URLSearchParams(window.location.search).get('generateHeroDoor')
   if (heroGenerationParam !== null) {
@@ -1948,6 +1964,7 @@ export default function App() {
       </main>
       </>}
       {selectedStyle && <div ref={pdfDoorSourceRef} className="configured-door-capture-host pdf-door-source" aria-hidden="true"><DoorPreview {...configuredDoorPreview} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} /></div>}
+      <BetaFeedback currentStep={feedbackStep} configuration={feedbackConfiguration}/>
       <footer className="site-footer">
         <div className="site-footer-contact">
           <div className="site-footer-direct"><a href="tel:+18005251885" aria-label="Call Home Guard Industries at 1-800-525-1885"><Phone size={15} /><span>1-800-525-1885</span></a><a href="mailto:getintouch@homeguardindustries.com" aria-label="Email Home Guard Industries"><Mail size={15} /><span>getintouch@homeguardindustries.com</span></a></div>
