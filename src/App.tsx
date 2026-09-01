@@ -1757,6 +1757,7 @@ function DoorBuilderApp() {
             <button className="start-building" onClick={() => showScreen('builder')}>Start Building <ArrowRight size={18} /></button>
           </div>
           <div className="home-hero-visual">
+            <div className="beta-feedback-context-host beta-feedback-hero-host" data-feedback-trigger-host="hero" />
             <div className="home-entryway-demo hero-composite" aria-label="Animated examples of configurable entry doors">
               <div className="hero-composite-stage">
                 <img className="home-entryway-image" src="/assets/hero/hero-entryway.png" alt="Welcoming home entryway with a customizable door preview" />
@@ -1945,6 +1946,7 @@ function DoorBuilderApp() {
         </section>
 
         {!submitted && <aside className={currentPage === 'review' ? 'review-preview-panel' : undefined}>
+          <div className="beta-feedback-context-host beta-feedback-preview-host" data-feedback-trigger-host="preview" />
           <div className="aside-preview-area">
             {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
           </div>

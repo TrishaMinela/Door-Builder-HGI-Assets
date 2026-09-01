@@ -5,6 +5,8 @@ import { PerspectiveDoorCanvas } from './PerspectiveDoorCanvas'
 import { usePhotoZoom } from './usePhotoZoom'
 import type { ProductLayer } from './SideliteSelector'
 import { buildEntranceRegionMap } from './entranceRegionMap'
+import { loadCachedImage } from '../../utils/imageCache'
+import { cacheVisualization, getCachedVisualization } from './renderCache'
 
 type Props = {
   corners: EntranceCorners
@@ -25,8 +27,12 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
   const editorRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
   const finalAfterUrlRef = useRef('')
+  const compositionRunRef = useRef(0)
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
   const [finalAfterImage, setFinalAfterImage] = useState<{ url: string; blob: Blob; width: number; height: number } | null>(null)
+  const [compositionLoading, setCompositionLoading] = useState(false)
+  const [compositionError, setCompositionError] = useState('')
+  const [retry, setRetry] = useState(0)
   const [comparisonPosition, setComparisonPosition] = useState(50)
   const comparisonDragRef = useRef<number | null>(null)
   const { zoom, pan, isPanning, onWheel, beginPan, movePan, endPan, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
@@ -67,13 +73,20 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
   const compositionKey = JSON.stringify({ corners, productLayers, doorSourceUrl, imageSrc, flipX })
   useEffect(() => {
     if (!showDoor || !stageSize.width || !naturalSizeRef.current.width || !naturalSizeRef.current.height) return
+    const run = ++compositionRunRef.current
     let cancelled = false
-    setFinalAfterImage(null)
-    if (finalAfterUrlRef.current) {
-      URL.revokeObjectURL(finalAfterUrlRef.current)
-      finalAfterUrlRef.current = ''
-    }
+    setCompositionLoading(true)
+    setCompositionError('')
     const compose = async () => {
+      const cached = getCachedVisualization(compositionKey)
+      if (cached) {
+        const url = URL.createObjectURL(cached.blob)
+        if (cancelled || compositionRunRef.current !== run) { URL.revokeObjectURL(url); return }
+        if (finalAfterUrlRef.current) URL.revokeObjectURL(finalAfterUrlRef.current)
+        finalAfterUrlRef.current = url
+        setFinalAfterImage({ url, ...cached })
+        return
+      }
       // Let React mount the temporary native-size warp canvases after a
       // configuration/quad change before collecting them for flattening.
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
@@ -84,7 +97,7 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
       for (let attempt = 0; attempt < 100 && layers.some((layer) => layer.dataset.renderReady !== 'true'); attempt += 1) await new Promise((resolve) => window.setTimeout(resolve, 50))
       if (cancelled) return
       if (!layers.length || layers.some((layer) => layer.dataset.renderReady !== 'true')) throw new Error('The configured door is still rendering. Please try again.')
-      const base = await new Promise<HTMLImageElement>((resolve, reject) => { const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('The completed house photo could not be loaded.'));image.src=imageSrc })
+      const base = await loadCachedImage(imageSrc)
       if (cancelled) return
       const width = base.naturalWidth
       const height = base.naturalHeight
@@ -100,15 +113,21 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
       const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error('The completed photo could not be encoded.')), 'image/jpeg', .94))
       canvas.width = 0
       canvas.height = 0
-      if (cancelled) return
+      if (cancelled || compositionRunRef.current !== run) return
       const url = URL.createObjectURL(blob)
+      cacheVisualization(compositionKey, { blob, width, height })
+      if (finalAfterUrlRef.current) URL.revokeObjectURL(finalAfterUrlRef.current)
       finalAfterUrlRef.current = url
       setFinalAfterImage({ url, blob, width, height })
       if (import.meta.env.DEV) console.debug('[home-visualizer:final-after-image]', { width, height, sourceQuad: corners, layerCount: layers.length, coordinateSystem: 'uploaded-photo-natural-pixels' })
     }
-    void compose().catch((reason) => { if (!cancelled && import.meta.env.DEV) console.error('[home-visualizer:final-composite-error]', reason) })
-    return () => { cancelled = true }
-  }, [compositionKey, showDoor, stageSize.width])
+    void compose().catch((reason) => {
+      if (cancelled || compositionRunRef.current !== run) return
+      if (import.meta.env.DEV) console.error('[home-visualizer:final-composite-error]', reason)
+      setCompositionError('We couldn’t create your visualization. Please try again.')
+    }).finally(() => { if (!cancelled && compositionRunRef.current === run) setCompositionLoading(false) })
+    return () => { cancelled = true; compositionRunRef.current += 1 }
+  }, [compositionKey, retry, showDoor, stageSize.width])
   useEffect(() => () => { if (finalAfterUrlRef.current) URL.revokeObjectURL(finalAfterUrlRef.current) }, [])
   const exportComposite = useCallback(async () => {
     if (!finalAfterImage) throw new Error('The completed visualization is not ready yet.')
@@ -123,10 +142,12 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
         naturalSizeRef.current = { width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }
         updateStageSize()
       }} />
-      {stageSize.width > 0 && showDoor && !finalAfterImage && <div className="visualizer-composite-render-layers" aria-hidden="true">{productLayers?.length
-        ? productLayers.map((layer) => <PerspectiveDoorCanvas key={layer.kind} diagnosticName={layer.kind} corners={layer.corners} sourceRect={layer.sourceRect} flipX={layer.flipX} doorSourceUrl={doorSourceUrl} photoWidth={naturalSizeRef.current.width} photoHeight={naturalSizeRef.current.height} visible={showDoor} />)
+      {stageSize.width > 0 && showDoor && compositionLoading && <div className="visualizer-composite-render-layers" aria-hidden="true">{productLayers?.length
+        ? productLayers.map((layer) => <PerspectiveDoorCanvas key={layer.kind} diagnosticName={layer.kind} corners={layer.corners} sourceRect={layer.sourceRect} flipX={layer.flipX} trimTransparent={layer.trimTransparent} doorSourceUrl={doorSourceUrl} photoWidth={naturalSizeRef.current.width} photoHeight={naturalSizeRef.current.height} visible={showDoor} />)
         : <PerspectiveDoorCanvas diagnosticName="assembled-entry-unit" corners={corners} flipX={flipX} doorSourceUrl={doorSourceUrl} photoWidth={naturalSizeRef.current.width} photoHeight={naturalSizeRef.current.height} visible={showDoor} />}</div>}
       {beforeAfter&&<><img className="visualizer-before-image" src={originalImageSrc} alt="Original uploaded entrance before visualization" style={{clipPath:`inset(0 ${100-comparisonPosition}% 0 0)`}}/><span className="visualizer-comparison-label visualizer-comparison-before">Before</span><span className="visualizer-comparison-label visualizer-comparison-after">After</span><span className="visualizer-comparison-line" style={{left:`${comparisonPosition}%`}}/><button type="button" className="visualizer-comparison-handle" style={{left:`${comparisonPosition}%`}} aria-label="Drag to compare before and after" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(comparisonPosition)} onKeyDown={(event)=>{if(event.key==='ArrowLeft')setComparisonPosition(value=>Math.max(0,value-2));if(event.key==='ArrowRight')setComparisonPosition(value=>Math.min(100,value+2))}} onPointerDown={(event)=>{event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);comparisonDragRef.current=event.pointerId}}>↔</button></>}
+      {compositionLoading&&<div className="visualizer-render-status" role="status"><span className="preview-asset-spinner"/><strong>Creating your visualization...</strong><small>This may take a few seconds.</small></div>}
+      {compositionError&&<div className="visualizer-render-status visualizer-render-error" role="alert"><strong>{compositionError}</strong><button type="button" onClick={()=>setRetry(value=>value+1)}>Retry</button></div>}
     </div>
     {showZoomControls&&<div className="visualizer-zoom-controls" role="group" aria-label="Photo zoom controls">
       <button type="button" aria-label="Zoom out" disabled={zoom <= 1} onClick={zoomOut}><ZoomOut size={17} /></button>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { MessageSquare, X } from 'lucide-react'
 
 type FeedbackConfiguration = Record<string, string>
@@ -30,21 +31,45 @@ export function BetaFeedback({ currentStep, configuration }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [isPhoneLayout, setIsPhoneLayout] = useState(() => window.matchMedia('(max-width: 767px)').matches)
+  const [previewTriggerHost, setPreviewTriggerHost] = useState<HTMLElement | null>(null)
+  const [heroTriggerHost, setHeroTriggerHost] = useState<HTMLElement | null>(null)
+  const lastTriggerRef = useRef<HTMLButtonElement | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
+  const nameRef = useRef<HTMLInputElement>(null)
   const feedbackRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    setPreviewTriggerHost(document.querySelector<HTMLElement>('[data-feedback-trigger-host="preview"]'))
+    setHeroTriggerHost(document.querySelector<HTMLElement>('[data-feedback-trigger-host="hero"]'))
+  }, [currentStep])
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)')
+    const updatePhoneLayout = () => setIsPhoneLayout(media.matches)
+    updatePhoneLayout()
+    media.addEventListener('change', updatePhoneLayout)
+    return () => media.removeEventListener('change', updatePhoneLayout)
+  }, [])
+
+  const openFeedback = (trigger: HTMLButtonElement) => {
+    lastTriggerRef.current = trigger
+    setError('')
+    setSent(false)
+    setOpen(true)
+  }
 
   const close = () => {
     if (submitting) return
     setOpen(false)
     setError('')
     setSent(false)
-    requestAnimationFrame(() => triggerRef.current?.focus())
+    requestAnimationFrame(() => lastTriggerRef.current?.focus())
   }
 
   useEffect(() => {
     if (!open) return
-    feedbackRef.current?.focus()
+    nameRef.current?.focus()
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault()
@@ -71,6 +96,9 @@ export function BetaFeedback({ currentStep, configuration }: Props) {
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     if (submitting) return
+    if (!form.name.trim()) { setError('Please enter your name.'); nameRef.current?.focus(); return }
+    if (!form.email.trim()) { setError('Please enter your email.'); return }
+    if (!form.phone.trim()) { setError('Please enter your phone number.'); return }
     if (!form.feedback.trim()) { setError('Please enter your feedback.'); feedbackRef.current?.focus(); return }
     setSubmitting(true)
     setError('')
@@ -106,8 +134,12 @@ export function BetaFeedback({ currentStep, configuration }: Props) {
     }
   }
 
+  const trigger = (className: string, label: string) => <button className={className} type="button" onClick={(event) => openFeedback(event.currentTarget)} aria-haspopup="dialog" aria-label={label}><MessageSquare size={17}/><span>Feedback</span><small>Beta</small></button>
+
   return <>
-    <button ref={triggerRef} className="beta-feedback-trigger" type="button" onClick={() => setOpen(true)} aria-haspopup="dialog"><MessageSquare size={17}/><span>Feedback</span><small>Beta</small></button>
+    {!isPhoneLayout && previewTriggerHost && createPortal(trigger('beta-feedback-context-trigger', 'Give feedback about the door preview'), previewTriggerHost)}
+    {!isPhoneLayout && heroTriggerHost && createPortal(trigger('beta-feedback-context-trigger', 'Give feedback about the home page preview'), heroTriggerHost)}
+    {(isPhoneLayout || (!previewTriggerHost && !heroTriggerHost)) && trigger('beta-feedback-context-trigger beta-feedback-page-trigger', 'Open beta feedback form')}
     {open && <div className="beta-feedback-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) close() }}>
       <div ref={dialogRef} className="beta-feedback-dialog" role="dialog" aria-modal="true" aria-labelledby="beta-feedback-title" aria-describedby="beta-feedback-description">
         <button className="beta-feedback-close" type="button" onClick={close} aria-label="Close feedback"><X size={20}/></button>
@@ -116,9 +148,9 @@ export function BetaFeedback({ currentStep, configuration }: Props) {
           <h2 id="beta-feedback-title">Help us improve</h2>
           <p id="beta-feedback-description">We're currently beta testing the Door Builder. Let us know what worked, what didn't, or anything that could be better.</p>
           <div className="beta-feedback-fields">
-            <label>Name <small>Optional</small><input type="text" autoComplete="name" maxLength={120} value={form.name} onChange={(event) => update('name', event.target.value)}/></label>
-            <label>Email <small>Optional</small><input type="email" autoComplete="email" maxLength={254} value={form.email} onChange={(event) => update('email', event.target.value)}/></label>
-            <label>Phone <small>Optional</small><input type="tel" autoComplete="tel" maxLength={40} value={form.phone} onChange={(event) => update('phone', event.target.value)}/></label>
+            <label>Name <small>Required</small><input ref={nameRef} type="text" autoComplete="name" required maxLength={120} value={form.name} onChange={(event) => update('name', event.target.value)}/></label>
+            <label>Email <small>Required</small><input type="email" autoComplete="email" required maxLength={254} value={form.email} onChange={(event) => update('email', event.target.value)}/></label>
+            <label>Phone <small>Required</small><input type="tel" autoComplete="tel" required maxLength={40} value={form.phone} onChange={(event) => update('phone', event.target.value)}/></label>
             <label className="beta-feedback-message">Feedback <textarea ref={feedbackRef} required maxLength={5000} rows={6} placeholder="Tell us what happened, what you expected, or anything you'd like us to improve..." value={form.feedback} onChange={(event) => update('feedback', event.target.value)}/></label>
             <label className="beta-feedback-honeypot" aria-hidden="true">Website<input type="text" tabIndex={-1} autoComplete="off" value={form.website} onChange={(event) => update('website', event.target.value)}/></label>
           </div>

@@ -38,13 +38,18 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   if (rawFeedback.length > MAX_FEEDBACK_LENGTH) { response.status(400).json({ error: 'Feedback is too long.' }); return }
   const feedback = text(rawFeedback, MAX_FEEDBACK_LENGTH)
   if (!feedback) { response.status(400).json({ error: 'Feedback is required.' }); return }
+  const name = text(source.name, 120)
+  if (!name) { response.status(400).json({ error: 'Name is required.' }); return }
   const email = text(source.email, 254)
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { response.status(400).json({ error: 'Email is invalid.' }); return }
+  if (!email) { response.status(400).json({ error: 'Email is required.' }); return }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { response.status(400).json({ error: 'Email is invalid.' }); return }
+  const phone = text(source.phone, 40)
+  if (!phone) { response.status(400).json({ error: 'Phone is required.' }); return }
   const context = object(source.context)
   const payload = {
-    name: text(source.name, 120),
+    name,
     email,
-    phone: text(source.phone, 40),
+    phone,
     feedback,
     context: {
       pageUrl: text(context.pageUrl, 2000),

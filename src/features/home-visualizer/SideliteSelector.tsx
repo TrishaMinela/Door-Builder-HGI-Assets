@@ -3,6 +3,9 @@ import { Move, ZoomIn, ZoomOut } from 'lucide-react'
 import { isValidEntranceCorners, type CornerId, type EntranceCorners, type Point } from './EntranceSelector'
 import { usePhotoZoom } from './usePhotoZoom'
 import { emptySnapState, freeDragWithMagneticSnap, type SnapGuides, type SnapState } from './magneticSnap'
+import type { DoorConfigurationType } from '../../types'
+import { createCanonicalEntranceGeometry, ENTRANCE_GEOMETRY, STANDARD_SIDELITE_TO_SLAB_RATIO } from './entranceGeometry'
+import { doorConfigurationLeafCount } from '../../data/doorConfigurationRules'
 
 export type SideliteSide = 'left' | 'right'
 export type SideliteOpening = { innerTop: Point; innerBottom: Point; outerTop: Point; outerBottom: Point }
@@ -14,12 +17,20 @@ const MOBILE_MAGNIFIER_SIZE=90
 const CORNER_ORDER:CornerId[]=['topLeft','topRight','bottomRight','bottomLeft']
 const cornerForHandle=(side:SideliteSide,handle:Handle):CornerId=>side==='left'?(handle==='outerTop'?'topLeft':handle==='innerTop'?'topRight':handle==='innerBottom'?'bottomRight':'bottomLeft'):(handle==='innerTop'?'topLeft':handle==='outerTop'?'topRight':handle==='outerBottom'?'bottomRight':'bottomLeft')
 
-export function initializeSideliteEdges(door: EntranceCorners, sides: SideliteSide[]): SideliteEdges {
-  const topWidth=door.topRight.x-door.topLeft.x,bottomWidth=door.bottomRight.x-door.bottomLeft.x
-  const topGap=Math.max(.012,Math.min(.06,topWidth*.05)),bottomGap=Math.max(.012,Math.min(.06,bottomWidth*.05))
+const offsetAlongEdge=(start:Point,end:Point,ratio:number):Point=>({x:(end.x-start.x)*ratio,y:(end.y-start.y)*ratio})
+const addPoint=(point:Point,offset:Point):Point=>({x:point.x+offset.x,y:point.y+offset.y})
+const subtractPoint=(point:Point,offset:Point):Point=>({x:point.x-offset.x,y:point.y-offset.y})
+
+export function initializeSideliteEdges(door: EntranceCorners, sides: SideliteSide[], doorLeafCount:1|2=1): SideliteEdges {
+  // The selected quad owns the complete slab assembly. Derive one slab from it,
+  // then extend mullion and sidelite vectors outward along its perspective edges.
+  const mullionRatio=ENTRANCE_GEOMETRY.frameProfiles.exterior.mullion/ENTRANCE_GEOMETRY.slabWidth/doorLeafCount
+  const sideliteRatio=STANDARD_SIDELITE_TO_SLAB_RATIO/doorLeafCount
+  const topMullion=offsetAlongEdge(door.topLeft,door.topRight,mullionRatio),bottomMullion=offsetAlongEdge(door.bottomLeft,door.bottomRight,mullionRatio)
+  const topSidelite=offsetAlongEdge(door.topLeft,door.topRight,sideliteRatio),bottomSidelite=offsetAlongEdge(door.bottomLeft,door.bottomRight,sideliteRatio)
   return {
-    ...(sides.includes('left')?{left:{innerTop:{x:Math.max(0,door.topLeft.x-topGap),y:door.topLeft.y},innerBottom:{x:Math.max(0,door.bottomLeft.x-bottomGap),y:door.bottomLeft.y},outerTop:{x:Math.max(0,door.topLeft.x-topGap-.15),y:door.topLeft.y},outerBottom:{x:Math.max(0,door.bottomLeft.x-bottomGap-.17),y:door.bottomLeft.y}}}:{}),
-    ...(sides.includes('right')?{right:{innerTop:{x:Math.min(1,door.topRight.x+topGap),y:door.topRight.y},innerBottom:{x:Math.min(1,door.bottomRight.x+bottomGap),y:door.bottomRight.y},outerTop:{x:Math.min(1,door.topRight.x+topGap+.15),y:door.topRight.y},outerBottom:{x:Math.min(1,door.bottomRight.x+bottomGap+.17),y:door.bottomRight.y}}}:{})
+    ...(sides.includes('left')?{left:{innerTop:subtractPoint(door.topLeft,topMullion),innerBottom:subtractPoint(door.bottomLeft,bottomMullion),outerTop:subtractPoint(subtractPoint(door.topLeft,topMullion),topSidelite),outerBottom:subtractPoint(subtractPoint(door.bottomLeft,bottomMullion),bottomSidelite)}}:{}),
+    ...(sides.includes('right')?{right:{innerTop:addPoint(door.topRight,topMullion),innerBottom:addPoint(door.bottomRight,bottomMullion),outerTop:addPoint(addPoint(door.topRight,topMullion),topSidelite),outerBottom:addPoint(addPoint(door.bottomRight,bottomMullion),bottomSidelite)}}:{})
   }
 }
 
@@ -66,10 +77,38 @@ export function SideliteSelector({imageSrc,door,edges,sides,showSideChoice=false
   </div><div className="visualizer-zoom-controls mobile-external-zoom-controls" role="group" aria-label="Uploaded photo zoom controls"><button type="button" aria-label="Zoom uploaded photo out" disabled={zoom<=1} onClick={zoomOut}><ZoomOut size={17}/></button><span aria-live="polite">{Math.round(zoom*100)}%</span><button type="button" aria-label="Zoom uploaded photo in" disabled={zoom>=4} onClick={zoomIn}><ZoomIn size={17}/></button><button type="button" onClick={resetZoom}>Reset Zoom</button></div></>
 }
 
-export type ProductLayer={kind:'assembled-entry';corners:EntranceCorners;sourceRect:{x:number;y:number;width:number;height:number};flipX?:boolean}
-export function productLayers(_door:EntranceCorners,_edges:SideliteEdges,_sourceSides:SideliteSide[],outerFrame:EntranceCorners,flipDoor=false,_doorLeafCount:1|2=1):ProductLayer[]{
-  // DoorFrame has already assembled and flattened the complete rectangular
-  // elevation. Preserve its straight frame, equal mullions, shared baseline,
-  // glass, and hardware by applying exactly one full-source homography.
-  return [{kind:'assembled-entry',corners:outerFrame,sourceRect:{x:0,y:0,width:1,height:1},flipX:flipDoor}]
+export type ProductLayer={kind:string;corners:EntranceCorners;sourceRect:{x:number;y:number;width:number;height:number};flipX?:boolean;trimTransparent?:boolean}
+const sourceRect=(x:number,y:number,width:number,height:number,totalWidth:number,totalHeight:number)=>({x:x/totalWidth,y:y/totalHeight,width:width/totalWidth,height:height/totalHeight})
+const frameQuads=(inner:EntranceCorners,outer:EntranceCorners)=>({
+  top:{topLeft:outer.topLeft,topRight:outer.topRight,bottomRight:inner.topRight,bottomLeft:inner.topLeft},
+  right:{topLeft:inner.topRight,topRight:outer.topRight,bottomRight:outer.bottomRight,bottomLeft:inner.bottomRight},
+  bottom:{topLeft:inner.bottomLeft,topRight:inner.bottomRight,bottomRight:outer.bottomRight,bottomLeft:outer.bottomLeft},
+  left:{topLeft:outer.topLeft,topRight:inner.topLeft,bottomRight:inner.bottomLeft,bottomLeft:outer.bottomLeft},
+})
+
+export function productLayers(door:EntranceCorners,edges:SideliteEdges,sourceSides:SideliteSide[],outerFrame:EntranceCorners,flipDoor=false,doorConfigurationType:DoorConfigurationType='single'):ProductLayer[]{
+  const sourceGeometry=createCanonicalEntranceGeometry({doorConfigurationType,sidelites:sourceSides.length===2?'both':sourceSides[0]??'none',variant:'exterior',openingOnly:true})
+  const {totalWidth,totalHeight,contentLeft,contentTop,openingHeight,doorLeft,doorAssemblyWidth,mullionWidth,leftSideliteWidth,rightSideliteWidth}=sourceGeometry
+  const entrance=completeEntranceBoundary(door,edges)
+  const frames=frameQuads(entrance,outerFrame)
+  const layers:ProductLayer[]=[
+    {kind:'frame-top',corners:frames.top,sourceRect:sourceRect(0,0,totalWidth,contentTop,totalWidth,totalHeight),trimTransparent:false},
+    {kind:'frame-left',corners:frames.left,sourceRect:sourceRect(0,contentTop,contentLeft,openingHeight,totalWidth,totalHeight),trimTransparent:false},
+    {kind:'frame-right',corners:frames.right,sourceRect:sourceRect(totalWidth-contentLeft,contentTop,contentLeft,openingHeight,totalWidth,totalHeight),trimTransparent:false},
+    {kind:'frame-bottom',corners:frames.bottom,sourceRect:sourceRect(0,contentTop+openingHeight,totalWidth,totalHeight-contentTop-openingHeight,totalWidth,totalHeight),trimTransparent:false},
+  ]
+  const destinations=(['left','right'] as SideliteSide[]).filter(side=>edges[side])
+  destinations.forEach((destinationSide)=>{
+    const configuredSourceSide=sourceSides.length===1?sourceSides[0]:destinationSide
+    const sourceX=configuredSourceSide==='left'?contentLeft:doorLeft+doorAssemblyWidth+mullionWidth
+    const width=configuredSourceSide==='left'?leftSideliteWidth:rightSideliteWidth
+    layers.push({kind:`sidelite-${destinationSide}`,corners:sideliteQuadrilateral(destinationSide,edges[destinationSide]!),sourceRect:sourceRect(sourceX,contentTop,width,openingHeight,totalWidth,totalHeight),flipX:flipDoor,trimTransparent:false})
+    const divider=dividerJambQuads(door,{[destinationSide]:edges[destinationSide]})[0]
+    const dividerSourceX=configuredSourceSide==='left'?doorLeft-mullionWidth:doorLeft+doorAssemblyWidth
+    layers.push({kind:`mullion-${destinationSide}`,corners:divider,sourceRect:sourceRect(dividerSourceX,contentTop,mullionWidth,openingHeight,totalWidth,totalHeight),flipX:flipDoor,trimTransparent:false})
+  })
+  // The original user quad is always the door slab assembly destination. A
+  // single source crop contains one slab; French/Savannah contain two slabs.
+  layers.push({kind:'door-slab-assembly',corners:door,sourceRect:sourceRect(doorLeft,contentTop,doorAssemblyWidth,openingHeight,totalWidth,totalHeight),flipX:flipDoor,trimTransparent:false})
+  return layers
 }

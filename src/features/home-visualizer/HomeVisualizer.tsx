@@ -103,7 +103,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   const entranceBoundary = useMemo(() => completeEntranceBoundary(corners, sideliteEdges), [corners, sideliteEdges])
   const sideliteOpenings = useMemo(() => sideliteOpeningQuads(sideliteEdges), [sideliteEdges])
   const dividerJambs = useMemo(() => dividerJambQuads(corners,sideliteEdges),[corners,sideliteEdges])
-  const visualizerProductLayers = useMemo(() => createProductLayers(corners, sideliteEdges, configuredSideliteSides, outerFrame, flipDoorOrientation, doorConfigurationLeafCount(configuredDoorPreview.doorConfigurationType)), [corners, sideliteEdges, configuredSideliteSides, outerFrame, flipDoorOrientation, configuredDoorPreview.doorConfigurationType])
+  const visualizerProductLayers = useMemo(() => createProductLayers(corners, sideliteEdges, configuredSideliteSides, outerFrame, flipDoorOrientation, configuredDoorPreview.doorConfigurationType), [corners, sideliteEdges, configuredSideliteSides, outerFrame, flipDoorOrientation, configuredDoorPreview.doorConfigurationType])
   const doorPlacementValid = isValidEntranceCorners(corners)
   const canContinueDoorPlacement = doorPlacementValid && !autoFitLoading
   const autoFitPlacementComplete = autoFitApplied || autoFitAlreadyAligned
@@ -321,7 +321,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     if (!canContinueDoorPlacement) return
     if (import.meta.env.DEV && isMobile) console.debug('[home-visualizer:mobileNextNavigationStarted]', { currentStep: wizardStep })
     setPhotoSideliteSide(configuredSideliteSides.length===2?'both':configuredSideliteSides.length===1?configuredSideliteSides[0]:'none')
-    setSideliteEdges(configuredSideliteSides.length ? initializeSideliteEdges(corners, configuredSideliteSides) : {})
+    setSideliteEdges(configuredSideliteSides.length ? initializeSideliteEdges(corners, configuredSideliteSides, doorConfigurationLeafCount(configuredDoorPreview.doorConfigurationType)) : {})
     setFrameConfirmed(false)
     // A configured sidelite always needs its own photo-opening placement,
     // regardless of whether the entry is Single, French, or Savannah. Only a
@@ -459,11 +459,11 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
             {wizardStep===1&&<>
               <div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>{configuredSideliteSides.length===1&&!photoSideliteSide?'Where Is the Sidelite?':configuredSideliteSides.length===1?'Position the Sidelite Opening':'Position Both Sidelite Openings'}</h3><p>{configuredSideliteSides.length===1&&!photoSideliteSide?'Tap the side where the sidelite appears in your uploaded photo.':configuredSideliteSides.length===1?'Place the four points on the inside corners of the sidelite opening.':'Place each set of points on the inside corners of its sidelite opening.'}</p>{photoSideliteSide&&<p className="entrance-placement-note">{configuredSideliteSides.length===1?'Leave the vertical jamb between the door and sidelite outside the selected sidelite area. It will be colored during the Frame step.':'Keep both divider jambs outside the sidelite selections.'}</p>}</div></div>
               <div className="visualizer-step-editor-shell">
-                <SideliteSelector imageSrc={photo.objectUrl} door={corners} edges={sideliteEdges} sides={photoSideliteSides} showSideChoice={configuredSideliteSides.length===1&&!photoSideliteSide} onChooseSide={(side)=>{setPhotoSideliteSide(side);setSideliteEdges(initializeSideliteEdges(corners,[side]));clearCleanup()}} onChange={(edges)=>{setSideliteEdges(edges);clearCleanup()}}/>
+              <SideliteSelector imageSrc={photo.objectUrl} door={corners} edges={sideliteEdges} sides={photoSideliteSides} showSideChoice={configuredSideliteSides.length===1&&!photoSideliteSide} onChooseSide={(side)=>{setPhotoSideliteSide(side);setSideliteEdges(initializeSideliteEdges(corners,[side],doorConfigurationLeafCount(configuredDoorPreview.doorConfigurationType)));clearCleanup()}} onChange={(edges)=>{setSideliteEdges(edges);clearCleanup()}}/>
                 <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" aria-label="Replace photo" onClick={openPicker}><RefreshCw size={21}/></button><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
                 <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={()=>setWizardStep(0)}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button><button type="button" className="wizard-continue" aria-label="Continue" disabled={configuredSideliteSides.length===1&&!photoSideliteSide} onClick={finishSidelitePlacement}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button></div>
               </div>
-              {configuredSideliteSides.length===1&&photoSideliteSide&&<div className="wizard-secondary"><button type="button" onClick={()=>{const opposite=photoSideliteSide==='left'?'right':'left';setPhotoSideliteSide(opposite);setSideliteEdges(initializeSideliteEdges(corners,[opposite]));setFrameConfirmed(false);clearCleanup()}}>Switch Sidelite Side</button></div>}
+              {configuredSideliteSides.length===1&&photoSideliteSide&&<div className="wizard-secondary"><button type="button" onClick={()=>{const opposite=photoSideliteSide==='left'?'right':'left';setPhotoSideliteSide(opposite);setSideliteEdges(initializeSideliteEdges(corners,[opposite],doorConfigurationLeafCount(configuredDoorPreview.doorConfigurationType)));setFrameConfirmed(false);clearCleanup()}}>Switch Sidelite Side</button></div>}
             </>}
             {wizardStep===2&&<>
               <div className="entrance-placement-instructions automatic-frame-status"><Check className="entrance-placement-icon" size={24}/><div><h3>Frame detected from your door placement</h3><p>We've automatically included the surrounding frame, divider jambs, and threshold.</p></div></div>

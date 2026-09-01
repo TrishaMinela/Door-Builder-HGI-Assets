@@ -179,6 +179,13 @@ body:has(.visualizer-app){
 .beta-feedback-trigger:hover{background:#075f64;transform:translateY(-1px)}
 .beta-feedback-trigger:focus-visible{outline:3px solid #ffd600;outline-offset:3px}
 .beta-feedback-trigger small{padding-left:7px;border-left:1px solid rgba(255,255,255,.35);color:#ffd600;font-size:9px;letter-spacing:.12em;text-transform:uppercase}
+.beta-feedback-context-host{position:absolute;top:16px;right:16px;z-index:12}
+.beta-feedback-context-trigger{display:flex;align-items:center;gap:7px;min-height:38px;padding:0 11px;border:1px solid rgba(255,255,255,.28);border-radius:3px;background:#086f75;color:#fff;box-shadow:0 5px 16px rgba(0,0,0,.18);font:750 12px/1 inherit;cursor:pointer}
+.beta-feedback-context-trigger:hover{background:#075f64;transform:translateY(-1px)}
+.beta-feedback-context-trigger:focus-visible{outline:3px solid #ffd600;outline-offset:3px}
+.beta-feedback-context-trigger small{padding-left:7px;border-left:1px solid rgba(255,255,255,.35);color:#ffd600;font-size:8px;letter-spacing:.12em;text-transform:uppercase}
+.beta-feedback-hero-host{top:22px;right:22px}
+.beta-feedback-page-trigger{position:fixed;top:112px;right:16px;z-index:90}
 .beta-feedback-backdrop{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:rgba(5,7,12,.7)}
 .beta-feedback-dialog{position:relative;width:min(600px,100%);max-height:calc(100dvh - 40px);overflow-y:auto;overscroll-behavior:contain;padding:30px;background:#f7f8f8;color:#080912;border:1px solid #cbd6d8;border-radius:4px;box-shadow:0 24px 70px rgba(0,0,0,.4)}
 .beta-feedback-close{position:absolute;top:12px;right:12px;display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;border-radius:2px;background:transparent;color:#086f75;cursor:pointer;line-height:0}
@@ -205,6 +212,9 @@ body:has(.visualizer-app){
 .beta-feedback-success p{margin:0 0 20px;color:#596068}
 @media(max-width:767px){
   .beta-feedback-trigger{right:14px;bottom:calc(112px + env(safe-area-inset-bottom));min-height:38px;padding:0 10px}
+  .beta-feedback-context-host{top:10px;right:10px}
+  .beta-feedback-context-trigger{min-height:34px;padding:0 9px;font-size:11px}
+  .beta-feedback-page-trigger{top:84px;right:10px}
   .beta-feedback-backdrop{align-items:center;padding:12px}
   .beta-feedback-dialog{max-height:calc(100dvh - 24px);padding:24px 18px 18px}
   .beta-feedback-dialog h2{font-size:25px}

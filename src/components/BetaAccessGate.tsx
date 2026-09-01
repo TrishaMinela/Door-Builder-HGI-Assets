@@ -2,7 +2,7 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { LockKeyhole } from 'lucide-react'
 
 const SESSION_KEY = 'hgi-door-builder-beta-access'
-const BETA_PASSWORD = 'beta'
+const BETA_PASSWORD = 'hgidealer2026'
 
 function hasSessionAccess() {
   try { return window.sessionStorage.getItem(SESSION_KEY) === 'granted' } catch { return false }

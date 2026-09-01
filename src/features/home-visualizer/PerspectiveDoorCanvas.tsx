@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { EntranceCorners, Point } from './EntranceSelector'
+import { loadCachedImage } from '../../utils/imageCache'
 
 type Props = {
   corners: EntranceCorners
@@ -10,6 +11,7 @@ type Props = {
   sourceRect?: { x: number; y: number; width: number; height: number }
   diagnosticName?: string
   flipX?: boolean
+  trimTransparent?: boolean
 }
 
 type Matrix = [number, number, number, number, number, number, number, number, number]
@@ -167,16 +169,7 @@ function invert(matrix: Matrix): Matrix | null {
   return [A / determinant, B / determinant, C / determinant, D / determinant, E / determinant, F / determinant, G / determinant, H / determinant, I / determinant]
 }
 
-function loadImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image()
-    image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error('The configured door source could not be loaded.'))
-    image.src = src
-  })
-}
-
-export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, photoWidth, visible, sourceRect = { x: 0, y: 0, width: 1, height: 1 }, diagnosticName = 'configured-door', flipX = false }: Props) {
+export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, photoWidth, visible, sourceRect = { x: 0, y: 0, width: 1, height: 1 }, diagnosticName = 'configured-door', flipX = false, trimTransparent = true }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const renderRunRef = useRef(0)
 
@@ -197,7 +190,7 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
     }
 
     const render = async () => {
-      const sourceImage = await loadImage(doorSourceUrl)
+      const sourceImage = await loadCachedImage(doorSourceUrl)
       if (renderRunRef.current !== run) return
       const sourceCanvas = document.createElement('canvas')
       sourceCanvas.width = sourceImage.naturalWidth
@@ -212,7 +205,10 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
       sourceContext.drawImage(sourceImage, 0, 0)
       const source = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height)
       const matteDiagnostics = extrudeTransparentEdgeColors(source)
-      const tightSource=tightAlphaBounds(source,sourceRect)
+      const exactLeft=Math.max(0,Math.floor(sourceRect.x*source.width)),exactTop=Math.max(0,Math.floor(sourceRect.y*source.height))
+      const exactRight=Math.min(source.width,Math.ceil((sourceRect.x+sourceRect.width)*source.width)),exactBottom=Math.min(source.height,Math.ceil((sourceRect.y+sourceRect.height)*source.height))
+      const exactSource={left:exactLeft,top:exactTop,width:Math.max(1,exactRight-exactLeft),height:Math.max(1,exactBottom-exactTop)}
+      const tightSource=trimTransparent?tightAlphaBounds(source,sourceRect):exactSource
       const sourceLeft=tightSource.left
       const sourceTop=tightSource.top
       const sourceSpanWidth=tightSource.width
@@ -322,7 +318,7 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
       if (import.meta.env.DEV) console.error('[home-visualizer:door-warp-error]', { layer: diagnosticName, reason })
     })
     return () => { renderRunRef.current += 1 }
-  }, [corners, diagnosticName, doorSourceUrl, flipX, photoHeight, photoWidth, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height])
+  }, [corners, diagnosticName, doorSourceUrl, flipX, photoHeight, photoWidth, sourceRect.x, sourceRect.y, sourceRect.width, sourceRect.height, trimTransparent])
 
   return <canvas ref={canvasRef} className="perspective-door-canvas" style={{ opacity: visible ? 1 : 0 }} aria-hidden="true" />
 }

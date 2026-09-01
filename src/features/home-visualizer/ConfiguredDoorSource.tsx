@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { DoorPreview, type DoorPreviewProps } from '../../components/DoorPreview'
 import { captureFinalDoorPreview } from './captureDoorPreview'
+import { cacheEntranceImage, getCachedEntranceImage } from './renderCache'
 
 type Props = {
   configurationKey: string
@@ -30,16 +31,21 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
 
   useEffect(() => {
     const run = ++captureRunRef.current
-    if (outputUrlRef.current) {
-      URL.revokeObjectURL(outputUrlRef.current)
-      outputUrlRef.current = null
-    }
-    setCapture(null)
     setLoading(true)
     setError('')
 
     const captureCurrentDoor = async () => {
       try {
+        const cached = getCachedEntranceImage(configurationKey)
+        if (cached) {
+          const url = URL.createObjectURL(cached.blob)
+          if (captureRunRef.current !== run) { URL.revokeObjectURL(url); return }
+          if (outputUrlRef.current) URL.revokeObjectURL(outputUrlRef.current)
+          outputUrlRef.current = url
+          setCapture({ url, width: cached.width, height: cached.height })
+          return
+        }
+        await waitForLayout()
         const root = captureRootRef.current
         if (!root) throw new Error('The configured door preview is unavailable.')
         let result: Awaited<ReturnType<typeof captureFinalDoorPreview>> | null = null
@@ -60,7 +66,9 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         }
         if (!result) throw lastError instanceof Error ? lastError : new Error('The configured door source could not be prepared.')
         if (captureRunRef.current !== run) return
+        cacheEntranceImage(configurationKey, result)
         const url = URL.createObjectURL(result.blob)
+        if (outputUrlRef.current) URL.revokeObjectURL(outputUrlRef.current)
         outputUrlRef.current = url
         setCapture({ url, width: result.width, height: result.height })
       } catch (reason) {
