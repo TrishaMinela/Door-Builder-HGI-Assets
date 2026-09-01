@@ -10,8 +10,8 @@ type InteractionMode = 'edit' | 'move'
 
 const CORNER_ORDER: CornerId[] = ['topLeft', 'topRight', 'bottomRight', 'bottomLeft']
 const MAGNIFIER_ZOOM = 3
-const MAGNIFIER_SIZE = 264
-const MOBILE_MAGNIFIER_SIZE = 180
+const MAGNIFIER_SIZE = 132
+const MOBILE_MAGNIFIER_SIZE = 90
 export const INITIAL_ENTRANCE_CORNERS: EntranceCorners = {
   topLeft: { x: 0.35, y: 0.35 },
   topRight: { x: 0.65, y: 0.35 },
