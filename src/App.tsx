@@ -856,14 +856,6 @@ export default function App() {
     glassFrameFinishType: appliedGlassFrameFinish?.finishType,
     glassFrameFinishColor: appliedGlassFrameFinish?.color,
   })
-  useEffect(() => {
-    if (!supportsGlassFrameColor || glassFrameColorMode) return
-    // Match Door is the first glass-frame option. Apply it as soon as glass
-    // frame coloring becomes relevant so the preview and downstream summary
-    // always have a valid default without requiring an extra click.
-    setGlassFrameColorMode('match-door')
-    setGlassFrameFinishType(matchedGlassFrameFinish.finishType)
-  }, [supportsGlassFrameColor, glassFrameColorMode, matchedGlassFrameFinish.finishType])
   useEffect(() => setPdfPreviewDataUrl(''), [configuredDoorKey])
   const renderConfiguredDoorPreview = (previewView: HardwareView, sharedComparisonCanvas = false) => <DoorPreview {...configuredDoorPreview} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} />
   const renderConfiguredPreviewMode = () => builderPreviewView === 'Both'
@@ -1075,6 +1067,15 @@ export default function App() {
       case 'sidelite-grid-width':
         if (!sideliteGridWidth && fslWidths[0]) setSideliteGridWidth(fslWidths[0])
         break
+      case 'glass-frame-color':
+        if (!glassFrameColorMode) {
+          // Do not tint insert trim while the customer is still choosing
+          // glass. Match Door becomes the default only upon reaching this
+          // dedicated step.
+          setGlassFrameColorMode('match-door')
+          setGlassFrameFinishType(matchedGlassFrameFinish.finishType)
+        }
+        break
       case 'hardware':
         if (!selectedHardware && hardwareStyleGroups[0]?.[0]) setHardwareId(hardwareStyleGroups[0][0].id)
         break
@@ -1082,7 +1083,7 @@ export default function App() {
         if (!selectedDoorSwing && doorSwingOptions[0]) setDoorSwingId(doorSwingOptions[0].id)
         break
     }
-  }, [screen, currentPage, selectedStyle, selectedDoorLine, selectedGrain, sidelites, selectedSideliteStyle, visibleSideliteStyleOptions, visibleSelectedFinish, visibleFinishes, jambType, jambFinish, jambFinishOptions, selectedGlassCategory, availableGlassCategories, selectedGlassGroup, glassOptionGroups, glassVariantConfirmed, selectedGlassGroupKey, gridPathId, availableGridLocations, gridStyle, gridPattern, compatibleGridPatterns, gridColor, compatibleGridColors, gridWidth, compatibleGridWidths, sideliteGlassCategory, selectedSideliteCatalog, selectedSideliteGlassGroup, sideliteGlassOptionGroups, sideliteGlassVariantConfirmed, sideliteGridLocation, availableSideliteGridLocations, sideliteGridStyle, fslGridStyles, sideliteGridPattern, fslPatterns, sideliteGridColor, fslColors, sideliteGridWidth, fslWidths, selectedHardware, hardwareStyleGroups, selectedDoorSwing])
+  }, [screen, currentPage, selectedStyle, selectedDoorLine, selectedGrain, sidelites, selectedSideliteStyle, visibleSideliteStyleOptions, visibleSelectedFinish, visibleFinishes, jambType, jambFinish, jambFinishOptions, selectedGlassCategory, availableGlassCategories, selectedGlassGroup, glassOptionGroups, glassVariantConfirmed, selectedGlassGroupKey, gridPathId, availableGridLocations, gridStyle, gridPattern, compatibleGridPatterns, gridColor, compatibleGridColors, gridWidth, compatibleGridWidths, sideliteGlassCategory, selectedSideliteCatalog, selectedSideliteGlassGroup, sideliteGlassOptionGroups, sideliteGlassVariantConfirmed, sideliteGridLocation, availableSideliteGridLocations, sideliteGridStyle, fslGridStyles, sideliteGridPattern, fslPatterns, sideliteGridColor, fslColors, sideliteGridWidth, fslWidths, glassFrameColorMode, matchedGlassFrameFinish.finishType, selectedHardware, hardwareStyleGroups, selectedDoorSwing])
 
   // Prime each grid choice as soon as its valid options are known. This keeps
   // the live preview one step ahead of the customer while preserving every
