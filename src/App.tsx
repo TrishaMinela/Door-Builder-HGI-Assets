@@ -6,6 +6,7 @@ import { HardwareOptionCard } from './components/HardwareOptionCard'
 import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
 import { BetaFeedback } from './components/BetaFeedback'
+import { BetaAccessGate } from './components/BetaAccessGate'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
 import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
@@ -400,7 +401,7 @@ function EmptyDoorPreview() {
   )
 }
 
-export default function App() {
+function DoorBuilderApp() {
   const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>('home')
   const [step, setStep] = useState(0)
   const [selectedDoorConfigurationType, setSelectedDoorConfigurationType] = useState<DoorConfigurationType | ''>('')
@@ -1977,4 +1978,8 @@ export default function App() {
       </footer>
     </div>
   )
+}
+
+export default function App() {
+  return <BetaAccessGate><DoorBuilderApp/></BetaAccessGate>
 }

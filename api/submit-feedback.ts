@@ -34,12 +34,16 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   // honeypot does not reveal itself as a filtering mechanism.
   if (text(source.website, 200)) { response.status(200).json({ ok: true }); return }
 
-  const feedback = text(source.feedback, MAX_FEEDBACK_LENGTH)
+  const rawFeedback = typeof source.feedback === 'string' ? source.feedback.trim() : ''
+  if (rawFeedback.length > MAX_FEEDBACK_LENGTH) { response.status(400).json({ error: 'Feedback is too long.' }); return }
+  const feedback = text(rawFeedback, MAX_FEEDBACK_LENGTH)
   if (!feedback) { response.status(400).json({ error: 'Feedback is required.' }); return }
+  const email = text(source.email, 254)
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { response.status(400).json({ error: 'Email is invalid.' }); return }
   const context = object(source.context)
   const payload = {
     name: text(source.name, 120),
-    email: text(source.email, 254),
+    email,
     phone: text(source.phone, 40),
     feedback,
     context: {
