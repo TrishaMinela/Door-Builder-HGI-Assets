@@ -157,11 +157,24 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   const automaticFrame=useMemo(()=>frameImageSize.width?createAutomaticFrame(entranceBoundary,corners,frameImageSize):expandFrameCorners(entranceBoundary),[entranceBoundary,corners,frameImageSize])
   const resetFrameArea = () => { clearRecoloredFrame(); setFramePlacementMode('automatic');setOuterFrame(automaticFrame); setFrameSides({ top: true, left: true, right: true, bottom: true }); setFrameCorrections({ add: [], remove: [] }); setFrameConfirmed(true) }
 
-  useEffect(()=>{if(wizardStep!==2||framePlacementMode!=='automatic')return;setOuterFrame(automaticFrame);setFrameConfirmed(true);setFrameCorrections({add:[],remove:[]})},[automaticFrame,framePlacementMode,wizardStep])
+  useEffect(()=>{
+    // Mobile can move directly from opening placement to the completed view,
+    // while desktop visits the frame review first. Build the same automatic
+    // structural-frame geometry in either destination so both paths use the
+    // configured jamb finish.
+    if((wizardStep!==2&&wizardStep!==4)||framePlacementMode!=='automatic')return
+    setOuterFrame(automaticFrame)
+    setFrameConfirmed(true)
+    setFrameCorrections({add:[],remove:[]})
+  },[automaticFrame,framePlacementMode,wizardStep])
   useEffect(()=>{if(!import.meta.env.DEV||!photo||!frameImageSize.width)return;console.debug('[home-visualizer:automatic-frame]',{doorPolygon:corners,leftSidelitePolygon:sideliteEdges.left?sideliteOpenings[0]??null:null,rightSidelitePolygon:sideliteEdges.right?sideliteOpenings[sideliteEdges.left?1:0]??null:null,assemblyEnvelope:entranceBoundary,frameWidthRatio:AUTO_FRAME_WIDTH_RATIO,sourceImageSize:frameImageSize,outerFramePolygon:outerFrame,framePlacementMode,dividerJambRegions:dividerJambs,frameMaskOpenings:[corners,...sideliteOpenings]})},[photo,corners,sideliteEdges,sideliteOpenings,entranceBoundary,frameImageSize,outerFrame,framePlacementMode,dividerJambs])
 
   useEffect(() => {
-    if (!photo || wizardStep !== 2 || !frameConfirmed) { clearRecoloredFrame(); return }
+    // Keep the native-resolution recolored photo alive for the completed
+    // compositor. Previously this effect cleared it on leaving step 2, so the
+    // final bitmap fell back to the original/default jamb color. Step 4 must
+    // consume the exact same resolved jamb layer that was reviewed in step 2.
+    if (!photo || (wizardStep !== 2 && wizardStep !== 4) || !frameConfirmed) { clearRecoloredFrame(); return }
     let cancelled = false
     const base = approvedCleanup?.cleanedUrl ?? photo.objectUrl
     void recolorPhotoFrame(base, entranceBoundary, outerFrame, frameSides, frameCorrections, activeJambFinish.color, configuredDoorPreview.jambType === 'clad' ? 'clad' : activeJambFinish.finishType, [corners, ...sideliteOpenings]).then((blob) => {
