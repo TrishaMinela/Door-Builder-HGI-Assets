@@ -47,7 +47,11 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         for (let attempt = 1; attempt <= MAX_SOURCE_CAPTURE_ATTEMPTS; attempt += 1) {
           await waitForLayout()
           try {
-            result = await captureFinalDoorPreview(root, { frameMode: 'visible' })
+            // The visualizer placement points describe the photographed
+            // opening, not the decorative outer frame. Capture the same
+            // opening-only assembly used by the previously correct mapping;
+            // the photographed frame is recolored separately on the base.
+            result = await captureFinalDoorPreview(root, { frameMode: 'opening-only' })
             break
           } catch (reason) {
             lastError = reason
@@ -104,5 +108,5 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         <button type="button" onClick={() => setRetry((value) => value + 1)}><RefreshCw size={16} /> Retry</button>
       </div>}
     </div>
-  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} /></div></>
+  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} placementMode="opening-only" /></div></>
 }

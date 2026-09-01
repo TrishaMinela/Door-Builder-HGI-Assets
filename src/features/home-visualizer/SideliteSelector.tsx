@@ -66,28 +66,18 @@ export function SideliteSelector({imageSrc,door,edges,sides,showSideChoice=false
   </div><div className="visualizer-zoom-controls mobile-external-zoom-controls" role="group" aria-label="Uploaded photo zoom controls"><button type="button" aria-label="Zoom uploaded photo out" disabled={zoom<=1} onClick={zoomOut}><ZoomOut size={17}/></button><span aria-live="polite">{Math.round(zoom*100)}%</span><button type="button" aria-label="Zoom uploaded photo in" disabled={zoom>=4} onClick={zoomIn}><ZoomIn size={17}/></button><button type="button" onClick={resetZoom}>Reset Zoom</button></div></>
 }
 
-export type ProductLayer={kind:'frame'|'door'|'left-sidelite'|'right-sidelite';corners:EntranceCorners;sourceRect:{x:number;y:number;width:number;height:number};flipX?:boolean}
-export function productLayers(door:EntranceCorners,edges:SideliteEdges,sourceSides:SideliteSide[],flipDoor=false,doorLeafCount:1|2=1,frameCorners:EntranceCorners=completeEntranceBoundary(door,edges)):ProductLayer[]{
-  // These values mirror DoorFrame's authored exterior source geometry. The
-  // flattened source includes the exterior frame and threshold, so crops must
-  // account for those pixels rather than treating the complete PNG as only a
-  // 242px single slab. French and Savannah share the same two-leaf center.
-  const doorWidth=242*doorLeafCount+(doorLeafCount===2?7:0),sideWidth=80,mullionWidth=11,frameSide=19,frameHead=19,threshold=12,sourceHeight=549
-  const openingWidth=doorWidth+sourceSides.length*(sideWidth+mullionWidth)
-  const totalWidth=openingWidth+frameSide*2,totalHeight=sourceHeight+frameHead+threshold
-  const doorX=frameSide+(sourceSides.includes('left')?sideWidth+mullionWidth:0)
+export type ProductLayer={kind:'door'|'left-sidelite'|'right-sidelite';corners:EntranceCorners;sourceRect:{x:number;y:number;width:number;height:number};flipX?:boolean}
+export function productLayers(door:EntranceCorners,edges:SideliteEdges,sourceSides:SideliteSide[],flipDoor=false,doorLeafCount:1|2=1):ProductLayer[]{
+  // Opening-only source geometry. These normalized crops retain the placement
+  // math that maps the center door and each independently selected sidelite
+  // directly to their user-confirmed quadrilaterals.
+  const doorWidth=242*doorLeafCount+(doorLeafCount===2?7:0),sideWidth=80,mullionWidth=11
+  const totalWidth=doorWidth+sourceSides.length*(sideWidth+mullionWidth)
+  const doorX=sourceSides.includes('left')?sideWidth+mullionWidth:0
   const sourceSide=(target:SideliteSide)=>sourceSides.length===2?target:sourceSides[0]??target
-  const sourceX=(target:SideliteSide)=>sourceSide(target)==='left'?frameSide:totalWidth-frameSide-sideWidth
-  const sourceY=frameHead/totalHeight,sourceRectHeight=sourceHeight/totalHeight
-  // The full configured assembly is the base layer so its selected jamb/frame
-  // finish is present in every visualization. Precisely placed product crops
-  // are then rendered above it, keeping the center door and sidelites aligned
-  // to their independently selected photo openings.
-  const layers:ProductLayer[]=[
-    {kind:'frame',corners:frameCorners,sourceRect:{x:0,y:0,width:1,height:1}},
-    {kind:'door',corners:door,sourceRect:{x:doorX/totalWidth,y:sourceY,width:doorWidth/totalWidth,height:sourceRectHeight},flipX:flipDoor},
-  ]
-  if(edges.left)layers.push({kind:'left-sidelite',corners:sideliteQuadrilateral('left',edges.left),sourceRect:{x:sourceX('left')/totalWidth,y:sourceY,width:sideWidth/totalWidth,height:sourceRectHeight}})
-  if(edges.right)layers.push({kind:'right-sidelite',corners:sideliteQuadrilateral('right',edges.right),sourceRect:{x:sourceX('right')/totalWidth,y:sourceY,width:sideWidth/totalWidth,height:sourceRectHeight}})
+  const sourceX=(target:SideliteSide)=>sourceSide(target)==='left'?0:totalWidth-sideWidth
+  const layers:ProductLayer[]=[{kind:'door',corners:door,sourceRect:{x:doorX/totalWidth,y:0,width:doorWidth/totalWidth,height:1},flipX:flipDoor}]
+  if(edges.left)layers.push({kind:'left-sidelite',corners:sideliteQuadrilateral('left',edges.left),sourceRect:{x:sourceX('left')/totalWidth,y:0,width:sideWidth/totalWidth,height:1}})
+  if(edges.right)layers.push({kind:'right-sidelite',corners:sideliteQuadrilateral('right',edges.right),sourceRect:{x:sourceX('right')/totalWidth,y:0,width:sideWidth/totalWidth,height:1}})
   return layers
 }

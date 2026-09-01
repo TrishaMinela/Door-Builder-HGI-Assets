@@ -16,7 +16,7 @@ type Matrix = [number, number, number, number, number, number, number, number, n
 // Product layers tuck beneath the adjacent jamb/frame mask. Four source-photo
 // pixels is enough to cover rasterized edge fringes without visibly enlarging
 // the configured slab or sidelites.
-const EDGE_OVERLAP_PX = 6
+const EDGE_OVERLAP_PX = 0
 const SUPERSAMPLE_SCALE = 4
 const MAX_SUPERSAMPLED_PIXELS = 12_000_000
 const MAX_TEMPORARY_CANVAS_DIMENSION = 4096
