@@ -592,7 +592,7 @@ const f764Overlays: Record<string, string> = {
 }
 
 const hrtOverlays: Record<string, string> = {
-  'hrt-clear-s11rt': '/assets/hgi-assets/Glass/HRT/HRTClear.png',
+  'hrt-clear-s11rt': '/assets/hgi-assets/Glass/HRT/HRT.png',
   'hrt-nouveau-nickel': '/assets/hgi-assets/Glass/HRT/HRTNouveaNickel.png',
   'hrt-nouveau-patina': '/assets/hgi-assets/Glass/HRT/HRTNouveaPatina.png',
 }

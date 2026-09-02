@@ -682,7 +682,7 @@ function DoorBuilderApp() {
     : []
   const previewGridColor = gridColor || compatibleGridColors[0]
   const doorStyleDefaultGlass = selectedStyleCodes.includes('HRT')
-    ? availableGlass.find((option) => option.id === 'clear') ?? null
+    ? availableGlass.find((option) => option.id === 'hrt-clear-s11rt') ?? null
     : null
   const selectedGridOverlay = gridStyle === 'Arts & Crafts' && gridPattern
     ? `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FART${internalGridPatternCodes[gridPattern]}WH.png`

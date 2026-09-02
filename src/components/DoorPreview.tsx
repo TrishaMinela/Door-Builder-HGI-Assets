@@ -392,6 +392,35 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
+function buildHrtClearTrimMask(image: HTMLImageElement) {
+  const canvas = document.createElement('canvas')
+  canvas.width = image.naturalWidth
+  canvas.height = image.naturalHeight
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+  if (!context) return null
+  context.drawImage(image, 0, 0)
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height)
+  for (let index = 0; index < pixels.data.length; index += 4) {
+    const red = pixels.data[index]
+    const green = pixels.data[index + 1]
+    const blue = pixels.data[index + 2]
+    const sourceAlpha = pixels.data[index + 3]
+    const minimum = Math.min(red, green, blue)
+    const maximum = Math.max(red, green, blue)
+    // Keep the neutral white/gray frame and lite bars while excluding the
+    // blue clear-glass field. The graduated threshold preserves soft edges.
+    const neutral = maximum - minimum < 42
+    const lightnessAlpha = Math.max(0, Math.min(255, (minimum - 145) * 3))
+    const alpha = neutral ? Math.min(sourceAlpha, lightnessAlpha) : 0
+    pixels.data[index] = 255
+    pixels.data[index + 1] = 255
+    pixels.data[index + 2] = 255
+    pixels.data[index + 3] = alpha
+  }
+  context.putImageData(pixels, 0, 0)
+  return canvas.toDataURL('image/png')
+}
+
 export function DoorPreview({ style, finish, glass, hardware, showHardware = true, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, sideliteGlassIsGrid = false, sideliteGridColor, sideliteGridIsPrairie = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', glassFrameFinish = null, placementMode, doorConfigurationType = 'single', doubleDoorLockPrep = null, loadingLabel = 'Loading preview' }: DoorPreviewProps) {
   const previewSceneRef = useRef<HTMLDivElement>(null)
   const [previewAssetsLoading, setPreviewAssetsLoading] = useState(false)
@@ -405,7 +434,10 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const maskCode = styleCodes.find((code) => glassDoorCodes.has(code))
   const isHrtDoor = maskCode === 'HRT'
   const maskAsset = maskCode ? (maskCode === 'HRT' && previewCandidates[0]?.includes('/Textured/') ? '/assets/masks/HRT-textured.png' : resolveGlassMaskAsset(maskCode)) : null
-  const openingMaskAsset = maskCode === 'HRT' ? '/assets/masks/HRT-glass.png' : null
+  // HRT Clear includes its own white outer trim and lite bars. Use the full
+  // opening silhouette so slab finish cannot show through those light areas;
+  // the dedicated HRT trim tint is applied later only after frame selection.
+  const openingMaskAsset = maskCode === 'HRT' ? '/assets/masks/HRT.png' : null
   const maskKey = maskCode ?? 'solid-slab'
   const [previewImage, setPreviewImage] = useState(previewCandidates[0] ?? '')
   const hasMappedPreview = Boolean(previewCandidates.length)
@@ -418,6 +450,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const compatibleGlass = isGlassCapable ? glassOptions.filter((option) => styleCodes.some((code) => option.overlaysByDoorStyle[code])) : []
   const previewGlass = glass && compatibleGlass.some((option) => option.id === glass.id) ? glass : null
   const glassOverlay = previewGlass ? styleCodes.map((code) => previewGlass.overlaysByDoorStyle[code]).find(Boolean) : undefined
+  const isHrtClearGlass = isHrtDoor && previewGlass?.id === 'hrt-clear-s11rt'
   const gridGlassUsesClearBase = previewGlass?.id === 'f-clear-grids' || previewGlass?.id === 'f48-clear-grids' || previewGlass?.id === 's-clear-grids'
   const clearNoGridGlass = glassOptions.find((option) => option.id === (maskCode === 'S' ? 's-clear-no-grids' : maskCode === 'F48' || maskCode === 'F482' ? 'f48-clear-no-grids' : 'f-clear-no-grids'))
   const clearNoGridOverlay = gridGlassUsesClearBase && maskCode
@@ -427,6 +460,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const [fittedClearBase, setFittedClearBase] = useState<{ source: string; maskSource: string; url: string } | null>(null)
   const [fittedSideliteGlass, setFittedSideliteGlass] = useState<{ source: string; slab: string; mask: string; url: string } | null>(null)
   const [tintedPrairieGrid, setTintedPrairieGrid] = useState<{ source: string; color: string; url: string } | null>(null)
+  const [hrtClearTrimMask, setHrtClearTrimMask] = useState<{ source: string; url: string } | null>(null)
   const renderedGlassOverlay = glassOverlay && fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage ? fittedGlassOverlay.url : glassOverlay
   const fittedOrSourceSideliteGlass = sideliteGlassSrc && fittedSideliteGlass?.source === sideliteGlassSrc && fittedSideliteGlass.slab === sideliteAssetSrc && fittedSideliteGlass.mask === sideliteMaskSrc
     ? fittedSideliteGlass.url
@@ -455,6 +489,23 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const frameSidelites = compact || configuredSidelitePlacement === 'none' ? 'none' : configuredSidelitePlacement === 'both' ? 'both' : visualSideliteSide ?? 'none'
   const defaultHardware = hardwareOptions.find((option) => Boolean(hardwarePreviewAssetUrl(option, previewView, doorSwing)))
   const previewHardware: PreviewHardware = selectedHardwareImage ? hardware : defaultHardware ?? hardware
+
+  useEffect(() => {
+    let cancelled = false
+    if (!isHrtClearGlass || !glassOverlay) {
+      setHrtClearTrimMask(null)
+      return () => { cancelled = true }
+    }
+    const image = new Image()
+    image.onload = () => {
+      if (cancelled) return
+      const url = buildHrtClearTrimMask(image)
+      setHrtClearTrimMask(url ? { source: glassOverlay, url } : null)
+    }
+    image.onerror = () => { if (!cancelled) setHrtClearTrimMask(null) }
+    image.src = glassOverlay
+    return () => { cancelled = true }
+  }, [glassOverlay, isHrtClearGlass])
 
   useEffect(() => {
     let cancelled = false
@@ -652,7 +703,10 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
 
   useEffect(() => {
     let cancelled = false
-    if (!glassOverlay || !previewImage || processedMask?.source !== previewImage || !processedMask.glassBounds || !processedMask.maskWidth || !processedMask.maskHeight) {
+    // HRT glass artwork is authored on the same 242x549 canvas as the slab.
+    // Render it directly instead of fitting/clipping it through the generic
+    // opening-mask pipeline, which would alter the supplied alignment.
+    if (isHrtDoor || !glassOverlay || !previewImage || processedMask?.source !== previewImage || !processedMask.glassBounds || !processedMask.maskWidth || !processedMask.maskHeight) {
       setFittedGlassOverlay(null)
       return () => { cancelled = true }
     }
@@ -684,7 +738,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
     overlay.onerror = () => { if (!cancelled) setFittedGlassOverlay(null) }
     overlay.src = glassOverlay
     return () => { cancelled = true }
-  }, [glassOverlay, maskCode, previewGlass?.id, previewImage, processedMask])
+  }, [glassOverlay, isHrtDoor, maskCode, previewGlass?.id, previewImage, processedMask])
 
   useEffect(() => {
     let cancelled = false
@@ -908,11 +962,9 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
           {previewImage && glassFrameDetailStyle && <img className="door-glass-frame-detail" src={previewImage} alt="" decoding="async" style={glassFrameDetailStyle} />}
           {clearNoGridOverlay && <img className="door-glass-overlay door-clear-glass-base" src={fittedClearBase?.source === clearNoGridOverlay && fittedClearBase.maskSource === previewImage ? fittedClearBase.url : clearNoGridOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {isHrtDoor
-            ? renderedGlassOverlay && <>
-              <div className="door-glass-overlay door-hrt-decorative-glass" style={glassOverlayStyle} />
-              {gridMatchesFinish
-                ? <div className="door-glass-overlay door-grid-finish-overlay door-hrt-caming-layer" style={{ backgroundColor: applyFinish ? finishColor : '#d9d9d9', WebkitMaskImage: `url("${renderedGlassOverlay}")`, maskImage: `url("${renderedGlassOverlay}")` }} />
-                : <img className="door-glass-overlay door-hrt-caming-layer" src={renderedGlassOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
+            ? glassOverlay && <>
+              <img className="door-glass-overlay door-hrt-caming-layer" src={glassOverlay} alt="" decoding="async" style={isHrtClearGlass ? glassOverlayStyle : undefined} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />
+              {isHrtClearGlass && glassFrameFinish && hrtClearTrimMask?.source === glassOverlay && <div className="door-glass-overlay door-hrt-trim-tint" style={{ backgroundColor: glassFrameFinish.color, WebkitMaskImage: `url("${hrtClearTrimMask.url}")`, maskImage: `url("${hrtClearTrimMask.url}")`, WebkitMaskSize: 'contain', maskSize: 'contain', WebkitMaskPosition: 'center', maskPosition: 'center', WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat' }} />}
             </>
             : renderedGlassOverlay && (gridMatchesFinish
               ? <div className="door-glass-overlay door-grid-finish-overlay" style={{ backgroundColor: applyFinish ? finishColor : '#d9d9d9', WebkitMaskImage: `url("${renderedGlassOverlay}")`, maskImage: `url("${renderedGlassOverlay}")` }} />

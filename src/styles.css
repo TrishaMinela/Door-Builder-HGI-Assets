@@ -420,6 +420,7 @@ body:has(.visualizer-app){
 .door-preview-hrt>.door-detail-image,.door-preview-hrt>.door-stain-highlight{z-index:3}
 .door-preview-hrt>.door-hrt-decorative-glass{z-index:4;background:linear-gradient(145deg,#edf6f9 0%,#d9e9ef 42%,#f7fbfc 62%,#c9dce3 100%);opacity:1!important;mix-blend-mode:normal!important}
 .door-preview-hrt>.door-hrt-caming-layer{z-index:5;opacity:1!important;mix-blend-mode:normal!important;filter:none!important;isolation:isolate}
+.door-hrt-trim-tint{z-index:6;opacity:1!important;mix-blend-mode:multiply;filter:none!important}
 .door-preview-hrt>.hardware-hrt{z-index:6}
 .door-default-glass-overlay{position:absolute;inset:0;z-index:4;width:100%;height:100%;background:linear-gradient(135deg,rgba(210,231,235,.92),rgba(250,253,253,.76) 48%,rgba(174,207,215,.88));-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;pointer-events:none}
 .door-glass-overlay.under-door-image{z-index:4}
