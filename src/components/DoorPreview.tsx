@@ -55,6 +55,7 @@ const GLASS_FRAME_WIDTH_RATIO = 0.035
 const MIN_GLASS_FRAME_WIDTH_PX = 5
 const MAX_GLASS_FRAME_WIDTH_PX = 24
 const GLASS_EDGE_OVERLAP_PX = 1.5
+const SAT_GLASS_FRAME_EDGE_WIDTH_PX = 4
 
 const FINISH_RENDERING = {
   paintColorBlendMode: 'normal',
@@ -421,6 +422,46 @@ function buildHrtClearTrimMask(image: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
+function buildSatGlassFrameMask(glass: HTMLImageElement) {
+  const canvas = document.createElement('canvas')
+  canvas.width = glass.naturalWidth
+  canvas.height = glass.naturalHeight
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+  if (!context) return null
+  context.drawImage(glass, 0, 0)
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height)
+  const sourceAlpha = new Uint8ClampedArray(canvas.width * canvas.height)
+  for (let pixel = 0; pixel < sourceAlpha.length; pixel += 1) sourceAlpha[pixel] = pixels.data[pixel * 4 + 3]
+
+  // SAT artwork is positioned as one complete glass assembly. Build its trim
+  // directly from that rendered alpha contour so the arch, rails, and bottom
+  // share the glass's exact bounds rather than the generic opening mask.
+  for (let y = 0; y < canvas.height; y += 1) {
+    for (let x = 0; x < canvas.width; x += 1) {
+      const pixel = y * canvas.width + x
+      const outerAlpha = sourceAlpha[pixel]
+      let interiorAlpha = outerAlpha
+      for (let offsetY = -SAT_GLASS_FRAME_EDGE_WIDTH_PX; offsetY <= SAT_GLASS_FRAME_EDGE_WIDTH_PX && interiorAlpha; offsetY += 1) {
+        const sampleY = y + offsetY
+        if (sampleY < 0 || sampleY >= canvas.height) { interiorAlpha = 0; break }
+        for (let offsetX = -SAT_GLASS_FRAME_EDGE_WIDTH_PX; offsetX <= SAT_GLASS_FRAME_EDGE_WIDTH_PX; offsetX += 1) {
+          if (offsetX * offsetX + offsetY * offsetY > SAT_GLASS_FRAME_EDGE_WIDTH_PX * SAT_GLASS_FRAME_EDGE_WIDTH_PX) continue
+          const sampleX = x + offsetX
+          if (sampleX < 0 || sampleX >= canvas.width) { interiorAlpha = 0; break }
+          interiorAlpha = Math.min(interiorAlpha, sourceAlpha[sampleY * canvas.width + sampleX])
+        }
+      }
+      const index = pixel * 4
+      pixels.data[index] = 255
+      pixels.data[index + 1] = 255
+      pixels.data[index + 2] = 255
+      pixels.data[index + 3] = Math.max(0, outerAlpha - interiorAlpha)
+    }
+  }
+  context.putImageData(pixels, 0, 0)
+  return canvas.toDataURL('image/png')
+}
+
 export function DoorPreview({ style, finish, glass, hardware, showHardware = true, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, sideliteGlassIsGrid = false, sideliteGridColor, sideliteGridIsPrairie = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', glassFrameFinish = null, placementMode, doorConfigurationType = 'single', doubleDoorLockPrep = null, loadingLabel = 'Loading preview' }: DoorPreviewProps) {
   const previewSceneRef = useRef<HTMLDivElement>(null)
   const [previewAssetsLoading, setPreviewAssetsLoading] = useState(false)
@@ -462,6 +503,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const [fittedSideliteGlass, setFittedSideliteGlass] = useState<{ source: string; slab: string; mask: string; url: string } | null>(null)
   const [tintedPrairieGrid, setTintedPrairieGrid] = useState<{ source: string; color: string; url: string } | null>(null)
   const [hrtClearTrimMask, setHrtClearTrimMask] = useState<{ source: string; url: string } | null>(null)
+  const [satGlassFrameMask, setSatGlassFrameMask] = useState<string | null>(null)
   const renderedGlassOverlay = glassOverlay && fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage ? fittedGlassOverlay.url : glassOverlay
   const fittedOrSourceSideliteGlass = sideliteGlassSrc && fittedSideliteGlass?.source === sideliteGlassSrc && fittedSideliteGlass.slab === sideliteAssetSrc && fittedSideliteGlass.mask === sideliteMaskSrc
     ? fittedSideliteGlass.url
@@ -507,6 +549,19 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
     image.src = glassOverlay
     return () => { cancelled = true }
   }, [glassOverlay, isHrtClearGlass])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!isSatDoor || !glassOverlay) {
+      setSatGlassFrameMask(null)
+      return () => { cancelled = true }
+    }
+    const renderedGlass = new Image()
+    renderedGlass.onload = () => { if (!cancelled) setSatGlassFrameMask(buildSatGlassFrameMask(renderedGlass)) }
+    renderedGlass.onerror = () => { if (!cancelled) setSatGlassFrameMask(null) }
+    renderedGlass.src = glassOverlay
+    return () => { cancelled = true }
+  }, [glassOverlay, isSatDoor])
 
   useEffect(() => {
     let cancelled = false
@@ -777,9 +832,10 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
       ...(finish.finishType === 'stain' ? { filter: `saturate(${FINISH_RENDERING.stainSaturation})` } : {}),
     } as React.CSSProperties
   }, [applyFinish, finish.finishType, finishColor, finishMask, hasMappedPreview])
-  const glassFrameMaskStyle = glassFrameFinish && glassFrameMask ? {
-    WebkitMaskImage: `url("${glassFrameMask}")`,
-    maskImage: `url("${glassFrameMask}")`,
+  const activeGlassFrameMask = isSatDoor ? satGlassFrameMask : glassFrameMask
+  const glassFrameMaskStyle = glassFrameFinish && activeGlassFrameMask ? {
+    WebkitMaskImage: `url("${activeGlassFrameMask}")`,
+    maskImage: `url("${activeGlassFrameMask}")`,
     ...(isSatDoor ? { transform: 'translateY(10px) scale(1.1)', transformOrigin: 'center' } : {}),
   } as React.CSSProperties : undefined
   const glassFrameTintStyle = glassFrameFinish && glassFrameMaskStyle ? {
