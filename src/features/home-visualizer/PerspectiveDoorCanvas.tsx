@@ -205,8 +205,13 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
       sourceContext.drawImage(sourceImage, 0, 0)
       const source = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height)
       const matteDiagnostics = extrudeTransparentEdgeColors(source)
-      const exactLeft=Math.max(0,Math.floor(sourceRect.x*source.width)),exactTop=Math.max(0,Math.floor(sourceRect.y*source.height))
-      const exactRight=Math.min(source.width,Math.ceil((sourceRect.x+sourceRect.width)*source.width)),exactBottom=Math.min(source.height,Math.ceil((sourceRect.y+sourceRect.height)*source.height))
+      // sourceRect is a half-open logical region in the canonical entrance.
+      // A high-density capture can put its boundary between physical pixels;
+      // rounding the start outward and the end inward prevents a neighboring
+      // jamb/frame row from being sampled into the slab (the former top seam).
+      // Destination geometry remains the original unscaled quadrilateral.
+      const exactLeft=Math.max(0,Math.ceil(sourceRect.x*source.width)),exactTop=Math.max(0,Math.ceil(sourceRect.y*source.height))
+      const exactRight=Math.min(source.width,Math.floor((sourceRect.x+sourceRect.width)*source.width)),exactBottom=Math.min(source.height,Math.floor((sourceRect.y+sourceRect.height)*source.height))
       const exactSource={left:exactLeft,top:exactTop,width:Math.max(1,exactRight-exactLeft),height:Math.max(1,exactBottom-exactTop)}
       const tightSource=trimTransparent?tightAlphaBounds(source,sourceRect):exactSource
       const sourceLeft=tightSource.left
