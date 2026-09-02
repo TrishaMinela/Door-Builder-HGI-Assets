@@ -14,7 +14,7 @@ export const ENTRANCE_GEOMETRY = {
   sideliteWidth: STANDARD_DOOR_SLAB_WIDTH * STANDARD_SIDELITE_TO_SLAB_RATIO,
   centerMeetingStileWidth: 7,
   thresholdHeight: 12,
-  visualizerFrameWidth: 20,
+  visualizerFrameWidth: 40,
   frameProfiles: {
     exterior: { side: 19, head: 19, mullion: 11, profileInset: 5, profileStroke: 3 },
     interior: { side: 8, head: 8, mullion: 8, profileInset: 2, profileStroke: 1.5 },

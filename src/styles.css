@@ -396,6 +396,7 @@ body:has(.visualizer-app){
 .preview-asset-loading-label{font-size:9px;font-weight:800;line-height:1;letter-spacing:.14em;text-transform:uppercase}
 .preview-scene.compact .preview-asset-loading-label{display:none}
 .preview-scene.compact .preview-asset-spinner{width:30px;height:30px}
+.visualizer-render-status{position:absolute;inset:0;z-index:24;display:grid;place-content:center;justify-items:center;gap:9px;padding:20px;background:rgba(233,240,241,.84);color:var(--peacock);text-align:center;pointer-events:none}.visualizer-render-status strong{font-size:14px}.visualizer-render-status small{color:#5b686b;font-size:11px}.visualizer-render-error{pointer-events:auto}.visualizer-render-error button{min-height:38px;padding:0 16px;border:0;border-radius:3px;background:var(--peacock);color:#fff;font-weight:800}
 @keyframes preview-asset-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.preview-asset-spinner{animation-duration:1.5s}}
 .door-frame{background:transparent;border:0;box-shadow:none}

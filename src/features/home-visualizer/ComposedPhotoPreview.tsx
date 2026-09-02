@@ -21,9 +21,10 @@ type Props = {
   onExporterReady?: (exporter: (() => Promise<Blob>) | null) => void
   beforeAfter?: boolean
   flipX?: boolean
+  onRenderingChange?: (rendering: boolean) => void
 }
 
-export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSrc, originalImageSrc, showAfter, displayMode, productLayers, showZoomControls = true, onExporterReady, beforeAfter = false, flipX = false }: Props) {
+export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSrc, originalImageSrc, showAfter, displayMode, productLayers, showZoomControls = true, onExporterReady, beforeAfter = false, flipX = false, onRenderingChange }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
   const finalAfterUrlRef = useRef('')
@@ -33,6 +34,7 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
   const [compositionLoading, setCompositionLoading] = useState(false)
   const [compositionError, setCompositionError] = useState('')
   const [retry, setRetry] = useState(0)
+  useEffect(() => { onRenderingChange?.(compositionLoading); return () => onRenderingChange?.(false) }, [compositionLoading, onRenderingChange])
   const [comparisonPosition, setComparisonPosition] = useState(50)
   const comparisonDragRef = useRef<number | null>(null)
   const { zoom, pan, isPanning, onWheel, beginPan, movePan, endPan, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)

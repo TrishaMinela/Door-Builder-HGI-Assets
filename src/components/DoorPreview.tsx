@@ -48,6 +48,7 @@ export type DoorPreviewProps = {
   placementMode?: 'opening-only'
   doorConfigurationType?: DoorConfigurationType
   doubleDoorLockPrep?: DoubleDoorLockPrepCode | null
+  loadingLabel?: string
 }
 
 const GLASS_FRAME_WIDTH_RATIO = 0.035
@@ -375,7 +376,7 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-export function DoorPreview({ style, finish, glass, hardware, showHardware = true, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, sideliteGlassIsGrid = false, sideliteGridColor, sideliteGridIsPrairie = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', glassFrameFinish = null, placementMode, doorConfigurationType = 'single', doubleDoorLockPrep = null }: DoorPreviewProps) {
+export function DoorPreview({ style, finish, glass, hardware, showHardware = true, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, sideliteGlassIsGrid = false, sideliteGridColor, sideliteGridIsPrairie = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', glassFrameFinish = null, placementMode, doorConfigurationType = 'single', doubleDoorLockPrep = null, loadingLabel = 'Loading preview' }: DoorPreviewProps) {
   const previewSceneRef = useRef<HTMLDivElement>(null)
   const [previewAssetsLoading, setPreviewAssetsLoading] = useState(false)
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
@@ -909,7 +910,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
       </DoorFrame>
       {previewAssetsLoading && <div className="preview-asset-loading" role="status" aria-live="polite">
         <span className="preview-asset-spinner" aria-hidden="true" />
-        <span className="preview-asset-loading-label">Loading preview</span>
+        <span className="preview-asset-loading-label">{loadingLabel}</span>
       </div>}
       {!compact && showViewToggle && previewHardware.manufacturer && previewHardware.asset && <div className="preview-view-toggle" role="group" aria-label="Preview view">
         {(['Exterior', 'Interior'] as const).map((view) => <button type="button" className={previewView === view ? 'active' : ''} aria-pressed={previewView === view} key={view} onClick={() => setPreviewView(view)}>{view}</button>)}

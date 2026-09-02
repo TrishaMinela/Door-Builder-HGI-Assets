@@ -1,6 +1,7 @@
 import type { CleanupStroke } from './CleanupBrushEditor'
 import type { EntranceCorners, Point } from './EntranceSelector'
 import { VISUALIZER_FRAME_WIDTH_PX } from './entranceGeometry'
+import { loadCachedImage } from '../../utils/imageCache'
 
 export type FrameSides = { top: boolean; left: boolean; right: boolean; bottom: boolean }
 export type FrameMaskCorrections = { add: CleanupStroke[]; remove: CleanupStroke[] }
@@ -39,11 +40,6 @@ export function expandFrameCorners(inner: EntranceCorners): EntranceCorners {
   }
 }
 
-function loadImage(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image(); image.onload = () => resolve(image); image.onerror = () => reject(new Error('The house photo could not be prepared for frame color.')); image.src = src
-  })
-}
 
 function polygon(context: CanvasRenderingContext2D, points: Point[], width: number, height: number) {
   context.beginPath(); points.forEach((point, index) => index ? context.lineTo(point.x * width, point.y * height) : context.moveTo(point.x * width, point.y * height)); context.closePath(); context.fill()
@@ -102,7 +98,7 @@ function blob(canvas: HTMLCanvasElement) {
 }
 
 export async function recolorPhotoFrame(imageSrc: string, inner: EntranceCorners, outer: EntranceCorners, sides: FrameSides, corrections: FrameMaskCorrections, targetColor: string, finishType: 'paint' | 'stain' | 'clad', openings: EntranceCorners[] = [inner]) {
-  const image = await loadImage(imageSrc); const width = image.naturalWidth; const height = image.naturalHeight
+  const image = await loadCachedImage(imageSrc); const width = image.naturalWidth; const height = image.naturalHeight
   const MASK_SUPERSAMPLE=4,short=Math.min(width,height),allCorrectionPoints=[...corrections.add,...corrections.remove].flatMap(stroke=>stroke.points),outerPoints=[outer.topLeft,outer.topRight,outer.bottomRight,outer.bottomLeft],boundsPoints=[...outerPoints,...allCorrectionPoints],correctionPadding=Math.max(6,...[...corrections.add,...corrections.remove].map(stroke=>stroke.radius*short+4)),cropLeft=Math.max(0,Math.floor(Math.min(...boundsPoints.map(point=>point.x*width))-correctionPadding)),cropTop=Math.max(0,Math.floor(Math.min(...boundsPoints.map(point=>point.y*height))-correctionPadding)),cropRight=Math.min(width,Math.ceil(Math.max(...boundsPoints.map(point=>point.x*width))+correctionPadding)),cropBottom=Math.min(height,Math.ceil(Math.max(...boundsPoints.map(point=>point.y*height))+correctionPadding)),cropWidth=Math.max(1,cropRight-cropLeft),cropHeight=Math.max(1,cropBottom-cropTop)
   const canvas = document.createElement('canvas'); const maskCanvas = document.createElement('canvas'); canvas.width = width;canvas.height=height;maskCanvas.width=cropWidth*MASK_SUPERSAMPLE;maskCanvas.height=cropHeight*MASK_SUPERSAMPLE
   const context = canvas.getContext('2d')!; const maskContext = maskCanvas.getContext('2d')!;context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';context.drawImage(image, 0, 0);maskContext.imageSmoothingEnabled=true;maskContext.imageSmoothingQuality='high';maskContext.scale(MASK_SUPERSAMPLE,MASK_SUPERSAMPLE);maskContext.translate(-cropLeft,-cropTop)

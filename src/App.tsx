@@ -822,6 +822,7 @@ function DoorBuilderApp() {
     jambFinish,
     jambType: jambType || 'timber',
     glassFrameFinish: appliedGlassFrameFinish,
+    loadingLabel: currentPage === 'jamb-finish' ? 'Updating preview...' : 'Loading preview',
   }
   const configuredDoorKey = JSON.stringify({
     doorConfigurationType: selectedDoorConfigurationType || 'single',
