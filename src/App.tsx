@@ -523,7 +523,7 @@ function DoorBuilderApp() {
       : styleCodesForGlass(selectedStyle)
     : []
   const availableGlass = selectedStyle && compatibilitySupportsGlass
-    ? glassOptions.filter((option) => selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])) && !(selectedStyleCodes.includes('F') && legacyFullLiteGlassIds.has(option.id)) && !(selectedStyleCodes.includes('S') && legacySHalfLiteClearGlassIds.has(option.id)) && !((selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && legacyF48ClearGlassIds.has(option.id)) && (!(selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) || f48GlassOptionIds.has(option.id)))
+    ? glassOptions.filter((option) => selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])) && !(selectedStyleCodes.includes('F') && legacyFullLiteGlassIds.has(option.id)) && !(selectedStyleCodes.includes('S') && legacySHalfLiteClearGlassIds.has(option.id)) && !((selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && legacyF48ClearGlassIds.has(option.id)) && (!(selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) || f48GlassOptionIds.has(option.id)) && !(selectedStyleCodes.includes('SAT') && glassCategory(option) === 'privacy'))
     : []
   const supportsGlass = Boolean(compatibilitySupportsGlass && availableGlass.length > 0)
   const supportsGlassFrameStain = availableFinishes.some((item) => item.finishType === 'stain')
@@ -683,7 +683,9 @@ function DoorBuilderApp() {
   const previewGridColor = gridColor || compatibleGridColors[0]
   const doorStyleDefaultGlass = selectedStyleCodes.includes('HRT')
     ? availableGlass.find((option) => option.id === 'hrt-clear-s11rt') ?? null
-    : null
+    : selectedStyleCodes.includes('SAT')
+      ? availableGlass.find((option) => option.id === 'sat-clear-nonstock') ?? null
+      : null
   const selectedGridOverlay = gridStyle === 'Arts & Crafts' && gridPattern
     ? `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FART${internalGridPatternCodes[gridPattern]}WH.png`
     : gridStyle === 'Contoured' && gridPattern && previewGridColor

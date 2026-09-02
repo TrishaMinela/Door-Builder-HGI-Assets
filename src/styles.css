@@ -421,6 +421,7 @@ body:has(.visualizer-app){
 .door-preview-hrt>.door-hrt-decorative-glass{z-index:4;background:linear-gradient(145deg,#edf6f9 0%,#d9e9ef 42%,#f7fbfc 62%,#c9dce3 100%);opacity:1!important;mix-blend-mode:normal!important}
 .door-preview-hrt>.door-hrt-caming-layer{z-index:5;opacity:1!important;mix-blend-mode:normal!important;filter:none!important;isolation:isolate}
 .door-hrt-trim-tint{z-index:6;opacity:1!important;mix-blend-mode:multiply;filter:none!important}
+.door-sat-glass-layer{transform:translateY(10px) scale(1.1);transform-origin:center}
 .door-preview-hrt>.hardware-hrt{z-index:6}
 .door-default-glass-overlay{position:absolute;inset:0;z-index:4;width:100%;height:100%;background:linear-gradient(135deg,rgba(210,231,235,.92),rgba(250,253,253,.76) 48%,rgba(174,207,215,.88));-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;pointer-events:none}
 .door-glass-overlay.under-door-image{z-index:4}
@@ -1548,6 +1549,7 @@ body{overflow:hidden}
 .home-app .home-entryway-door-slot .door-style-image,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-glass-overlay,.home-app .home-entryway-door-slot .hardware img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:contain!important;object-position:center!important;transform:none!important}
 .home-app .home-entryway-door-slot .door-preview-hrt>.door-hrt-decorative-glass{z-index:4!important;opacity:1!important;mix-blend-mode:normal!important}
 .home-app .home-entryway-door-slot .door-preview-hrt>.door-hrt-caming-layer{z-index:5!important;opacity:1!important;mix-blend-mode:normal!important;filter:none!important}
+.home-app .home-entryway-door-slot .door-glass-overlay.door-sat-glass-layer{transform:translateY(10px) scale(1.1)!important;transform-origin:center!important}
 .home-app .home-entryway-door-slot .door-preview-hrt>.hardware-hrt{z-index:6!important}
 .home-app .home-entryway-door-slot .door-finish-layer,.home-app .home-entryway-door-slot .door-detail-image,.home-app .home-entryway-door-slot .door-stain-highlight,.home-app .home-entryway-door-slot .door-default-glass-overlay{-webkit-mask-size:contain!important;mask-size:contain!important;-webkit-mask-position:center!important;mask-position:center!important;-webkit-mask-repeat:no-repeat!important;mask-repeat:no-repeat!important}
 
