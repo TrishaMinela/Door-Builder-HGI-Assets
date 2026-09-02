@@ -780,6 +780,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const glassFrameMaskStyle = glassFrameFinish && glassFrameMask ? {
     WebkitMaskImage: `url("${glassFrameMask}")`,
     maskImage: `url("${glassFrameMask}")`,
+    ...(isSatDoor ? { transform: 'translateY(10px) scale(1.1)', transformOrigin: 'center' } : {}),
   } as React.CSSProperties : undefined
   const glassFrameTintStyle = glassFrameFinish && glassFrameMaskStyle ? {
     ...glassFrameMaskStyle,
