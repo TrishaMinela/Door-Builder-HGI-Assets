@@ -79,33 +79,20 @@ export function SideliteSelector({imageSrc,door,edges,sides,showSideChoice=false
 
 export type ProductLayer={kind:string;corners:EntranceCorners;sourceRect:{x:number;y:number;width:number;height:number};flipX?:boolean;trimTransparent?:boolean}
 const sourceRect=(x:number,y:number,width:number,height:number,totalWidth:number,totalHeight:number)=>({x:x/totalWidth,y:y/totalHeight,width:width/totalWidth,height:height/totalHeight})
-const frameQuads=(inner:EntranceCorners,outer:EntranceCorners)=>({
-  top:{topLeft:outer.topLeft,topRight:outer.topRight,bottomRight:inner.topRight,bottomLeft:inner.topLeft},
-  right:{topLeft:inner.topRight,topRight:outer.topRight,bottomRight:outer.bottomRight,bottomLeft:inner.bottomRight},
-  bottom:{topLeft:inner.bottomLeft,topRight:inner.bottomRight,bottomRight:outer.bottomRight,bottomLeft:outer.bottomLeft},
-  left:{topLeft:outer.topLeft,topRight:inner.topLeft,bottomRight:inner.bottomLeft,bottomLeft:outer.bottomLeft},
-})
-
-export function productLayers(door:EntranceCorners,edges:SideliteEdges,sourceSides:SideliteSide[],outerFrame:EntranceCorners,flipDoor=false,doorConfigurationType:DoorConfigurationType='single'):ProductLayer[]{
+export function productLayers(door:EntranceCorners,edges:SideliteEdges,sourceSides:SideliteSide[],_outerFrame:EntranceCorners,flipDoor=false,doorConfigurationType:DoorConfigurationType='single'):ProductLayer[]{
   const sourceGeometry=createCanonicalEntranceGeometry({doorConfigurationType,sidelites:sourceSides.length===2?'both':sourceSides[0]??'none',variant:'exterior',openingOnly:true})
   const {totalWidth,totalHeight,contentLeft,contentTop,openingHeight,doorLeft,doorAssemblyWidth,mullionWidth,leftSideliteWidth,rightSideliteWidth}=sourceGeometry
-  const entrance=completeEntranceBoundary(door,edges)
-  const frames=frameQuads(entrance,outerFrame)
-  const layers:ProductLayer[]=[
-    {kind:'frame-top',corners:frames.top,sourceRect:sourceRect(0,0,totalWidth,contentTop,totalWidth,totalHeight),trimTransparent:false},
-    {kind:'frame-left',corners:frames.left,sourceRect:sourceRect(0,contentTop,contentLeft,openingHeight,totalWidth,totalHeight),trimTransparent:false},
-    {kind:'frame-right',corners:frames.right,sourceRect:sourceRect(totalWidth-contentLeft,contentTop,contentLeft,openingHeight,totalWidth,totalHeight),trimTransparent:false},
-    {kind:'frame-bottom',corners:frames.bottom,sourceRect:sourceRect(0,contentTop+openingHeight,totalWidth,totalHeight-contentTop-openingHeight,totalWidth,totalHeight),trimTransparent:false},
-  ]
+  // The photographed frame is recolored once at native photo resolution and
+  // reused by the final slider. Do not warp a second copy of the canonical
+  // outer frame over it: doing so changes its apparent width and can cover the
+  // selected slab finish. Only product openings are composited here.
+  const layers:ProductLayer[]=[]
   const destinations=(['left','right'] as SideliteSide[]).filter(side=>edges[side])
   destinations.forEach((destinationSide)=>{
     const configuredSourceSide=sourceSides.length===1?sourceSides[0]:destinationSide
     const sourceX=configuredSourceSide==='left'?contentLeft:doorLeft+doorAssemblyWidth+mullionWidth
     const width=configuredSourceSide==='left'?leftSideliteWidth:rightSideliteWidth
     layers.push({kind:`sidelite-${destinationSide}`,corners:sideliteQuadrilateral(destinationSide,edges[destinationSide]!),sourceRect:sourceRect(sourceX,contentTop,width,openingHeight,totalWidth,totalHeight),flipX:flipDoor,trimTransparent:false})
-    const divider=dividerJambQuads(door,{[destinationSide]:edges[destinationSide]})[0]
-    const dividerSourceX=configuredSourceSide==='left'?doorLeft-mullionWidth:doorLeft+doorAssemblyWidth
-    layers.push({kind:`mullion-${destinationSide}`,corners:divider,sourceRect:sourceRect(dividerSourceX,contentTop,mullionWidth,openingHeight,totalWidth,totalHeight),flipX:flipDoor,trimTransparent:false})
   })
   // The original user quad is always the door slab assembly destination. A
   // single source crop contains one slab; French/Savannah contain two slabs.

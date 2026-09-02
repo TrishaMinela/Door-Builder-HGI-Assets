@@ -216,8 +216,9 @@ function buildVectorGlassMasks(width: number, height: number, regions: PixelBoun
   }
 }
 
-function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement, expandGlassCutout = true, frameDefinition: GlassFrameMaskDefinition = { shape: 'rectangle', separateOpenings: false }) {
+function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement, expandGlassCutout = true, frameDefinition: GlassFrameMaskDefinition = { shape: 'rectangle', separateOpenings: false }, openingMask?: HTMLImageElement) {
   if (mask.naturalWidth !== slab.naturalWidth || mask.naturalHeight !== slab.naturalHeight) return null
+  if (openingMask && (openingMask.naturalWidth !== slab.naturalWidth || openingMask.naturalHeight !== slab.naturalHeight)) return null
   const canvas = document.createElement('canvas')
   canvas.width = slab.naturalWidth
   canvas.height = slab.naturalHeight
@@ -235,9 +236,18 @@ function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement, expan
   context.fillRect(0, 0, canvas.width, canvas.height)
   context.drawImage(mask, 0, 0)
   const maskPixels = context.getImageData(0, 0, canvas.width, canvas.height)
-  const glassPixels = new ImageData(new Uint8ClampedArray(maskPixels.data), canvas.width, canvas.height)
+  let openingPixels = maskPixels
+  if (openingMask) {
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    context.fillStyle = '#fff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(openingMask, 0, 0)
+    openingPixels = context.getImageData(0, 0, canvas.width, canvas.height)
+  }
+  const glassPixels = new ImageData(new Uint8ClampedArray(openingPixels.data), canvas.width, canvas.height)
   for (let index = 0; index < maskPixels.data.length; index += 4) {
     const maskValue = Math.round((maskPixels.data[index] + maskPixels.data[index + 1] + maskPixels.data[index + 2]) / 3)
+    const openingValue = Math.round((openingPixels.data[index] + openingPixels.data[index + 1] + openingPixels.data[index + 2]) / 3)
     maskPixels.data[index] = 255
     maskPixels.data[index + 1] = 255
     maskPixels.data[index + 2] = 255
@@ -245,7 +255,7 @@ function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement, expan
     glassPixels.data[index] = 255
     glassPixels.data[index + 1] = 255
     glassPixels.data[index + 2] = 255
-    glassPixels.data[index + 3] = 255 - maskValue
+    glassPixels.data[index + 3] = 255 - openingValue
   }
 
   // Treat every authored glass opening as inclusive. Growing the cutout by one
@@ -286,7 +296,13 @@ function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement, expan
     : undefined
   context.putImageData(maskPixels, 0, 0)
   const finishUrl = canvas.toDataURL('image/png')
-  return { finishUrl, glassUrl: vectorMasks?.openingUrl, glassFrameUrl: vectorMasks?.frameUrl, glassBounds, glassRegions: frameRegions, maskWidth: canvas.width, maskHeight: canvas.height }
+  let glassUrl = vectorMasks?.openingUrl
+  if (openingMask) {
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    context.putImageData(glassPixels, 0, 0)
+    glassUrl = canvas.toDataURL('image/png')
+  }
+  return { finishUrl, glassUrl, glassFrameUrl: vectorMasks?.frameUrl, glassBounds, glassRegions: frameRegions, maskWidth: canvas.width, maskHeight: canvas.height }
 }
 
 function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height: number, maskBounds: PixelBounds, offsetY = 0, maskRegions?: PixelBounds[], edgeOverlapPx = GLASS_EDGE_OVERLAP_PX, containWithinMask = false, stretchToMaskWidth = false, stretchToMaskHeight = false) {
@@ -388,7 +404,8 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const isGlassCapable = styleCodes.some((code) => glassDoorCodes.has(code))
   const maskCode = styleCodes.find((code) => glassDoorCodes.has(code))
   const isHrtDoor = maskCode === 'HRT'
-  const maskAsset = maskCode ? resolveGlassMaskAsset(maskCode) : null
+  const maskAsset = maskCode ? (maskCode === 'HRT' && previewCandidates[0]?.includes('/Textured/') ? '/assets/masks/HRT-textured.png' : resolveGlassMaskAsset(maskCode)) : null
+  const openingMaskAsset = maskCode === 'HRT' ? '/assets/masks/HRT-glass.png' : null
   const maskKey = maskCode ?? 'solid-slab'
   const [previewImage, setPreviewImage] = useState(previewCandidates[0] ?? '')
   const hasMappedPreview = Boolean(previewCandidates.length)
@@ -474,18 +491,27 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
               doorPreviewDimensions: `${slab.naturalWidth}x${slab.naturalHeight}`,
             })
           }
-          const masks = buildPreviewMasks(suppliedMask, slab, true, glassFrameMaskForOpening(maskCode))
-          if (!masks) {
-            console.error('[door-preview:glass-mask-dimension-mismatch]', {
-              selectedDoorStyleId: maskCode,
-              resolvedMappingKey: maskCode,
-              resolvedMappingPath: maskAsset,
-              maskDimensions: `${suppliedMask.naturalWidth}x${suppliedMask.naturalHeight}`,
-              doorPreviewDimensions: `${slab.naturalWidth}x${slab.naturalHeight}`,
-            })
+          const applyMasks = (openingMask?: HTMLImageElement) => {
+            if (cancelled) return
+            const masks = buildPreviewMasks(suppliedMask, slab, true, glassFrameMaskForOpening(maskCode), openingMask)
+            if (!masks) {
+              console.error('[door-preview:glass-mask-dimension-mismatch]', {
+                selectedDoorStyleId: maskCode,
+                resolvedMappingKey: maskCode,
+                resolvedMappingPath: maskAsset,
+                maskDimensions: `${suppliedMask.naturalWidth}x${suppliedMask.naturalHeight}`,
+                doorPreviewDimensions: `${slab.naturalWidth}x${slab.naturalHeight}`,
+              })
+            }
+            setProcessedMask(masks ? { source: candidate, ...masks } : null)
+            setPreviewImage(candidate)
           }
-          setProcessedMask(masks ? { source: candidate, ...masks } : null)
-          setPreviewImage(candidate)
+          if (openingMaskAsset) {
+            const openingMask = new Image()
+            openingMask.onload = () => applyMasks(openingMask)
+            openingMask.onerror = () => applyMasks()
+            openingMask.src = openingMaskAsset
+          } else applyMasks()
         }
         suppliedMask.onerror = () => {
           if (cancelled) return
@@ -506,7 +532,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
 
     tryNextCandidate()
     return () => { cancelled = true }
-  }, [previewCandidatesKey, isGlassCapable, maskKey, maskAsset, maskCode])
+  }, [previewCandidatesKey, isGlassCapable, maskKey, maskAsset, maskCode, openingMaskAsset])
 
   useEffect(() => {
     let cancelled = false

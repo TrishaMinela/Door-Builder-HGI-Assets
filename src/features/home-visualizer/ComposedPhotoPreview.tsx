@@ -24,6 +24,8 @@ type Props = {
   onRenderingChange?: (rendering: boolean) => void
 }
 
+const COMPOSITION_PIPELINE_VERSION = 'native-photo-frame-v2'
+
 export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSrc, originalImageSrc, showAfter, displayMode, productLayers, showZoomControls = true, onExporterReady, beforeAfter = false, flipX = false, onRenderingChange }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
@@ -72,7 +74,7 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
       showSeamPixels: diagnostic.seamPixelCount ? 'magenta diagnostic required' : 'no seam pixels to display',
     })
   }, [corners, productLayers, stageSize.width, stageSize.height])
-  const compositionKey = JSON.stringify({ corners, productLayers, doorSourceUrl, imageSrc, flipX })
+  const compositionKey = JSON.stringify({ version: COMPOSITION_PIPELINE_VERSION, corners, productLayers, doorSourceUrl, imageSrc, flipX })
   useEffect(() => {
     if (!showDoor || !stageSize.width || !naturalSizeRef.current.width || !naturalSizeRef.current.height) return
     const run = ++compositionRunRef.current
