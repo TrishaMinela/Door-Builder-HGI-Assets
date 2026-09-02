@@ -60,6 +60,10 @@ const SAT_GLASS_FRAME_EDGE_WIDTH_PX = 4
 const FINISH_RENDERING = {
   paintColorBlendMode: 'normal',
   paintColorOpacity: 0.92,
+  // Slab and sidelite finishes are completed opaque surfaces. Keeping this
+  // separate from insert/frame tint opacity prevents the export capture from
+  // blending any selected finish over light source artwork and washing it out.
+  slabColorOpacity: 1,
   paintDetailBlendMode: 'multiply',
   paintDetailOpacity: 0.25,
   stainColorBlendMode: 'normal',
@@ -828,7 +832,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
       WebkitMaskImage: `url("${finishMask}")`,
       maskImage: `url("${finishMask}")`,
       mixBlendMode: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorBlendMode : FINISH_RENDERING.stainColorBlendMode,
-      opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorOpacity : FINISH_RENDERING.stainColorOpacity,
+      opacity: FINISH_RENDERING.slabColorOpacity,
       ...(finish.finishType === 'stain' ? { filter: `saturate(${FINISH_RENDERING.stainSaturation})` } : {}),
     } as React.CSSProperties
   }, [applyFinish, finish.finishType, finishColor, finishMask, hasMappedPreview])
@@ -883,7 +887,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
     WebkitMaskImage: `url("${activeSideliteFinishMask}")`,
     maskImage: `url("${activeSideliteFinishMask}")`,
     mixBlendMode: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorBlendMode : FINISH_RENDERING.stainColorBlendMode,
-    opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorOpacity : FINISH_RENDERING.stainColorOpacity,
+    opacity: FINISH_RENDERING.slabColorOpacity,
     ...(finish.finishType === 'stain' ? { filter: `saturate(${FINISH_RENDERING.stainSaturation})` } : {}),
   } as React.CSSProperties : undefined
   const sideliteDetailStyle = applyFinish && activeSideliteFinishMask ? {

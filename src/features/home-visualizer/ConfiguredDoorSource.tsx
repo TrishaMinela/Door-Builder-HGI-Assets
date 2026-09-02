@@ -19,9 +19,11 @@ type CaptureState = {
 
 export type DoorSourceState = Omit<CaptureState, 'configurationKey'> & { error: string; ready: boolean; retry?: () => void }
 const MAX_SOURCE_CAPTURE_ATTEMPTS = 3
+const ENTRANCE_CAPTURE_PIPELINE_VERSION = 'opaque-slab-finishes-v2'
 const waitForLayout = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
 export function ConfiguredDoorSource({ configurationKey, onStateChange, previewProps }: Props) {
+  const captureKey = `${ENTRANCE_CAPTURE_PIPELINE_VERSION}:${configurationKey}`
   const captureRootRef = useRef<HTMLDivElement>(null)
   const outputUrlRef = useRef<string | null>(null)
   const captureRunRef = useRef(0)
@@ -37,13 +39,13 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
 
     const captureCurrentDoor = async () => {
       try {
-        const cached = getCachedEntranceImage(configurationKey)
+        const cached = getCachedEntranceImage(captureKey)
         if (cached) {
           const url = URL.createObjectURL(cached.blob)
           if (captureRunRef.current !== run) { URL.revokeObjectURL(url); return }
           if (outputUrlRef.current) URL.revokeObjectURL(outputUrlRef.current)
           outputUrlRef.current = url
-          setCapture({ configurationKey, url, width: cached.width, height: cached.height })
+          setCapture({ configurationKey: captureKey, url, width: cached.width, height: cached.height })
           return
         }
         await waitForLayout()
@@ -67,11 +69,11 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         }
         if (!result) throw lastError instanceof Error ? lastError : new Error('The configured door source could not be prepared.')
         if (captureRunRef.current !== run) return
-        cacheEntranceImage(configurationKey, result)
+        cacheEntranceImage(captureKey, result)
         const url = URL.createObjectURL(result.blob)
         if (outputUrlRef.current) URL.revokeObjectURL(outputUrlRef.current)
         outputUrlRef.current = url
-        setCapture({ configurationKey, url, width: result.width, height: result.height })
+        setCapture({ configurationKey: captureKey, url, width: result.width, height: result.height })
       } catch (reason) {
         if (captureRunRef.current !== run) return
         setCapture(null)
@@ -96,10 +98,10 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
       width: capture?.width ?? 0,
       height: capture?.height ?? 0,
       error,
-      ready: Boolean(capture && capture.configurationKey === configurationKey && !loading && !error),
+      ready: Boolean(capture && capture.configurationKey === captureKey && !loading && !error),
       retry: () => setRetry((value) => value + 1),
     })
-  }, [capture, configurationKey, error, loading, onStateChange])
+  }, [capture, captureKey, error, loading, onStateChange])
 
   return <><section className="configured-door-source" aria-labelledby="configured-door-source-title" hidden>
     <div className="configured-door-source-heading">
