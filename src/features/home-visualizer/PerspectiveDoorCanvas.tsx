@@ -303,7 +303,17 @@ export function PerspectiveDoorCanvas({ corners, doorSourceUrl, photoHeight, pho
         const supersampledContext = supersampledCanvas.getContext('2d')
         if (supersampledContext) {
           supersampledContext.putImageData(warped, 0, 0)
+          // Downsampling a rectangular temporary canvas can otherwise leave
+          // fractional edge samples beyond the intended product quad. Clip the
+          // final draw to the original placed geometry; supersampling affects
+          // sharpness only and cannot enlarge the visible entry layer.
+          outputContext.save()
+          outputContext.beginPath()
+          targetPoints.forEach((point, index) => index ? outputContext.lineTo(point.x, point.y) : outputContext.moveTo(point.x, point.y))
+          outputContext.closePath()
+          outputContext.clip()
           outputContext.drawImage(supersampledCanvas, 0, 0, renderWidth, renderHeight, minX, minY, regionWidth, regionHeight)
+          outputContext.restore()
           canvas.dataset.renderReady = 'true'
           if (import.meta.env.DEV) {
             const renderedRegion = outputContext.getImageData(minX, minY, regionWidth, regionHeight)

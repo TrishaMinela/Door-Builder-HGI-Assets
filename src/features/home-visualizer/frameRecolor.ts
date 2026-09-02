@@ -1,11 +1,12 @@
 import type { CleanupStroke } from './CleanupBrushEditor'
 import type { EntranceCorners, Point } from './EntranceSelector'
-import { VISUALIZER_FRAME_WIDTH_PX } from './entranceGeometry'
 import { loadCachedImage } from '../../utils/imageCache'
 
 export type FrameSides = { top: boolean; left: boolean; right: boolean; bottom: boolean }
 export type FrameMaskCorrections = { add: CleanupStroke[]; remove: CleanupStroke[] }
-export const AUTO_FRAME_EXPANSION_PX = VISUALIZER_FRAME_WIDTH_PX
+// Source-photo fallback around the confirmed entry; intentionally independent
+// from the canonical product-frame width so surrounding wall is never painted.
+export const AUTO_FRAME_EXPANSION_PX = 10
 
 type ImageSize = { width: number; height: number }
 
@@ -113,6 +114,13 @@ export async function recolorPhotoFrame(imageSrc: string, inner: EntranceCorners
   if (!sides.bottom) polygon(maskContext, [outer.bottomLeft, outer.bottomRight, inner.bottomRight, inner.bottomLeft], width, height)
   maskContext.globalCompositeOperation = 'source-over'
   replay(maskContext, corrections.add, width, height, 'source-over'); replay(maskContext, corrections.remove, width, height, 'destination-out')
+  // Corrections may refine which photographed pixels belong to the frame, but
+  // they must never extend the finish beyond the confirmed outer entry shape.
+  // Re-intersect the completed mask with that exact polygon before recoloring.
+  maskContext.globalCompositeOperation = 'destination-in'
+  maskContext.fillStyle = '#fff'
+  polygon(maskContext, [outer.topLeft, outer.topRight, outer.bottomRight, outer.bottomLeft], width, height)
+  maskContext.globalCompositeOperation = 'source-over'
   // Four-times coverage sampling provides a crisp anti-aliased edge without the
   // broad Gaussian feather that previously made frame boundaries look muddy.
   const featherRadius=0

@@ -79,6 +79,13 @@ export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSr
     if (!showDoor || !stageSize.width || !naturalSizeRef.current.width || !naturalSizeRef.current.height) return
     const run = ++compositionRunRef.current
     let cancelled = false
+    // Do not display a completed composite produced for an older finish while
+    // the newly selected entrance is being rendered.
+    setFinalAfterImage(null)
+    if (finalAfterUrlRef.current) {
+      URL.revokeObjectURL(finalAfterUrlRef.current)
+      finalAfterUrlRef.current = ''
+    }
     setCompositionLoading(true)
     setCompositionError('')
     const compose = async () => {

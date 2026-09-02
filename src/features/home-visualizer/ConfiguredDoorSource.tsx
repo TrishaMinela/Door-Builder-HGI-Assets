@@ -11,12 +11,13 @@ type Props = {
 }
 
 type CaptureState = {
+  configurationKey: string
   url: string
   width: number
   height: number
 }
 
-export type DoorSourceState = CaptureState & { error: string; ready: boolean; retry?: () => void }
+export type DoorSourceState = Omit<CaptureState, 'configurationKey'> & { error: string; ready: boolean; retry?: () => void }
 const MAX_SOURCE_CAPTURE_ATTEMPTS = 3
 const waitForLayout = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
@@ -42,7 +43,7 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
           if (captureRunRef.current !== run) { URL.revokeObjectURL(url); return }
           if (outputUrlRef.current) URL.revokeObjectURL(outputUrlRef.current)
           outputUrlRef.current = url
-          setCapture({ url, width: cached.width, height: cached.height })
+          setCapture({ configurationKey, url, width: cached.width, height: cached.height })
           return
         }
         await waitForLayout()
@@ -70,7 +71,7 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         const url = URL.createObjectURL(result.blob)
         if (outputUrlRef.current) URL.revokeObjectURL(outputUrlRef.current)
         outputUrlRef.current = url
-        setCapture({ url, width: result.width, height: result.height })
+        setCapture({ configurationKey, url, width: result.width, height: result.height })
       } catch (reason) {
         if (captureRunRef.current !== run) return
         setCapture(null)
@@ -95,10 +96,10 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
       width: capture?.width ?? 0,
       height: capture?.height ?? 0,
       error,
-      ready: Boolean(capture && !loading && !error),
+      ready: Boolean(capture && capture.configurationKey === configurationKey && !loading && !error),
       retry: () => setRetry((value) => value + 1),
     })
-  }, [capture, error, loading, onStateChange])
+  }, [capture, configurationKey, error, loading, onStateChange])
 
   return <><section className="configured-door-source" aria-labelledby="configured-door-source-title" hidden>
     <div className="configured-door-source-heading">
