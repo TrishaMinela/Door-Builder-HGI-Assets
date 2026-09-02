@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { DoorPreview, type DoorPreviewProps } from '../../components/DoorPreview'
 import { captureFinalDoorPreview } from './captureDoorPreview'
@@ -19,7 +19,7 @@ type CaptureState = {
 
 export type DoorSourceState = Omit<CaptureState, 'configurationKey'> & { error: string; ready: boolean; retry?: () => void }
 const MAX_SOURCE_CAPTURE_ATTEMPTS = 3
-const ENTRANCE_CAPTURE_PIPELINE_VERSION = 'canonical-surface-finish-v4'
+const ENTRANCE_CAPTURE_PIPELINE_VERSION = 'resolved-material-multiply-v5'
 const waitForLayout = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
 export function ConfiguredDoorSource({ configurationKey, onStateChange, previewProps }: Props) {
@@ -31,6 +31,10 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
   const [capture, setCapture] = useState<CaptureState | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [readyConfigurationKey, setReadyConfigurationKey] = useState('')
+  const updateRenderReadiness = useCallback((state: { ready: boolean; configurationKey: string }) => {
+    setReadyConfigurationKey(state.ready ? state.configurationKey : '')
+  }, [])
 
   useEffect(() => {
     const run = ++captureRunRef.current
@@ -48,6 +52,7 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
           setCapture({ configurationKey: captureKey, url, width: cached.width, height: cached.height })
           return
         }
+        if (readyConfigurationKey !== configurationKey) return
         await waitForLayout()
         const root = captureRootRef.current
         if (!root) throw new Error('The configured door preview is unavailable.')
@@ -63,6 +68,7 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
             result = await captureFinalDoorPreview(root, {
               frameMode: 'opening-only',
               preserveCanonicalFrameBounds: true,
+              expectedConfigurationKey: configurationKey,
             })
             break
           } catch (reason) {
@@ -89,7 +95,7 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
 
     void captureCurrentDoor()
     return () => { captureRunRef.current += 1 }
-  }, [configurationKey, retry])
+  }, [captureKey, configurationKey, readyConfigurationKey, retry])
 
   useEffect(() => () => {
     if (outputUrlRef.current) URL.revokeObjectURL(outputUrlRef.current)
@@ -122,5 +128,5 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         <button type="button" onClick={() => setRetry((value) => value + 1)}><RefreshCw size={16} /> Retry</button>
       </div>}
     </div>
-  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} placementMode="opening-only" /></div></>
+  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} renderConfigurationKey={configurationKey} onRenderReadinessChange={updateRenderReadiness} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} placementMode="opening-only" /></div></>
 }

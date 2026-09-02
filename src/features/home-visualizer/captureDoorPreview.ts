@@ -88,6 +88,84 @@ async function materializeMaskedLayers(root: HTMLElement) {
   return () => restorers.reverse().forEach((restore) => restore())
 }
 
+type SurfaceStack = {
+  detail: HTMLImageElement
+  finish: HTMLElement
+}
+
+function captureSurfaceStacks(root: HTMLElement): SurfaceStack[] {
+  const stacks: SurfaceStack[] = []
+  root.querySelectorAll<HTMLElement>('.door').forEach((door) => {
+    const finish = door.querySelector<HTMLElement>(':scope > .door-finish-layer')
+    const detail = door.querySelector<HTMLImageElement>(':scope > .door-detail-image')
+    if (finish && detail) stacks.push({ finish, detail })
+  })
+  root.querySelectorAll<HTMLElement>('.door-frame-sidelite-slot').forEach((slot) => {
+    const finish = slot.querySelector<HTMLElement>(':scope > .door-frame-sidelite-finish')
+    const detail = slot.querySelector<HTMLImageElement>(':scope > .door-frame-sidelite-detail')
+    if (finish && detail) stacks.push({ finish, detail })
+  })
+  return stacks
+}
+
+/** Resolve the CSS finish/detail stack into one capture-only bitmap. The live
+ * preview uses mix-blend-mode:multiply, which html2canvas does not reproduce;
+ * leaving the light detail image separate therefore washes dark finishes out. */
+async function resolveSurfaceMaterialBlends(root: HTMLElement) {
+  const restorers: (() => void)[] = []
+  for (const { finish, detail } of captureSurfaceStacks(root)) {
+    const finishStyle = window.getComputedStyle(finish)
+    const detailStyle = window.getComputedStyle(detail)
+    if (detailStyle.mixBlendMode !== 'multiply') continue
+    const finishSource = cssImageUrl(finishStyle.backgroundImage)
+    if (!finishSource || !detail.complete || !detail.naturalWidth) continue
+    const width = Math.max(1, Math.round(finish.offsetWidth))
+    const height = Math.max(1, Math.round(finish.offsetHeight))
+    const finishImage = await loadCaptureImage(finishSource)
+    const canvas = document.createElement('canvas')
+    canvas.width = width * CAPTURE_SCALE
+    canvas.height = height * CAPTURE_SCALE
+    const context = canvas.getContext('2d')
+    if (!context) continue
+    context.imageSmoothingEnabled = true
+    context.imageSmoothingQuality = 'high'
+    context.scale(CAPTURE_SCALE, CAPTURE_SCALE)
+
+    context.filter = finishStyle.filter === 'none' ? 'none' : finishStyle.filter
+    context.drawImage(finishImage, 0, 0, width, height)
+    context.filter = detailStyle.filter === 'none' ? 'none' : detailStyle.filter
+    context.globalCompositeOperation = 'multiply'
+    context.globalAlpha = Math.max(0, Math.min(1, Number.parseFloat(detailStyle.opacity) || 0))
+    context.drawImage(detail, 0, 0, width, height)
+    context.globalAlpha = 1
+    context.globalCompositeOperation = 'source-over'
+    context.filter = 'none'
+
+    const resolved = canvas.toDataURL('image/png')
+    canvas.width = 0
+    canvas.height = 0
+    const originalFinishStyle = finish.getAttribute('style')
+    const originalDetailStyle = detail.getAttribute('style')
+    finish.style.backgroundColor = 'transparent'
+    finish.style.backgroundImage = `url("${resolved}")`
+    finish.style.backgroundSize = '100% 100%'
+    finish.style.backgroundPosition = '0 0'
+    finish.style.backgroundRepeat = 'no-repeat'
+    finish.style.mixBlendMode = 'normal'
+    finish.style.opacity = '1'
+    finish.style.filter = 'none'
+    detail.style.display = 'none'
+    restorers.push(() => {
+      if (originalFinishStyle === null) finish.removeAttribute('style')
+      else finish.setAttribute('style', originalFinishStyle)
+      if (originalDetailStyle === null) detail.removeAttribute('style')
+      else detail.setAttribute('style', originalDetailStyle)
+    })
+  }
+  await nextFrame()
+  return () => restorers.reverse().forEach((restore) => restore())
+}
+
 function parseInsetClipPath(value: string) {
   const match = value.match(/^inset\(\s*([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s*\)$/i)
   if (!match) return null
@@ -233,11 +311,32 @@ type CaptureDoorPreviewOptions = {
    * system, so changing its bounds would make them sample the wrong pixels.
    */
   preserveCanonicalFrameBounds?: boolean
+  expectedConfigurationKey?: string
+}
+
+async function waitForSemanticReadiness(root: HTMLElement, expectedConfigurationKey?: string) {
+  if (!expectedConfigurationKey) return
+  for (let attempt = 0; attempt < MAX_SETTLE_ATTEMPTS; attempt += 1) {
+    const scene = root.querySelector<HTMLElement>('.preview-scene')
+    if (scene?.dataset.renderConfigurationKey === expectedConfigurationKey && scene.dataset.renderSemanticallyReady === 'true') return
+    await new Promise((resolve) => window.setTimeout(resolve, SETTLE_INTERVAL))
+  }
+  throw new Error('The configured door layers did not become ready for the current configuration.')
+}
+
+function assertSemanticReadiness(root: HTMLElement, expectedConfigurationKey?: string) {
+  if (!expectedConfigurationKey) return
+  const scene = root.querySelector<HTMLElement>('.preview-scene')
+  if (scene?.dataset.renderConfigurationKey !== expectedConfigurationKey || scene.dataset.renderSemanticallyReady !== 'true') {
+    throw new Error('The door configuration changed while its rendered snapshot was being captured.')
+  }
 }
 
 export async function captureFinalDoorPreview(previewRoot: HTMLElement, options: CaptureDoorPreviewOptions = {}): Promise<CapturedDoorSource> {
   const captureStartTime = performance.now()
+  await waitForSemanticReadiness(previewRoot, options.expectedConfigurationKey)
   await waitForRenderedAssets(previewRoot)
+  await waitForSemanticReadiness(previewRoot, options.expectedConfigurationKey)
   const frameMode = options.frameMode ?? 'opening-only'
   const frame = previewRoot.querySelector<HTMLElement>(`.door-frame[data-frame="${frameMode}"]`)
   if (!frame) throw new Error(`The configured ${frameMode} door assembly is unavailable.`)
@@ -270,10 +369,14 @@ export async function captureFinalDoorPreview(previewRoot: HTMLElement, options:
   // second export-only compositor making independent decisions about masks,
   // finishes, spacing, hardware, or frame geometry.
   const { default: html2canvas } = await import('html2canvas')
-  const restoreMaskedLayers = await materializeMaskedLayers(captureTarget)
-  const restoreClippedImages = await materializeClippedImages(captureTarget)
+  let restoreMaskedLayers = () => {}
+  let restoreSurfaceMaterialBlends = () => {}
+  let restoreClippedImages = () => {}
   let canvas: HTMLCanvasElement
   try {
+    restoreMaskedLayers = await materializeMaskedLayers(captureTarget)
+    restoreSurfaceMaterialBlends = await resolveSurfaceMaterialBlends(captureTarget)
+    restoreClippedImages = await materializeClippedImages(captureTarget)
     canvas = await html2canvas(captureTarget, {
       backgroundColor: null,
       logging: false,
@@ -284,8 +387,10 @@ export async function captureFinalDoorPreview(previewRoot: HTMLElement, options:
     })
   } finally {
     restoreClippedImages()
+    restoreSurfaceMaterialBlends()
     restoreMaskedLayers()
   }
+  assertSemanticReadiness(previewRoot, options.expectedConfigurationKey)
   const coverage = alphaCoverage(canvas)
   if (import.meta.env.DEV) console.debug('CONFIGURED_DOOR_SOURCE_DEBUG', {
     viewportWidth: window.innerWidth,

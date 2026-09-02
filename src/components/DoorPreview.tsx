@@ -49,6 +49,8 @@ export type DoorPreviewProps = {
   doorConfigurationType?: DoorConfigurationType
   doubleDoorLockPrep?: DoubleDoorLockPrepCode | null
   loadingLabel?: string
+  renderConfigurationKey?: string
+  onRenderReadinessChange?: (state: { ready: boolean; configurationKey: string }) => void
 }
 
 const GLASS_FRAME_WIDTH_RATIO = 0.035
@@ -488,7 +490,7 @@ function buildSatGlassFrameMask(glass: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-export function DoorPreview({ style, finish, glass, hardware, showHardware = true, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, sideliteGlassIsGrid = false, sideliteGridColor, sideliteGridIsPrairie = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', glassFrameFinish = null, placementMode, doorConfigurationType = 'single', doubleDoorLockPrep = null, loadingLabel = 'Loading preview' }: DoorPreviewProps) {
+export function DoorPreview({ style, finish, glass, hardware, showHardware = true, compact = false, grain = null, product = null, tintColor = null, doorSwing = null, applyFinish = true, view, onViewChange, showViewToggle = true, sidelites = 'none', sideliteAssetSrc, sideliteMaskSrc, sideliteGlassSrc, sideliteClearGlassBase = false, sideliteGlassIsGrid = false, sideliteGridColor, sideliteGridIsPrairie = false, gridMatchesFinish = false, sideliteGridMatchesFinish = false, sharedComparisonCanvas = false, jambFinish = null, jambType = 'timber', glassFrameFinish = null, placementMode, doorConfigurationType = 'single', doubleDoorLockPrep = null, loadingLabel = 'Loading preview', renderConfigurationKey = '', onRenderReadinessChange }: DoorPreviewProps) {
   const previewSceneRef = useRef<HTMLDivElement>(null)
   const [previewAssetsLoading, setPreviewAssetsLoading] = useState(false)
   const previewCandidates = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
@@ -558,6 +560,47 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const frameSidelites = compact || configuredSidelitePlacement === 'none' ? 'none' : configuredSidelitePlacement === 'both' ? 'both' : visualSideliteSide ?? 'none'
   const defaultHardware = hardwareOptions.find((option) => Boolean(hardwarePreviewAssetUrl(option, previewView, doorSwing)))
   const previewHardware: PreviewHardware = selectedHardwareImage ? hardware : defaultHardware ?? hardware
+  const requestedHardwareImage = selectedHardwareImage || hardwarePreviewAssetUrl(previewHardware, previewView, doorSwing)
+  const [hardwareImage, setHardwareImage] = useState(requestedHardwareImage)
+
+  const usesAuthoredSideliteArtsAndCrafts = sideliteGlassSrc?.includes('/F48SL%20SSL%20Arts%20Crafts%20White.png')
+    || sideliteGlassSrc?.includes('/F48SL SSL Arts Crafts White.png')
+  const sideliteGlassNeedsFitting = Boolean(sideliteGlassSrc && (!sideliteGlassIsGrid || sideliteGridIsPrairie || usesAuthoredSideliteArtsAndCrafts))
+  const usesAuthoredSidelitePrairieColor = /\/(?:FSL|F48SL|SSL)(?:%20| )Prairie(?:%20| )/i.test(sideliteGlassSrc ?? '')
+  const mainMaskReady = Boolean(previewImage && previewCandidates.includes(previewImage) && processedMask?.source === previewImage && processedMask.finishUrl)
+  const mainGlassReady = !glassOverlay || isHrtDoor || isSatDoor
+    || Boolean(fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage)
+  const clearBaseReady = !clearNoGridOverlay || Boolean(fittedClearBase?.source === clearNoGridOverlay && fittedClearBase.maskSource === previewImage)
+  const sideliteMaskReady = frameSidelites === 'none' || Boolean(sideliteFinishMask && sideliteFinishMask.slab === sideliteAssetSrc && sideliteFinishMask.mask === sideliteMaskSrc && sideliteFinishMask.url)
+  const sideliteGlassReady = frameSidelites === 'none' || !sideliteGlassSrc || !sideliteGlassNeedsFitting || Boolean(fittedSideliteGlass && fittedSideliteGlass.source === sideliteGlassSrc && fittedSideliteGlass.slab === sideliteAssetSrc && fittedSideliteGlass.mask === sideliteMaskSrc)
+  const prairieGridReady = frameSidelites === 'none' || !sideliteGridIsPrairie || !sideliteGridColor || usesAuthoredSidelitePrairieColor || Boolean(tintedPrairieGrid && tintedPrairieGrid.source === fittedOrSourceSideliteGlass && tintedPrairieGrid.color === sideliteGridColor)
+  const specialFrameReady = (!isHrtClearGlass || !glassFrameFinish || hrtClearTrimMask?.source === glassOverlay)
+    && (!isSatDoor || !glassFrameFinish || Boolean(satGlassFrameMask))
+  const hardwareReady = !showHardware || !requestedHardwareImage || hardwareImage === requestedHardwareImage
+  const semanticLayersReady = Boolean(renderConfigurationKey && mainMaskReady && mainGlassReady && clearBaseReady && sideliteMaskReady && sideliteGlassReady && prairieGridReady && specialFrameReady && hardwareReady)
+
+  useEffect(() => {
+    let cancelled = false
+    onRenderReadinessChange?.({ ready: false, configurationKey: renderConfigurationKey })
+    if (!semanticLayersReady) return () => { cancelled = true }
+    const confirmLoadedSnapshot = async () => {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+      const scene = previewSceneRef.current
+      if (!scene || cancelled) return
+      const images = Array.from(scene.querySelectorAll('img'))
+      await Promise.all(images.map((image) => image.complete
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => {
+            image.addEventListener('load', () => resolve(), { once: true })
+            image.addEventListener('error', () => resolve(), { once: true })
+          })))
+      await Promise.all(images.map((image) => image.decode().catch(() => undefined)))
+      if (cancelled || images.some((image) => !image.complete || !image.naturalWidth)) return
+      onRenderReadinessChange?.({ ready: true, configurationKey: renderConfigurationKey })
+    }
+    void confirmLoadedSnapshot()
+    return () => { cancelled = true }
+  }, [onRenderReadinessChange, renderConfigurationKey, semanticLayersReady])
 
   useEffect(() => {
     let cancelled = false
@@ -910,9 +953,6 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
     WebkitMaskRepeat: 'no-repeat',
     maskRepeat: 'no-repeat',
   } as React.CSSProperties : undefined
-  const requestedHardwareImage = selectedHardwareImage || hardwarePreviewAssetUrl(previewHardware, previewView, doorSwing)
-  const [hardwareImage, setHardwareImage] = useState(requestedHardwareImage)
-
   useEffect(() => {
     if (!import.meta.env.DEV) return
     console.info('[door-preview:selection]', {
@@ -997,7 +1037,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   }, [previewHardware.manufacturer, previewHardware.style, previewHardware.finish, previewView, requestedHardwareImage, doorSwing?.id])
 
   return (
-    <div ref={previewSceneRef} className={`preview-scene ${compact ? 'compact' : ''}`} aria-busy={previewAssetsLoading} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
+    <div ref={previewSceneRef} className={`preview-scene ${compact ? 'compact' : ''}`} data-render-configuration-key={renderConfigurationKey} data-render-semantically-ready={semanticLayersReady ? 'true' : 'false'} aria-busy={previewAssetsLoading} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
       <DoorFrame doorConfigurationType={doorConfigurationType} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={renderedSideliteGlass} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGlassIsGrid={sideliteGlassIsGrid} sideliteGridIsPrairie={sideliteGridIsPrairie} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteGridFinishColor={applyFinish ? finishColor : '#d9d9d9'} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteGlassOpeningStyle={sideliteGlassOpeningStyle} sideliteGlassFrameMaskStyle={sideliteGlassFrameMaskStyle} sideliteGlassFrameTintStyle={sideliteGlassFrameTintStyle} sideliteGlassFrameDetailStyle={sideliteGlassFrameDetailStyle}>
         {Array.from({ length: doorConfigurationLeafCount(doorConfigurationType) }).map((_, leafIndex) => {

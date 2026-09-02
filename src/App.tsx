@@ -872,7 +872,7 @@ function DoorBuilderApp() {
   })
   configuredDoorKeyRef.current = configuredDoorKey
   useEffect(() => setPdfPreviewCapture(null), [configuredDoorKey])
-  const renderConfiguredDoorPreview = (previewView: HardwareView, sharedComparisonCanvas = false) => <DoorPreview {...configuredDoorPreview} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} />
+  const renderConfiguredDoorPreview = (previewView: HardwareView, sharedComparisonCanvas = false) => <DoorPreview {...configuredDoorPreview} renderConfigurationKey={configuredDoorKey} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} />
   const renderConfiguredPreviewMode = () => builderPreviewView === 'Both'
     ? <div className="preview-comparison" aria-label="Exterior and interior door previews">
         {(['Exterior', 'Interior'] as const).map((previewView) => <div className="preview-comparison-item" key={previewView}>
@@ -1380,7 +1380,7 @@ function DoorBuilderApp() {
     const captureConfigurationKey = configuredDoorKey
     const source = pdfDoorSourceRef.current
     if (!source) throw new Error('The configured door preview is unavailable.')
-    const captured = await captureFinalDoorPreview(source, { frameMode: 'visible' })
+    const captured = await captureFinalDoorPreview(source, { frameMode: 'visible', expectedConfigurationKey: captureConfigurationKey })
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader()
       reader.onload = () => resolve(String(reader.result))
@@ -1969,7 +1969,7 @@ function DoorBuilderApp() {
         </aside>}
       </main>
       </>}
-      {selectedStyle && <div ref={pdfDoorSourceRef} className="configured-door-capture-host pdf-door-source" aria-hidden="true"><DoorPreview {...configuredDoorPreview} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} /></div>}
+      {selectedStyle && <div ref={pdfDoorSourceRef} className="configured-door-capture-host pdf-door-source" aria-hidden="true"><DoorPreview {...configuredDoorPreview} renderConfigurationKey={configuredDoorKey} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} /></div>}
       <BetaFeedback currentStep={feedbackStep} configuration={feedbackConfiguration}/>
       <footer className="site-footer">
         <div className="site-footer-contact">
