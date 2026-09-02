@@ -76,6 +76,28 @@ const FINISH_RENDERING = {
   stainGlossStrength: 1,
 } as const
 
+function canonicalSurfaceFinishStyle(mask: string, finishType: Finish['finishType'], color: string) {
+  return {
+    '--door': color,
+    backgroundColor: color,
+    WebkitMaskImage: `url("${mask}")`,
+    maskImage: `url("${mask}")`,
+    mixBlendMode: finishType === 'paint' ? FINISH_RENDERING.paintColorBlendMode : FINISH_RENDERING.stainColorBlendMode,
+    opacity: FINISH_RENDERING.slabColorOpacity,
+    ...(finishType === 'stain' ? { filter: `saturate(${FINISH_RENDERING.stainSaturation})` } : {}),
+  } as React.CSSProperties
+}
+
+function canonicalSurfaceDetailStyle(mask: string, finishType: Finish['finishType']) {
+  return {
+    WebkitMaskImage: `url("${mask}")`,
+    maskImage: `url("${mask}")`,
+    mixBlendMode: finishType === 'paint' ? FINISH_RENDERING.paintDetailBlendMode : FINISH_RENDERING.stainDetailBlendMode,
+    opacity: finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity,
+    filter: `grayscale(1) contrast(${finishType === 'paint' ? 1.12 : FINISH_RENDERING.stainContrast})`,
+  } as React.CSSProperties
+}
+
 type PixelBounds = { x: number; y: number; width: number; height: number }
 type HardwareSide = 'left' | 'right'
 
@@ -826,15 +848,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
 
   const finishLayerStyle = useMemo(() => {
     if (!applyFinish || !hasMappedPreview || !finishMask || !finishColor) return undefined
-    return {
-      '--door': finishColor,
-      backgroundColor: finishColor,
-      WebkitMaskImage: `url("${finishMask}")`,
-      maskImage: `url("${finishMask}")`,
-      mixBlendMode: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorBlendMode : FINISH_RENDERING.stainColorBlendMode,
-      opacity: FINISH_RENDERING.slabColorOpacity,
-      ...(finish.finishType === 'stain' ? { filter: `saturate(${FINISH_RENDERING.stainSaturation})` } : {}),
-    } as React.CSSProperties
+    return canonicalSurfaceFinishStyle(finishMask, finish.finishType, finishColor)
   }, [applyFinish, finish.finishType, finishColor, finishMask, hasMappedPreview])
   const activeGlassFrameMask = isSatDoor ? satGlassFrameMask : glassFrameMask
   const glassFrameMaskStyle = glassFrameFinish && activeGlassFrameMask ? {
@@ -874,29 +888,14 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
     opacity: glassFrameFinish.finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity,
     filter: `grayscale(1) contrast(${glassFrameFinish.finishType === 'paint' ? 1.12 : FINISH_RENDERING.stainContrast})`,
   } as React.CSSProperties : undefined
-  const detailLayerStyle = {
-    WebkitMaskImage: finishMask ? `url("${finishMask}")` : undefined,
-    maskImage: finishMask ? `url("${finishMask}")` : undefined,
-    mixBlendMode: finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailBlendMode : FINISH_RENDERING.stainDetailBlendMode,
-    opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity,
-    ...(finish.finishType === 'stain' ? { filter: `grayscale(1) contrast(${FINISH_RENDERING.stainContrast})` } : {}),
-  } as React.CSSProperties
+  const detailLayerStyle = finishMask ? canonicalSurfaceDetailStyle(finishMask, finish.finishType) : undefined
   const activeSideliteFinishMask = sideliteFinishMask && sideliteFinishMask.slab === sideliteAssetSrc && sideliteFinishMask.mask === sideliteMaskSrc ? sideliteFinishMask.url : undefined
-  const sideliteFinishStyle = applyFinish && activeSideliteFinishMask ? {
-    backgroundColor: finishColor,
-    WebkitMaskImage: `url("${activeSideliteFinishMask}")`,
-    maskImage: `url("${activeSideliteFinishMask}")`,
-    mixBlendMode: finish.finishType === 'paint' ? FINISH_RENDERING.paintColorBlendMode : FINISH_RENDERING.stainColorBlendMode,
-    opacity: FINISH_RENDERING.slabColorOpacity,
-    ...(finish.finishType === 'stain' ? { filter: `saturate(${FINISH_RENDERING.stainSaturation})` } : {}),
-  } as React.CSSProperties : undefined
-  const sideliteDetailStyle = applyFinish && activeSideliteFinishMask ? {
-    WebkitMaskImage: `url("${activeSideliteFinishMask}")`,
-    maskImage: `url("${activeSideliteFinishMask}")`,
-    mixBlendMode: finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailBlendMode : FINISH_RENDERING.stainDetailBlendMode,
-    opacity: finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity,
-    ...(finish.finishType === 'stain' ? { filter: `grayscale(1) contrast(${FINISH_RENDERING.stainContrast})` } : {}),
-  } as React.CSSProperties : undefined
+  const sideliteFinishStyle = applyFinish && activeSideliteFinishMask
+    ? canonicalSurfaceFinishStyle(activeSideliteFinishMask, finish.finishType, finishColor)
+    : undefined
+  const sideliteDetailStyle = applyFinish && activeSideliteFinishMask
+    ? canonicalSurfaceDetailStyle(activeSideliteFinishMask, finish.finishType)
+    : undefined
   // Clip every glass layer to the authored opening. This is especially
   // important for S before its SDL grid layer is added: the slab finish must
   // stop at the glass mask, while the grid remains a separate layer above it.
