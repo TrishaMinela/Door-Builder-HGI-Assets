@@ -19,7 +19,7 @@ type CaptureState = {
 
 export type DoorSourceState = Omit<CaptureState, 'configurationKey'> & { error: string; ready: boolean; retry?: () => void }
 const MAX_SOURCE_CAPTURE_ATTEMPTS = 3
-const ENTRANCE_CAPTURE_PIPELINE_VERSION = 'opaque-slab-finishes-v2'
+const ENTRANCE_CAPTURE_PIPELINE_VERSION = 'canonical-preview-frame-v3'
 const waitForLayout = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
 export function ConfiguredDoorSource({ configurationKey, onStateChange, previewProps }: Props) {
@@ -60,7 +60,10 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
             // opening, not the decorative outer frame. Capture the same
             // opening-only assembly used by the previously correct mapping;
             // the photographed frame is recolored separately on the base.
-            result = await captureFinalDoorPreview(root, { frameMode: 'opening-only' })
+            result = await captureFinalDoorPreview(root, {
+              frameMode: 'opening-only',
+              preserveCanonicalFrameBounds: true,
+            })
             break
           } catch (reason) {
             lastError = reason

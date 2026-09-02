@@ -24,7 +24,7 @@ type Props = {
   onRenderingChange?: (rendering: boolean) => void
 }
 
-const COMPOSITION_PIPELINE_VERSION = 'native-photo-frame-v4-opaque-finishes'
+const COMPOSITION_PIPELINE_VERSION = 'canonical-preview-source-v5'
 
 export function ComposedPhotoPreview({ corners, doorSourceUrl, imageAlt, imageSrc, originalImageSrc, showAfter, displayMode, productLayers, showZoomControls = true, onExporterReady, beforeAfter = false, flipX = false, onRenderingChange }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)

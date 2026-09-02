@@ -227,6 +227,12 @@ type CaptureDoorPreviewOptions = {
   mimeType?: 'image/png' | 'image/webp'
   targetHeight?: number
   quality?: number
+  /**
+   * Keep the complete DoorFrame canvas instead of trimming transparent pixels.
+   * Visualizer source rectangles are expressed in this canonical coordinate
+   * system, so changing its bounds would make them sample the wrong pixels.
+   */
+  preserveCanonicalFrameBounds?: boolean
 }
 
 export async function captureFinalDoorPreview(previewRoot: HTMLElement, options: CaptureDoorPreviewOptions = {}): Promise<CapturedDoorSource> {
@@ -245,12 +251,12 @@ export async function captureFinalDoorPreview(previewRoot: HTMLElement, options:
     throw new Error('A configured sidelite finish asset did not finish loading. Please retry.')
   }
 
-  // Capture the stable preview scene rather than clipping directly to the
-  // door-frame box. Frame strokes, threshold edges, sidelites, hardware, and
-  // anti-aliased pixels can extend to the frame boundary. The surrounding
-  // scene provides safe transparent capture space; trimTransparentPixels then
-  // removes only pixels that are truly empty.
-  const captureTarget = previewRoot.querySelector<HTMLElement>('.preview-scene') ?? frame
+  // PDF/export captures retain the safe surrounding scene and trim it. The
+  // visualizer instead needs the exact, untrimmed DoorFrame bounds because its
+  // product-layer source rectangles use the same canonical entrance geometry.
+  const captureTarget = options.preserveCanonicalFrameBounds
+    ? frame
+    : previewRoot.querySelector<HTMLElement>('.preview-scene') ?? frame
   const width = Math.ceil(Number.parseFloat(captureTarget.style.width) || captureTarget.offsetWidth)
   const height = Math.ceil(Number.parseFloat(captureTarget.style.height) || captureTarget.offsetHeight)
   if (!width || !height) throw new Error('The configured door assembly has invalid dimensions.')
@@ -308,7 +314,7 @@ export async function captureFinalDoorPreview(previewRoot: HTMLElement, options:
     canvas.height = 0
     throw new Error('The configured door source rendered empty.')
   }
-  let outputCanvas = trimTransparentPixels(canvas)
+  let outputCanvas = options.preserveCanonicalFrameBounds ? canvas : trimTransparentPixels(canvas)
   if (options.targetHeight && outputCanvas.height !== options.targetHeight) {
     const resized = document.createElement('canvas')
     resized.height = options.targetHeight
