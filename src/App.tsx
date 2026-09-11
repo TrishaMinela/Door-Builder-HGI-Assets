@@ -447,6 +447,7 @@ function DoorBuilderApp() {
   const [errors, setErrors] = useState<Partial<Record<keyof ContactForm, string>>>({})
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const submissionAttemptRef = useRef<{ fingerprint: string; submissionId: string } | null>(null)
   const [submitError, setSubmitError] = useState('')
   const [pendingCustomerAction, setPendingCustomerAction] = useState<null | 'download-pdf' | 'open-visualizer'>(null)
   const [completedCustomerAction, setCompletedCustomerAction] = useState<null | 'download-pdf' | 'open-visualizer'>(null)
@@ -1300,6 +1301,7 @@ function DoorBuilderApp() {
     setErrors({})
     setSubmitted(false)
     setSubmitting(false)
+    submissionAttemptRef.current = null
     setSubmitError('')
     setPendingCustomerAction(null)
     setCompletedCustomerAction(null)
@@ -1629,7 +1631,18 @@ function DoorBuilderApp() {
         ...((sidelites || 'none') !== 'none' && selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}),
         ...((sidelites || 'none') !== 'none' && sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}),
       }
-      await submitQuote(buildDoorBuilderSubmissionPayload({ configuration, contact }))
+      const flattenedSubmission = buildDoorBuilderSubmissionPayload({ configuration, contact })
+      const doorConfiguration = { schemaVersion: 1 as const, configuration }
+      const submissionFingerprint = JSON.stringify({ ...flattenedSubmission, doorConfiguration })
+      const submissionId = submissionAttemptRef.current?.fingerprint === submissionFingerprint
+        ? submissionAttemptRef.current.submissionId
+        : crypto.randomUUID()
+      submissionAttemptRef.current = { fingerprint: submissionFingerprint, submissionId }
+      await submitQuote({
+        ...flattenedSubmission,
+        submissionId,
+        doorConfiguration,
+      })
       const completedAction = pendingCustomerAction
       setCustomerFormCompleted(true)
       setPendingCustomerAction(null)
@@ -1795,7 +1808,7 @@ function DoorBuilderApp() {
           </div>
         </section>
       </main> : screen === 'customer-form' ? <main className="customer-form-page">
-        <section className="customer-form-screen" aria-labelledby="customer-form-title">
+        <section className={`customer-form-screen ${submitted && completedCustomerAction === 'open-visualizer' ? 'visualizer-success-screen' : ''}`} aria-labelledby="customer-form-title">
           <button type="button" className="back" onClick={() => { setPendingCustomerAction(null); setCompletedCustomerAction(null); setSubmitted(false); goTo(pages.indexOf('review')); showScreen('builder') }}><ArrowLeft size={17} /> Back to Review</button>
           {!submitted ? <div className="form-card" id="quote-contact-form">
             <span className="form-screen-eyebrow">Home Guard Door Builder</span>
@@ -1807,7 +1820,18 @@ function DoorBuilderApp() {
             {submitError && <p className="submit-error" role="alert">{submitError}</p>}
             <button className="submit-button" type="button" disabled={submitting} onClick={submit}><Send size={18} /> {submitting ? 'Preparing & Sending...' : pendingCustomerAction === 'open-visualizer' ? 'Continue to Visualizer' : pendingCustomerAction === 'download-pdf' ? 'Submit & Download PDF' : 'Send My Door Configuration'}</button>
             <p className="privacy"><ShieldCheck size={15} /> Your information is kept private and never sold.</p>
-          </div> : completedCustomerAction === 'open-visualizer' ? <div className="success visualizer-form-confirmation"><span><Check size={32} /></span><small>Information received</small><h1 id="customer-form-title">Your door is ready to view on your home.</h1><p>Next, upload a photo of your entrance. We’ll guide you through positioning your configured door on the picture.</p><div className="visualizer-confirmation-graphic"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="A configured door visualized on a home entrance" /></div><div className="visualizer-confirmation-action"><strong>See your configured door on your own entryway</strong><span>Have a clear photo of your entrance ready.</span><button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Continue to Home Visualizer <ArrowRight size={17} /></button></div></div> : <div className="success visualizer-form-confirmation"><span><Check size={32} /></span><small>Configuration received</small><h1>Thanks, {contact.fullName}.</h1><p>Your configuration PDF has been prepared. You can now see the same configured door on a photo of your home.</p><div className="visualizer-confirmation-action"><strong>Next: View your door on your home</strong><span>Upload a clear entrance photo and follow the guided placement steps.</span><button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Continue to Home Visualizer <ArrowRight size={17} /></button></div><button type="button" onClick={() => { setSubmitted(false); setCompletedCustomerAction(null); goTo(pages.indexOf('review')); showScreen('builder') }}>Return to Review</button></div>}
+          </div> : completedCustomerAction === 'open-visualizer' ? <div className="success visualizer-form-confirmation visualizer-home-success-card">
+            <div className="visualizer-confirmation-layout">
+              <div className="visualizer-confirmation-intro">
+                <span className="visualizer-success-indicator"><Check size={32} /></span>
+                <small>Information received</small>
+                <h1 id="customer-form-title">Your door is ready to view on your home.</h1>
+                <p>Next, upload a photo of your entrance. We’ll guide you through positioning your configured door on the picture.</p>
+              </div>
+              <div className="visualizer-confirmation-graphic"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="A configured door visualized on a home entrance" /></div>
+              <div className="visualizer-confirmation-action"><strong>See your configured door on your own entryway</strong><span>Have a clear photo of your entrance ready.</span><button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Continue to Home Visualizer <ArrowRight size={17} /></button></div>
+            </div>
+          </div> : <div className="success visualizer-form-confirmation"><span><Check size={32} /></span><small>Configuration received</small><h1>Thanks, {contact.fullName}.</h1><p>Your configuration PDF has been prepared. You can now see the same configured door on a photo of your home.</p><div className="visualizer-confirmation-action"><strong>Next: View your door on your home</strong><span>Upload a clear entrance photo and follow the guided placement steps.</span><button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Continue to Home Visualizer <ArrowRight size={17} /></button></div><button type="button" onClick={() => { setSubmitted(false); setCompletedCustomerAction(null); goTo(pages.indexOf('review')); showScreen('builder') }}>Return to Review</button></div>}
         </section>
       </main> : screen === 'visualizer' ? <HomeVisualizer
         onBack={() => showScreen('builder')}

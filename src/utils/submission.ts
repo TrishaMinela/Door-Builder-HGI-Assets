@@ -29,6 +29,16 @@ export type DoorBuilderSubmissionPayload = {
   hinge_option: string
 }
 
+export type DoorConfigurationSnapshot = {
+  schemaVersion: 1
+  configuration: DoorConfiguration
+}
+
+export type DoorBuilderSubmissionRequest = DoorBuilderSubmissionPayload & {
+  submissionId: string
+  doorConfiguration: DoorConfigurationSnapshot
+}
+
 type SubmissionSource = {
   contact: ContactForm
   configuration: DoorConfiguration
@@ -117,7 +127,7 @@ export function buildDoorBuilderSubmissionPayload({ contact, configuration, subm
 
 export type SubmissionResult = { message: string }
 
-export async function submitQuote(payload: DoorBuilderSubmissionPayload): Promise<SubmissionResult> {
+export async function submitQuote(payload: DoorBuilderSubmissionRequest): Promise<SubmissionResult> {
   const response = await fetch('/api/submit-door-builder', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

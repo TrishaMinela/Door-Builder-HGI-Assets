@@ -9,7 +9,15 @@ npm install
 npm run dev
 ```
 
-Set the server-only Vercel environment variable `ZAPIER_DOOR_BUILDER_WEBHOOK_URL` to the Zapier Catch Hook URL. Customer submissions are posted by the browser to `/api/submit-door-builder`; the Vercel function forwards the normalized flat payload to Zapier. Do not expose this value through a `VITE_` environment variable.
+Customer submissions are posted by the browser to `/api/submit-door-builder`. The Vercel function first stores the complete configuration in the existing Dealer Portal Supabase project, then forwards the existing normalized flat payload to Zapier. A submission is complete only after both destinations succeed.
+
+Configure these server-only Vercel environment variables:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `ZAPIER_DOOR_BUILDER_WEBHOOK_URL`
+
+Never expose the Supabase service-role key or either server integration through a `VITE_` environment variable.
 
 ## Replace placeholder visuals
 
