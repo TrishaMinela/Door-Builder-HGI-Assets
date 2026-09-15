@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test:ai-visualizer": "node --import tsx scripts/verifyAiVisualizer.ts",
     "test:submission": "node --import tsx scripts/verifySubmissionPayload.ts",
     "lint": "eslint .",
     "generate:hero": "tsx scripts/generateHeroDoorImages.ts"

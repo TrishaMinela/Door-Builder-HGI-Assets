@@ -1588,6 +1588,37 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (doorSwingOptions.length === 1) goTo(step + 1)
   }
 
+  const currentDoorConfiguration: DoorConfiguration | null = selectedHardware && selectedDoorSwing ? {
+    doorConfigurationType: selectedDoorConfigurationType || 'single',
+    ...(doorConfigurationProductOption ? { doorConfigurationProductOption } : {}),
+    ...(selectedDoorConfigurationType !== 'single' && doubleDoorLockPrep ? { doubleDoorLockPrep } : {}),
+    product,
+    doorLine: selectedDoorLine?.name ?? product.doorType,
+    style,
+    grain: selectedGrain,
+    finish,
+    doorFinishType: finish.finishType,
+    doorFinishColor: finish.name,
+    glassFrameColorMode: glassFrameColorMode || undefined,
+    glassFrameFinishId: glassFrameColorMode === 'custom' ? resolvedGlassFrameFinish.id : undefined,
+    jambType: jambType || 'timber',
+    jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint',
+    jambFinishColor: jambFinish?.name ?? '',
+    jambFinishOverridden,
+    glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined,
+    glass: configuredGlass,
+    mainDoorGlass: configuredGlass,
+    grid: gridConfiguration,
+    hardware: selectedHardware,
+    doorSwing: selectedDoorSwing,
+    sidelites: sidelites || 'none',
+    sidelitePlacement: sidelites || 'none',
+    sideliteConfigurationCode: sideliteProductCode(sidelites || 'none'),
+    sideliteConfigurationLabel: sideliteProductLabel(sidelites || 'none'),
+    ...((sidelites || 'none') !== 'none' && selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}),
+    ...((sidelites || 'none') !== 'none' && sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}),
+  } : null
+
   const submit = async () => {
     if (submitting || submitted) return
     const required: (keyof ContactForm)[] = ['fullName', 'email', 'phone', 'zip']
@@ -1605,33 +1636,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     try {
       if (!selectedHardware) throw new Error('Please select hardware before sending your configuration.')
       if (!selectedDoorSwing) throw new Error('Please select a door swing before sending your configuration.')
-      const jambSummary = { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' as const : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }
-      const configuration: DoorConfiguration = {
-        doorConfigurationType: selectedDoorConfigurationType || 'single',
-        ...(doorConfigurationProductOption ? { doorConfigurationProductOption } : {}),
-        ...(selectedDoorConfigurationType !== 'single' && doubleDoorLockPrep ? { doubleDoorLockPrep } : {}),
-        product,
-        doorLine: selectedDoorLine?.name ?? product.doorType,
-        style,
-        grain: selectedGrain,
-        finish,
-        doorFinishType: finish.finishType,
-        doorFinishColor: finish.name,
-        glassFrameColorMode: glassFrameColorMode || undefined,
-        glassFrameFinishId: glassFrameColorMode === 'custom' ? resolvedGlassFrameFinish.id : undefined,
-        ...jambSummary,
-        glass: configuredGlass,
-        mainDoorGlass: configuredGlass,
-        grid: gridConfiguration,
-        hardware: selectedHardware,
-        doorSwing: selectedDoorSwing,
-        sidelites: sidelites || 'none',
-        sidelitePlacement: sidelites || 'none',
-        sideliteConfigurationCode: sideliteProductCode(sidelites || 'none'),
-        sideliteConfigurationLabel: sideliteProductLabel(sidelites || 'none'),
-        ...((sidelites || 'none') !== 'none' && selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}),
-        ...((sidelites || 'none') !== 'none' && sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}),
-      }
+      if (!currentDoorConfiguration) throw new Error('Please complete your door configuration before sending it.')
+      const configuration = currentDoorConfiguration
       const flattenedSubmission = buildDoorBuilderSubmissionPayload({ configuration, contact })
       const doorConfiguration = { schemaVersion: 1 as const, configuration }
       const submissionFingerprint = JSON.stringify({ ...flattenedSubmission, doorConfiguration })
@@ -1841,6 +1847,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         onDownloadPdf={downloadPdf}
         configuredDoorPreview={configuredDoorPreview}
         configurationKey={configuredDoorKey}
+        doorConfiguration={currentDoorConfiguration}
       /> : <>
       <div className={`builder-toolbar ${currentPage === 'review' && submitted ? 'confirmation-toolbar' : ''}`}>
         <nav className="stepper" aria-label="Configuration progress">

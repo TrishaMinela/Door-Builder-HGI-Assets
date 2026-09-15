@@ -6,9 +6,12 @@ type Props = {
   originalSrc: string
   cleanupSrc: string
   imageAlt: string
+  originalLabel?: string
+  resultLabel?: string
+  ariaLabel?: string
 }
 
-export function CleanupComparisonSlider({ originalSrc, cleanupSrc, imageAlt }: Props) {
+export function CleanupComparisonSlider({ originalSrc, cleanupSrc, imageAlt, originalLabel = 'Original', resultLabel = 'Cleanup Preview', ariaLabel = 'Cleanup before and after comparison' }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
@@ -72,18 +75,18 @@ export function CleanupComparisonSlider({ originalSrc, cleanupSrc, imageAlt }: P
     event.preventDefault()
   }
 
-  return <div ref={editorRef} className="visualizer-editor cleanup-comparison-editor" aria-label="Cleanup before and after comparison">
+  return <div ref={editorRef} className="visualizer-editor cleanup-comparison-editor" aria-label={ariaLabel}>
     <div ref={stageRef} className="entrance-image-stage cleanup-comparison-stage" style={stageSize.width ? { width: stageSize.width, height: stageSize.height, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` } : undefined} onWheel={onWheel}>
       <img className="cleanup-comparison-original" src={originalSrc} alt={imageAlt} draggable={false} onLoad={(event) => { naturalSizeRef.current = { width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }; updateStageSize() }} />
       <img className="cleanup-comparison-proposed" src={cleanupSrc} alt="" draggable={false} style={{ clipPath: `inset(0 0 0 ${position}%)` }} />
-      <span className="cleanup-comparison-label cleanup-comparison-label-original">Original</span>
-      <span className="cleanup-comparison-label cleanup-comparison-label-proposed">Cleanup Preview</span>
+      <span className="cleanup-comparison-label cleanup-comparison-label-original">{originalLabel}</span>
+      <span className="cleanup-comparison-label cleanup-comparison-label-proposed">{resultLabel}</span>
       <span className="cleanup-comparison-divider" aria-hidden="true" style={{ left: `${position}%` }} />
       <button
         type="button"
         className="cleanup-comparison-handle"
         role="slider"
-        aria-label="Drag to compare the original photo with the cleanup preview."
+        aria-label={`Drag to compare ${originalLabel.toLowerCase()} with ${resultLabel.toLowerCase()}.`}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(position)}
