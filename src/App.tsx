@@ -7,6 +7,7 @@ import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
 import { BetaFeedback } from './components/BetaFeedback'
 import { BetaAccessGate } from './components/BetaAccessGate'
+import { DealerContextGate } from './components/DealerContextGate'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
 import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
@@ -401,7 +402,7 @@ function EmptyDoorPreview() {
   )
 }
 
-function DoorBuilderApp() {
+function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>('home')
   const [step, setStep] = useState(0)
   const [selectedDoorConfigurationType, setSelectedDoorConfigurationType] = useState<DoorConfigurationType | ''>('')
@@ -1642,6 +1643,7 @@ function DoorBuilderApp() {
         ...flattenedSubmission,
         submissionId,
         doorConfiguration,
+        dealerSlug,
       })
       const completedAction = pendingCustomerAction
       setCustomerFormCompleted(true)
@@ -2010,5 +2012,5 @@ function DoorBuilderApp() {
 }
 
 export default function App() {
-  return <BetaAccessGate><DoorBuilderApp/></BetaAccessGate>
+  return <DealerContextGate>{(dealerSlug) => <BetaAccessGate><DoorBuilderApp dealerSlug={dealerSlug}/></BetaAccessGate>}</DealerContextGate>
 }

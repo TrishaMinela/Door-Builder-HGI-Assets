@@ -37,6 +37,7 @@ export type DoorConfigurationSnapshot = {
 export type DoorBuilderSubmissionRequest = DoorBuilderSubmissionPayload & {
   submissionId: string
   doorConfiguration: DoorConfigurationSnapshot
+  dealerSlug?: string | null
 }
 
 type SubmissionSource = {
@@ -133,6 +134,9 @@ export async function submitQuote(payload: DoorBuilderSubmissionRequest): Promis
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-  if (!response.ok) throw new Error("We couldn't submit your information. Please try again.")
+  if (!response.ok) {
+    const result = await response.json().catch(() => null) as { error?: string } | null
+    throw new Error(result?.error || "We couldn't submit your information. Please try again.")
+  }
   return { message: 'Your information and door configuration were submitted successfully.' }
 }

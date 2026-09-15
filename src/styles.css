@@ -3320,3 +3320,28 @@ body:has(.customer-form-app),
     padding-bottom:calc(28px + env(safe-area-inset-bottom));
   }
 }
+.dealer-link-state {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f4f4f0;
+  color: #171717;
+}
+.dealer-link-state section {
+  width: min(100%, 520px);
+  padding: 42px;
+  border: 1px solid rgba(0,0,0,.1);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(0,0,0,.1);
+  text-align: center;
+}
+.dealer-link-state span { color: #0b6f70; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.dealer-link-state h1 { margin: 12px 0 10px; font-size: clamp(25px,5vw,38px); }
+.dealer-link-state p { color: #5e6464; line-height: 1.6; }
+.dealer-link-state a {
+  min-height: 46px; display: inline-flex; align-items: center; justify-content: center;
+  margin-top: 24px; padding: 10px 20px; border-radius: 9px;
+  color: #fff; background: #0b6f70; font-weight: 750; text-decoration: none;
+}

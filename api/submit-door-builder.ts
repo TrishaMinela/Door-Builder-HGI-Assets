@@ -1,3 +1,5 @@
+import { DealerResolutionError, resolveDealerId } from '../server/dealerResolution'
+
 type ApiRequest = { method?: string; body?: unknown }
 declare const process: { env: Record<string, string | undefined> }
 type ApiResponse = { status: (code: number) => ApiResponse; json: (body: unknown) => void; setHeader: (name: string, value: string) => void }
@@ -60,7 +62,7 @@ async function submitToZapier(payload: ZapierPayload) {
   if (!result.ok) throw new Error(`Zapier returned HTTP ${result.status}.`)
 }
 
-async function submitToSupabase(submissionId: string, payload: ZapierPayload, doorConfiguration: JsonObject) {
+async function submitToSupabase(submissionId: string, payload: ZapierPayload, doorConfiguration: JsonObject, dealerId: string | null) {
   const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, '')
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!supabaseUrl || !serviceRoleKey) throw new Error('Supabase destination is not configured.')
@@ -69,7 +71,7 @@ async function submitToSupabase(submissionId: string, payload: ZapierPayload, do
     method: 'POST',
     headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}`, 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal' },
     body: JSON.stringify({
-      submission_id: submissionId, dealer_id: null, first_name: firstName, last_name: lastName,
+      submission_id: submissionId, dealer_id: dealerId, first_name: firstName, last_name: lastName,
       email: payload.email, phone: payload.phone || null, zip: payload.postal_code || null,
       comments: payload.notes || null, status: 'new', source: 'door_builder', door_configuration: doorConfiguration,
     }),
@@ -98,8 +100,17 @@ export default async function handler(request: ApiRequest, response: ApiResponse
 
   logDevelopmentSubmission(payload)
 
+  let dealerId: string | null
   try {
-    await submitToSupabase(submissionId, payload, doorConfiguration)
+    dealerId = await resolveDealerId(source.dealerSlug)
+  } catch (reason) {
+    const status = reason instanceof DealerResolutionError ? reason.status : 502
+    response.status(status).json({ error: status === 502 ? 'Dealer lookup is unavailable. Please try again.' : 'This dealer link is unavailable.' })
+    return
+  }
+
+  try {
+    await submitToSupabase(submissionId, payload, doorConfiguration, dealerId)
   } catch (reason) {
     console.error('Door Builder supabase submission failed.', errorMessage(reason))
     response.status(502).json({

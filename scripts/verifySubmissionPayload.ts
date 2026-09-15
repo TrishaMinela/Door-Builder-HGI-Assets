@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import submitDoorBuilder from '../api/submit-door-builder'
 import { buildDoorBuilderSubmissionPayload } from '../src/utils/submission'
+import { dealerSlugFromPath } from '../src/utils/dealerSlug'
 import type { DoorConfiguration, DoorConfigurationType, SideliteConfiguration } from '../src/types'
 
 const baseConfiguration: DoorConfiguration = {
@@ -61,15 +63,21 @@ process.env.ZAPIER_DOOR_BUILDER_WEBHOOK_URL = 'https://example.invalid/zapier-ca
 process.env.SUPABASE_URL = 'https://dealer-portal.supabase.invalid'
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
 
-type Outcome = { supabase: boolean; zapier: boolean }
-type Captures = { supabaseBodies: Record<string, unknown>[]; zapierBodies: Record<string, unknown>[]; supabaseUrls: string[]; supabaseHeaders: Headers[]; callOrder: string[] }
+type Outcome = { supabase: boolean; zapier: boolean; dealer?: 'active' | 'inactive' | 'missing' }
+type Captures = { supabaseBodies: Record<string, unknown>[]; zapierBodies: Record<string, unknown>[]; supabaseUrls: string[]; supabaseHeaders: Headers[]; dealerUrls: string[]; callOrder: string[] }
 
 async function invoke(body: unknown, outcome: Outcome, seenIds = new Set<string>()) {
-  const captures: Captures = { supabaseBodies: [], zapierBodies: [], supabaseUrls: [], supabaseHeaders: [], callOrder: [] }
+  const captures: Captures = { supabaseBodies: [], zapierBodies: [], supabaseUrls: [], supabaseHeaders: [], dealerUrls: [], callOrder: [] }
   let fetchCount = 0
   globalThis.fetch = async (url, options) => {
     fetchCount += 1
     const target = String(url)
+    if (target.includes('.supabase.invalid/rest/v1/dealers')) {
+      captures.callOrder.push('dealer-lookup')
+      captures.dealerUrls.push(target)
+      if (outcome.dealer === 'missing') return Response.json([])
+      return Response.json([{ id: '11111111-1111-4111-8111-111111111111', is_active: outcome.dealer !== 'inactive' }])
+    }
     const parsed = JSON.parse(String(options?.body)) as Record<string, unknown>
     if (target.includes('.supabase.invalid/rest/v1/leads')) {
       captures.callOrder.push('supabase')
@@ -112,6 +120,7 @@ assert.equal(bothSucceed.captures.supabaseHeaders[0].get('apikey'), process.env.
 assert.deepEqual(bothSucceed.captures.zapierBodies[0], zapierPayload)
 assert.equal('submissionId' in bothSucceed.captures.zapierBodies[0], false)
 assert.equal('doorConfiguration' in bothSucceed.captures.zapierBodies[0], false)
+assert.equal('dealerSlug' in bothSucceed.captures.zapierBodies[0], false)
 
 const supabaseOnly = await invoke(validRequest, { supabase: true, zapier: false })
 assert.equal(supabaseOnly.status, 502)
@@ -142,4 +151,43 @@ assert.equal(invalidConfiguration.status, 400); assert.equal(invalidConfiguratio
 const oversizedConfiguration = await invoke({ ...validRequest, doorConfiguration: { value: 'x'.repeat(129 * 1024) } }, { supabase: true, zapier: true })
 assert.equal(oversizedConfiguration.status, 413); assert.equal(oversizedConfiguration.fetchCount, 0)
 
-console.info('Verified flattened Zapier compatibility, Supabase-first sequencing/idempotency, destination failure behavior, and API validation.')
+assert.equal(dealerSlugFromPath('/'), null)
+assert.equal(dealerSlugFromPath('/beewindow'), 'beewindow')
+assert.equal(dealerSlugFromPath('/beewindow/'), 'beewindow')
+assert.equal(dealerSlugFromPath('/api'), null)
+assert.equal(dealerSlugFromPath('/assets'), null)
+
+const dealerRequest = { ...validRequest, dealerSlug: 'beewindow' }
+const activeDealer = await invoke(dealerRequest, { supabase: true, zapier: true, dealer: 'active' })
+assert.equal(activeDealer.status, 200)
+assert.deepEqual(activeDealer.captures.callOrder, ['dealer-lookup', 'supabase', 'zapier'])
+assert.equal(activeDealer.captures.supabaseBodies[0].dealer_id, '11111111-1111-4111-8111-111111111111')
+assert.match(activeDealer.captures.dealerUrls[0], /slug=eq%2Ebeewindow|slug=eq\.beewindow/)
+
+const missingDealer = await invoke(dealerRequest, { supabase: true, zapier: true, dealer: 'missing' })
+assert.equal(missingDealer.status, 404)
+assert.deepEqual(missingDealer.captures.callOrder, ['dealer-lookup'])
+assert.equal(missingDealer.captures.supabaseBodies.length, 0)
+assert.equal(missingDealer.captures.zapierBodies.length, 0)
+
+const inactiveDealer = await invoke(dealerRequest, { supabase: true, zapier: true, dealer: 'inactive' })
+assert.equal(inactiveDealer.status, 403)
+assert.deepEqual(inactiveDealer.captures.callOrder, ['dealer-lookup'])
+assert.equal(inactiveDealer.captures.supabaseBodies.length, 0)
+assert.equal(inactiveDealer.captures.zapierBodies.length, 0)
+
+const spoofedDealerId = await invoke({ ...validRequest, dealer_id: 'attacker-controlled' }, { supabase: true, zapier: true })
+assert.equal(spoofedDealerId.status, 200)
+assert.equal(spoofedDealerId.captures.supabaseBodies[0].dealer_id, null)
+
+const dealerSeenIds = new Set<string>()
+await invoke(dealerRequest, { supabase: true, zapier: false, dealer: 'active' }, dealerSeenIds)
+await invoke(dealerRequest, { supabase: true, zapier: true, dealer: 'active' }, dealerSeenIds)
+assert.equal(dealerSeenIds.size, 1)
+
+const vercelConfiguration = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8')) as { routes: Array<Record<string, string>> }
+assert.deepEqual(vercelConfiguration.routes[0], { handle: 'filesystem' })
+assert.deepEqual(vercelConfiguration.routes[1], { src: '/api/(.*)', dest: '/api/$1' })
+assert.deepEqual(vercelConfiguration.routes[2], { src: '/.*', dest: '/index.html' })
+
+console.info('Verified dealer slug routing/resolution, ownership security, SPA routing, Zapier compatibility, Supabase-first sequencing/idempotency, and API validation.')
