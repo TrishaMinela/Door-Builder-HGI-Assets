@@ -1,7 +1,9 @@
 {
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/.*", "dest": "/index.html" }
-  ]
+  "functions": {
+    "api/generate-door-visualization.ts": {
+      "includeFiles": "public/assets/**",
+      "maxDuration": 180
+    }
+  }
 }
+
