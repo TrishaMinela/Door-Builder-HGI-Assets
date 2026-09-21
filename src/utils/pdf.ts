@@ -435,7 +435,6 @@ export async function generateSummaryPdf(
   })
 
   addImageContained(pdf, previewDataUrl, 350, 214, 210, 340)
-  if (import.meta.env.DEV) console.info('PDF_PREVIEW_DEBUG', { doorConfigurationType, sidelites, previewSourceType: 'captured-door-preview', dataUrlLength: previewDataUrl.length, pdfInsertionResult: 'inserted-without-recoloring' })
 
   return pdf
 }

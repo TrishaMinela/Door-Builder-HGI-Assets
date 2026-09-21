@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test:ai-visualizer": "node --import tsx scripts/verifyAiVisualizer.ts",
+    "test:ai-visualizer:ui": "node --import tsx scripts/verifyAiVisualizerUi.ts",
     "test:submission": "node --import tsx scripts/verifySubmissionPayload.ts",
+    "test:pdf-renderer": "node --import tsx scripts/verifyPdfRenderer.ts",
     "lint": "eslint .",
     "generate:hero": "tsx scripts/generateHeroDoorImages.ts"
   },
@@ -20,10 +22,12 @@
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "sharp": "^0.35.4",
     "typescript": "~5.7.2",
     "vite": "^6.0.5"
   },
   "devDependencies": {
+    "@types/node": "^26.6.1",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "playwright-core": "^1.62.1",

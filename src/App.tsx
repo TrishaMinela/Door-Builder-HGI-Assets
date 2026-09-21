@@ -24,7 +24,6 @@ import { cr14slGlassCategories, cr14slGlassOptions, cr14slGridAsset, cr14slStyle
 import { glassSelectionThumbnail } from './data/glassOptions'
 import { cladColors } from './data/finishes'
 import { HomeVisualizer } from './features/home-visualizer/HomeVisualizer'
-import { captureFinalDoorPreview } from './features/home-visualizer/captureDoorPreview'
 import { HERO_PRESETS, heroDoorFilename, type HeroPreset } from './data/heroPresets'
 import { HeroDoorGenerator } from './features/hero/HeroDoorGenerator'
 import { sideliteBuilderOptions, sideliteProductCode, sideliteProductLabel } from './data/sideliteConfigurations'
@@ -457,9 +456,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [homeDemoIndex, setHomeDemoIndex] = useState(0)
   const [heroImageError, setHeroImageError] = useState('')
   const [builderPreviewView, setBuilderPreviewView] = useState<'Exterior' | 'Interior' | 'Both'>('Exterior')
-  const [pdfPreviewCapture, setPdfPreviewCapture] = useState<{ configurationKey: string; dataUrl: string } | null>(null)
-  const pdfDoorSourceRef = useRef<HTMLDivElement | null>(null)
-  const configuredDoorKeyRef = useRef('')
+  const [pdfProductRender, setPdfProductRender] = useState<{ configurationKey: string; dataUrl: string } | null>(null)
+  const [pdfError, setPdfError] = useState('')
+  const pdfProductKeyRef = useRef('')
   const builderPanelRef = useRef<HTMLElement | null>(null)
   const builderOptionsRef = useRef<HTMLDivElement | null>(null)
   const entrywayDialogRef = useRef<HTMLDivElement | null>(null)
@@ -864,16 +863,17 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     jambFinishColor: jambFinish?.color,
     jambFinishImage: jambFinish?.image,
     jambType,
-    // The flattened source is shared by the visualizer and PDF. Include the
-    // complete insert-trim selection so neither consumer can reuse a capture
-    // made before the customer changed the glass-frame finish.
+    // Include the complete trim selection in the product/cache identity.
     glassFrameColorMode,
     glassFrameFinish: appliedGlassFrameFinish?.id,
     glassFrameFinishType: appliedGlassFrameFinish?.finishType,
     glassFrameFinishColor: appliedGlassFrameFinish?.color,
   })
-  configuredDoorKeyRef.current = configuredDoorKey
-  useEffect(() => setPdfPreviewCapture(null), [configuredDoorKey])
+  // PDF cache includes complete material/product and resolved appearance,
+  // not just style codes (the same code can have different surface families).
+  const pdfProductKey = JSON.stringify({ ...configuredDoorPreview, loadingLabel: undefined, grid: gridConfiguration, sideliteGlass: sideliteGlassConfiguration })
+  pdfProductKeyRef.current = pdfProductKey
+  useEffect(() => { setPdfProductRender(null); setPdfError('') }, [pdfProductKey])
   const renderConfiguredDoorPreview = (previewView: HardwareView, sharedComparisonCanvas = false) => <DoorPreview {...configuredDoorPreview} renderConfigurationKey={configuredDoorKey} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} />
   const renderConfiguredPreviewMode = () => builderPreviewView === 'Both'
     ? <div className="preview-comparison" aria-label="Exterior and interior door previews">
@@ -1357,14 +1357,14 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
   const requestCustomerAction = (action: 'download-pdf' | 'open-visualizer') => {
     if (testMode || customerFormCompleted) {
-      if (action === 'download-pdf') void downloadPdf()
+      if (action === 'download-pdf') void downloadPdf().catch(() => {}) // PDF error is displayed below its action.
       else showScreen('visualizer')
       return
     }
     void (async () => {
       if (action === 'download-pdf') {
         try {
-          await captureExactExteriorPreview()
+          await renderConfiguredPdfProduct()
         } catch (error) {
           setSubmitError(error instanceof Error ? error.message : 'The configured door preview could not be prepared.')
           return
@@ -1379,21 +1379,20 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     })()
   }
 
-  const captureExactExteriorPreview = async () => {
-    const captureConfigurationKey = configuredDoorKey
-    const source = pdfDoorSourceRef.current
-    if (!source) throw new Error('The configured door preview is unavailable.')
-    const captured = await captureFinalDoorPreview(source, { frameMode: 'visible', expectedConfigurationKey: captureConfigurationKey })
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(String(reader.result))
-      reader.onerror = () => reject(new Error('The configured door preview could not be encoded.'))
-      reader.readAsDataURL(captured.blob)
-    })
-    if (configuredDoorKeyRef.current !== captureConfigurationKey) throw new Error('The door configuration changed while the preview was being prepared. Please try again.')
-    setPdfPreviewCapture({ configurationKey: captureConfigurationKey, dataUrl })
-    if (import.meta.env.DEV) Object.assign(window, { __HGI_LAST_FLATTENED_PREVIEW__: dataUrl })
-    return dataUrl
+  const renderConfiguredPdfProduct = async () => {
+    setPdfError('')
+    try {
+      const renderConfigurationKey = pdfProductKey
+      if (!currentDoorConfiguration) throw new Error('Complete the door configuration before PDF export.')
+      const { renderPdfProduct } = await import('./utils/pdfProductRenderer')
+      const { dataUrl } = await renderPdfProduct(currentDoorConfiguration, configuredDoorPreview)
+      if (pdfProductKeyRef.current !== renderConfigurationKey) throw new Error('The door configuration changed while the PDF product image was being prepared. Please try again.')
+      setPdfProductRender({ configurationKey: renderConfigurationKey, dataUrl })
+      return dataUrl
+    } catch (error) {
+      setPdfError(error instanceof Error ? error.message : 'The PDF product image could not be rendered. Please retry.')
+      throw error
+    }
   }
 
   const updateContact = (key: keyof ContactForm, value: string) => {
@@ -1673,9 +1672,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const downloadPdf = async () => {
     if (!selectedHardware || !selectedDoorSwing) return
     const { downloadSummary } = await import('./utils/pdf')
-    const exactPreview = pdfPreviewCapture?.configurationKey === configuredDoorKey
-      ? pdfPreviewCapture.dataUrl
-      : await captureExactExteriorPreview()
+    const exactPreview = pdfProductRender?.configurationKey === pdfProductKey
+      ? pdfProductRender.dataUrl
+      : await renderConfiguredPdfProduct()
     await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }, selectedDoorConfigurationType || 'single', exactPreview, selectedDoorConfigurationType === 'french' ? doubleDoorLockPrep || 'DDLLBO' : null)
   }
 
@@ -1968,6 +1967,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 <span className="attachment-copy"><strong>{configurationPdfName}</strong></span>
                 <button type="button" onClick={() => requestCustomerAction('download-pdf')}><Download size={16} /> Download PDF</button>
               </div>
+              {pdfError && <p className="submit-error" role="alert">{pdfError}</p>}
             </div>
           </>}
 
@@ -2002,7 +2002,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         </aside>}
       </main>
       </>}
-      {selectedStyle && <div ref={pdfDoorSourceRef} className="configured-door-capture-host pdf-door-source" aria-hidden="true"><DoorPreview {...configuredDoorPreview} renderConfigurationKey={configuredDoorKey} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} /></div>}
       <BetaFeedback currentStep={feedbackStep} configuration={feedbackConfiguration}/>
       <footer className="site-footer">
         <div className="site-footer-contact">

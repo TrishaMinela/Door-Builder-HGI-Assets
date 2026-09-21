@@ -17,9 +17,9 @@ import type { DoorConfiguration, SideliteConfiguration } from '../src/types'
 
 export class AiInputError extends Error {}
 export const AI_MODEL = 'gpt-image-2.5-sunburst'
-export const AI_QUALITY = 'high' // Product fidelity, but not Sunburst's xhigh/max cost tiers.
+export const AI_QUALITY = 'xhigh' // Favor product detail; keep below the maximum cost tier.
 export const AI_MAX_REQUEST_BYTES = 3 * 1024 * 1024
-export const AI_MAX_REFERENCE_EDGE = 1024
+export const AI_MAX_REFERENCE_EDGE = 1536
 type ObjectValue = Record<string, unknown>
 export const objectValue = (value: unknown): ObjectValue | null => value && typeof value === 'object' && !Array.isArray(value) ? value as ObjectValue : null
 
@@ -105,7 +105,7 @@ export function resolveAiProduct(value: unknown, jambFinishId?: unknown, glassFr
   if (glassFrameFinishId !== undefined && !finishes.some(item => item.id === glassFrameFinishId)) throw new AiInputError('Selected glass frame finish is invalid.')
   const snapshot = {
     schemaVersion: 1, configurationType: type, doorLine: line?.name, product: selectedProduct.doorType,
-    doorStyle: style.name, doorCode: style.code, grain: source.grain ?? null,
+    doorStyle: style.name, doorCode: style.code, grain: source.grain ?? line?.grains[0] ?? null,
     finish: { name: finish.name, type: finish.finishType, hex: finish.color },
     glass: glass?.name ?? 'No glass', grids: gridValues(source.grid),
     hardware: { manufacturer: hardware.manufacturer, style: hardware.style, finish: hardware.finish, handing: hardware.handing },
@@ -138,11 +138,22 @@ export async function loadAiReference(paths: string[]) {
 }
 
 export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot'], corners: AiCorners, labels: string[]) {
+  const roles: Record<string, string> = {
+    'original base door design': 'defines the exact slab design, panel geometry, panel depth, grooves, glass opening and underlying material/grain; its original color is not the selected finish',
+    'selected glass design': 'defines the exact selected glass shape, decorative detail, pattern and visible glass construction; do not substitute plain glass',
+    'selected exterior hardware': 'defines the exact hardware silhouette, proportions, knob/lever/handle/lockset components and finish; preserve its relative placement on the slab',
+    'original sidelite slab': 'defines the exact sidelite structure, panel details, opening and material; preserve the configured count and placement',
+    'selected sidelite glass': 'defines the exact sidelite glass design and decorative detail, separately from the main-door glass',
+  }
   return [
     'PRIORITY 1 — PRESERVE THE HOUSE. The FIRST image is the original customer house and the base scene. The transparent PNG mask indicates the only editable entrance region, including a small blending allowance. Preserve architecture, siding, windows, roof, porch, masonry, landscaping, steps and surroundings. Do not redesign unrelated pixels.',
-    `PRIORITY 2 — PRODUCT FIDELITY. Subsequent original source references are in this order: ${labels.join(', ')}. Install the exact referenced panel count and geometry, glass shape/design, hardware style and physical placement. Preserve the configured single/French/Savannah arrangement, sidelite count and placement, and grids. These are design references, NOT a finished composite. Do not simply paste them into the house.`,
+    'PRIORITY 2 — PRODUCT FIDELITY. The references are high-priority product-definition inputs, NOT inspiration images and NOT a finished composite. They define the true HGI product design. Adapt only finish, perspective and scene lighting, never redesign or generalize the product. Do not simply paste them into the house.',
+    ...labels.map((label, index) => `Image ${index + 2} — ${label}: ${roles[label] ?? 'defines the selected product detail'}.`),
+    'DETAILS TO PRESERVE. Preserve selected hardware style, silhouette, proportions, finish and physical placement. Preserve selected glass style and all visible decorative detail. Preserve configured grid pattern, grid count implied by the selected layout/reference, grid placement, visible grid thickness and color; do not invent an unspecified count. Preserve sidelite glass and structure, exact panel geometry, visible panel grooves and depth, and crisp jamb/frame edge definition. Keep the configured single/French/Savannah arrangement and sidelite count/placement.',
     'PRIORITY 3 — SELECTED FINISHES. Ignore original reference door/sidelite colors. Refinish the slab and sidelites with the SAME specified customer finish/hex while retaining panel geometry and material/grain. Paint must be opaque, not a translucent pale tint. Stain retains natural grain. Respect configured glass coating, grid color/location, jamb finish and hardware finish.',
+    'MATERIAL FIDELITY. The configured door line and grain define the underlying material. Smooth steel must remain smooth steel; brushed/smooth fiberglass must remain that fiberglass surface; textured or oak-grain fiberglass must retain its texture/oak grain. Preserve any configured visible woodgrain, its direction and relief while applying paint or stain naturally. Do not turn steel into wood or textured fiberglass into a generic flat surface. The selected finish changes color, not material type.',
     'PRIORITY 4 — NATURAL INSTALLATION. Fit to the selected perspective; match scene lighting, exposure, color temperature, highlights, glass reflections/transparency and believable contact shadows. The result must look physically installed, not pasted. Preserve photo framing/aspect ratio. Do not invent decorative architecture, plants, lights, windows, columns, transoms or extra trim.',
+    'AVOID. Do not substitute a different or generic knob, lever, lockset or pull handle. Do not remove, simplify or flatten decorative glass. Do not remove or reduce grids. Do not replace configured glass with plain generic glass. Do not change material type or flatten panel depth. Do not oversoften, blur away or smooth out product-defining details. Preserve fine edges without artificial sharpening halos. Do not invent unrelated architecture or redesign the house.',
     `Selected doorway corners, normalized 0–1: ${JSON.stringify(corners)}`,
     `DoorConfiguration schemaVersion 1: ${JSON.stringify(snapshot)}`,
   ].join('\n')

@@ -25,7 +25,7 @@ async function generate(source: Record<string, unknown>, apiKey: string) {
   form.append('size', 'auto')
   form.append('quality', AI_QUALITY)
   form.append('output_format', 'jpeg')
-  form.append('output_compression', '90')
+  form.append('output_compression', '100')
   const upstream = await fetch('https://api.openai.com/v1/images/edits', {
     method: 'POST', headers: { Authorization: `Bearer ${apiKey}` }, body: form,
     signal: AbortSignal.timeout(140_000),

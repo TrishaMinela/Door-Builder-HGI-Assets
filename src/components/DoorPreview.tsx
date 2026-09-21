@@ -59,7 +59,7 @@ const MAX_GLASS_FRAME_WIDTH_PX = 24
 const GLASS_EDGE_OVERLAP_PX = 1.5
 const SAT_GLASS_FRAME_EDGE_WIDTH_PX = 4
 
-const FINISH_RENDERING = {
+export const FINISH_RENDERING = {
   paintColorBlendMode: 'normal',
   paintColorOpacity: 0.92,
   // Slab and sidelite finishes are completed opaque surfaces. Keeping this
@@ -173,7 +173,7 @@ function connectedAlphaBounds(image: ImageData, minimumAlpha = 128): PixelBounds
   return regions
 }
 
-function isUsableDoorSlabImage(image: HTMLImageElement) {
+export function isUsableDoorSlabImage(image: HTMLImageElement) {
   const canvas = document.createElement('canvas')
   canvas.width = 24
   canvas.height = 48
@@ -245,7 +245,7 @@ function buildVectorGlassMasks(width: number, height: number, regions: PixelBoun
   }
 }
 
-function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement, expandGlassCutout = true, frameDefinition: GlassFrameMaskDefinition = { shape: 'rectangle', separateOpenings: false }, openingMask?: HTMLImageElement) {
+export function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement, expandGlassCutout = true, frameDefinition: GlassFrameMaskDefinition = { shape: 'rectangle', separateOpenings: false }, openingMask?: HTMLImageElement) {
   if (mask.naturalWidth !== slab.naturalWidth || mask.naturalHeight !== slab.naturalHeight) return null
   if (openingMask && (openingMask.naturalWidth !== slab.naturalWidth || openingMask.naturalHeight !== slab.naturalHeight)) return null
   const canvas = document.createElement('canvas')
@@ -334,7 +334,7 @@ function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement, expan
   return { finishUrl, glassUrl, glassFrameUrl: vectorMasks?.frameUrl, glassBounds, glassRegions: frameRegions, maskWidth: canvas.width, maskHeight: canvas.height }
 }
 
-function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height: number, maskBounds: PixelBounds, offsetY = 0, maskRegions?: PixelBounds[], edgeOverlapPx = GLASS_EDGE_OVERLAP_PX, containWithinMask = false, stretchToMaskWidth = false, stretchToMaskHeight = false) {
+export function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height: number, maskBounds: PixelBounds, offsetY = 0, maskRegions?: PixelBounds[], edgeOverlapPx = GLASS_EDGE_OVERLAP_PX, containWithinMask = false, stretchToMaskWidth = false, stretchToMaskHeight = false) {
   const sourceCanvas = document.createElement('canvas')
   sourceCanvas.width = overlay.naturalWidth
   sourceCanvas.height = overlay.naturalHeight
@@ -421,7 +421,7 @@ function buildSolidSlabMask(slab: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-function buildHrtClearTrimMask(image: HTMLImageElement) {
+export function buildHrtClearTrimMask(image: HTMLImageElement) {
   const canvas = document.createElement('canvas')
   canvas.width = image.naturalWidth
   canvas.height = image.naturalHeight
@@ -450,7 +450,7 @@ function buildHrtClearTrimMask(image: HTMLImageElement) {
   return canvas.toDataURL('image/png')
 }
 
-function buildSatGlassFrameMask(glass: HTMLImageElement) {
+export function buildSatGlassFrameMask(glass: HTMLImageElement) {
   const canvas = document.createElement('canvas')
   canvas.width = glass.naturalWidth
   canvas.height = glass.naturalHeight
