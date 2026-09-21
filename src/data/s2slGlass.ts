@@ -2,7 +2,7 @@ import type { GridStyle } from '../types'
 import type { SideliteGlassOption, SideliteGridRules } from './fslGlass'
 
 export const s2slGlassCategories = [
-  { id: 'clear', name: 'Clear Glass', image: '/assets/glass/thumbnails/Clear.png' },
+  { id: 'clear', name: 'Clear Glass', image: '/assets/glass/thumbnails/Clear.webp' },
 ] as const
 
 export const s2slGlassOptions: SideliteGlassOption[] = [

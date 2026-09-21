@@ -11,9 +11,9 @@ export type DoubleDoorLockPrepOption = {
 }
 
 export const doubleDoorLockPrepOptions: DoubleDoorLockPrepOption[] = [
-  { code: 'DDLLBO', label: 'DDLLBO — Double Door — Locks in Both Panels', name: 'Locks on Both Doors', description: 'Lock hardware on both doors.', thumbnail: '/assets/hardware/lock-setup/locks-on-both-doors.png' },
-  { code: 'DDLLAC', label: 'DDLLAC — Double Door — Lock on the Active Panel', name: 'Lock on Main Door Only', description: 'Lock hardware only on the Main Door.', thumbnail: '/assets/hardware/lock-setup/lock-on-main-door-only.png' },
-  { code: 'DDLLKP', label: 'DDLLKP — Double Door Knob Prep Only', name: 'Knob Prep Only', description: 'Prepare the doors for knob hardware without a full lockset.', thumbnail: '/assets/hardware/lock-setup/knob-prep-only.png' },
+  { code: 'DDLLBO', label: 'DDLLBO — Double Door — Locks in Both Panels', name: 'Locks on Both Doors', description: 'Lock hardware on both doors.', thumbnail: '/assets/hardware/lock-setup/locks-on-both-doors.webp' },
+  { code: 'DDLLAC', label: 'DDLLAC — Double Door — Lock on the Active Panel', name: 'Lock on Main Door Only', description: 'Lock hardware only on the Main Door.', thumbnail: '/assets/hardware/lock-setup/lock-on-main-door-only.webp' },
+  { code: 'DDLLKP', label: 'DDLLKP — Double Door Knob Prep Only', name: 'Knob Prep Only', description: 'Prepare the doors for knob hardware without a full lockset.', thumbnail: '/assets/hardware/lock-setup/knob-prep-only.webp' },
 ]
 
 export function doubleDoorLockPrepOption(code?: string | null) {

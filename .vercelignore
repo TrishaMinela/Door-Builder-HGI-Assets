@@ -1,0 +1,14 @@
+dist/
+.env.local
+.env.local.*
+*.swp
+*.backup
+*.tsbuildinfo
+.codex-*
+coverage/
+docs/
+scripts/
+test-results/
+playwright-report/
+*.log
+.DS_Store

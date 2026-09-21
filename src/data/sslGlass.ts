@@ -3,14 +3,14 @@ import type { SideliteGlassCategory, SideliteGlassOption, SideliteGridRules } fr
 import { isApprovedDecorativeGlassName } from './decorativeGlass'
 import { isApprovedPrivacyGlassName } from './privacyGlass'
 
-const asset = (code: string) => `/assets/hgi-assets/Sidelites/SSL/Glass/SSL${code}.png`
+const asset = (code: string) => `/assets/hgi-assets/Sidelites/SSL/Glass/SSL${code}.webp`
 const option = (code: string, name: string, category: SideliteGlassCategory = 'decorative'): SideliteGlassOption => ({ id: code.toLowerCase(), name, category, asset: asset(code) })
 
 export const sslGlassCategories = [
-  { id: 'clear', name: 'Clear Glass', image: '/assets/glass/thumbnails/Clear.png' },
-  { id: 'decorative', name: 'Decorative Glass', image: '/assets/glass/thumbnails/Decorative.png' },
-  { id: 'privacy', name: 'Privacy Glass', image: '/assets/glass/thumbnails/Privacy.png' },
-  { id: 'blinds', name: 'Mini Blinds', image: '/assets/glass/thumbnails/Blinds.png' },
+  { id: 'clear', name: 'Clear Glass', image: '/assets/glass/thumbnails/Clear.webp' },
+  { id: 'decorative', name: 'Decorative Glass', image: '/assets/glass/thumbnails/Decorative.webp' },
+  { id: 'privacy', name: 'Privacy Glass', image: '/assets/glass/thumbnails/Privacy.webp' },
+  { id: 'blinds', name: 'Mini Blinds', image: '/assets/glass/thumbnails/Blinds.webp' },
 ] as const
 
 const allSslGlassOptions: SideliteGlassOption[] = [
@@ -60,13 +60,13 @@ export const sslLowEStyleRules: Partial<Record<GridStyle, SideliteGridRules>> = 
 
 const patternCodes: Partial<Record<GridPattern, string>> = { '2 Lite': '2L', '3 Lite': '3L' }
 const colorCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Black: 'BL', Bronze: 'BZ', 'Bronze/White': 'WH', Champagne: 'CH', Tan: 'TA', White: 'WH' }
-export const sslGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Sidelites/SSL/Internal Grids/SSLINT${patternCodes[pattern]}${colorCodes[color]}.png`
-export const sslArtsAndCraftsGridAsset = (_color: GridColor) => '/assets/hgi-assets/Glass/Sidelites/F48SL SSL Arts Crafts White.png'
+export const sslGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Sidelites/SSL/Internal Grids/SSLINT${patternCodes[pattern]}${colorCodes[color]}.webp`
+export const sslArtsAndCraftsGridAsset = (_color: GridColor) => '/assets/hgi-assets/Glass/Sidelites/F48SL SSL Arts Crafts White.webp'
 
 const sslPrairieGridAssets: Partial<Record<GridColor, string>> = {
-  Champagne: '/assets/hgi-assets/Glass/SSL/CLEAR STOCK/SSL Prairie Champagne.png',
-  Tan: '/assets/hgi-assets/Glass/SSL/CLEAR STOCK/SSL Prairie Tan.png',
-  White: '/assets/hgi-assets/Glass/SSL/CLEAR STOCK/SSL Prairie White.png',
+  Champagne: '/assets/hgi-assets/Glass/SSL/CLEAR STOCK/SSL Prairie Champagne.webp',
+  Tan: '/assets/hgi-assets/Glass/SSL/CLEAR STOCK/SSL Prairie Tan.webp',
+  White: '/assets/hgi-assets/Glass/SSL/CLEAR STOCK/SSL Prairie White.webp',
 }
 
 export const sslPrairieGridAsset = (color: GridColor) => sslPrairieGridAssets[color] ?? sslPrairieGridAssets.White!

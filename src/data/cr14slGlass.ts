@@ -14,9 +14,9 @@ export const cr14slGlassOptions: SideliteGlassOption[] = glassOptions
   }))
 
 const categories = [
-  { id: 'clear', name: 'Clear Glass', image: '/assets/glass/thumbnails/Clear.png' },
-  { id: 'decorative', name: 'Decorative Glass', image: '/assets/glass/thumbnails/Decorative.png' },
-  { id: 'privacy', name: 'Privacy Glass', image: '/assets/glass/thumbnails/Privacy.png' },
+  { id: 'clear', name: 'Clear Glass', image: '/assets/glass/thumbnails/Clear.webp' },
+  { id: 'decorative', name: 'Decorative Glass', image: '/assets/glass/thumbnails/Decorative.webp' },
+  { id: 'privacy', name: 'Privacy Glass', image: '/assets/glass/thumbnails/Privacy.webp' },
 ] as const
 
 export const cr14slGlassCategories = categories.filter((category) => cr14slGlassOptions.some((option) => option.category === category.id))

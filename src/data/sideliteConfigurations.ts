@@ -12,10 +12,10 @@ export type SideliteProductOption = {
 }
 
 export const sideliteProductOptions: readonly SideliteProductOption[] = [
-  { code: 'NOSIDE', label: 'NOSIDE - NO SIDE LITE WITH THE DOOR', legacyValue: 'none', placement: 'none', image: '/assets/hgi-assets/Sidelites/options/No Sidelites.png' },
-  { code: 'BOTHSIDES', label: 'BOTHSIDES - SIDELITES ON BOTH SIDES', legacyValue: 'both-sides', placement: 'both', image: '/assets/hgi-assets/Sidelites/options/Both-Sides Sidelites.png' },
-  { code: 'LEFTSIDE', label: 'LEFTSIDE - SIDELITE ON LEFT OSLI', legacyValue: 'hinge-side', placement: 'left', image: '/assets/hgi-assets/Sidelites/options/Left Side OSLI.png' },
-  { code: 'RIGHTSIDE', label: 'RIGHTSIDE - SIDELITE ON RIGHT OSLI', legacyValue: 'lock-side', placement: 'right', image: '/assets/hgi-assets/Sidelites/options/Right Side OSLI.png' },
+  { code: 'NOSIDE', label: 'NOSIDE - NO SIDE LITE WITH THE DOOR', legacyValue: 'none', placement: 'none', image: '/assets/hgi-assets/Sidelites/options/No Sidelites.webp' },
+  { code: 'BOTHSIDES', label: 'BOTHSIDES - SIDELITES ON BOTH SIDES', legacyValue: 'both-sides', placement: 'both', image: '/assets/hgi-assets/Sidelites/options/Both-Sides Sidelites.webp' },
+  { code: 'LEFTSIDE', label: 'LEFTSIDE - SIDELITE ON LEFT OSLI', legacyValue: 'hinge-side', placement: 'left', image: '/assets/hgi-assets/Sidelites/options/Left Side OSLI.webp' },
+  { code: 'RIGHTSIDE', label: 'RIGHTSIDE - SIDELITE ON RIGHT OSLI', legacyValue: 'lock-side', placement: 'right', image: '/assets/hgi-assets/Sidelites/options/Right Side OSLI.webp' },
 ] as const
 
 export type SideliteBuilderOption = {
@@ -25,22 +25,22 @@ export type SideliteBuilderOption = {
 }
 
 const singleDoorBuilderOptions: readonly SideliteBuilderOption[] = [
-  { id: 'none', name: 'No Sidelite', image: '/assets/hgi-assets/Sidelites/options/No Sidelites.png' },
-  { id: 'both-sides', name: 'Both Sidelites', image: '/assets/hgi-assets/Sidelites/options/Both-Sides Sidelites.png' },
-  { id: 'lock-side', name: 'Lock Side', image: '/assets/hgi-assets/Sidelites/options/Lock-Side Sidelite.png' },
-  { id: 'hinge-side', name: 'Hinge Side', image: '/assets/hgi-assets/Sidelites/options/Hinge-Side Sidelite.png' },
+  { id: 'none', name: 'No Sidelite', image: '/assets/hgi-assets/Sidelites/options/No Sidelites.webp' },
+  { id: 'both-sides', name: 'Both Sidelites', image: '/assets/hgi-assets/Sidelites/options/Both-Sides Sidelites.webp' },
+  { id: 'lock-side', name: 'Lock Side', image: '/assets/hgi-assets/Sidelites/options/Lock-Side Sidelite.webp' },
+  { id: 'hinge-side', name: 'Hinge Side', image: '/assets/hgi-assets/Sidelites/options/Hinge-Side Sidelite.webp' },
 ]
 
 const doubleDoorBuilderOptions: readonly SideliteBuilderOption[] = sideliteProductOptions.map((option) => ({
   id: option.legacyValue,
   name: option.label,
   image: option.code === 'NOSIDE'
-    ? '/assets/hgi-assets/Sidelites/options/Double Door No Side.png'
+    ? '/assets/hgi-assets/Sidelites/options/Double Door No Side.webp'
     : option.code === 'BOTHSIDES'
-      ? '/assets/hgi-assets/Sidelites/options/Double Door Both Sides.png'
+      ? '/assets/hgi-assets/Sidelites/options/Double Door Both Sides.webp'
       : option.code === 'LEFTSIDE'
-        ? '/assets/hgi-assets/Sidelites/options/Double Door Left Side.png'
-        : '/assets/hgi-assets/Sidelites/options/Double Door Right Side.png',
+        ? '/assets/hgi-assets/Sidelites/options/Double Door Left Side.webp'
+        : '/assets/hgi-assets/Sidelites/options/Double Door Right Side.webp',
 }))
 
 export function sideliteBuilderOptions(configurationType: DoorConfigurationType | '' | null | undefined): readonly SideliteBuilderOption[] {

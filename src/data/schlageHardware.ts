@@ -7,8 +7,8 @@ export type SchlageHardwareOption = {
   interiorPreviewImage?: string
 }
 
-const card = (name: string) => `cards/schlage-${name}.png`
-const preview = (name: string, view: 'exterior' | 'interior') => `schlage/${name}-${view}.png`
+const card = (name: string) => `cards/schlage-${name}.webp`
+const preview = (name: string, view: 'exterior' | 'interior') => `schlage/${name}-${view}.webp`
 
 export const schlageHardware: SchlageHardwareOption[] = [
   { manufacturer: 'Schlage', style: 'Accent Lever with Deadbolt', finish: 'Bright Brass', cardImage: card('accent-bright-brass'), exteriorPreviewImage: preview('accent-bright-brass', 'exterior'), interiorPreviewImage: preview('accent-bright-brass', 'interior') },
@@ -22,16 +22,16 @@ export const schlageHardware: SchlageHardwareOption[] = [
   { manufacturer: 'Schlage', style: 'Georgian Knob with Deadbolt', finish: 'Matte Black', cardImage: card('georgian-matte-black'), exteriorPreviewImage: preview('georgian-matte-black', 'exterior'), interiorPreviewImage: preview('georgian-matte-black', 'interior') },
   { manufacturer: 'Schlage', style: 'Georgian Knob with Deadbolt', finish: 'Satin Nickel', cardImage: card('georgian-satin-nickel'), exteriorPreviewImage: preview('georgian-satin-nickel', 'exterior'), interiorPreviewImage: preview('georgian-satin-nickel', 'interior') },
 
-  { manufacturer: 'Schlage', style: 'Latitude Lever with Deadbolt', finish: 'Matte Black', cardImage: card('latitude-matte-black'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Latitude - Matte Black.png', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Latitude - Matte Black.png' },
-  { manufacturer: 'Schlage', style: 'Latitude Lever with Deadbolt', finish: 'Satin Nickel', cardImage: card('latitude-satin-nickel'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Latitude - Satin Nickel.png', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Latitude - Satin Nickel.png' },
+  { manufacturer: 'Schlage', style: 'Latitude Lever with Deadbolt', finish: 'Matte Black', cardImage: card('latitude-matte-black'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Latitude - Matte Black.webp', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Latitude - Matte Black.webp' },
+  { manufacturer: 'Schlage', style: 'Latitude Lever with Deadbolt', finish: 'Satin Nickel', cardImage: card('latitude-satin-nickel'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Latitude - Satin Nickel.webp', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Latitude - Satin Nickel.webp' },
 
   { manufacturer: 'Schlage', style: 'Plymouth Handleset', finish: 'Bright Brass', cardImage: card('plymouth-bright-brass'), exteriorPreviewImage: preview('plymouth-bright-brass', 'exterior'), interiorPreviewImage: preview('plymouth-bright-brass', 'interior') },
   { manufacturer: 'Schlage', style: 'Plymouth Handleset', finish: 'Matte Black', cardImage: card('plymouth-matte-black'), exteriorPreviewImage: preview('plymouth-matte-black', 'exterior'), interiorPreviewImage: preview('plymouth-matte-black', 'interior') },
   { manufacturer: 'Schlage', style: 'Plymouth Handleset', finish: 'Satin Nickel', cardImage: card('plymouth-satin-nickel'), exteriorPreviewImage: preview('plymouth-satin-nickel', 'exterior'), interiorPreviewImage: preview('plymouth-satin-nickel', 'interior') },
 
-  { manufacturer: 'Schlage', style: 'Camelot Handleset', finish: 'Bright Brass', cardImage: card('camelot-bright-brass'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Camelot - Bright Brass.png', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Camelot - Bright Brass.png' },
-  { manufacturer: 'Schlage', style: 'Camelot Handleset', finish: 'Matte Black', cardImage: card('camelot-matte-black'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Camelot - Matte Black.png', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Camelot - Matte Black.png' },
-  { manufacturer: 'Schlage', style: 'Camelot Handleset', finish: 'Satin Nickel', cardImage: card('camelot-satin-nickel'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Camelot - Satin Nickel.png', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Camelot - Satin Nickel.png' },
+  { manufacturer: 'Schlage', style: 'Camelot Handleset', finish: 'Bright Brass', cardImage: card('camelot-bright-brass'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Camelot - Bright Brass.webp', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Camelot - Bright Brass.webp' },
+  { manufacturer: 'Schlage', style: 'Camelot Handleset', finish: 'Matte Black', cardImage: card('camelot-matte-black'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Camelot - Matte Black.webp', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Camelot - Matte Black.webp' },
+  { manufacturer: 'Schlage', style: 'Camelot Handleset', finish: 'Satin Nickel', cardImage: card('camelot-satin-nickel'), exteriorPreviewImage: 'schlage/Preview - Schlage - Exterior - Camelot - Satin Nickel.webp', interiorPreviewImage: 'schlage/Preview - Schlage - Interior - Camelot - Satin Nickel.webp' },
 
   { manufacturer: 'Schlage', style: 'Century Handleset', finish: 'Matte Black', cardImage: card('century-matte-black'), exteriorPreviewImage: preview('century-matte-black', 'exterior'), interiorPreviewImage: preview('century-matte-black', 'interior') },
   { manufacturer: 'Schlage', style: 'Century Handleset', finish: 'Satin Nickel', cardImage: card('century-satin-nickel'), exteriorPreviewImage: preview('century-satin-nickel', 'exterior'), interiorPreviewImage: preview('century-satin-nickel', 'interior') },

@@ -5,15 +5,15 @@ import { isApprovedPrivacyGlassName } from './privacyGlass'
 export type SideliteGlassCategory = 'clear' | 'decorative' | 'privacy' | 'clic' | 'blinds'
 export type SideliteGlassOption = { id: string; name: string; category: SideliteGlassCategory; asset?: string }
 
-const asset = (code: string) => `/assets/hgi-assets/Sidelites/FSL/Glass/FSL${code}.png`
+const asset = (code: string) => `/assets/hgi-assets/Sidelites/FSL/Glass/FSL${code}.webp`
 const option = (code: string, name: string, category: SideliteGlassCategory = 'decorative'): SideliteGlassOption => ({ id: code.toLowerCase(), name, category, asset: asset(code) })
 
 export const fslGlassCategories = [
-  { id: 'clear', name: 'Clear Glass', image: '/assets/glass/thumbnails/Clear.png' },
-  { id: 'decorative', name: 'Decorative Glass', image: '/assets/glass/thumbnails/Decorative.png' },
-  { id: 'privacy', name: 'Privacy Glass', image: '/assets/glass/thumbnails/Privacy.png' },
-  { id: 'clic', name: 'CLiC Glass', image: '/assets/glass/thumbnails/CLIC.png' },
-  { id: 'blinds', name: 'Mini Blinds', image: '/assets/glass/thumbnails/Blinds.png' },
+  { id: 'clear', name: 'Clear Glass', image: '/assets/glass/thumbnails/Clear.webp' },
+  { id: 'decorative', name: 'Decorative Glass', image: '/assets/glass/thumbnails/Decorative.webp' },
+  { id: 'privacy', name: 'Privacy Glass', image: '/assets/glass/thumbnails/Privacy.webp' },
+  { id: 'clic', name: 'CLiC Glass', image: '/assets/glass/thumbnails/CLIC.webp' },
+  { id: 'blinds', name: 'Mini Blinds', image: '/assets/glass/thumbnails/Blinds.webp' },
 ] as const
 
 const allFslGlassOptions: SideliteGlassOption[] = [
@@ -86,12 +86,12 @@ export const fslSdlPatterns: Record<FslGridCoatingId, GridPattern[]> = {
 
 const patternCodes: Partial<Record<GridPattern, string>> = { '2 Lite': '2L', '3 Lite': '3L', '4 Lite': '4L', '5 Lite': '5L' }
 const colorCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Black: 'BL', Bronze: 'BZ', 'Bronze/White': 'WH', Champagne: 'CH', Tan: 'TA', White: 'WH' }
-export const fslGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Sidelites/FSL/Internal Grids/FSLINT${patternCodes[pattern]}${colorCodes[color]}.png`
+export const fslGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Sidelites/FSL/Internal Grids/FSLINT${patternCodes[pattern]}${colorCodes[color]}.webp`
 const fslPrairieGridAssets: Partial<Record<GridColor, string>> = {
-  Champagne: '/assets/hgi-assets/Glass/FSL/CLEAR STOCK/FSL Prairie Champagne.png',
-  Tan: '/assets/hgi-assets/Glass/FSL/CLEAR STOCK/FSL Prairie Tan.png',
-  White: '/assets/hgi-assets/Glass/FSL/CLEAR STOCK/FSL Prairie White.png',
+  Champagne: '/assets/hgi-assets/Glass/FSL/CLEAR STOCK/FSL Prairie Champagne.webp',
+  Tan: '/assets/hgi-assets/Glass/FSL/CLEAR STOCK/FSL Prairie Tan.webp',
+  White: '/assets/hgi-assets/Glass/FSL/CLEAR STOCK/FSL Prairie White.webp',
 }
 
 export const fslPrairieGridAsset = (color: GridColor) => fslPrairieGridAssets[color] ?? fslPrairieGridAssets.White!
-export const fslArtsAndCraftsGridAsset = (_color: GridColor) => '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FART3LWH.png'
+export const fslArtsAndCraftsGridAsset = (_color: GridColor) => '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FART3LWH.webp'

@@ -20,7 +20,7 @@ function fixture(code: string, finishId: string, sidelites: DoorConfiguration['s
 }
 const grid = fixture('F', 'paint-black', 'none', 'single', 'f-clear-grids')
 grid.configuration.grid = { glassCoating: 'Low-E', gridLocation: 'SDL', gridPattern: '6 Lite', gridStyle: 'Flat' }
-grid.appearance.glass = { ...grid.configuration.glass!, overlaysByDoorStyle: { F: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT6LWH.png' } }
+grid.appearance.glass = { ...grid.configuration.glass!, overlaysByDoorStyle: { F: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT6LWH.webp' } }
 grid.appearance.gridMatchesFinish = true
 const sideGrid = fixture('F', 'paint-brown', 'both-sides', 'single', 'f-clear-no-grids')
 sideGrid.configuration.sideliteGlass = { glass: 'Clear Glass with Grids', glassCategory: 'Clear Glass', gridLocation: 'SDL', gridPattern: '3 Lite', gridStyle: 'Flat' }

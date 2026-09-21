@@ -9,33 +9,33 @@ type SideliteFamilySelection = {
 
 const SIDELITE_SLABS: Record<SideliteAssetFamily, Partial<Record<SideliteStyleId, string>>> = {
   '20-gauge': {
-    fsl: '/assets/hgi-assets/Sidelites/20 Gauge/FSL.png',
-    f48sl: '/assets/hgi-assets/Sidelites/20 Gauge/F48SL.png',
-    s2sl: '/assets/hgi-assets/Sidelites/20 Gauge/S2SL.png',
+    fsl: '/assets/hgi-assets/Sidelites/20 Gauge/FSL.webp',
+    f48sl: '/assets/hgi-assets/Sidelites/20 Gauge/F48SL.webp',
+    s2sl: '/assets/hgi-assets/Sidelites/20 Gauge/S2SL.webp',
   },
   '22-gauge': {
-    fsl: '/assets/hgi-assets/Sidelites/22 Gauge/FSL.png',
-    f48sl: '/assets/hgi-assets/Sidelites/22 Gauge/F48SL.png',
-    ssl: '/assets/hgi-assets/Sidelites/Signature/Oak/SSL.png',
-    s2sl: '/assets/hgi-assets/Sidelites/22 Gauge/S2SL.png',
+    fsl: '/assets/hgi-assets/Sidelites/22 Gauge/FSL.webp',
+    f48sl: '/assets/hgi-assets/Sidelites/22 Gauge/F48SL.webp',
+    ssl: '/assets/hgi-assets/Sidelites/Signature/Oak/SSL.webp',
+    s2sl: '/assets/hgi-assets/Sidelites/22 Gauge/S2SL.webp',
   },
   cherry: {
-    fsl: '/assets/hgi-assets/Sidelites/Signature/Cherry/FSL.png',
-    f48sl: '/assets/hgi-assets/Sidelites/Signature/Cherry/F48SL.png',
-    ssl: '/assets/hgi-assets/Sidelites/Signature/Cherry/SSL.png',
+    fsl: '/assets/hgi-assets/Sidelites/Signature/Cherry/FSL.webp',
+    f48sl: '/assets/hgi-assets/Sidelites/Signature/Cherry/F48SL.webp',
+    ssl: '/assets/hgi-assets/Sidelites/Signature/Cherry/SSL.webp',
   },
   fir: {
-    fsl: '/assets/hgi-assets/Sidelites/Signature/Fir/FSL.png',
-    cr14sl: '/assets/hgi-assets/Sidelites/Signature/Fir/CR14SL.png',
+    fsl: '/assets/hgi-assets/Sidelites/Signature/Fir/FSL.webp',
+    cr14sl: '/assets/hgi-assets/Sidelites/Signature/Fir/CR14SL.webp',
   },
   mahogany: {
-    fsl: '/assets/hgi-assets/Sidelites/Signature/Mahogany/FSL.png',
-    f48sl: '/assets/hgi-assets/Sidelites/Signature/Mahogany/F48SL.png',
-    ssl: '/assets/hgi-assets/Sidelites/Signature/Mahogany/SSL.png',
+    fsl: '/assets/hgi-assets/Sidelites/Signature/Mahogany/FSL.webp',
+    f48sl: '/assets/hgi-assets/Sidelites/Signature/Mahogany/F48SL.webp',
+    ssl: '/assets/hgi-assets/Sidelites/Signature/Mahogany/SSL.webp',
   },
   oak: {
-    f48sl: '/assets/hgi-assets/Sidelites/Signature/Oak/F48SL.png',
-    ssl: '/assets/hgi-assets/Sidelites/Signature/Oak/SSL.png',
+    f48sl: '/assets/hgi-assets/Sidelites/Signature/Oak/F48SL.webp',
+    ssl: '/assets/hgi-assets/Sidelites/Signature/Oak/SSL.webp',
   },
 }
 

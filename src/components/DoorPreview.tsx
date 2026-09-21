@@ -563,8 +563,8 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const requestedHardwareImage = selectedHardwareImage || hardwarePreviewAssetUrl(previewHardware, previewView, doorSwing)
   const [hardwareImage, setHardwareImage] = useState(requestedHardwareImage)
 
-  const usesAuthoredSideliteArtsAndCrafts = sideliteGlassSrc?.includes('/F48SL%20SSL%20Arts%20Crafts%20White.png')
-    || sideliteGlassSrc?.includes('/F48SL SSL Arts Crafts White.png')
+  const usesAuthoredSideliteArtsAndCrafts = sideliteGlassSrc?.includes('/F48SL%20SSL%20Arts%20Crafts%20White.webp')
+    || sideliteGlassSrc?.includes('/F48SL SSL Arts Crafts White.webp')
   const sideliteGlassNeedsFitting = Boolean(sideliteGlassSrc && (!sideliteGlassIsGrid || sideliteGridIsPrairie || usesAuthoredSideliteArtsAndCrafts))
   const usesAuthoredSidelitePrairieColor = /\/(?:FSL|F48SL|SSL)(?:%20| )Prairie(?:%20| )/i.test(sideliteGlassSrc ?? '')
   const mainMaskReady = Boolean(previewImage && previewCandidates.includes(previewImage) && processedMask?.source === previewImage && processedMask.finishUrl)
@@ -751,8 +751,8 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
     // different: they include their own visible glass pane inside transparent
     // padding, so fit that pane to the canonical opening to avoid exposed
     // clear-glass strips above or below it.
-    const usesAuthoredArtsAndCraftsGlass = sideliteGlassSrc?.includes('/F48SL%20SSL%20Arts%20Crafts%20White.png')
-      || sideliteGlassSrc?.includes('/F48SL SSL Arts Crafts White.png')
+    const usesAuthoredArtsAndCraftsGlass = sideliteGlassSrc?.includes('/F48SL%20SSL%20Arts%20Crafts%20White.webp')
+      || sideliteGlassSrc?.includes('/F48SL SSL Arts Crafts White.webp')
     if (sideliteGlassIsGrid && !sideliteGridIsPrairie && !usesAuthoredArtsAndCraftsGlass) {
       setFittedSideliteGlass(null)
       return () => { cancelled = true }

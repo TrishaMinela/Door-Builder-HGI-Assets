@@ -43,9 +43,9 @@ const timberStainTooltipTitle = 'About TimberStain®'
 const timberStainTooltipText = 'TimberStain® finishes use nature-inspired colors and are hand-applied to enhance the door’s natural texture and grain. Each finish is oven-cured, protected with a durable clear coat, and backed by a 15-year warranty.'
 const proMatchNote = 'Colors may appear differently depending on the material, lighting, and screen. Confirm your final selection with an official color sample.'
 const doorConfigurationOptions: { id: DoorConfigurationType; name: string; description: string; image: string }[] = [
-  { id: 'single', name: doorConfigurationLabel('single'), description: 'One standard entry door.', image: '/assets/door-configurations/single-door.png' },
-  { id: 'french', name: doorConfigurationLabel('french'), description: 'Two operating door panels.', image: '/assets/door-configurations/french-door.png' },
-  { id: 'savannah', name: doorConfigurationLabel('savannah'), description: 'Double-door appearance with one fixed panel.', image: '/assets/door-configurations/savannah-door.png' },
+  { id: 'single', name: doorConfigurationLabel('single'), description: 'One standard entry door.', image: '/assets/door-configurations/single-door.webp' },
+  { id: 'french', name: doorConfigurationLabel('french'), description: 'Two operating door panels.', image: '/assets/door-configurations/french-door.webp' },
+  { id: 'savannah', name: doorConfigurationLabel('savannah'), description: 'Double-door appearance with one fixed panel.', image: '/assets/door-configurations/savannah-door.webp' },
 ]
 
 function doorCatalogModelName(name: string) {
@@ -174,55 +174,55 @@ const FULL_LITE_GRID_GLASS_ID = 'f-clear-grids'
 const F48_GRID_GLASS_ID = 'f48-clear-grids'
 const S_GRID_GLASS_ID = 's-clear-grids'
 const gridLocations = [
-  { id: 'external', name: 'External Grids', image: '/assets/grid-options/External Grids.png' },
-  { id: 'internal', name: 'Internal Grids', image: '/assets/grid-options/Internal Grids.png' },
-  { id: 'sdl', name: 'SDL Grids', image: '/assets/grid-options/SDL Grids.png' },
+  { id: 'external', name: 'External Grids', image: '/assets/grid-options/External Grids.webp' },
+  { id: 'internal', name: 'Internal Grids', image: '/assets/grid-options/Internal Grids.webp' },
+  { id: 'sdl', name: 'SDL Grids', image: '/assets/grid-options/SDL Grids.webp' },
 ] as const
 const gridStyles: { id: GridStyle; image: string }[] = [
-  { id: 'Contoured', image: '/assets/grid-options/Contoured Grids.png' },
-  { id: 'Flat', image: '/assets/grid-options/Flat Grids.png' },
-  { id: 'Prairie', image: '/assets/grid-options/Prairie Grids.png' },
+  { id: 'Contoured', image: '/assets/grid-options/Contoured Grids.webp' },
+  { id: 'Flat', image: '/assets/grid-options/Flat Grids.webp' },
+  { id: 'Prairie', image: '/assets/grid-options/Prairie Grids.webp' },
 ]
 const lowEGridStyles: { id: GridStyle; image: string }[] = [
-  { id: 'Arts & Crafts', image: '/assets/grid-options/Arts & Crafts Grid.png' },
+  { id: 'Arts & Crafts', image: '/assets/grid-options/Arts & Crafts Grid.webp' },
   ...gridStyles,
 ]
 const flatGridPatterns: { id: GridPattern; image: string }[] = [
-  { id: '4 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT4LBE.png' },
-  { id: '4 Lite Horizontal', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT4LHBE.png' },
-  { id: '6 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT6LBE.png' },
-  { id: '8 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT8LBE.png' },
-  { id: '10 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT10LBE.png' },
-  { id: '12 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT12LBE.png' },
-  { id: '15 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT15LBE.png' },
+  { id: '4 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT4LBE.webp' },
+  { id: '4 Lite Horizontal', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT4LHBE.webp' },
+  { id: '6 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT6LBE.webp' },
+  { id: '8 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT8LBE.webp' },
+  { id: '10 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT10LBE.webp' },
+  { id: '12 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT12LBE.webp' },
+  { id: '15 Lite', image: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT15LBE.webp' },
 ]
 const allGridPatterns: { id: GridPattern; image: string }[] = [
-  { id: '2 Lite', image: '/assets/grid-options/All Lites.png' },
-  { id: '3 Lite', image: '/assets/grid-options/All Lites.png' },
+  { id: '2 Lite', image: '/assets/grid-options/All Lites.webp' },
+  { id: '3 Lite', image: '/assets/grid-options/All Lites.webp' },
   ...flatGridPatterns.slice(0, 4),
-  { id: '9 Lite', image: '/assets/grid-options/All Lites.png' },
+  { id: '9 Lite', image: '/assets/grid-options/All Lites.webp' },
   ...flatGridPatterns.slice(4),
 ]
 const internalGridPatternCodes: Partial<Record<GridPattern, string>> = { '2 Lite': '2L', '3 Lite': '3L', '4 Lite': '4L', '4 Lite Horizontal': '4LH', '6 Lite': '6L', '8 Lite': '8L', '9 Lite': '9L', '10 Lite': '10L', '12 Lite': '12L', '15 Lite': '15L' }
 const internalGridColorCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Black: 'BK', Bronze: 'BZ', 'Bronze/White': 'WH', Champagne: 'CH', Tan: 'TA', White: 'WH' }
-const internalGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT${internalGridPatternCodes[pattern]}${internalGridColorCodes[color]}.png`
+const internalGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT${internalGridPatternCodes[pattern]}${internalGridColorCodes[color]}.webp`
 const f48GridColorCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Black: 'BL', Bronze: 'BR', 'Bronze/White': 'WH', Champagne: 'CH', Tan: 'TA', White: 'WH' }
-const f48InternalGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Glass/F48/INTERNAL GRIDS/F48INT${internalGridPatternCodes[pattern]}${f48GridColorCodes[color]}.png`
+const f48InternalGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Glass/F48/INTERNAL GRIDS/F48INT${internalGridPatternCodes[pattern]}${f48GridColorCodes[color]}.webp`
 const sGridColorCodes: Partial<Record<GridColor, string>> = { Beige: 'BE', Black: 'BL', Bronze: 'BR', 'Bronze/White': 'WH', Champagne: 'CH', Tan: 'TA', White: 'WH' }
-const sInternalGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Glass/S/INTERNAL GRIDS/SINT${internalGridPatternCodes[pattern]}${sGridColorCodes[color]}.png`
+const sInternalGridAsset = (pattern: GridPattern, color: GridColor) => `/assets/hgi-assets/Glass/S/INTERNAL GRIDS/SINT${internalGridPatternCodes[pattern]}${sGridColorCodes[color]}.webp`
 const contouredGridAssets: Partial<Record<GridPattern, Partial<Record<GridColor, string>>>> = {
-  '4 Lite': { White: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT4LWH.png' },
+  '4 Lite': { White: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT4LWH.webp' },
   '10 Lite': {
-    Champagne: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT10LCH.png',
-    White: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT10LWH.png',
+    Champagne: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT10LCH.webp',
+    White: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT10LWH.webp',
   },
-  '15 Lite': { Champagne: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT15LCH.png' },
+  '15 Lite': { Champagne: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT15LCH.webp' },
 }
 const prairieGridAssets: Partial<Record<GridColor, string>> = {
-  White: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRAWH.png',
-  Champagne: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRACH.png',
-  Beige: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRACHBE.png',
-  Tan: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRACHTA.png',
+  White: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRAWH.webp',
+  Champagne: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRACH.webp',
+  Beige: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRACHBE.webp',
+  Tan: '/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FPRACHTA.webp',
 }
 const gridColorValues: Partial<Record<GridColor, string>> = {
   Beige: '#d8c5a4', Black: '#161616', Bronze: '#6f4b32', 'Bronze/White': 'linear-gradient(90deg,#6f4b32 0 50%,#f4f4ef 50%)', Champagne: '#d5bd8e', Tan: '#b18b62', White: '#f4f4ef',
@@ -320,10 +320,10 @@ const HERO_FINISH_SPECS: Record<HeroPreset['finishKey'], { baseId: string; name:
   'black-cherry-stain': { baseId: 'stain-black-cherry', name: 'Black Cherry Stain' },
 }
 const grainThumbnails: Record<string, string> = {
-  Cherry: '/assets/door-lines/grains/cherry.png',
-  Fir: '/assets/door-lines/grains/fir.png',
-  Mahogany: '/assets/door-lines/grains/mahogany.png',
-  Oak: '/assets/door-lines/grains/oak.png',
+  Cherry: '/assets/door-lines/grains/cherry.webp',
+  Fir: '/assets/door-lines/grains/fir.webp',
+  Mahogany: '/assets/door-lines/grains/mahogany.webp',
+  Oak: '/assets/door-lines/grains/oak.webp',
 }
 const signatureGrainChoices = (['Cherry', 'Fir', 'Mahogany', 'Oak'] as const).map((grain) => ({
   id: grain,
@@ -331,10 +331,10 @@ const signatureGrainChoices = (['Cherry', 'Fir', 'Mahogany', 'Oak'] as const).ma
   image: grainThumbnails[grain],
 }))
 const doorSwingOptions: DoorSwing[] = [
-  { id: 'LHI', name: 'Left Hand Inswing', image: '/assets/door-swing/lhi.png' },
-  { id: 'LHO', name: 'Left Hand Outswing', image: '/assets/door-swing/lho.png' },
-  { id: 'RHI', name: 'Right Hand Inswing', image: '/assets/door-swing/rhi.png' },
-  { id: 'RHO', name: 'Right Hand Outswing', image: '/assets/door-swing/rho.png' },
+  { id: 'LHI', name: 'Left Hand Inswing', image: '/assets/door-swing/lhi.webp' },
+  { id: 'LHO', name: 'Left Hand Outswing', image: '/assets/door-swing/lho.webp' },
+  { id: 'RHI', name: 'Right Hand Inswing', image: '/assets/door-swing/rhi.webp' },
+  { id: 'RHO', name: 'Right Hand Outswing', image: '/assets/door-swing/rho.webp' },
 ]
 const hardwareStyleGroups = [...hardwareOptions.reduce((groups, option) => {
   const key = `${option.manufacturer}|${option.style}`
@@ -359,13 +359,13 @@ function glassGroupKey(option: GlassOption) {
 }
 
 const glassCategoryChoices: { id: GlassCategory; name: string; description: string; image: string }[] = [
-  { id: 'clear', name: 'Clear Glass', description: 'Clear glass and clear grille options.', image: '/assets/glass/thumbnails/Clear.png' },
-  { id: 'decorative', name: 'Decorative Glass', description: 'Decorative glass designs and caming finishes.', image: '/assets/glass/thumbnails/Decorative.png' },
-  { id: 'privacy', name: 'Privacy Glass', description: 'Textured glass designed for added privacy.', image: '/assets/glass/thumbnails/Privacy.png' },
-  { id: 'blinds', name: 'Mini Blinds', description: 'Glass options with integrated mini blinds.', image: '/assets/glass/thumbnails/Blinds.png' },
-  { id: 'clic', name: 'CLiC Glass', description: 'CLiC enclosed-glass options.', image: '/assets/glass/thumbnails/CLIC.png' },
+  { id: 'clear', name: 'Clear Glass', description: 'Clear glass and clear grille options.', image: '/assets/glass/thumbnails/Clear.webp' },
+  { id: 'decorative', name: 'Decorative Glass', description: 'Decorative glass designs and caming finishes.', image: '/assets/glass/thumbnails/Decorative.webp' },
+  { id: 'privacy', name: 'Privacy Glass', description: 'Textured glass designed for added privacy.', image: '/assets/glass/thumbnails/Privacy.webp' },
+  { id: 'blinds', name: 'Mini Blinds', description: 'Glass options with integrated mini blinds.', image: '/assets/glass/thumbnails/Blinds.webp' },
+  { id: 'clic', name: 'CLiC Glass', description: 'CLiC enclosed-glass options.', image: '/assets/glass/thumbnails/CLIC.webp' },
 ]
-const retroGlassCategory = { id: 'retro' as const, name: 'Retro', description: 'Explore all available Retro glass options.', image: '/assets/glass/thumbnails/Retro.png' }
+const retroGlassCategory = { id: 'retro' as const, name: 'Retro', description: 'Explore all available Retro glass options.', image: '/assets/glass/thumbnails/Retro.webp' }
 
 const clearGlassIds = new Set(['clear', 'f-clear-no-grids', 'f-clear-grids', 'clear-low-e', 'cr14-divided-lites', 'f-f10l', 'f-f15wh', 'f-prairie-internal', 'f-ten-lite', 'f-clear-f10', 'f-clear-f10l', 'f-clear-f15', 'f-clear-f15int', 'f-clear-f15intl', 'f-clear-fpraint', 'f-clear-ften', 'f-clear-nonstock', 'f48-clear-f1248', 'f48-clear-f1248l', 'f48-clear-f648l', 'f48-clear-nonstock', 'frt-clear-f17rt', 'hrt-clear-s11rt', 'n-clear-ncl', 'qa-clear-qacl', 'sat-clear-nonstock', 'so-clear-nonstock', 'so-clear-small-no-coating', 'so-clear-small-low-e', 's-clear-s5', 's-clear-s5l', 's-clear-s9', 's-clear-s9int', 's-clear-s9intl', 's-clear-sv6', 's-clear-nonstock', 'sw-clear-swg'])
 clearGlassIds.add(F48_GRID_GLASS_ID)
@@ -588,8 +588,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     ? ([...new Set([...(fslStandardRules[effectiveSidelitePattern]?.[sideliteGridColor] ?? []), ...(fslLowERules[effectiveSidelitePattern]?.[sideliteGridColor] ?? [])])] as GridWidth[])
     : []
   const availableSideliteGridLocations: { id: FslGridLocationId; name: string; image: string }[] = [
-    { id: 'internal', name: 'Internal Grids', image: '/assets/grid-options/Internal Grids.png' },
-    { id: 'sdl', name: 'SDL Grids', image: '/assets/grid-options/SDL Grids.png' },
+    { id: 'internal', name: 'Internal Grids', image: '/assets/grid-options/Internal Grids.webp' },
+    { id: 'sdl', name: 'SDL Grids', image: '/assets/grid-options/SDL Grids.webp' },
   ]
   const fslMatches = (rules: typeof fslStandardRules) => {
     if (!effectiveSidelitePattern || !sideliteGridColor) return false
@@ -688,7 +688,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       ? availableGlass.find((option) => option.id === 'sat-clear-nonstock') ?? null
       : null
   const selectedGridOverlay = gridStyle === 'Arts & Crafts' && gridPattern
-    ? `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FART${internalGridPatternCodes[gridPattern]}WH.png`
+    ? `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FART${internalGridPatternCodes[gridPattern]}WH.webp`
     : gridStyle === 'Contoured' && gridPattern && previewGridColor
       ? usesSGridFlow ? sInternalGridAsset(gridPattern, previewGridColor) : usesF48GridFlow ? f48InternalGridAsset(gridPattern, previewGridColor) : contouredGridAssets[gridPattern]?.[previewGridColor] ?? null
     : gridStyle === 'Prairie' && previewGridColor
@@ -701,7 +701,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       ? sInternalGridAsset(gridPattern, 'White')
       : usesF48GridFlow
       ? f48InternalGridAsset(gridPattern, 'White')
-      : `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT${internalGridPatternCodes[gridPattern]}WH.png`
+      : `/assets/hgi-assets/Glass/F/INTERNAL GRIDS/FINT${internalGridPatternCodes[gridPattern]}WH.webp`
     : null
   const gridPreviewDoorCode = usesSGridFlow ? 'S' : usesF48GridFlow ? selectedStyleCodes.includes('F482') ? 'F482' : 'F48' : 'F'
   const gridClearGlass = glassOptions.find((option) => option.id === (usesSGridFlow ? 's-clear-no-grids' : usesF48GridFlow ? 'f48-clear-no-grids' : 'f-clear-no-grids'))
@@ -1747,7 +1747,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       <header>
         <div className="brand">
           <button className="brand-home" type="button" aria-label="Go to home page" onClick={() => showScreen('home')}>
-            <img src="/assets/branding/hgi-logo-black.png" alt="Home Guard Industries Doors and Windows" />
+            <img src="/assets/branding/hgi-logo-black.webp" alt="Home Guard Industries Doors and Windows" />
           </button>
           <span className="app-name"><strong>Home Guard Door Builder</strong></span>
         </div>
@@ -1783,7 +1783,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <div className="beta-feedback-context-host beta-feedback-hero-host" data-feedback-trigger-host="hero" />
             <div className="home-entryway-demo hero-composite" aria-label="Animated examples of configurable entry doors">
               <div className="hero-composite-stage">
-                <img className="home-entryway-image" src="/assets/hero/hero-entryway.png" alt="Welcoming home entryway with a customizable door preview" />
+                <img className="home-entryway-image" src="/assets/hero/hero-entryway.webp" alt="Welcoming home entryway with a customizable door preview" />
                 <div className="home-entryway-overlay" aria-hidden="true">
                   <div className="home-entryway-door-slot hero-door-stack entryway-door-stack hero-door-overlay" style={heroDoorOpeningStyle}>
                     <div className="home-demo-door-layer active" key={`${activeHomeDemo.style.code}-${activeHomeDemo.finish.id}-${activeHomeDemo.glass?.id ?? 'no-glass'}-${activeHomeDemo.hardware.id}`}>
@@ -1821,7 +1821,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <span className="form-screen-eyebrow">Home Guard Door Builder</span>
             <h1 id="customer-form-title">Complete Your Information</h1>
             <p>{pendingCustomerAction === 'download-pdf' ? 'Enter your details to download your configured door quote.' : pendingCustomerAction === 'open-visualizer' ? 'Enter your details to view your configured door on your home.' : 'Enter your details to send your configured door to Home Guard.'}</p>
-            {pendingCustomerAction === 'open-visualizer' && <div className="visualizer-form-guide"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="Example of a configured door shown on a customer's house" /><div><strong>Next: Add a photo of your home</strong><p>After submitting, we’ll guide you through uploading a clear picture of your entrance and placing your configured door on it.</p></div></div>}
+            {pendingCustomerAction === 'open-visualizer' && <div className="visualizer-form-guide"><img src="/assets/visualizer/view-on-your-home-tablet.webp" alt="Example of a configured door shown on a customer's house" /><div><strong>Next: Add a photo of your home</strong><p>After submitting, we’ll guide you through uploading a clear picture of your entrance and placing your configured door on it.</p></div></div>}
             <QuoteForm values={contact} errors={errors} onChange={updateContact} />
             <label className="consent"><input type="checkbox" defaultChecked /> <span>I agree to be contacted about this door configuration.</span></label>
             {submitError && <p className="submit-error" role="alert">{submitError}</p>}
@@ -1835,7 +1835,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 <h1 id="customer-form-title">Your door is ready to view on your home.</h1>
                 <p>Next, upload a photo of your entrance. We’ll guide you through positioning your configured door on the picture.</p>
               </div>
-              <div className="visualizer-confirmation-graphic"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="A configured door visualized on a home entrance" /></div>
+              <div className="visualizer-confirmation-graphic"><img src="/assets/visualizer/view-on-your-home-tablet.webp" alt="A configured door visualized on a home entrance" /></div>
               <div className="visualizer-confirmation-action"><strong>See your configured door on your own entryway</strong><span>Have a clear photo of your entrance ready.</span><button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Continue to Home Visualizer <ArrowRight size={17} /></button></div>
             </div>
           </div> : <div className="success visualizer-form-confirmation"><span><Check size={32} /></span><small>Configuration received</small><h1>Thanks, {contact.fullName}.</h1><p>Your configuration PDF has been prepared. You can now see the same configured door on a photo of your home.</p><div className="visualizer-confirmation-action"><strong>Next: View your door on your home</strong><span>Upload a clear entrance photo and follow the guided placement steps.</span><button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Continue to Home Visualizer <ArrowRight size={17} /></button></div><button type="button" onClick={() => { setSubmitted(false); setCompletedCustomerAction(null); goTo(pages.indexOf('review')); showScreen('builder') }}>Return to Review</button></div>}
@@ -1893,15 +1893,15 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 {(currentPage === 'door-finish' || jambType === 'timber') && <div className="finish-tabs" role="tablist" aria-label="Finish type">{effectiveFinishTypes.map((type) => <button type="button" role="tab" aria-selected={(currentPage === 'door-finish' ? activeFinishType : jambFinishType) === type} className={(currentPage === 'door-finish' ? activeFinishType : jambFinishType) === type ? 'active' : ''} key={type} onClick={() => currentPage === 'door-finish' ? selectFinishTab(type) : (setJambFinishType(type), setJambFinishColor(''), setJambFinishOverridden(true))}>{type === 'paint' ? 'Paint' : 'Stain'}</button>)}</div>}
                 <div className="finish-logo-slot">
                   {(jambType === 'clad' && currentPage === 'jamb-finish' || (currentPage === 'door-finish' ? activeFinishType : jambFinishType) === 'paint') && <div className="promatch-group">
-                    <div className="promatch-brand"><img src="/assets/branding/pro-match-logo.png" alt="ProMatch paint colors" loading="lazy" decoding="async" /><ProMatchInfo /></div>
+                    <div className="promatch-brand"><img src="/assets/branding/pro-match-logo.webp" alt="ProMatch paint colors" loading="lazy" decoding="async" /><ProMatchInfo /></div>
                     <p>{proMatchNote}</p>
                   </div>}
-                  {(currentPage === 'door-finish' ? activeFinishType : jambFinishType) === 'stain' && <div className="timberstain-group"><div className="timberstain-brand"><img src="/assets/branding/timberstain-logo.png" alt="TimberStain®" loading="lazy" decoding="async" /><TimberStainInfo /></div><p>{proMatchNote}</p></div>}
+                  {(currentPage === 'door-finish' ? activeFinishType : jambFinishType) === 'stain' && <div className="timberstain-group"><div className="timberstain-brand"><img src="/assets/branding/timberstain-logo.webp" alt="TimberStain®" loading="lazy" decoding="async" /><TimberStainInfo /></div><p>{proMatchNote}</p></div>}
                 </div>
               </div>}
               {currentPage === 'glass-frame-color' && <div className="finish-toolbar">
                 <div className="finish-tabs" role="tablist" aria-label="Glass frame finish type">{glassFrameFinishTypes.map((type) => <button type="button" role="tab" aria-selected={glassFrameFinishType === type} className={glassFrameFinishType === type ? 'active' : ''} key={type} onClick={() => setGlassFrameFinishType(type)}>{type === 'paint' ? 'Paint' : 'Stain'}</button>)}</div>
-                <div className="finish-logo-slot">{glassFrameFinishType === 'paint' ? <div className="promatch-group"><div className="promatch-brand"><img src="/assets/branding/pro-match-logo.png" alt="ProMatch paint colors" /><ProMatchInfo /></div></div> : <div className="timberstain-group"><div className="timberstain-brand"><img src="/assets/branding/timberstain-logo.png" alt="TimberStain®" /><TimberStainInfo /></div></div>}</div>
+                <div className="finish-logo-slot">{glassFrameFinishType === 'paint' ? <div className="promatch-group"><div className="promatch-brand"><img src="/assets/branding/pro-match-logo.webp" alt="ProMatch paint colors" /><ProMatchInfo /></div></div> : <div className="timberstain-group"><div className="timberstain-brand"><img src="/assets/branding/timberstain-logo.webp" alt="TimberStain®" /><TimberStainInfo /></div></div>}</div>
               </div>}
               <div className={`options-grid step-${step} ${currentPage === 'door-configuration' ? 'door-configuration-grid door-style-catalog-grid' : ''} ${currentPage === 'door-style' || currentPage === 'lock-setup' ? 'door-style-catalog-grid ' : ''}${currentPage === 'lock-setup' ? 'lock-setup-grid ' : ''}${currentPage === 'door-style' || currentPage === 'lock-setup' || currentPage === 'door-grain' || currentPage === 'door-finish' || currentPage === 'jamb-type' || currentPage === 'jamb-finish' || currentPage === 'glass-type' || currentPage === 'glass-variant' || currentPage.startsWith('grid-') || currentPage.startsWith('sidelite-') ? 'door-style-grid' : ''} ${currentPage === 'sidelites' || currentPage === 'sidelite-style' ? 'sidelite-catalog-grid' : ''} ${currentPage === 'glass' || currentPage === 'glass-variant' || currentPage === 'sidelite-glass' || currentPage === 'sidelite-glass-variant' ? 'glass-options-grid' : ''}`}>
                 {currentPage === 'door-configuration' && doorConfigurationOptions.map((item) => <OptionCard key={item.id} className="door-catalog-card door-configuration-card" title={item.name} description={item.description} eyebrow="Entry configuration" selected={selectedDoorConfigurationType === item.id} onClick={() => selectDoorConfiguration(item.id)} visual={<div className="door-configuration-preview"><img className="door-configuration-card-image" src={item.image} alt="" loading="eager" decoding="async" /></div>} />)}
@@ -1910,12 +1910,12 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 {currentPage === 'door-grain' && signatureGrainOptions.map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Signature grain" selected={selectedGrain === item.id} onClick={() => selectGrain(item.id)} visual={<img className="grain-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'sidelites' && sideliteOptions.map((item) => <OptionCard key={item.id} className="sidelite-catalog-card" title={item.name} eyebrow="Entry layout" selected={sidelites === item.id} onClick={() => selectSidelites(item.id)} visual={<img className="sidelite-option-image sidelite-option-image-unflipped" src={item.image} alt="" loading="eager" decoding="async" />} />)}
                 {currentPage === 'sidelite-style' && visibleSideliteStyleOptions.map((item) => <OptionCard key={item.id} className="sidelite-catalog-card" title={item.name} eyebrow={`${selectedDoorLine?.name ?? 'Door'} sidelite`} selected={sideliteStyleId === item.id} onClick={() => selectSideliteStyle(item.id)} visual={<img className="sidelite-style-image" src={sideliteSlabAsset(sideliteAssetFamily, item.id as SideliteStyleId)} alt="" loading="eager" decoding="async" />} />)}
-                {currentPage === 'door-finish' && visibleFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => selectFinish(item.id, item.finishType)} visual={<span className={`finish-tile-wrap${item.finishType === 'paint' ? ' finish-tile-flat' : ' finish-tile-stain'}`} style={{ '--fallback-finish': item.color } as CSSProperties}>{item.proMatch && <img src="/assets/branding/pro-match-logo.png" className="pro-match-swatch-logo" alt="" loading="eager" decoding="async" />}{item.finishType === 'stain' && <img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}</span>} />)}
+                {currentPage === 'door-finish' && visibleFinishes.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => selectFinish(item.id, item.finishType)} visual={<span className={`finish-tile-wrap${item.finishType === 'paint' ? ' finish-tile-flat' : ' finish-tile-stain'}`} style={{ '--fallback-finish': item.color } as CSSProperties}>{item.proMatch && <img src="/assets/branding/pro-match-logo.webp" className="pro-match-swatch-logo" alt="" loading="eager" decoding="async" />}{item.finishType === 'stain' && <img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}</span>} />)}
                 {currentPage === 'jamb-type' && <>
-                  <OptionCard title="Timber" description="Choose from available paint and stain finishes. The jamb defaults to match your door but can be changed." eyebrow="Jamb type" selected={jambType === 'timber'} onClick={() => selectJambType('timber')} visual={<span className="jamb-type-card-image"><img src="/assets/jamb/timber-frame-card.png" alt="Timber-framed entry door" loading="lazy" decoding="async" /></span>} />
-                  <OptionCard title="Clad" description="Choose from available Home Guard clad colors. Stain finishes are not available for clad jambs." eyebrow="Jamb type" selected={jambType === 'clad'} onClick={() => selectJambType('clad')} visual={<span className="jamb-type-card-image jamb-type-card-image-clad"><img src="/assets/jamb/clad-wrap-card.png" alt="Clad-wrapped entry door" loading="lazy" decoding="async" /></span>} />
+                  <OptionCard title="Timber" description="Choose from available paint and stain finishes. The jamb defaults to match your door but can be changed." eyebrow="Jamb type" selected={jambType === 'timber'} onClick={() => selectJambType('timber')} visual={<span className="jamb-type-card-image"><img src="/assets/jamb/timber-frame-card.webp" alt="Timber-framed entry door" loading="lazy" decoding="async" /></span>} />
+                  <OptionCard title="Clad" description="Choose from available Home Guard clad colors. Stain finishes are not available for clad jambs." eyebrow="Jamb type" selected={jambType === 'clad'} onClick={() => selectJambType('clad')} visual={<span className="jamb-type-card-image jamb-type-card-image-clad"><img src="/assets/jamb/clad-wrap-card.webp" alt="Clad-wrapped entry door" loading="lazy" decoding="async" /></span>} />
                 </>}
-                {currentPage === 'jamb-finish' && jambFinishOptions.map((item) => <OptionCard key={`${jambType}-${item.id}`} title={item.name} description={jambType === 'clad' ? 'Home Guard clad color.' : item.description} eyebrow={jambType === 'clad' ? 'Clad' : item.finishType} selected={jambFinishColor === item.id} onClick={() => selectJambFinish(item.id)} visual={<span className={`finish-tile-wrap${item.finishType === 'paint' || jambType === 'clad' ? ' finish-tile-flat' : ' finish-tile-stain'}`} style={{ '--fallback-finish': item.color } as CSSProperties}>{item.proMatch && <img src="/assets/branding/pro-match-logo.png" className="pro-match-swatch-logo" alt="" loading="eager" decoding="async" />}{item.finishType === 'stain' && jambType !== 'clad' && <img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}</span>} />)}
+                {currentPage === 'jamb-finish' && jambFinishOptions.map((item) => <OptionCard key={`${jambType}-${item.id}`} title={item.name} description={jambType === 'clad' ? 'Home Guard clad color.' : item.description} eyebrow={jambType === 'clad' ? 'Clad' : item.finishType} selected={jambFinishColor === item.id} onClick={() => selectJambFinish(item.id)} visual={<span className={`finish-tile-wrap${item.finishType === 'paint' || jambType === 'clad' ? ' finish-tile-flat' : ' finish-tile-stain'}`} style={{ '--fallback-finish': item.color } as CSSProperties}>{item.proMatch && <img src="/assets/branding/pro-match-logo.webp" className="pro-match-swatch-logo" alt="" loading="eager" decoding="async" />}{item.finishType === 'stain' && jambType !== 'clad' && <img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}</span>} />)}
                 {currentPage === 'glass-type' && availableGlassCategories.map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Glass type" selected={selectedGlassCategory === item.id} onClick={() => selectGlassCategory(item.id)} visual={<img className={`glass-option-thumbnail${item.id === 'retro' ? ' retro-glass-thumbnail' : item.id === 'clic' ? ' clic-glass-thumbnail' : ''}`} src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'glass' && glassOptionGroups.map((group) => {
                   const displayOption = group.options.find((item) => item.id === glassId) ?? group.options[0]
@@ -1923,22 +1923,22 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 })}
                 {currentPage === 'glass-variant' && selectedGlassGroup?.options.map((item) => <OptionCard key={item.id} title={glassVariantLabel(item.name)} eyebrow={selectedGlassGroup.title} selected={glassVariantConfirmed && glassId === item.id} onClick={() => selectGlassVariant(item.id)} visual={item.thumbnailPath ? <img className={`glass-option-thumbnail${selectedGlassCategory === 'decorative' ? ' caming-finish-thumbnail' : ''}`} src={item.thumbnailPath} alt="" loading="lazy" decoding="async" /> : undefined} />)}
                 {currentPage === 'glass-frame-color' && <OptionCard title="Match Door" eyebrow="Glass frame" selected={glassFrameColorMode === 'match-door'} onClick={() => { setGlassFrameColorMode('match-door'); setGlassFrameFinishType(matchedGlassFrameFinish.finishType) }} visual={<span className={`finish-tile-wrap${matchedGlassFrameFinish.finishType === 'paint' ? ' finish-tile-flat' : ' finish-tile-stain'}`} style={{ '--fallback-finish': matchedGlassFrameFinish.color } as CSSProperties}>{matchedGlassFrameFinish.finishType === 'stain' && <img className="finish-tile-image" src={matchedGlassFrameFinish.image} alt="" />}</span>} />}
-                {currentPage === 'glass-frame-color' && visibleGlassFrameFinishes.map((item) => <OptionCard key={`glass-frame-${item.id}`} title={item.name} eyebrow={`Custom glass frame · ${item.finishType}`} selected={glassFrameColorMode === 'custom' && glassFrameFinishId === item.id} onClick={() => { setGlassFrameColorMode('custom'); setGlassFrameFinishId(item.id) }} visual={<span className={`finish-tile-wrap${item.finishType === 'paint' ? ' finish-tile-flat' : ' finish-tile-stain'}`} style={{ '--fallback-finish': item.color } as CSSProperties}>{item.proMatch && <img src="/assets/branding/pro-match-logo.png" className="pro-match-swatch-logo" alt="" />}{item.finishType === 'stain' && <img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}</span>} />)}
+                {currentPage === 'glass-frame-color' && visibleGlassFrameFinishes.map((item) => <OptionCard key={`glass-frame-${item.id}`} title={item.name} eyebrow={`Custom glass frame · ${item.finishType}`} selected={glassFrameColorMode === 'custom' && glassFrameFinishId === item.id} onClick={() => { setGlassFrameColorMode('custom'); setGlassFrameFinishId(item.id) }} visual={<span className={`finish-tile-wrap${item.finishType === 'paint' ? ' finish-tile-flat' : ' finish-tile-stain'}`} style={{ '--fallback-finish': item.color } as CSSProperties}>{item.proMatch && <img src="/assets/branding/pro-match-logo.webp" className="pro-match-swatch-logo" alt="" />}{item.finishType === 'stain' && <img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}</span>} />)}
                 {currentPage === 'grid-location' && availableGridLocations.map((item) => <OptionCard key={item.id} title={item.name} selected={gridPathId === item.id} onClick={() => selectGridLocation(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" loading="eager" decoding="async" />} />)}
                 {currentPage === 'grid-style' && lowEGridStyles.map((item) => <OptionCard key={item.id} title={item.id} selected={gridStyle === item.id} onClick={() => selectGridStyle(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" loading="eager" decoding="async" />} />)}
-                {currentPage === 'grid-pattern' && compatibleGridPatterns.map((item) => <OptionCard key={item.id} title={item.id} selected={gridPattern === item.id} onClick={() => selectGridPattern(item.id)} visual={<img className="grid-pattern-thumbnail" src="/assets/grid-options/All Lites.png" alt="" loading="eager" decoding="async" />} />)}
+                {currentPage === 'grid-pattern' && compatibleGridPatterns.map((item) => <OptionCard key={item.id} title={item.id} selected={gridPattern === item.id} onClick={() => selectGridPattern(item.id)} visual={<img className="grid-pattern-thumbnail" src="/assets/grid-options/All Lites.webp" alt="" loading="eager" decoding="async" />} />)}
                 {currentPage === 'grid-color' && compatibleGridColors.map((color) => <OptionCard key={color} title={color} eyebrow="Grid color" selected={gridColor === color} onClick={() => selectGridColor(color)} visual={<span className="finish-tile-wrap grid-color-tile" style={{ '--fallback-finish': gridColorValues[color] ?? '#efeee8' } as CSSProperties} />} />)}
                 {currentPage === 'grid-width' && gridColor && compatibleGridWidths.map((width) => <OptionCard key={width} className="bar-size-option-card" title={width} eyebrow="Bar size" selected={gridWidth === width} onClick={() => selectGridWidth(width)} />)}
                 {currentPage === 'sidelite-glass-type' && selectedSideliteCatalog?.categories.map((item) => <OptionCard key={item.id} title={item.name} eyebrow={`${selectedSideliteStyle?.name} glass`} selected={sideliteGlassCategory === item.id} onClick={() => selectSideliteGlassCategory(item.id)} visual={<img className={`glass-option-thumbnail${item.id === 'clic' ? ' clic-glass-thumbnail' : ''}`} src={glassCategoryChoices.find((category) => category.id === item.id)?.image ?? item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'sidelite-glass' && sideliteGlassOptionGroups.map((group) => {
                   const displayOption = group.options.find((item) => item.id === sideliteGlassId) ?? group.options[0]
-                  const thumbnail = glassSelectionThumbnail(displayOption.name) ?? displayOption.asset ?? (displayOption.id === 'clear-grids' ? '/assets/grid-options/Internal Grids.png' : '/assets/glass/thumbnails/Clear-option.png')
+                  const thumbnail = glassSelectionThumbnail(displayOption.name) ?? displayOption.asset ?? (displayOption.id === 'clear-grids' ? '/assets/grid-options/Internal Grids.webp' : '/assets/glass/thumbnails/Clear-option.webp')
                   return <OptionCard key={group.key} title={group.title} eyebrow={`${selectedSideliteStyle?.name ?? ''} Glass`} selected={sideliteGlassGroupKey === group.key} onClick={() => selectSideliteGlassGroup(group)} visual={<img className={`glass-option-thumbnail${group.title.toLowerCase().startsWith('clic') ? ' clic-glass-thumbnail' : ''}`} src={thumbnail} alt="" loading="lazy" decoding="async" />} />
                 })}
                 {currentPage === 'sidelite-glass-variant' && selectedSideliteGlassGroup?.options.map((item) => <OptionCard key={item.id} title={glassVariantLabel(item.name)} eyebrow={selectedSideliteGlassGroup.title} selected={sideliteGlassVariantConfirmed && sideliteGlassId === item.id} onClick={() => selectSideliteGlassVariant(item.id)} visual={item.asset ? <img className={`glass-option-thumbnail${sideliteGlassCategory === 'decorative' ? ' caming-finish-thumbnail' : ''}`} src={item.asset} alt="" loading="lazy" decoding="async" /> : undefined} />)}
                 {currentPage === 'sidelite-grid-location' && availableSideliteGridLocations.map((item) => <OptionCard key={item.id} title={item.name} selected={sideliteGridLocation === item.id} onClick={() => selectSideliteGridLocation(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" />} />)}
-                {currentPage === 'sidelite-grid-style' && fslGridStyles.map((item) => <OptionCard key={item} title={item} selected={sideliteGridStyle === item} onClick={() => selectSideliteGridStyle(item)} visual={<img className="grid-option-thumbnail" src={`/assets/grid-options/${item === 'Arts & Crafts' ? 'Arts & Crafts Grid' : `${item} Grids`}.png`} alt="" />} />)}
-                {currentPage === 'sidelite-grid-pattern' && fslPatterns.map((item) => <OptionCard key={item} title={item} selected={sideliteGridPattern === item} onClick={() => selectSideliteGridPattern(item)} visual={<img className="grid-pattern-thumbnail" src="/assets/grid-options/All Lites.png" alt="" />} />)}
+                {currentPage === 'sidelite-grid-style' && fslGridStyles.map((item) => <OptionCard key={item} title={item} selected={sideliteGridStyle === item} onClick={() => selectSideliteGridStyle(item)} visual={<img className="grid-option-thumbnail" src={`/assets/grid-options/${item === 'Arts & Crafts' ? 'Arts & Crafts Grid' : `${item} Grids`}.webp`} alt="" />} />)}
+                {currentPage === 'sidelite-grid-pattern' && fslPatterns.map((item) => <OptionCard key={item} title={item} selected={sideliteGridPattern === item} onClick={() => selectSideliteGridPattern(item)} visual={<img className="grid-pattern-thumbnail" src="/assets/grid-options/All Lites.webp" alt="" />} />)}
                 {currentPage === 'sidelite-grid-color' && fslColors.map((color) => <OptionCard key={color} title={color} eyebrow="Grid color" selected={sideliteGridColor === color} onClick={() => selectSideliteGridColor(color)} visual={<span className="finish-tile-wrap grid-color-tile" style={{ '--fallback-finish': gridColorValues[color] ?? '#efeee8' } as CSSProperties} />} />)}
                 {currentPage === 'sidelite-grid-width' && fslWidths.map((width) => <OptionCard key={width} className="bar-size-option-card" title={width} eyebrow="Bar size" selected={sideliteGridWidth === width} onClick={() => setSideliteGridWidth(width)} />)}
                 {currentPage === 'lock-setup' && <div className="double-door-lock-prep-options" role="group" aria-label="Lock Setup">{doubleDoorLockPrepOptions.map((option) => <OptionCard key={option.code} className="door-catalog-card double-door-lock-prep-card" title={option.name} eyebrow={option.description} selected={doubleDoorLockPrep === option.code} onClick={() => setDoubleDoorLockPrep(option.code)} visual={<span className="door-style-thumbnail double-door-lock-prep-visual"><img className="double-door-lock-prep-thumbnail" src={option.thumbnail} alt="" loading="eager" decoding="async" /></span>} />)}</div>}
@@ -1954,7 +1954,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <button className="floating-visualizer-launch" type="button" onClick={() => requestCustomerAction('open-visualizer')} aria-label="Launch Door Visualizer"><Eye size={19} /><span>Launch Door Visualizer</span><ArrowRight size={16} /></button>
             <div className="mobile-review-preview">{renderConfiguredPreviewMode()}</div>
             <section className="visualizer-promo-card visualizer-promo-card-mobile" aria-labelledby="mobile-visualizer-promo-title">
-              <div className="visualizer-promo-graphic" aria-hidden="true"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="" /></div>
+              <div className="visualizer-promo-graphic" aria-hidden="true"><img src="/assets/visualizer/view-on-your-home-tablet.webp" alt="" /></div>
               <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow">Home Visualizer</span><h2 id="mobile-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => requestCustomerAction('open-visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
             </section>
             <div className="summary-card">
@@ -1987,7 +1987,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
           </div>
           {currentPage === 'review' && <section className="visualizer-promo-card visualizer-promo-card-desktop" aria-labelledby="desktop-visualizer-promo-title">
-            <div className="visualizer-promo-graphic" aria-hidden="true"><img src="/assets/visualizer/view-on-your-home-tablet.png" alt="" /></div>
+            <div className="visualizer-promo-graphic" aria-hidden="true"><img src="/assets/visualizer/view-on-your-home-tablet.webp" alt="" /></div>
             <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow">Home Visualizer</span><h2 id="desktop-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => requestCustomerAction('open-visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
           </section>}
           {currentPage !== 'review' && <div className="mini-summary">
