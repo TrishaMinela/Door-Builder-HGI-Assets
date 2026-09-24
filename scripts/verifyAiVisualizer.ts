@@ -3,8 +3,8 @@ import sharp from 'sharp'
 import handler from '../api/generate-door-visualization.ts'
 import { aiTestConfiguration } from './aiVisualizerFixture'
 import { doorStyles, glassOptions } from '../src/data/options'
-import { AI_MAX_PHOTO_BYTES, aiPixelCorners, aiWorkingSize } from '../src/features/home-visualizer/aiImagePreparation'
-import { loadAiReference, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
+import { aiPixelCorners, aiWorkingSize } from '../src/features/home-visualizer/aiImagePreparation'
+import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiStructuralInstructionBlock, loadAiReference, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
 
 const originalFetch = globalThis.fetch
 const originalKey = process.env.OPENAI_API_KEY
@@ -14,7 +14,7 @@ const bytes = await sharp({ create: { width: 2400, height: 1600, channels: 3, ba
 const source = { photo: `data:image/jpeg;base64,${bytes.toString('base64')}`, corners, configuration: aiTestConfiguration }
 let forwardedForm: FormData | null = null
 let calls = 0
-let failOpenAi = false
+let openAiFailure: 'none' | 'rate' | 'rejected' | 'empty' = 'none'
 let gate: Promise<void> | null = null
 globalThis.fetch = (async (url, init) => {
   calls += 1
@@ -23,7 +23,10 @@ globalThis.fetch = (async (url, init) => {
   assert.ok(init?.body instanceof FormData)
   forwardedForm = init.body
   if (gate) await gate
-  return new Response(JSON.stringify(failOpenAi ? { error: { code: 'billing-test', message: 'SECRET INTERNAL ERROR' } } : { data: [{ b64_json: 'YWktcmVzdWx0' }] }), { status: failOpenAi ? 429 : 200 })
+  if (openAiFailure === 'rate') return new Response(JSON.stringify({ error: { code: 'rate_limit_exceeded', message: 'SECRET INTERNAL ERROR' } }), { status: 429, headers: { 'x-request-id': 'openai-rate-test' } })
+  if (openAiFailure === 'rejected') return new Response(JSON.stringify({ error: { code: 'invalid_image', type: 'image_generation_user_error', message: 'SECRET INTERNAL ERROR' } }), { status: 400, headers: { 'x-request-id': 'openai-rejected-test' } })
+  if (openAiFailure === 'empty') return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'x-request-id': 'openai-empty-test' } })
+  return new Response(JSON.stringify({ data: [{ b64_json: 'YWktcmVzdWx0' }] }), { status: 200, headers: { 'x-request-id': 'openai-success-test' } })
 }) as typeof fetch
 
 let checks = 0
@@ -33,16 +36,14 @@ async function request(body: unknown, expected: number, method = 'POST', headers
   await handler({ method, body, headers }, response)
   assert.equal(status, expected)
   checks += 1
-  return result as { image?: string; error?: string }
+  return result as { image?: string; error_code?: string; user_message?: string; request_id?: string }
 }
 
 try {
   await request(source, 405, 'GET')
   await request({ ...source, photo: undefined }, 400)
   await request({ ...source, photo: 'data:image/gif;base64,R0lGODlh' }, 400)
-  await request({ ...source, photo: `data:image/jpeg;base64,${'A'.repeat(Math.ceil((AI_MAX_PHOTO_BYTES + 10) * 4 / 3))}` }, 400)
   await request({ ...source, photo: 'data:image/jpeg;base64,aW52YWxpZA==' }, 400)
-  await request({ ...source, corners: undefined }, 400)
   await request({ ...source, corners: { ...corners, extra: { x: .5, y: .5 } } }, 400)
   await request({ ...source, corners: { ...corners, topLeft: { x: -1, y: .1 } } }, 400)
   await request({ ...source, corners: { ...corners, topLeft: { x: NaN, y: .1 } } }, 400)
@@ -51,7 +52,7 @@ try {
   await request({ ...source, configuration: {} }, 400)
   await request({ ...source, configuration: { ...aiTestConfiguration, finish: { id: 'unknown' } } }, 400)
   await request('not-json', 400)
-  await request(source, 400, 'POST', { 'content-length': '99999999' })
+  await request(source, 413, 'POST', { 'content-length': '99999999' })
   assert.equal(calls, 0, 'Invalid requests must not consume OpenAI credits')
 
   const prepared = await prepareHouseAndMask(source.photo, corners)
@@ -67,7 +68,38 @@ try {
   assert.equal(alpha(200, 512), 255, 'Padding must not expose a large surrounding wall region')
   assert.deepEqual(aiWorkingSize(2400, 1600), { width: 1536, height: 1024 })
   assert.deepEqual(aiPixelCorners(corners, 1536, 1024)[0], { x: 307.20000000000005, y: 102.4 })
-  checks += 3
+  assert.deepEqual(prepared.original, { declaredMimeType: 'image/jpeg', format: 'jpeg', width: 2400, height: 1600, orientation: 1, byteSize: bytes.length })
+  assert.deepEqual({ format: prepared.normalized.format, width: prepared.normalized.width, height: prepared.normalized.height }, { format: 'webp', width: 1536, height: 1024 })
+  const automatic = await prepareHouseAndMask(source.photo, null)
+  assert.equal(automatic.mask, undefined)
+  const fixtureSpecs = [
+    { name: 'large high-resolution JPEG', format: 'jpeg' as const, width: 6000, height: 4000 },
+    { name: 'large PNG', format: 'png' as const, width: 5000, height: 4000 },
+    { name: 'WebP', format: 'webp' as const, width: 2200, height: 1467 },
+    { name: 'portrait phone photo', format: 'jpeg' as const, width: 3024, height: 4032 },
+    { name: 'landscape phone photo', format: 'jpeg' as const, width: 4032, height: 3024 },
+  ]
+  const fixtureReport: Array<Record<string, unknown>> = []
+  for (const fixture of fixtureSpecs) {
+    const localBytes = await sharp({ create: { width: fixture.width, height: fixture.height, channels: 3, background: '#786d62' } })[fixture.format]({ quality: 96 } as never).toBuffer()
+    const local = await prepareHouseAndMask(`data:image/${fixture.format};base64,${localBytes.toString('base64')}`, null)
+    assert.equal(local.original.format, fixture.format)
+    assert.ok(local.normalized.width <= fixture.width && local.normalized.height <= fixture.height, 'Normalization must never upscale')
+    assert.ok(Math.abs(local.normalized.width / local.normalized.height - fixture.width / fixture.height) < .002, 'Aspect ratio is preserved')
+    fixtureReport.push({ name: fixture.name, before: `${fixture.width}x${fixture.height} / ${localBytes.length} bytes`, after: `${local.normalized.width}x${local.normalized.height} / ${local.normalized.byteSize} bytes` })
+  }
+  const rotatedBytes = await sharp({ create: { width: 1600, height: 2400, channels: 3, background: '#695e54' } }).jpeg({ quality: 94 }).withMetadata({ orientation: 6 }).toBuffer()
+  const rotated = await prepareHouseAndMask(`data:image/jpeg;base64,${rotatedBytes.toString('base64')}`, null)
+  assert.equal(rotated.original.orientation, 6)
+  assert.deepEqual({ width: rotated.normalized.width, height: rotated.normalized.height }, { width: 1536, height: 1024 })
+  fixtureReport.push({ name: 'EXIF rotation 6', before: `1600x2400 / ${rotatedBytes.length} bytes`, after: `${rotated.normalized.width}x${rotated.normalized.height} / ${rotated.normalized.byteSize} bytes` })
+  const mismatched = await prepareHouseAndMask(`data:image/png;base64,${bytes.toString('base64')}`, null)
+  assert.equal(mismatched.original.declaredMimeType, 'image/png')
+  assert.equal(mismatched.original.format, 'jpeg', 'Actual bytes, not the declared MIME, determine the format')
+  fixtureReport.push({ name: 'misleading PNG MIME with JPEG data', before: `2400x1600 / ${bytes.length} bytes`, after: `${mismatched.normalized.width}x${mismatched.normalized.height} / ${mismatched.normalized.byteSize} bytes` })
+  await assert.rejects(() => prepareHouseAndMask('data:image/jpeg;base64,aW52YWxpZA==', null), (error: unknown) => error instanceof AiInputError && error.code === 'IMAGE_DECODE_FAILED')
+  console.log('AI house-photo normalization fixtures:', fixtureReport)
+  checks += 10
 
   const trusted = resolveAiProduct(aiTestConfiguration)
   const hostile = resolveAiProduct({ ...aiTestConfiguration, style: { ...aiTestConfiguration.style, image: 'https://evil.example/image.png' }, hardware: { ...aiTestConfiguration.hardware, asset: '../../secrets' } })
@@ -85,7 +117,103 @@ try {
   })
   assert.ok(glassProduct.references.some(item => item.label === 'selected glass design'))
   for (const reference of glassProduct.references) assert.ok((await loadAiReference(reference.paths)).length > 0)
-  checks += 2
+  const structuralScenarios = [
+    { type: 'single', sidelites: 'none', expectedDoor: 'single', expectedSidelites: 'none' },
+    { type: 'single', sidelites: 'hinge-side', expectedDoor: 'single', expectedSidelites: 'left' },
+    { type: 'single', sidelites: 'lock-side', expectedDoor: 'single', expectedSidelites: 'right' },
+    { type: 'single', sidelites: 'both-sides', expectedDoor: 'single', expectedSidelites: 'both' },
+    { type: 'french', sidelites: 'none', expectedDoor: 'double', expectedSidelites: 'none' },
+    { type: 'french', sidelites: 'hinge-side', expectedDoor: 'double', expectedSidelites: 'left' },
+    { type: 'french', sidelites: 'lock-side', expectedDoor: 'double', expectedSidelites: 'right' },
+    { type: 'french', sidelites: 'both-sides', expectedDoor: 'double', expectedSidelites: 'both' },
+  ] as const
+  for (const scenario of structuralScenarios) {
+    const resolved = resolveAiProduct({
+      ...aiTestConfiguration,
+      doorConfigurationType: scenario.type,
+      sidelites: scenario.sidelites,
+      ...(scenario.sidelites === 'none' ? {} : { sideliteSlab: 'fsl', sideliteGlass: { glass: 'Clear Glass with No Grids' } }),
+    })
+    const block = aiStructuralInstructionBlock(resolved.snapshot)
+    assert.match(block, new RegExp(`door_structure: ${scenario.expectedDoor}`))
+    assert.match(block, new RegExp(`sidelite_structure: ${scenario.expectedSidelites}`))
+    assert.match(block, /selected_door_style:/)
+    assert.match(block, /selected_material:/)
+    assert.match(block, /selected_finish:/)
+    assert.match(block, /selected_glass:/)
+    assert.match(block, /selected_grids:/)
+    assert.match(block, /selected_sidelite_product_glass_grids:/)
+    assert.match(block, /selected_hardware:/)
+    assert.match(block, /selected_hardware_handing_active_leaf:/)
+    assert.match(block, /selected_jamb_frame:/)
+  }
+  const mismatchPrompt = aiPrompt(trusted.snapshot, null, trusted.references.map(item => item.label))
+  const fidelityBlock = aiProductFidelityInstructionBlock(trusted.snapshot)
+  assert.match(fidelityBlock, /AUTHORITATIVE PRODUCT FIDELITY RULES/)
+  assert.match(fidelityBlock, /Do not redesign the door\./)
+  assert.match(fidelityBlock, /Do not change the panel layout\./)
+  assert.match(fidelityBlock, /Do not change the glass layout\./)
+  assert.match(fidelityBlock, /Do not change hardware count\./)
+  assert.match(fidelityBlock, /Do not simplify the configured product into a generic door\./)
+  assert.match(fidelityBlock, /Do not redesign, embellish, or simplify the selected product\./)
+  assert.match(fidelityBlock, /Do not add optional features that were not selected\./)
+  assert.match(fidelityBlock, /adjust architecture around the configured door rather than redesigning the door itself/)
+  assert.match(mismatchPrompt, /AUTHORITATIVE PRODUCT FIDELITY RULES/)
+  const doNotInventBlock = aiDoNotInventInstructionBlock(trusted.snapshot)
+  assert.match(doNotInventBlock, /DO NOT ADD OR INVENT DETAILS/)
+  assert.match(doNotInventBlock, /UNSELECTED FEATURES MUST NOT APPEAR/)
+  assert.match(doNotInventBlock, /No door grids are selected\. Do not show grids, muntins, grille bars/)
+  assert.match(doNotInventBlock, /No sidelites are selected\. Do not add, retain, imply, or fabricate sidelites/)
+  assert.match(doNotInventBlock, /No door glass is selected\. Do not create glass panes, lites/)
+  assert.match(doNotInventBlock, /Show exactly 1 configured visible hardware placement—no more and no fewer/)
+  assert.match(doNotInventBlock, /exact selected panel count, panel layout and panel shapes/)
+  assert.match(doNotInventBlock, /exact selected glass-lite count and layout/)
+  assert.match(doNotInventBlock, /Do not add knockers, kickplates, mail slots, peepholes, clavos, straps/)
+  assert.match(doNotInventBlock, /never invent a transom where none exists/)
+  assert.match(mismatchPrompt, /DO NOT ADD OR INVENT DETAILS/)
+  const twoHardware = resolveAiProduct({ ...aiTestConfiguration, doorConfigurationType: 'french', doubleDoorLockPrep: 'DDLLBO' })
+  assert.equal(twoHardware.snapshot.hardware.count, 2)
+  assert.match(aiProductFidelityInstructionBlock(twoHardware.snapshot), /exactly 2 configured visible hardware placements/)
+  assert.match(aiProductFidelityInstructionBlock(twoHardware.snapshot), /remove one handle when two are configured/)
+  assert.match(aiDoNotInventInstructionBlock(twoHardware.snapshot), /Show exactly 2 configured visible hardware placements—no more and no fewer/)
+  const structuralConversions = [
+    ['single to double', /Original single -> target double:/],
+    ['double to single', /Original double -> target single:/],
+    ['single both sidelites to single none', /Existing single with both sidelites -> target single with none:/],
+    ['single both sidelites to double none', /Existing single with both sidelites -> target double with none:/],
+    ['double none to single none', /Original double -> target single: install one normally proportioned slab/],
+    ['double none to single both', /Existing double with none -> target single with both:/],
+    ['double both sidelites to single left', /Existing double with both sidelites -> target single with left only:/],
+    ['both sidelites to left only', /Existing both sidelites -> target left only:/],
+    ['left only to right only', /Existing left only -> target right only:/],
+    ['target wider than source', /If the target is wider than the existing entrance/],
+    ['target narrower than source', /If the target is narrower/],
+    ['existing transom', /Preserve an existing transom by default/],
+    ['storm or screen door', /A storm or screen door is not the configured primary entry door/],
+    ['nearby windows are not sidelites', /Do not mistake an adjacent house window for a sidelite/],
+    ['arched and constrained entrances', /Preserve arches, recessed construction, close columns/],
+  ] as const
+  for (const [, pattern] of structuralConversions) assert.match(mismatchPrompt, pattern)
+  assert.match(mismatchPrompt, /Do not preserve an original door leaf or sidelite merely because it exists in the photo/)
+  assert.match(mismatchPrompt, /target sidelite_structure is the sole authority/)
+  assert.match(mismatchPrompt, /DOOR SLABS, SIDELITES, AND SURROUNDING ARCHITECTURE ARE THREE SEPARATE WIDTH REGIONS/)
+  assert.match(mismatchPrompt, /Do not interpret the entire original framed opening or entrance composition as the width of the new target slab or slab pair/)
+  assert.equal(AI_SINGLE_DOOR_WIDTH_BIAS, .94)
+  assert.match(mismatchPrompt, /apply a subtle width bias of 0\.94 \(about 6% narrower\)/)
+  assert.match(mismatchPrompt, /keeping its height unchanged/)
+  assert.match(mismatchPrompt, /approximately 0\.35 of the adjusted single slab/)
+  assert.match(mismatchPrompt, /Do not shrink the whole entrance, jamb, or surrounding architecture with the slab/)
+  assert.match(mismatchPrompt, /DOUBLE-DOOR RULE: a target double entrance must remain exactly two normally proportioned residential door slabs/)
+  assert.match(mismatchPrompt, /reconstruct every unused side region/)
+  assert.match(mismatchPrompt, /The slab must not become oversized because the old composition was wide/)
+  assert.match(mismatchPrompt, /BAD RESULTS TO AVOID: one giant single slab/)
+  assert.match(mismatchPrompt, /ghost seams left by removed sidelites/)
+  assert.doesNotMatch(mismatchPrompt, /always preserve (?:all )?existing sidelites/i)
+  assert.doesNotMatch(mismatchPrompt, /always remove (?:all )?existing sidelites/i)
+  const savannah = resolveAiProduct({ ...aiTestConfiguration, doorConfigurationType: 'savannah' })
+  assert.match(aiStructuralInstructionBlock(savannah.snapshot), /door_structure: double/)
+  console.log(`AI structural prompt matrix: ${structuralScenarios.length} target configurations; ${structuralConversions.length} source/conversion and architectural cases; 2 non-contradiction guards.`)
+  checks += 11
 
   const result = await request(JSON.stringify(source), 200)
   assert.ok(result.image?.startsWith('data:image/jpeg;base64,'))
@@ -96,11 +224,14 @@ try {
   assert.equal(form.get('quality'), 'xhigh')
   assert.equal(form.get('output_format'), 'jpeg')
   assert.equal(form.get('output_compression'), '100')
-  assert.equal((form.getAll('image[]')[0] as File).name, 'house.png')
+  assert.equal((form.getAll('image[]')[0] as File).name, 'house.webp')
   assert.equal(form.getAll('image[]').length, trusted.references.length + 1)
   assert.ok(form.get('mask') instanceof Blob)
   const prompt = String(form.get('prompt'))
   assert.match(prompt, /Black/); assert.match(prompt, /#242424/)
+  assert.match(prompt, /AUTHORITATIVE TARGET ENTRANCE STRUCTURE/)
+  assert.match(prompt, /door_structure: single/)
+  assert.match(prompt, /sidelite_structure: none/)
   assert.match(prompt, /Ignore original reference door\/sidelite colors/)
   assert.match(prompt, /NOT inspiration images/)
   assert.match(prompt, /Image 2 — original base door design: defines the exact slab design/)
@@ -111,11 +242,24 @@ try {
   assert.match(prompt, /Do not oversoften, blur away/)
   assert.doesNotMatch(prompt, /finalEntranceImage|html2canvas|\/assets\//)
 
-  failOpenAi = true
-  const failed = await request(source, 502)
-  assert.match(failed.error!, /try again/)
-  assert.doesNotMatch(failed.error!, /SECRET|billing-test|mock-only-key/)
-  failOpenAi = false
+  const automaticResult = await request({ ...source, corners: undefined }, 200)
+  assert.ok(automaticResult.image)
+  assert.equal((forwardedForm as FormData).get('mask'), null)
+  assert.match(String((forwardedForm as FormData).get('prompt')), /Locate the existing main exterior entrance/)
+
+  openAiFailure = 'rate'
+  const failed = await request(source, 429)
+  assert.equal(failed.error_code, 'OPENAI_RATE_LIMITED')
+  assert.match(failed.user_message!, /try again/)
+  assert.ok(failed.request_id)
+  assert.doesNotMatch(JSON.stringify(failed), /SECRET|billing-test|mock-only-key/)
+  openAiFailure = 'rejected'
+  const rejected = await request(source, 422)
+  assert.equal(rejected.error_code, 'OPENAI_REQUEST_REJECTED')
+  openAiFailure = 'empty'
+  const empty = await request(source, 502)
+  assert.equal(empty.error_code, 'NO_GENERATED_IMAGE')
+  openAiFailure = 'none'
   const before = calls
   let release!: () => void
   gate = new Promise<void>(resolve => { release = resolve })

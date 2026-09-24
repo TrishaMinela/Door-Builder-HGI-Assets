@@ -1,6 +1,6 @@
-import type { GridColor, GridPattern, GridStyle, GridWidth } from '../types'
-import { isApprovedDecorativeGlassName } from './decorativeGlass'
-import { isApprovedPrivacyGlassName } from './privacyGlass'
+import type { GridColor, GridPattern, GridStyle, GridWidth } from '../types.js'
+import { isApprovedDecorativeGlassName } from './decorativeGlass.js'
+import { isApprovedPrivacyGlassName } from './privacyGlass.js'
 
 export type SideliteGlassCategory = 'clear' | 'decorative' | 'privacy' | 'clic' | 'blinds'
 export type SideliteGlassOption = { id: string; name: string; category: SideliteGlassCategory; asset?: string }

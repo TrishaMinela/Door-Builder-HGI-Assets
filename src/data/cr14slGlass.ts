@@ -1,8 +1,8 @@
-import type { GridColor, GridPattern } from '../types'
-import { glassOptions } from './glassOptions'
-import type { SideliteGlassCategory, SideliteGlassOption } from './fslGlass'
-import { s2slStyleRules } from './s2slGlass'
-import { isApprovedPrivacyGlassName } from './privacyGlass'
+import type { GridColor, GridPattern } from '../types.js'
+import { glassOptions } from './glassOptions.js'
+import type { SideliteGlassCategory, SideliteGlassOption } from './fslGlass.js'
+import { s2slStyleRules } from './s2slGlass.js'
+import { isApprovedPrivacyGlassName } from './privacyGlass.js'
 
 export const cr14slGlassOptions: SideliteGlassOption[] = glassOptions
   .filter((option) => Boolean(option.overlaysByDoorStyle.CR14))

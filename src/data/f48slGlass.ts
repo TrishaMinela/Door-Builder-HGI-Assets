@@ -1,7 +1,7 @@
-import type { GridColor, GridPattern, GridStyle, GridWidth } from '../types'
-import type { SideliteGlassCategory, SideliteGlassOption, SideliteGridRules } from './fslGlass'
-import { isApprovedDecorativeGlassName } from './decorativeGlass'
-import { isApprovedPrivacyGlassName } from './privacyGlass'
+import type { GridColor, GridPattern, GridStyle, GridWidth } from '../types.js'
+import type { SideliteGlassCategory, SideliteGlassOption, SideliteGridRules } from './fslGlass.js'
+import { isApprovedDecorativeGlassName } from './decorativeGlass.js'
+import { isApprovedPrivacyGlassName } from './privacyGlass.js'
 
 const asset = (code: string) => `/assets/hgi-assets/Sidelites/F48SL/Glass/F48SL${code}.webp`
 const option = (code: string, name: string, category: SideliteGlassCategory = 'decorative'): SideliteGlassOption => ({ id: code.toLowerCase(), name, category, asset: asset(code) })

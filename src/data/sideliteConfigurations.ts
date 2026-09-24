@@ -1,6 +1,6 @@
-import type { DoorConfigurationType, SideliteConfiguration, SideliteProductCode } from '../types'
+import type { DoorConfigurationType, SideliteConfiguration, SideliteProductCode } from '../types.js'
 
-export type { SideliteProductCode } from '../types'
+export type { SideliteProductCode } from '../types.js'
 export type SideliteInput = SideliteConfiguration | SideliteProductCode | 'both' | 'left' | 'right' | '' | null | undefined
 
 export type SideliteProductOption = {

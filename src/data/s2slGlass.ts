@@ -1,5 +1,5 @@
-import type { GridStyle } from '../types'
-import type { SideliteGlassOption, SideliteGridRules } from './fslGlass'
+import type { GridStyle } from '../types.js'
+import type { SideliteGlassOption, SideliteGridRules } from './fslGlass.js'
 
 export const s2slGlassCategories = [
   { id: 'clear', name: 'Clear Glass', image: '/assets/glass/thumbnails/Clear.webp' },

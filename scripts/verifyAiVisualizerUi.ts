@@ -3,6 +3,25 @@ import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
 import sharp from 'sharp'
 import { aiTestConfiguration } from './aiVisualizerFixture'
+import { AI_LOADING_MESSAGES } from '../src/features/home-visualizer/AiGenerationLoading'
+
+assert.deepEqual(AI_LOADING_MESSAGES, [
+  'Analyzing your doorway',
+  'Getting a feel for your entrance',
+  'Preparing your selected door',
+  'Lining up the proportions',
+  'Matching the details',
+  'Building a realistic fit',
+  'Blending it into your home',
+  'Checking the final look',
+  'Fine-tuning the details',
+  'Making it look natural',
+  'Your new entrance is taking shape',
+  'Almost there',
+  'Adding the finishing touches',
+  'Polishing your visualization',
+  'Finalizing the result',
+])
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5189', '--strictPort'], { stdio: 'pipe' })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null
@@ -24,7 +43,7 @@ try {
     await page.route('**/api/generate-door-visualization', async route => {
       requests += 1
       captured = route.request().postDataJSON()
-      if (fail) await route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ error: 'Please try again, or use Manual mode.' }) })
+      if (fail) await route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ error_code: 'OPENAI_REQUEST_REJECTED', user_message: 'OpenAI could not process this photo. Try the doorway locator.', request_id: 'safe-test-request' }) })
       else {
         await new Promise<void>(resolve => { release = resolve })
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ image: aiResult }) })
@@ -34,15 +53,13 @@ try {
     const manual = page.getByRole('button', { name: 'Manual', exact: true })
     const ai = page.getByRole('button', { name: 'AI Beta', exact: true })
     assert.equal(await manual.getAttribute('aria-pressed'), 'true')
-    await page.locator('input[type=file]').setInputFiles({ name: 'test-home.jpg', mimeType: 'image/jpeg', buffer: photo })
-    await page.getByRole('button', { name: 'Start Placing Points' }).click()
-    const cornersBefore = await page.locator('.entrance-corner-handle').evaluateAll(elements => elements.map(element => element.getAttribute('style')))
-    const photoBefore = await page.locator('img[alt^="Uploaded entrance photo"]').getAttribute('src')
     await ai.focus(); await page.keyboard.press('Enter')
+    await page.locator('input[type=file]').setInputFiles({ name: 'test-home.jpg', mimeType: 'image/jpeg', buffer: photo })
+    const photoBefore = await page.locator('img[alt^="Uploaded entrance photo"]').getAttribute('src')
     assert.equal(await ai.getAttribute('aria-pressed'), 'true')
     assert.equal(requests, 0)
     assert.equal(await page.locator('img[alt^="Uploaded entrance photo"]').getAttribute('src'), photoBefore)
-    assert.deepEqual(await page.locator('.entrance-corner-handle').evaluateAll(elements => elements.map(element => element.getAttribute('style'))), cornersBefore)
+    assert.equal(await page.locator('.entrance-corner-handle').count(), 0, 'AI starts with automatic entrance detection and no mandatory points')
     const generate = page.getByRole('button', { name: 'Generate AI Visualization', exact: true })
     assert.equal(await generate.isVisible(), true)
     assert.notEqual(await generate.locator('.wizard-nav-label').evaluate(element => getComputedStyle(element).display), 'none')
@@ -50,11 +67,20 @@ try {
     await page.getByRole('button', { name: 'Try Again', exact: true }).waitFor()
     assert.equal(requests, 1)
     assert.deepEqual(captured!.configuration, JSON.parse(JSON.stringify(aiTestConfiguration)))
-    assert.deepEqual(captured!.corners, { topLeft: { x: .35, y: .35 }, topRight: { x: .65, y: .35 }, bottomRight: { x: .65, y: .65 }, bottomLeft: { x: .35, y: .65 } })
+    assert.equal(captured!.corners, undefined)
+    assert.match(await page.getByRole('alert').innerText(), /OpenAI could not process this photo/)
+    assert.match(await page.getByRole('alert').innerText(), /Reference: safe-tes/)
+    assert.match(await page.getByRole('alert').innerText(), /Error code: OPENAI_REQUEST_REJECTED/)
     assert.equal(await page.locator('img[alt^="Uploaded entrance photo"]').getAttribute('src'), photoBefore)
+    await page.getByRole('button', { name: 'Help AI locate the entrance' }).click()
+    const cornersBefore = await page.locator('.entrance-corner-handle').evaluateAll(elements => elements.map(element => element.getAttribute('style')))
+    assert.equal(cornersBefore.length, 4)
     fail = false
     await page.getByRole('button', { name: 'Try Again', exact: true }).click()
     await page.getByText('Creating your AI visualization', { exact: true }).waitFor()
+    await page.getByText('Analyzing your doorway', { exact: true }).waitFor()
+    await page.getByText('This may take a minute or two.', { exact: true }).waitFor()
+    assert.equal(await page.getByText('Status messages are illustrative.', { exact: false }).count(), 0)
     assert.equal(await generate.isDisabled(), true)
     await page.waitForFunction(() => document.querySelector('.ai-photo-loading-overlay') !== null)
     const overlayBounds = await page.locator('.ai-photo-loading-overlay').boundingBox()
@@ -62,13 +88,15 @@ try {
     assert.ok(overlayBounds && photoBounds)
     for (const key of ['x', 'y', 'width', 'height'] as const) assert.ok(Math.abs(overlayBounds[key] - photoBounds[key]) < 2, `Loading overlay is photo-only: ${JSON.stringify({ overlayBounds, photoBounds })}`)
     assert.equal(await page.getByRole('progressbar').getAttribute('aria-valuenow'), null, 'Simulated loading is not announced as true measured progress')
-    await page.waitForTimeout(8500)
-    await page.getByText('Analyzing your doorway', { exact: true }).waitFor()
+    await page.waitForTimeout(5500)
+    await page.getByText('Getting a feel for your entrance', { exact: true }).waitFor()
     const progress = await page.locator('.ai-photo-loading-track > span').evaluate(element => parseFloat((element as HTMLElement).style.width))
     assert.ok(progress > 8 && progress <= 88)
     // Wait for the mocked request to start without ever allowing a paid fetch.
     await new Promise<void>(resolve => { const check = () => release ? resolve() : setTimeout(check, 25); check() })
+    assert.deepEqual(captured!.corners, { topLeft: { x: .35, y: .35 }, topRight: { x: .65, y: .35 }, bottomRight: { x: .65, y: .65 }, bottomLeft: { x: .35, y: .65 } })
     await manual.click()
+    assert.deepEqual(await page.locator('.entrance-corner-handle').evaluateAll(elements => elements.map(element => element.getAttribute('style'))), cornersBefore)
     release()
     await page.getByRole('button', { name: 'Continue', exact: true }).waitFor()
     await ai.click()

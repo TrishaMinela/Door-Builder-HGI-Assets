@@ -1,5 +1,5 @@
-import type { DoorStyle, Finish, ResolvedDoorProduct } from '../types'
-import { doorStyleThumbnailAssets } from './doorStyleThumbnailAssets'
+import type { DoorStyle, Finish, ResolvedDoorProduct } from '../types.js'
+import { doorStyleThumbnailAssets } from './doorStyleThumbnailAssets.js'
 
 // Preview slabs are separate from door-style thumbnails and are loaded by URL.
 const slabUrl = (folder: string, fileName: string) => `/assets/hgi-assets/Preview Slabs/${folder}/${fileName}`

@@ -1,6 +1,6 @@
-import type { GlassOption } from '../types'
-import { approvedPrivacyGlassIds, knownPrivacyGlassIds } from './privacyGlass'
-import { approvedDecorativeGlassIds, knownDecorativeGlassIds } from './decorativeGlass'
+import type { GlassOption } from '../types.js'
+import { approvedPrivacyGlassIds, knownPrivacyGlassIds } from './privacyGlass.js'
+import { approvedDecorativeGlassIds, knownDecorativeGlassIds } from './decorativeGlass.js'
 
 const glassPreviewAssets: Record<string, string> = {
   "CR14BAY.webp": "/assets/hgi-assets/Glass/CR14/CR14BAY.webp",

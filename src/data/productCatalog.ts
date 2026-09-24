@@ -1,5 +1,5 @@
-import type { DoorLine, DoorLineChoice, DoorStyle, DoorTypeOption, Finish, ResolvedDoorProduct } from '../types'
-import { getDoorStyleThumbnailAsset } from './doorStyleThumbnailAssets'
+import type { DoorLine, DoorLineChoice, DoorStyle, DoorTypeOption, Finish, ResolvedDoorProduct } from '../types.js'
+import { getDoorStyleThumbnailAsset } from './doorStyleThumbnailAssets.js'
 
 export const glassDoorCodes = new Set([
   '3LT', '3STEP', '4LT', '5LT', 'CA', 'CR14', 'CR14PL', 'F', 'F2', 'F3', 'F4', 'F48', 'F482',

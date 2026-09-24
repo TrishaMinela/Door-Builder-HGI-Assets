@@ -1,6 +1,6 @@
-import type { DoorSwing, HardwareAsset, HardwareFinishName, HardwareHanding, HardwareManufacturer, HardwareOption, HardwareStyleName, HardwareView, PreviewHardware } from '../types'
-import { hardwareAssets as baldwinAssets } from './hardwareAssets'
-import { resolveSchlageHardware, schlageHardware } from './schlageHardware'
+import type { DoorSwing, HardwareAsset, HardwareFinishName, HardwareHanding, HardwareManufacturer, HardwareOption, HardwareStyleName, HardwareView, PreviewHardware } from '../types.js'
+import { hardwareAssets as baldwinAssets } from './hardwareAssets.js'
+import { resolveSchlageHardware, schlageHardware } from './schlageHardware.js'
 
 const finishColors: Record<string, string> = {
   'Aged Bronze': '#584536',

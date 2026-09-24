@@ -1,8 +1,8 @@
-import type { Finish } from '../types'
-import { paintColors, stainColors } from './finishes'
-export { glassOptions } from './glassOptions'
-export { hardwareOptions } from './hardware'
-import { catalogDoorStyles } from './productCatalog'
+import type { Finish } from '../types.js'
+import { paintColors, stainColors } from './finishes.js'
+export { glassOptions } from './glassOptions.js'
+export { hardwareOptions } from './hardware.js'
+import { catalogDoorStyles } from './productCatalog.js'
 
 export const doorStyles = catalogDoorStyles
 

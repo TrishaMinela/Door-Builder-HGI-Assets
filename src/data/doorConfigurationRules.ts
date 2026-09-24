@@ -1,4 +1,4 @@
-import type { DoorConfigurationType, DoubleDoorLockPrepCode } from '../types'
+import type { DoorConfigurationType, DoubleDoorLockPrepCode } from '../types.js'
 
 export type DoorHardwareSide = 'left' | 'right'
 export type DoorHardwareRenderMode = 'full' | 'knob-only'

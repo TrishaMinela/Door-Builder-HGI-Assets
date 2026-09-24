@@ -1,4 +1,4 @@
-import type { HardwareAsset, HardwareHanding, HardwareView } from '../types'
+import type { HardwareAsset, HardwareHanding, HardwareView } from '../types.js'
 
 // Explicit asset records keep human-readable product data independent from filenames.
 // The supplied exterior overlays are normalized to Right / Exterior (RO) assets.

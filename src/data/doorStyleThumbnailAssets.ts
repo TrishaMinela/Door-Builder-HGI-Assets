@@ -1,4 +1,4 @@
-import type { DoorStyle } from '../types'
+import type { DoorStyle } from '../types.js'
 
 export type DoorStyleThumbnailAsset = {
   image: string
