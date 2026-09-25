@@ -5,10 +5,7 @@ import { doorStyleThumbnailAssets } from './doorStyleThumbnailAssets.js'
 const slabUrl = (folder: string, fileName: string) => `/assets/hgi-assets/Preview Slabs/${folder}/${fileName}`
 
 const smoothPaintDoorPreviewAssets: Record<string, string> = {
-  // The supplied smooth 2PHD file is an opaque-black export rather than usable
-  // neutral slab artwork. Use the matching neutral 2PHD source so the default
-  // first style renders correctly for single, French, and Savannah assemblies.
-  '2PHD': slabUrl('Textured', '2P HD Flat Top - Textured.webp'),
+  '2PHD': slabUrl('Smooth', '2P HD Flat Top - Smooth.webp'),
   '3LT': slabUrl('Smooth', 'Stacked 3 Lite - Smooth.webp'),
   '3PNG': slabUrl('Smooth', '3 Panel No Glass - Smooth.webp'),
   '3PNGSS': slabUrl('Smooth', '3 Panel No Glass - Smooth.webp'),
@@ -49,13 +46,8 @@ const smoothPaintDoorPreviewAssets: Record<string, string> = {
   SW: slabUrl('Smooth', 'Wagon Wheel - Smooth.webp'),
 }
 
-// F3 uses the supplied textured square slab for both of these product lines.
-// Keep this line-specific so the other smooth preview mappings stay unchanged.
 const exactDoorLinePreviewAssets: Record<string, Record<string, string>> = {
   '22-gauge-steel': {
-    F3: slabUrl('Textured', 'F3 - Textured.webp'),
-  },
-  'brushed-smooth-fiberglass': {
     F3: slabUrl('Textured', 'F3 - Textured.webp'),
   },
 }
@@ -184,6 +176,15 @@ export function resolveDoorPreviewCandidates(style: DoorStyle, finishType?: Fini
   const candidates: (string | undefined)[] = []
   const hasExactDoorLine = product?.doorTypes.length === 1
   const exactLineId = hasExactDoorLine ? product?.matchingVariants[0]?.lineId : undefined
+
+  // Brushed Smooth Fiberglass is a paint-only smooth surface. Keep its asset
+  // resolution isolated from the generic fallback chain so a missing smooth
+  // asset can never silently substitute textured, Oak, or other grained art.
+  if (exactLineId === 'brushed-smooth-fiberglass') {
+    const smoothCandidate = previewFromMap(style, smoothPaintDoorPreviewAssets)
+    return smoothCandidate ? [smoothCandidate] : []
+  }
+
   const exactLineAssets = exactLineId ? exactDoorLinePreviewAssets[exactLineId] : undefined
   if (exactLineAssets) candidates.push(previewFromMap(style, exactLineAssets))
   const useStainableSteelTexture = hasExactDoorLine && usesPaintableStainableSteelPreview(product)

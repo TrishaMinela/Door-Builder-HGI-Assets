@@ -92,6 +92,14 @@ for (const style of doorStyles) {
         const codes = product.styleCodes
         const slabs = resolveDoorPreviewCandidates(style, finish.finishType, product, grain)
         assert.ok(slabs.length, `${line.id}/${style.code}/${finish.id} has no slab candidate`)
+        if (line.id === 'brushed-smooth-fiberglass') {
+          assert.equal(grain, null, `${line.id}/${style.code} must not resolve a grain`)
+          assert.equal(finish.finishType, 'paint', `${line.id}/${style.code} must remain paint-only`)
+          assert.ok(
+            slabs.every(slab => slab.includes('/Preview Slabs/Smooth/')),
+            `${line.id}/${style.code} resolved a non-smooth slab: ${slabs.join(', ')}`,
+          )
+        }
         for (const slab of slabs) await checkAsset(slab, `slab ${line.id}/${style.code}/${finish.id}`)
         await checkAsset(resolveGlassMaskAsset(codes.find(code => resolveGlassMaskAsset(code)) ?? ''), `mask ${style.code}`)
         const glassChoices = doorStyleSupportsGlass(style, line.id) ? availableGlass(codes) : []
@@ -99,6 +107,9 @@ for (const style of doorStyles) {
         for (const glass of glassChoices) for (const code of codes) await checkAsset(glass.overlaysByDoorStyle[code], `glass ${glass.id}/${code}`)
 
         const family = sideliteAssetFamilyForSlab({ doorLineId: line.id, grain, doorStyleCode: style.code })
+        if (line.id === 'brushed-smooth-fiberglass') {
+          assert.equal(family, '20-gauge', `${line.id}/${style.code} must use the smooth sidelite family`)
+        }
         let sideliteSelectionCount = 1n
         if (family) {
           let perPlacement = 0n

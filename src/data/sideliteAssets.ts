@@ -52,7 +52,7 @@ const SIDELITE_GLASS_MASKS: Record<SideliteStyleId, string> = {
  * main slab. Keep this centralized with the slab-asset exceptions so the
  * builder, captures, and exports cannot independently choose a texture.
  */
-export function sideliteAssetFamilyForSlab({ doorLineId, grain, doorStyleCode }: SideliteFamilySelection): SideliteAssetFamily | null {
+export function sideliteAssetFamilyForSlab({ doorLineId, grain }: SideliteFamilySelection): SideliteAssetFamily | null {
   // The current builder-facing Door Line uses `signature-series`; retain the
   // older `signature-fiberglass` identifier for saved configurations that
   // still resolve through this shared asset helper.
@@ -61,9 +61,6 @@ export function sideliteAssetFamilyForSlab({ doorLineId, grain, doorStyleCode }:
     if (normalizedGrain === 'cherry' || normalizedGrain === 'fir' || normalizedGrain === 'mahogany' || normalizedGrain === 'oak') return normalizedGrain
     return null
   }
-  // F3 uses the supplied textured slab for both 22-Gauge and Brushed Smooth.
-  // Its sidelite must therefore use the textured authored family as well.
-  if (doorStyleCode === 'F3' && doorLineId === 'brushed-smooth-fiberglass') return '22-gauge'
   if (doorLineId === '20-gauge-smooth-steel' || doorLineId === 'brushed-smooth-fiberglass') return '20-gauge'
   if (doorLineId === '22-gauge-steel' || doorLineId === 'textured-fiberglass') return '22-gauge'
   return null
