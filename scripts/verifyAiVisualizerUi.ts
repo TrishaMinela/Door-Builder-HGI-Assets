@@ -39,7 +39,7 @@ try {
     const page = await browser.newPage({ viewport: { width, height: 900 } })
     let requests = 0, fail = true
     let release!: () => void
-    let captured: { corners: unknown; configuration: unknown } | null = null
+    let captured: { corners: unknown; configuration: unknown; productReference?: string } | null = null
     await page.route('**/api/generate-door-visualization', async route => {
       requests += 1
       captured = route.request().postDataJSON()
@@ -63,10 +63,13 @@ try {
     const generate = page.getByRole('button', { name: 'Generate AI Visualization', exact: true })
     assert.equal(await generate.isVisible(), true)
     assert.notEqual(await generate.locator('.wizard-nav-label').evaluate(element => getComputedStyle(element).display), 'none')
+    await generate.waitFor({ state: 'visible' })
+    await page.waitForFunction(() => !(document.querySelector('[aria-label="Generate AI Visualization"]') as HTMLButtonElement | null)?.disabled, undefined, { timeout: 60_000 })
     await generate.click()
     await page.getByRole('button', { name: 'Try Again', exact: true }).waitFor()
     assert.equal(requests, 1)
     assert.deepEqual(captured!.configuration, JSON.parse(JSON.stringify(aiTestConfiguration)))
+    assert.match(captured!.productReference ?? '', /^data:image\/webp;base64,/, 'AI request includes the flattened configured render')
     assert.equal(captured!.corners, undefined)
     assert.match(await page.getByRole('alert').innerText(), /OpenAI could not process this photo/)
     assert.match(await page.getByRole('alert').innerText(), /Reference: safe-tes/)

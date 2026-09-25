@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { AI_MAX_REQUEST_BYTES, AI_MODEL, AI_QUALITY, AiGenerationError, AiInputError, aiPrompt, loadAiReference, objectValue, optionalCorners, prepareHouseAndMask, resolveAiProduct, type AiErrorCode } from '../server/aiDoorVisualization.js'
+import { AI_MAX_REQUEST_BYTES, AI_MODEL, AI_QUALITY, AiGenerationError, AiInputError, aiPrompt, loadAiReference, objectValue, optionalCorners, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct, type AiErrorCode } from '../server/aiDoorVisualization.js'
 
 type ApiRequest = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> }
 type ApiResponse = { status: (code: number) => ApiResponse; json: (body: unknown) => void; setHeader: (name: string, value: string) => void }
@@ -53,14 +53,22 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
   const corners = optionalCorners(source.corners)
   const product = resolveAiProduct(source.configuration, source.jambFinishId, source.glassFrameFinishId)
   const prepared = await prepareHouseAndMask(source.photo, corners)
-  console.info('[ai-visualizer:image-prepared]', { request_id: requestId, original_image: originalImageDiagnostic(source.uploadMetadata, prepared.original), normalized_ai_input: prepared.normalized, placement_mode: corners ? 'user-corners' : 'automatic', product_reference_count: product.references.length })
+  const configuredReferences = source.productReference ? await prepareConfiguredProductReferences(source.productReference) : null
+  const intendedReferenceCount = configuredReferences?.length ?? product.references.length
+  console.info('[ai-visualizer:image-prepared]', { request_id: requestId, original_image: originalImageDiagnostic(source.uploadMetadata, prepared.original), normalized_ai_input: prepared.normalized, placement_mode: corners ? 'user-corners' : 'automatic', product_reference_mode: configuredReferences ? 'flattened-configured-render' : 'catalog-fallback', product_reference_count: intendedReferenceCount })
   const form = new FormData()
   form.append('model', AI_MODEL)
   form.append('image[]', new Blob([new Uint8Array(prepared.photo)], { type: 'image/webp' }), 'house.webp')
   if (prepared.mask) form.append('mask', new Blob([new Uint8Array(prepared.mask)], { type: 'image/webp' }), 'doorway-mask.webp')
   const labels: string[] = []
   const referenceSizes: number[] = []
-  for (const reference of product.references) {
+  if (configuredReferences) {
+    for (const reference of configuredReferences) {
+      labels.push(reference.label)
+      referenceSizes.push(reference.bytes.length)
+      form.append('image[]', new Blob([new Uint8Array(reference.bytes)], { type: 'image/png' }), `reference-${labels.length}.png`)
+    }
+  } else for (const reference of product.references) {
     try {
       const bytes = await loadAiReference(reference.paths)
       labels.push(reference.label)
@@ -78,7 +86,7 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
   form.append('output_format', 'jpeg')
   form.append('output_compression', '100')
   const approximateRequestBytes = prepared.photo.length + (prepared.mask?.length ?? 0) + referenceSizes.reduce((sum, size) => sum + size, 0) + Buffer.byteLength(prompt)
-  console.info('[ai-visualizer:request]', { request_id: requestId, original_image: originalImageDiagnostic(source.uploadMetadata, prepared.original), normalized_ai_input: prepared.normalized, placement_mode: corners ? 'user-corners' : 'automatic', product_reference_count: labels.length, approximate_request_bytes: approximateRequestBytes })
+  console.info('[ai-visualizer:request]', { request_id: requestId, original_image: originalImageDiagnostic(source.uploadMetadata, prepared.original), normalized_ai_input: prepared.normalized, placement_mode: corners ? 'user-corners' : 'automatic', product_reference_mode: configuredReferences ? 'flattened-configured-render' : 'catalog-fallback', product_reference_count: labels.length, product_reference_bytes: referenceSizes, approximate_request_bytes: approximateRequestBytes })
 
   let upstream: Response
   try {

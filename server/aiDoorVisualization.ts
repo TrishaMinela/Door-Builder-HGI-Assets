@@ -52,6 +52,7 @@ export const AI_MAX_REFERENCE_EDGE = 1536
 export const AI_MAX_ORIGINAL_PHOTO_BYTES = 30 * 1024 * 1024
 export const AI_MAX_ORIGINAL_PIXELS = 40_000_000
 export const AI_NORMALIZED_QUALITY = 90
+export const AI_MAX_PRODUCT_REFERENCE_BYTES = 5 * 1024 * 1024
 type ObjectValue = Record<string, unknown>
 export const objectValue = (value: unknown): ObjectValue | null => value && typeof value === 'object' && !Array.isArray(value) ? value as ObjectValue : null
 
@@ -110,6 +111,36 @@ export async function prepareHouseAndMask(value: unknown, corners: AiCorners | n
   } catch (error) {
     if (error instanceof AiInputError) throw error
     throw new AiInputError('IMAGE_DECODE_FAILED', 'Your house photo could not be decoded. Please choose another photo.', 400, { cause: error })
+  }
+}
+
+export async function prepareConfiguredProductReferences(value: unknown) {
+  if (typeof value !== 'string') throw new AiInputError('REFERENCE_IMAGE_FAILED', 'The configured product render is missing.')
+  const match = /^data:image\/(png|webp);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(value)
+  if (!match) throw new AiInputError('REFERENCE_IMAGE_FAILED', 'The configured product render is invalid.')
+  const bytes = Buffer.from(match[2], 'base64')
+  if (!bytes.length || bytes.length > AI_MAX_PRODUCT_REFERENCE_BYTES) throw new AiInputError('REFERENCE_IMAGE_FAILED', 'The configured product render could not be prepared.')
+  try {
+    const metadata = await sharp(bytes, { limitInputPixels: 24_000_000 }).metadata()
+    if (!metadata.width || !metadata.height || !['png', 'webp'].includes(metadata.format ?? '')) throw new Error('Unsupported configured-product image.')
+    const primary = await sharp(bytes, { limitInputPixels: 24_000_000 })
+      .rotate().ensureAlpha()
+      .resize({ width: AI_MAX_REFERENCE_EDGE, height: AI_MAX_REFERENCE_EDGE, fit: 'inside', withoutEnlargement: true })
+      .png({ compressionLevel: 9, adaptiveFiltering: true })
+      .toBuffer()
+    const primaryMetadata = await sharp(primary).metadata()
+    const emphasis = await sharp(primary)
+      .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .resize({ width: AI_MAX_REFERENCE_EDGE, height: AI_MAX_REFERENCE_EDGE, fit: 'inside', withoutEnlargement: true })
+      .png({ compressionLevel: 9, adaptiveFiltering: true })
+      .toBuffer()
+    const emphasisMetadata = await sharp(emphasis).metadata()
+    return [
+      { label: 'authoritative flattened configured entrance', bytes: primary, width: primaryMetadata.width!, height: primaryMetadata.height! },
+      { label: 'authoritative tight configured-entrance geometry crop', bytes: emphasis, width: emphasisMetadata.width!, height: emphasisMetadata.height! },
+    ]
+  } catch (error) {
+    throw new AiInputError('REFERENCE_IMAGE_FAILED', 'The configured product render could not be decoded.', 400, { cause: error })
   }
 }
 
@@ -252,7 +283,8 @@ export function aiStructuralInstructionBlock(snapshot: ReturnType<typeof resolve
 export function aiProductFidelityInstructionBlock(snapshot: ReturnType<typeof resolveAiProduct>['snapshot']) {
   return [
     'AUTHORITATIVE PRODUCT FIDELITY RULES',
-    '- The resolved DoorConfiguration and supplied configured-product reference images are authoritative for the final entrance product. Match the selected door exactly; they are product specifications, not visual inspiration.',
+    '- The flattened configured/rendered entrance in Image 2 is the authoritative reference for the final door design. Image 3 is a tight emphasis view of that same exact configured product. The resolved DoorConfiguration confirms its specifications. These are the exact target, NOT inspiration images.',
+    '- Preserve the exact configured product design. Do not redesign the door. Do not reinterpret the style. Do not simplify the design. Do not embellish the design. Do not create a similar door. Match the configured door as exactly as possible.',
     `- Preserve exactly: ${snapshot.configurationType === 'single' ? 'one slab' : 'two slabs'}; the selected single/double structure; slab proportions; panel layout; panel count; panel shapes; top-panel shapes; glass-lite count, size, placement and proportions; mullion/grid layout; target sidelite presence and side; sidelite glass; hardware type, exact hardware count (${snapshot.hardware.count}), placement and handing; active/inactive leaf behavior; finish/color; material appearance; and jamb/frame appearance.`,
     '- Do not redesign the door. Do not reinterpret the style. Do not create a new panel layout. Do not change the panel layout. Do not change panel count, panel shapes, or top-panel shapes.',
     '- Do not change the glass layout. Do not widen or narrow glass lites arbitrarily. Do not change the number, size, proportions, or placement of glass lites. Do not alter or simplify the configured mullion/grid layout.',
@@ -260,6 +292,21 @@ export function aiProductFidelityInstructionBlock(snapshot: ReturnType<typeof re
     '- Do not redesign, embellish, or simplify the selected product. Do not add optional features that were not selected. Do not invent decorative details that are absent from the configured product. Do not simplify the configured product into a generic door. Do not substitute a visually similar door style.',
     '- HOUSE VERSUS PRODUCT SEPARATION: the house photo supplies location, perspective, lighting, shadows and surrounding facade. The configured product references and DoorConfiguration supply the exact door design and product details.',
     '- Change only the surrounding architectural context when necessary for a realistic fit: trim, casing, brick, stone, siding, opening width, former sidelite space, jamb transition, contact shadows and immediate entrance architecture. If the opening must change, adjust architecture around the configured door rather than redesigning the door itself.',
+  ].join('\n')
+}
+
+export function aiDoorGeometryInstructionBlock(snapshot: ReturnType<typeof resolveAiProduct>['snapshot']) {
+  return [
+    'AUTHORITATIVE DOOR GEOMETRY RULES',
+    '- Geometry must come from the authoritative flattened configured render, not from free reinterpretation, the old photographed entrance, or assumptions about a generic residential door.',
+    `- Preserve the configured ${snapshot.configurationType === 'single' ? 'single-slab' : 'two-slab'} structure, exact overall slab proportions, rail/stile relationships, panel count, panel layout, panel shapes, center seam/active-leaf relationship, and jamb/frame relationship shown in the configured render.`,
+    '- Preserve the exact number of glass lites. Preserve every lite’s aspect ratio, width-to-height relationship, width, height, relative position on the slab, spacing from every other lite, and the thickness of frames/borders around the lites.',
+    '- Preserve the exact mullion/grid presence or absence and exact grid layout when selected. Preserve exact sidelite count, side, width relationship, glass geometry, borders and spacing.',
+    `- Preserve the exact hardware type, exact count (${snapshot.hardware.count}), position, orientation and spacing shown in the configured render.`,
+    '- Do not elongate, widen, narrow, shrink, crop, merge, divide, rotate, or reposition glass lites arbitrarily. Do not stretch the slab, panels, sidelites, glass, grids, hardware or frame to make them fit the photographed opening.',
+    '- Make the result photorealistic, but keep the same geometry and proportions from the configured render.',
+    '- Adjust realism using lighting, texture, perspective, contact shadows, and architectural blending—not by changing the configured door geometry.',
+    '- Adjust the surrounding architecture to fit the configured door, not the configured door to fit the surrounding architecture.',
   ].join('\n')
 }
 
@@ -308,6 +355,8 @@ export function aiDoNotInventInstructionBlock(snapshot: ReturnType<typeof resolv
 
 export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot'], corners: AiCorners | null, labels: string[]) {
   const roles: Record<string, string> = {
+    'authoritative flattened configured entrance': 'the PRIMARY AND AUTHORITATIVE product reference; copy its complete configured entrance design, geometry, proportions, finish, glass, grids, hardware, sidelites and frame as exactly as possible',
+    'authoritative tight configured-entrance geometry crop': 'a SECOND AUTHORITATIVE VIEW of Image 2, cropped tightly only to make panel, lite, grid, hardware, sidelite and frame geometry easier to inspect; it is the same product and must not be interpreted as a different option',
     'original base door design': 'defines the exact slab design, panel geometry, panel depth, grooves, glass opening and underlying material/grain; its original color is not the selected finish',
     'selected glass design': 'defines the exact selected glass shape, decorative detail, pattern and visible glass construction; do not substitute plain glass',
     'selected exterior hardware': 'defines the exact hardware silhouette, proportions, knob/lever/handle/lockset components and finish; preserve its relative placement on the slab',
@@ -320,8 +369,9 @@ export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot
       : 'PRIORITY 1 — PRESERVE THE HOUSE. The FIRST image is the full original customer house and the base scene. Identify the existing main exterior entrance in that photograph and replace only that entrance. Preserve the full photo framing and all unrelated architecture, siding, windows, roof, porch, masonry, landscaping, steps and surroundings. Do not crop or redesign unrelated pixels.',
     aiStructuralInstructionBlock(snapshot),
     aiProductFidelityInstructionBlock(snapshot),
+    aiDoorGeometryInstructionBlock(snapshot),
     aiDoNotInventInstructionBlock(snapshot),
-    'PRIORITY 2 — PRODUCT FIDELITY. The references are high-priority product-definition inputs, NOT inspiration images and NOT a finished composite. They define the true HGI product design. Adapt only finish, perspective and scene lighting, never redesign or generalize the product. Do not simply paste them into the house.',
+    'PRIORITY 2 — PRODUCT FIDELITY. Image 1 is environmental context only. Image 2 is the primary authoritative configured-product target. Image 3 is a tight emphasis view of the same target. Product geometry must come from Images 2 and 3, never from free reinterpretation or the existing photographed door. Adapt only perspective, scene lighting and the surrounding architectural transition; never redesign, generalize, simplify, embellish, stretch or distort the configured product.',
     ...labels.map((label, index) => `Image ${index + 2} — ${label}: ${roles[label] ?? 'defines the selected product detail'}.`),
     'DETAILS TO PRESERVE. Preserve selected hardware style, silhouette, proportions, finish, handing/active-leaf logic and physical placement. Preserve selected glass style and all visible decorative detail. Preserve configured grid pattern, grid count implied by the selected layout/reference, grid placement, visible grid thickness and color; do not invent an unspecified count. Preserve the TARGET sidelite glass and structure, exact panel geometry, visible panel grooves and depth, and crisp jamb/frame edge definition. Keep the configured single/French/Savannah arrangement and target sidelite count/placement.',
     'PRIORITY 3 — SELECTED FINISHES. Ignore original reference door/sidelite colors. Refinish the slab and sidelites with the SAME specified customer finish/hex while retaining panel geometry and material/grain. Paint must be opaque, not a translucent pale tint. Stain retains natural grain. Respect configured glass coating, grid color/location, jamb finish and hardware finish.',

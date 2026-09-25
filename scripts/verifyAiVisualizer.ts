@@ -4,14 +4,18 @@ import handler from '../api/generate-door-visualization.ts'
 import { aiTestConfiguration } from './aiVisualizerFixture'
 import { doorStyles, glassOptions } from '../src/data/options'
 import { aiPixelCorners, aiWorkingSize } from '../src/features/home-visualizer/aiImagePreparation'
-import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiStructuralInstructionBlock, loadAiReference, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
+import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiDoorGeometryInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiStructuralInstructionBlock, loadAiReference, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
 
 const originalFetch = globalThis.fetch
 const originalKey = process.env.OPENAI_API_KEY
 process.env.OPENAI_API_KEY = 'mock-only-key'
 const corners = { topLeft: { x: .2, y: .1 }, topRight: { x: .8, y: .1 }, bottomRight: { x: .8, y: .9 }, bottomLeft: { x: .2, y: .9 } }
 const bytes = await sharp({ create: { width: 2400, height: 1600, channels: 3, background: '#888888' } }).jpeg().toBuffer()
-const source = { photo: `data:image/jpeg;base64,${bytes.toString('base64')}`, corners, configuration: aiTestConfiguration }
+const productReferenceBytes = await sharp({ create: { width: 600, height: 1200, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+  .composite([{ input: Buffer.from('<svg width="600" height="1200"><rect x="90" y="40" width="420" height="1120" rx="4" fill="#242424"/><rect x="250" y="210" width="100" height="360" fill="#b9d5df"/></svg>') }])
+  .png().toBuffer()
+const productReference = `data:image/png;base64,${productReferenceBytes.toString('base64')}`
+const source = { photo: `data:image/jpeg;base64,${bytes.toString('base64')}`, productReference, corners, configuration: aiTestConfiguration }
 let forwardedForm: FormData | null = null
 let calls = 0
 let openAiFailure: 'none' | 'rate' | 'rejected' | 'empty' = 'none'
@@ -51,6 +55,7 @@ try {
   await request({ ...source, configuration: undefined }, 400)
   await request({ ...source, configuration: {} }, 400)
   await request({ ...source, configuration: { ...aiTestConfiguration, finish: { id: 'unknown' } } }, 400)
+  await request({ ...source, productReference: 'data:image/png;base64,aW52YWxpZA==' }, 400)
   await request('not-json', 400)
   await request(source, 413, 'POST', { 'content-length': '99999999' })
   assert.equal(calls, 0, 'Invalid requests must not consume OpenAI credits')
@@ -102,6 +107,11 @@ try {
   checks += 10
 
   const trusted = resolveAiProduct(aiTestConfiguration)
+  const configuredReferences = await prepareConfiguredProductReferences(productReference)
+  assert.equal(configuredReferences.length, 2)
+  assert.equal(configuredReferences[0].label, 'authoritative flattened configured entrance')
+  assert.equal(configuredReferences[1].label, 'authoritative tight configured-entrance geometry crop')
+  assert.ok(configuredReferences[1].width < configuredReferences[0].width, 'The emphasis reference removes transparent side padding')
   const hostile = resolveAiProduct({ ...aiTestConfiguration, style: { ...aiTestConfiguration.style, image: 'https://evil.example/image.png' }, hardware: { ...aiTestConfiguration.hardware, asset: '../../secrets' } })
   assert.deepEqual(hostile.references, trusted.references)
   for (const reference of trusted.references) assert.ok((await loadAiReference(reference.paths)).length > 0)
@@ -147,7 +157,8 @@ try {
     assert.match(block, /selected_hardware_handing_active_leaf:/)
     assert.match(block, /selected_jamb_frame:/)
   }
-  const mismatchPrompt = aiPrompt(trusted.snapshot, null, trusted.references.map(item => item.label))
+  const authoritativeLabels = configuredReferences.map(item => item.label)
+  const mismatchPrompt = aiPrompt(trusted.snapshot, null, authoritativeLabels)
   const fidelityBlock = aiProductFidelityInstructionBlock(trusted.snapshot)
   assert.match(fidelityBlock, /AUTHORITATIVE PRODUCT FIDELITY RULES/)
   assert.match(fidelityBlock, /Do not redesign the door\./)
@@ -158,6 +169,21 @@ try {
   assert.match(fidelityBlock, /Do not redesign, embellish, or simplify the selected product\./)
   assert.match(fidelityBlock, /Do not add optional features that were not selected\./)
   assert.match(fidelityBlock, /adjust architecture around the configured door rather than redesigning the door itself/)
+  assert.match(fidelityBlock, /flattened configured\/rendered entrance in Image 2 is the authoritative reference/)
+  assert.match(fidelityBlock, /Do not reinterpret the style\./)
+  assert.match(fidelityBlock, /Do not simplify the design\./)
+  assert.match(fidelityBlock, /Do not embellish the design\./)
+  assert.match(fidelityBlock, /Do not create a similar door\./)
+  const geometryBlock = aiDoorGeometryInstructionBlock(trusted.snapshot)
+  assert.match(geometryBlock, /AUTHORITATIVE DOOR GEOMETRY RULES/)
+  assert.match(geometryBlock, /Preserve the exact number of glass lites/)
+  assert.match(geometryBlock, /every lite’s aspect ratio/)
+  assert.match(geometryBlock, /spacing from every other lite/)
+  assert.match(geometryBlock, /panel count, panel layout, panel shapes/)
+  assert.match(geometryBlock, /exact hardware type, exact count \(1\)/)
+  assert.match(geometryBlock, /Do not elongate, widen, narrow, shrink, crop, merge, divide, rotate, or reposition glass lites arbitrarily/)
+  assert.match(geometryBlock, /Make the result photorealistic, but keep the same geometry and proportions from the configured render/)
+  assert.match(geometryBlock, /Adjust the surrounding architecture to fit the configured door, not the configured door to fit the surrounding architecture/)
   assert.match(mismatchPrompt, /AUTHORITATIVE PRODUCT FIDELITY RULES/)
   const doNotInventBlock = aiDoNotInventInstructionBlock(trusted.snapshot)
   assert.match(doNotInventBlock, /DO NOT ADD OR INVENT DETAILS/)
@@ -225,17 +251,22 @@ try {
   assert.equal(form.get('output_format'), 'jpeg')
   assert.equal(form.get('output_compression'), '100')
   assert.equal((form.getAll('image[]')[0] as File).name, 'house.webp')
-  assert.equal(form.getAll('image[]').length, trusted.references.length + 1)
+  assert.equal(form.getAll('image[]').length, 3, 'House plus authoritative full configured render and tight geometry crop')
+  assert.equal((form.getAll('image[]')[1] as File).name, 'reference-1.png')
+  assert.equal((form.getAll('image[]')[2] as File).name, 'reference-2.png')
   assert.ok(form.get('mask') instanceof Blob)
   const prompt = String(form.get('prompt'))
   assert.match(prompt, /Black/); assert.match(prompt, /#242424/)
   assert.match(prompt, /AUTHORITATIVE TARGET ENTRANCE STRUCTURE/)
+  assert.match(prompt, /AUTHORITATIVE DOOR GEOMETRY RULES/)
+  assert.match(prompt, /Image 2 is the primary authoritative configured-product target/)
+  assert.match(prompt, /Image 3 is a tight emphasis view of the same target/)
   assert.match(prompt, /door_structure: single/)
   assert.match(prompt, /sidelite_structure: none/)
   assert.match(prompt, /Ignore original reference door\/sidelite colors/)
   assert.match(prompt, /NOT inspiration images/)
-  assert.match(prompt, /Image 2 — original base door design: defines the exact slab design/)
-  assert.match(prompt, /selected exterior hardware: defines the exact hardware silhouette/)
+  assert.match(prompt, /Image 2 — authoritative flattened configured entrance: the PRIMARY AND AUTHORITATIVE product reference/)
+  assert.match(prompt, /Image 3 — authoritative tight configured-entrance geometry crop: a SECOND AUTHORITATIVE VIEW/)
   assert.match(prompt, /Do not substitute a different or generic knob/)
   assert.match(prompt, /grid count implied by the selected layout\/reference/)
   assert.match(prompt, /Smooth steel must remain smooth steel/)

@@ -36,8 +36,37 @@ export async function prepareAiHousePhoto(source: string) {
   throw new Error('This photo is too detailed for AI generation. Please try a smaller photo.')
 }
 
+export async function prepareAiConfiguredProductReference(source: string) {
+  const response = await fetch(source)
+  if (!response.ok) throw new Error('The configured door render could not be loaded.')
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image()
+      image.onload = () => resolve(image)
+      image.onerror = () => reject(new Error('The configured door render could not be prepared.'))
+      image.src = objectUrl
+    })
+    const scale = Math.min(1, 1536 / Math.max(image.naturalWidth, image.naturalHeight))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale))
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('The configured door render could not be prepared.')
+    context.imageSmoothingEnabled = true
+    context.imageSmoothingQuality = 'high'
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(image, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/webp', .98)
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+}
+
 export async function generateAiVisualization(input: {
   photoUrl: string
+  productReferenceUrl: string
   corners?: EntranceCorners
   configuration: DoorConfiguration
   jambFinish?: Finish | null
@@ -45,14 +74,19 @@ export async function generateAiVisualization(input: {
   uploadMetadata?: { mimeType: string; format: string; byteSize: number }
   signal?: AbortSignal
 }) {
-  // Original asset IDs only. The server ignores browser asset paths and resolves its own catalog.
-  const prepared = await prepareAiHousePhoto(input.photoUrl)
+  // The completed configured render is the authoritative product image. The
+  // server still validates the configuration and normalizes this image before
+  // forwarding it; browser-provided catalog paths remain ignored.
+  const [prepared, productReference] = await Promise.all([
+    prepareAiHousePhoto(input.photoUrl),
+    prepareAiConfiguredProductReference(input.productReferenceUrl),
+  ])
   let response: Response
   try {
     response = await fetch('/api/generate-door-visualization', {
       method: 'POST', signal: input.signal,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ photo: prepared.photo, corners: input.corners, configuration: input.configuration,
+      body: JSON.stringify({ photo: prepared.photo, productReference, corners: input.corners, configuration: input.configuration,
         uploadMetadata: { ...input.uploadMetadata, width: prepared.naturalWidth, height: prepared.naturalHeight },
         jambFinishId: input.jambFinish?.id, glassFrameFinishId: input.glassFrameFinish?.id }),
     })
