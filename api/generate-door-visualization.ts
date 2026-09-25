@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { AI_MAX_REQUEST_BYTES, AI_MODEL, AI_QUALITY, AiGenerationError, AiInputError, aiPrompt, loadAiReference, objectValue, optionalCorners, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct, type AiErrorCode } from '../server/aiDoorVisualization.js'
+import { AI_MAX_REQUEST_BYTES, AI_MODEL, AI_QUALITY, AiGenerationError, AiInputError, aiPrompt, entranceFitContext, loadAiReference, objectValue, optionalCorners, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct, type AiErrorCode } from '../server/aiDoorVisualization.js'
 
 type ApiRequest = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> }
 type ApiResponse = { status: (code: number) => ApiResponse; json: (body: unknown) => void; setHeader: (name: string, value: string) => void }
@@ -51,6 +51,7 @@ function withServerlessDeadline<T>(operation: Promise<T>) {
 async function generate(source: Record<string, unknown>, apiKey: string, requestId: string) {
   const startedAt = Date.now()
   const corners = optionalCorners(source.corners)
+  const fitContext = entranceFitContext(source.entranceDetection, source.fitStrategy)
   const product = resolveAiProduct(source.configuration, source.jambFinishId, source.glassFrameFinishId)
   const prepared = await prepareHouseAndMask(source.photo, corners)
   const configuredReferences = source.productReference ? await prepareConfiguredProductReferences(source.productReference) : null
@@ -78,7 +79,7 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
       throw new AiGenerationError('REFERENCE_IMAGE_FAILED', `Product reference failed to load: ${reference.label}`, 500, { cause: error })
     }
   }
-  const prompt = aiPrompt(product.snapshot, corners, labels)
+  const prompt = aiPrompt(product.snapshot, corners, labels, fitContext)
   form.append('prompt', prompt)
   form.append('n', '1')
   form.append('size', 'auto')

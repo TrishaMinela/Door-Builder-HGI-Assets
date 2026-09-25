@@ -4,7 +4,8 @@ import handler from '../api/generate-door-visualization.ts'
 import { aiTestConfiguration } from './aiVisualizerFixture'
 import { doorStyles, glassOptions } from '../src/data/options'
 import { aiPixelCorners, aiWorkingSize } from '../src/features/home-visualizer/aiImagePreparation'
-import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiDoorGeometryInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiStructuralInstructionBlock, loadAiReference, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
+import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiDoorGeometryInstructionBlock, aiEntranceFitInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiStructuralInstructionBlock, entranceFitContext, loadAiReference, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
+import { detectedEntranceStructure, evaluateEntranceCompatibility } from '../src/features/home-visualizer/entranceFitStrategy'
 
 const originalFetch = globalThis.fetch
 const originalKey = process.env.OPENAI_API_KEY
@@ -185,6 +186,33 @@ try {
   assert.match(geometryBlock, /Make the result photorealistic, but keep the same geometry and proportions from the configured render/)
   assert.match(geometryBlock, /Adjust the surrounding architecture to fit the configured door, not the configured door to fit the surrounding architecture/)
   assert.match(mismatchPrompt, /AUTHORITATIVE PRODUCT FIDELITY RULES/)
+  const detectedWideEntrance = { doorStructure: 'single', sidelites: 'both', transom: true, widthClass: 'wide', approximateWidthRatio: .42, structurallyWide: true, confidence: .94, summary: 'Single door with two sidelites and a transom.' } as const
+  const fitBlock = aiEntranceFitInstructionBlock(entranceFitContext(detectedWideEntrance, 'use-selected-product'))
+  assert.match(fitBlock, /ENTRANCE FIT STRATEGY — AUTHORITATIVE FOR ARCHITECTURAL FIT/)
+  assert.match(fitBlock, /selected Door Builder configuration as authoritative/)
+  assert.match(fitBlock, /Do not silently choose a different fit strategy/)
+  assert.equal(detectedEntranceStructure({ ...detectedWideEntrance, confidence: .4 }), 'unknown')
+  const singleNone = { ...detectedWideEntrance, sidelites: 'none', transom: false, structurallyWide: false } as const
+  assert.equal(evaluateEntranceCompatibility(singleNone, aiTestConfiguration)?.status, 'good-fit')
+  assert.equal(evaluateEntranceCompatibility({ ...singleNone, sidelites: 'both' }, aiTestConfiguration)?.status, 'caution')
+  assert.equal(evaluateEntranceCompatibility({ ...singleNone, doorStructure: 'double' }, aiTestConfiguration)?.status, 'caution')
+  assert.equal(evaluateEntranceCompatibility({ ...singleNone, doorStructure: 'double', sidelites: 'both' }, aiTestConfiguration)?.status, 'not-recommended')
+  assert.match(evaluateEntranceCompatibility({ ...singleNone, transom: true }, aiTestConfiguration)?.notes.join(' ') ?? '', /transom was detected/)
+  assert.equal(evaluateEntranceCompatibility({ ...singleNone, confidence: .4 }, aiTestConfiguration), null)
+  const compatibilityCodes = ['S0', 'SL', 'SR', 'SB', 'D0', 'DL', 'DR', 'DB'] as const
+  const sideBySuffix = { '0': 'none', L: 'left', R: 'right', B: 'both' } as const
+  const selectedSideBySuffix = { '0': 'none', L: 'hinge-side', R: 'lock-side', B: 'both-sides' } as const
+  const compatibilityCounts = { 'good-fit': 0, caution: 0, 'not-recommended': 0, unsupported: 0 }
+  for (const existing of compatibilityCodes) for (const selected of compatibilityCodes) {
+    const detectedDoor = existing[0] === 'D' ? 'double' : 'single'
+    const selectedDoor = selected[0] === 'D' ? 'french' : 'single'
+    const detectedSide = sideBySuffix[existing[1] as keyof typeof sideBySuffix]
+    const selectedSide = selectedSideBySuffix[selected[1] as keyof typeof selectedSideBySuffix]
+    const result = evaluateEntranceCompatibility({ ...singleNone, doorStructure: detectedDoor, sidelites: detectedSide }, { ...aiTestConfiguration, doorConfigurationType: selectedDoor, sidelites: selectedSide })
+    assert.ok(result)
+    compatibilityCounts[result!.status] += 1
+  }
+  assert.deepEqual(compatibilityCounts, { 'good-fit': 8, caution: 32, 'not-recommended': 24, unsupported: 0 })
   const doNotInventBlock = aiDoNotInventInstructionBlock(trusted.snapshot)
   assert.match(doNotInventBlock, /DO NOT ADD OR INVENT DETAILS/)
   assert.match(doNotInventBlock, /UNSELECTED FEATURES MUST NOT APPEAR/)

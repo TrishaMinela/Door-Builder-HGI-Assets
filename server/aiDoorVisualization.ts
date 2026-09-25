@@ -16,6 +16,7 @@ import { s2slGlassOptions } from '../src/data/s2slGlass.js'
 import { cr14slGlassOptions } from '../src/data/cr14slGlass.js'
 import { AI_CORNER_ORDER, AI_MASK_PADDING_PX, AI_MAX_PHOTO_BYTES, AI_MAX_PHOTO_EDGE, aiPixelCorners, aiWorkingSize, type AiCorners } from '../src/features/home-visualizer/aiImagePreparation.js'
 import type { DoorConfiguration, SideliteConfiguration } from '../src/types.js'
+import type { EntranceDetection, EntranceFitStrategy } from '../src/features/home-visualizer/entranceFitStrategy.js'
 
 export type AiErrorCode =
   | 'INVALID_IMAGE_INPUT'
@@ -71,6 +72,25 @@ export function validateCorners(value: unknown): AiCorners {
 
 export function optionalCorners(value: unknown): AiCorners | null {
   return value === undefined || value === null ? null : validateCorners(value)
+}
+
+const fitStrategies = new Set<EntranceFitStrategy>(['use-selected-product', 'preserve-sidelites', 'preserve-sidelites-and-transom', 'single-with-matching-sidelites', 'matching-double-doors', 'convert-opening-to-double', 'rebuild-opening'])
+
+export function entranceFitContext(detectionValue: unknown, strategyValue: unknown) {
+  const strategy: EntranceFitStrategy = typeof strategyValue === 'string' && fitStrategies.has(strategyValue as EntranceFitStrategy) ? strategyValue as EntranceFitStrategy : 'use-selected-product'
+  const source = objectValue(detectionValue)
+  if (!source) return { detection: null, strategy }
+  const detection: EntranceDetection = {
+    doorStructure: ['single', 'double', 'unknown'].includes(String(source.doorStructure)) ? source.doorStructure as EntranceDetection['doorStructure'] : 'unknown',
+    sidelites: ['none', 'left', 'right', 'both', 'unknown'].includes(String(source.sidelites)) ? source.sidelites as EntranceDetection['sidelites'] : 'unknown',
+    transom: typeof source.transom === 'boolean' ? source.transom : null,
+    widthClass: ['narrow', 'standard', 'wide', 'unknown'].includes(String(source.widthClass)) ? source.widthClass as EntranceDetection['widthClass'] : 'unknown',
+    approximateWidthRatio: typeof source.approximateWidthRatio === 'number' && Number.isFinite(source.approximateWidthRatio) ? Math.max(0, Math.min(1, source.approximateWidthRatio)) : null,
+    structurallyWide: source.structurallyWide === true,
+    confidence: typeof source.confidence === 'number' && Number.isFinite(source.confidence) ? Math.max(0, Math.min(1, source.confidence)) : 0,
+    summary: typeof source.summary === 'string' ? source.summary.slice(0, 240) : '',
+  }
+  return { detection, strategy }
 }
 
 export async function prepareHouseAndMask(value: unknown, corners: AiCorners | null) {
@@ -353,7 +373,22 @@ export function aiDoNotInventInstructionBlock(snapshot: ReturnType<typeof resolv
   ].join('\n')
 }
 
-export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot'], corners: AiCorners | null, labels: string[]) {
+export function aiEntranceFitInstructionBlock(context?: ReturnType<typeof entranceFitContext>) {
+  if (!context) return 'ENTRANCE FIT STRATEGY\n- No separate fit strategy was supplied. Use the configured product structure.'
+  const detected = context.detection ? JSON.stringify(context.detection) : 'not available'
+  const rules: Record<EntranceFitStrategy, string> = {
+    'use-selected-product': 'Treat the selected Door Builder configuration as authoritative. Install that exact selected entrance at normal proportions, and widen, narrow, remove, add, or reconstruct only the surrounding opening architecture as needed for a realistic fit. Do not substitute a different door or sidelite structure.',
+    'preserve-sidelites': 'Keep or accurately rebuild the existing sidelites around the configured door. They are architectural fit elements; do not stretch the selected slab or change its product details.',
+    'preserve-sidelites-and-transom': 'Keep or accurately rebuild both the existing sidelites and existing transom around the configured door. Preserve their location and architectural character while keeping the configured door exact.',
+    'single-with-matching-sidelites': 'Install one normally proportioned selected door slab and create matching sidelites to fill the former double-width opening. Never stretch the single slab across that opening.',
+    'matching-double-doors': 'Create two normally proportioned matching door leaves using the selected configured product design. Preserve any detected transom or surrounding sidelites indicated by the existing entrance structure.',
+    'convert-opening-to-double': 'Convert the opening to two normally proportioned matching door leaves using the selected configured product design. Expand only the minimum surrounding architecture required.',
+    'rebuild-opening': 'Keep the selected configured product structure exact and rebuild the minimum surrounding opening architecture needed for a natural fit.',
+  }
+  return ['ENTRANCE FIT STRATEGY — AUTHORITATIVE FOR ARCHITECTURAL FIT', `Detected existing entrance: ${detected}`, `Selected strategy: ${context.strategy}`, `- ${rules[context.strategy]}`, '- Product configuration remains authoritative for each slab’s style, panels, glass, grids, finish, material and hardware details. Fit strategy controls the architectural arrangement: effective slab count, retained existing sidelites/transom, and reconstruction of unused opening space.', '- If a configured door_structure or sidelite_structure statement conflicts with this explicitly selected fit strategy, the FIT STRATEGY wins for structure only. Never use that exception to redesign the product details.', '- Do not silently choose a different fit strategy. Do not stretch door slabs to consume leftover opening width.'].join('\n')
+}
+
+export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot'], corners: AiCorners | null, labels: string[], fitContext?: ReturnType<typeof entranceFitContext>) {
   const roles: Record<string, string> = {
     'authoritative flattened configured entrance': 'the PRIMARY AND AUTHORITATIVE product reference; copy its complete configured entrance design, geometry, proportions, finish, glass, grids, hardware, sidelites and frame as exactly as possible',
     'authoritative tight configured-entrance geometry crop': 'a SECOND AUTHORITATIVE VIEW of Image 2, cropped tightly only to make panel, lite, grid, hardware, sidelite and frame geometry easier to inspect; it is the same product and must not be interpreted as a different option',
@@ -368,6 +403,7 @@ export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot
       ? 'PRIORITY 1 — PRESERVE THE HOUSE. The FIRST image is the original customer house and the base scene. The transparent PNG mask indicates the only editable entrance region, including a small blending allowance. Preserve architecture, siding, windows, roof, porch, masonry, landscaping, steps and surroundings. Do not redesign unrelated pixels.'
       : 'PRIORITY 1 — PRESERVE THE HOUSE. The FIRST image is the full original customer house and the base scene. Identify the existing main exterior entrance in that photograph and replace only that entrance. Preserve the full photo framing and all unrelated architecture, siding, windows, roof, porch, masonry, landscaping, steps and surroundings. Do not crop or redesign unrelated pixels.',
     aiStructuralInstructionBlock(snapshot),
+    aiEntranceFitInstructionBlock(fitContext),
     aiProductFidelityInstructionBlock(snapshot),
     aiDoorGeometryInstructionBlock(snapshot),
     aiDoNotInventInstructionBlock(snapshot),
@@ -378,6 +414,7 @@ export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot
     'MATERIAL FIDELITY. The configured door line and grain define the underlying material. Smooth steel must remain smooth steel; brushed/smooth fiberglass must remain that fiberglass surface; textured or oak-grain fiberglass must retain its texture/oak grain. Preserve any configured visible woodgrain, its direction and relief while applying paint or stain naturally. Do not turn steel into wood or textured fiberglass into a generic flat surface. The selected finish changes color, not material type.',
     `PRIORITY 4 — NATURAL INSTALLATION. ${corners ? 'Fit to the selected perspective' : 'Use the perspective and exact opening of the detected existing main exterior entrance'}; match scene lighting, exposure, color temperature, highlights, glass reflections/transparency and believable contact shadows. The result must look physically installed, not pasted. Preserve photo framing/aspect ratio. Do not invent decorative architecture, plants, lights, windows, columns, transoms or extra trim.`,
     'AVOID. Do not substitute a different or generic knob, lever, lockset or pull handle. Do not add, remove, simplify or flatten configured glass details. Do not add, remove, reduce or reinterpret configured grids. Do not replace configured glass with plain generic glass. Do not change material type or flatten panel depth. Do not oversoften, blur away or smooth out product-defining details. Preserve fine edges without artificial sharpening halos. Do not invent unrelated architecture or redesign the house.',
+    aiEntranceFitInstructionBlock(fitContext),
     corners ? `Optional user-provided doorway corners, normalized 0–1: ${JSON.stringify(corners)}` : 'No doorway corners were provided. Locate the existing main exterior entrance from the complete house photograph.',
     `DoorConfiguration schemaVersion 1: ${JSON.stringify(snapshot)}`,
   ].join('\n')

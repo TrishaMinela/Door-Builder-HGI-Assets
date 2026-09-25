@@ -3,6 +3,10 @@
     "api/generate-door-visualization.ts": {
       "includeFiles": "{public/assets/**,server/aiDoorVisualization.ts,src/data/**,src/features/home-visualizer/aiImagePreparation.ts}",
       "maxDuration": 180
+    },
+    "api/detect-entrance-structure.ts": {
+      "includeFiles": "{server/aiDoorVisualization.ts,src/data/**,src/features/home-visualizer/aiImagePreparation.ts,src/features/home-visualizer/entranceFitStrategy.ts}",
+      "maxDuration": 60
     }
   }
 }

@@ -37,9 +37,17 @@ try {
   const aiResult = `data:image/jpeg;base64,${photo.toString('base64')}`
   for (const width of [1280, 390]) {
     const page = await browser.newPage({ viewport: { width, height: 900 } })
+    const goodFit = width === 390
     let requests = 0, fail = true
-    let release!: () => void
-    let captured: { corners: unknown; configuration: unknown; productReference?: string } | null = null
+    let detectionRouteAvailable = false
+    let releaseDetection: (() => void) | undefined
+    let release: (() => void) | undefined
+    let captured: { corners: unknown; configuration: unknown; productReference?: string; fitStrategy?: string; entranceDetection?: unknown } | null = null
+    await page.route('**/api/detect-entrance-structure', async route => {
+      if (!detectionRouteAvailable) { await route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not found' }); return }
+      await new Promise<void>(resolve => { releaseDetection = resolve })
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ detection: { doorStructure: goodFit ? 'single' : 'double', sidelites: 'none', transom: false, widthClass: goodFit ? 'standard' : 'wide', approximateWidthRatio: .35, structurallyWide: !goodFit, confidence: .96, summary: goodFit ? 'Single door.' : 'Double doors.' }, request_id: 'detection-test' }) })
+    })
     await page.route('**/api/generate-door-visualization', async route => {
       requests += 1
       captured = route.request().postDataJSON()
@@ -57,18 +65,36 @@ try {
     await page.locator('input[type=file]').setInputFiles({ name: 'test-home.jpg', mimeType: 'image/jpeg', buffer: photo })
     const photoBefore = await page.locator('img[alt^="Uploaded entrance photo"]').getAttribute('src')
     assert.equal(await ai.getAttribute('aria-pressed'), 'true')
-    assert.equal(requests, 0)
     assert.equal(await page.locator('img[alt^="Uploaded entrance photo"]').getAttribute('src'), photoBefore)
     assert.equal(await page.locator('.entrance-corner-handle').count(), 0, 'AI starts with automatic entrance detection and no mandatory points')
-    const generate = page.getByRole('button', { name: 'Generate AI Visualization', exact: true })
-    assert.equal(await generate.isVisible(), true)
-    assert.notEqual(await generate.locator('.wizard-nav-label').evaluate(element => getComputedStyle(element).display), 'none')
-    await generate.waitFor({ state: 'visible' })
-    await page.waitForFunction(() => !(document.querySelector('[aria-label="Generate AI Visualization"]') as HTMLButtonElement | null)?.disabled, undefined, { timeout: 60_000 })
-    await generate.click()
+    await page.getByText('Entrance detection API route is unavailable. Run the app with the Vercel development runtime, then retry.', { exact: true }).waitFor()
+    await page.getByText('API_ROUTE_UNAVAILABLE', { exact: false }).waitFor()
+    assert.equal(await page.getByText("We couldn't confidently identify the entrance structure.", { exact: false }).count(), 0, 'Transport failures are not presented as low-confidence AI analysis')
+    detectionRouteAvailable = true
+    await page.getByRole('button', { name: 'Retry detection', exact: true }).click()
+    await page.getByText('Analyzing your existing entrance', { exact: true }).waitFor()
+    await page.getByText('We’re identifying the doorway, sidelites, and other entry details.', { exact: true }).waitFor()
+    await new Promise<void>(resolve => { const check = () => releaseDetection ? resolve() : setTimeout(check, 25); check() })
+    const detectionProgress = page.getByRole('progressbar', { name: 'Entrance analysis in progress' })
+    assert.ok(Number(await detectionProgress.getAttribute('aria-valuenow')) >= 0)
+    assert.match(await page.locator('.ai-entrance-analysis-overlay .ai-photo-loading-percentage').innerText(), /^\d+%$/)
+    releaseDetection!()
+    if (goodFit) {
+      await page.getByRole('button', { name: 'Try Again', exact: true }).waitFor()
+      assert.equal(requests, 1, 'Good fits automatically continue into generation')
+      assert.equal(await page.getByText('Good fit', { exact: true }).count(), 0, 'Good fits do not stop on a compatibility screen')
+    } else {
+      await page.getByText('We detected double doors with no sidelites.', { exact: true }).waitFor()
+      await page.getByText('Caution — structural change needed', { exact: true }).waitFor()
+      await page.getByText('You selected a single door with no sidelites.', { exact: true }).waitFor()
+      assert.equal(requests, 0, 'Warnings wait for explicit confirmation')
+      await page.getByRole('button', { name: 'Continue anyway with selected configuration', exact: true }).click()
+    }
     await page.getByRole('button', { name: 'Try Again', exact: true }).waitFor()
     assert.equal(requests, 1)
     assert.deepEqual(captured!.configuration, JSON.parse(JSON.stringify(aiTestConfiguration)))
+    assert.equal(captured!.fitStrategy, 'use-selected-product')
+    assert.ok(captured!.entranceDetection)
     assert.match(captured!.productReference ?? '', /^data:image\/webp;base64,/, 'AI request includes the flattened configured render')
     assert.equal(captured!.corners, undefined)
     assert.match(await page.getByRole('alert').innerText(), /OpenAI could not process this photo/)
@@ -84,28 +110,30 @@ try {
     await page.getByText('Analyzing your doorway', { exact: true }).waitFor()
     await page.getByText('This may take a minute or two.', { exact: true }).waitFor()
     assert.equal(await page.getByText('Status messages are illustrative.', { exact: false }).count(), 0)
-    assert.equal(await generate.isDisabled(), true)
+    assert.equal(await page.getByRole('button', { name: goodFit ? 'AI visualization generation status' : 'Continue anyway with selected configuration' }).isDisabled(), true)
     await page.waitForFunction(() => document.querySelector('.ai-photo-loading-overlay') !== null)
     const overlayBounds = await page.locator('.ai-photo-loading-overlay').boundingBox()
     const photoBounds = await page.locator('.ai-photo-placement-area .visualizer-editor').boundingBox()
     assert.ok(overlayBounds && photoBounds)
     for (const key of ['x', 'y', 'width', 'height'] as const) assert.ok(Math.abs(overlayBounds[key] - photoBounds[key]) < 2, `Loading overlay is photo-only: ${JSON.stringify({ overlayBounds, photoBounds })}`)
-    assert.equal(await page.getByRole('progressbar').getAttribute('aria-valuenow'), null, 'Simulated loading is not announced as true measured progress')
+    assert.ok(Number(await page.getByRole('progressbar').getAttribute('aria-valuenow')) >= 0, 'Illustrative progress exposes its displayed percentage accessibly')
     await page.waitForTimeout(5500)
     await page.getByText('Getting a feel for your entrance', { exact: true }).waitFor()
     const progress = await page.locator('.ai-photo-loading-track > span').evaluate(element => parseFloat((element as HTMLElement).style.width))
-    assert.ok(progress > 8 && progress <= 88)
+    assert.ok(progress > 0 && progress <= 94)
+    assert.match(await page.locator('.ai-photo-loading-percentage').innerText(), /^\d+%$/)
     // Wait for the mocked request to start without ever allowing a paid fetch.
     await new Promise<void>(resolve => { const check = () => release ? resolve() : setTimeout(check, 25); check() })
     assert.deepEqual(captured!.corners, { topLeft: { x: .35, y: .35 }, topRight: { x: .65, y: .35 }, bottomRight: { x: .65, y: .65 }, bottomLeft: { x: .35, y: .65 } })
     await manual.click()
     assert.deepEqual(await page.locator('.entrance-corner-handle').evaluateAll(elements => elements.map(element => element.getAttribute('style'))), cornersBefore)
-    release()
+    release!()
     await page.getByRole('button', { name: 'Continue', exact: true }).waitFor()
     await ai.click()
     await page.getByText('AI Result', { exact: true }).waitFor()
     await page.locator('.ai-photo-loading-overlay').waitFor({ state: 'hidden' })
     assert.equal(requests, 2, 'Mode toggles never generate')
+    assert.equal(await page.getByText('Want to try another valid fit for this opening?', { exact: true }).count(), 0)
     assert.equal(await page.getByRole('button', { name: 'Download completed home visualization photo' }).isDisabled(), false)
     await manual.click()
     await page.getByRole('button', { name: 'Continue', exact: true }).click()

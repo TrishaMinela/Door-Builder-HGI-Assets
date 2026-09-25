@@ -1,6 +1,7 @@
 import type { DoorConfiguration, Finish } from '../../types'
 import type { EntranceCorners } from './EntranceSelector'
 import { AI_MAX_PHOTO_BYTES, aiWorkingSize } from './aiImagePreparation'
+import type { EntranceDetection, EntranceFitStrategy } from './entranceFitStrategy'
 
 export type AiVisualizationFailure = { userMessage: string; errorCode: string; requestId: string }
 
@@ -71,6 +72,8 @@ export async function generateAiVisualization(input: {
   configuration: DoorConfiguration
   jambFinish?: Finish | null
   glassFrameFinish?: Finish | null
+  entranceDetection?: EntranceDetection | null
+  fitStrategy: EntranceFitStrategy
   uploadMetadata?: { mimeType: string; format: string; byteSize: number }
   signal?: AbortSignal
 }) {
@@ -87,6 +90,7 @@ export async function generateAiVisualization(input: {
       method: 'POST', signal: input.signal,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ photo: prepared.photo, productReference, corners: input.corners, configuration: input.configuration,
+        entranceDetection: input.entranceDetection, fitStrategy: input.fitStrategy,
         uploadMetadata: { ...input.uploadMetadata, width: prepared.naturalWidth, height: prepared.naturalHeight },
         jambFinishId: input.jambFinish?.id, glassFrameFinishId: input.glassFrameFinish?.id }),
     })
