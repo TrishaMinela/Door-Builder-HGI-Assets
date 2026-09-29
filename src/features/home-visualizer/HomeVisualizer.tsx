@@ -14,7 +14,7 @@ import { CleanupComparisonSlider } from './CleanupComparisonSlider'
 import { FrameAreaEditor } from './FrameAreaEditor'
 import { AUTO_FRAME_EXPANSION_PX, createAutomaticFrame, expandFrameCorners, recolorPhotoFrame, type FrameMaskCorrections, type FrameSides } from './frameRecolor'
 import { completeEntranceBoundary, dividerJambQuads, initializeSideliteEdges, productLayers as createProductLayers, sideliteOpeningQuads, SideliteSelector, type SideliteEdges, type SideliteSide } from './SideliteSelector'
-import { AiVisualizationError, generateAiVisualization, type AiVisualizationFailure } from './aiVisualization'
+import { AiVisualizationError, generateAiVisualization, invalidateAiHousePhotoCache, invalidateAiProductReferenceCache, type AiVisualizationFailure } from './aiVisualization'
 import { AiGenerationLoading, EntranceDetectionLoading, useAiGenerationLoading, useEntranceDetectionLoading } from './AiGenerationLoading'
 import { detectEntranceStructure } from './entranceDetection'
 import { detectionForManualStructure, evaluateEntranceCompatibility, MANUAL_ENTRANCE_OPTIONS, type EntranceDetection, type EntranceFitStrategy, type ExistingEntranceStructure } from './entranceFitStrategy'
@@ -96,6 +96,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const objectUrlRef = useRef<string | null>(null)
+  const cachedDoorSourceUrlRef = useRef<string | null>(null)
   const [corners, setCorners] = useState<EntranceCorners>(() => cloneEntranceCorners(INITIAL_ENTRANCE_CORNERS))
   const cornersRef = useRef(corners)
   const entranceViewportMetricsRef = useRef<EntranceViewportMetrics | null>(null)
@@ -151,6 +152,17 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   const autoFitPlacementComplete = autoFitApplied || autoFitAlreadyAligned
   const updateDoorSource = useCallback((state: DoorSourceState) => setDoorSource(state), [])
   const setCompositeExporter = useCallback((exporter: (() => Promise<Blob>) | null) => { compositeExporterRef.current = exporter }, [])
+
+  useEffect(() => {
+    const previous = cachedDoorSourceUrlRef.current
+    if (previous && previous !== doorSource.url) invalidateAiProductReferenceCache(previous)
+    cachedDoorSourceUrlRef.current = doorSource.url || null
+  }, [doorSource.url])
+
+  useEffect(() => () => {
+    if (objectUrlRef.current) invalidateAiHousePhotoCache(objectUrlRef.current)
+    if (cachedDoorSourceUrlRef.current) invalidateAiProductReferenceCache(cachedDoorSourceUrlRef.current)
+  }, [])
 
   const invalidateAiResult = () => {
     aiRequestIdRef.current += 1
@@ -315,7 +327,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   useEffect(() => () => {
     aiRequestIdRef.current += 1
     aiAbortRef.current?.abort()
-    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    if (objectUrlRef.current) { invalidateAiHousePhotoCache(objectUrlRef.current); URL.revokeObjectURL(objectUrlRef.current) }
     cleanupUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
     if (frameUrlRef.current) URL.revokeObjectURL(frameUrlRef.current)
   }, [])
@@ -382,7 +394,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
       setError('That HEIC photo could not be opened. Please try another photo.')
       return
     }
-    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    if (objectUrlRef.current) { invalidateAiHousePhotoCache(objectUrlRef.current); URL.revokeObjectURL(objectUrlRef.current) }
     const objectUrl = URL.createObjectURL(displayFile)
     objectUrlRef.current = objectUrl
     setPhoto({ file: displayFile, objectUrl, originalFormat, originalByteSize: file.size })

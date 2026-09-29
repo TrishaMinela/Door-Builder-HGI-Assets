@@ -149,15 +149,8 @@ export async function prepareConfiguredProductReferences(value: unknown) {
       .png({ compressionLevel: 9, adaptiveFiltering: true })
       .toBuffer()
     const primaryMetadata = await sharp(primary).metadata()
-    const emphasis = await sharp(primary)
-      .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .resize({ width: AI_MAX_REFERENCE_EDGE, height: AI_MAX_REFERENCE_EDGE, fit: 'inside', withoutEnlargement: true })
-      .png({ compressionLevel: 9, adaptiveFiltering: true })
-      .toBuffer()
-    const emphasisMetadata = await sharp(emphasis).metadata()
     return [
       { label: 'authoritative flattened configured entrance', bytes: primary, width: primaryMetadata.width!, height: primaryMetadata.height! },
-      { label: 'authoritative tight configured-entrance geometry crop', bytes: emphasis, width: emphasisMetadata.width!, height: emphasisMetadata.height! },
     ]
   } catch (error) {
     throw new AiInputError('REFERENCE_IMAGE_FAILED', 'The configured product render could not be decoded.', 400, { cause: error })
@@ -175,7 +168,10 @@ function gridValues(value: unknown) {
   }))
 }
 
-export function resolveAiProduct(value: unknown, jambFinishId?: unknown, glassFrameFinishId?: unknown) {
+const resolvedProductCache = new Map<string, ReturnType<typeof resolveAiProductUncached>>()
+const MAX_RESOLVED_PRODUCT_CACHE_ENTRIES = 32
+
+function resolveAiProductUncached(value: unknown, jambFinishId?: unknown, glassFrameFinishId?: unknown) {
   const source = objectValue(value)
   if (!source || JSON.stringify(source).length > 64 * 1024) throw new AiInputError('INVALID_REQUEST', 'Door configuration is missing or invalid.')
   const style = doorStyles.find(item => item.id === objectValue(source.style)?.id)
@@ -231,6 +227,16 @@ export function resolveAiProduct(value: unknown, jambFinishId?: unknown, glassFr
     ...(sidelitePath ? [{ label: 'original sidelite slab', paths: [sidelitePath] }] : []),
     ...(sideliteGlass?.asset ? [{ label: 'selected sidelite glass', paths: [sideliteGlass.asset] }] : []),
   ] }
+}
+
+export function resolveAiProduct(value: unknown, jambFinishId?: unknown, glassFrameFinishId?: unknown) {
+  const key = JSON.stringify([value, jambFinishId ?? null, glassFrameFinishId ?? null])
+  const cached = resolvedProductCache.get(key)
+  if (cached) return cached
+  const resolved = resolveAiProductUncached(value, jambFinishId, glassFrameFinishId)
+  resolvedProductCache.set(key, resolved)
+  while (resolvedProductCache.size > MAX_RESOLVED_PRODUCT_CACHE_ENTRIES) resolvedProductCache.delete(resolvedProductCache.keys().next().value!)
+  return resolved
 }
 
 export async function loadAiReference(paths: string[]) {
@@ -303,7 +309,7 @@ export function aiStructuralInstructionBlock(snapshot: ReturnType<typeof resolve
 export function aiProductFidelityInstructionBlock(snapshot: ReturnType<typeof resolveAiProduct>['snapshot']) {
   return [
     'AUTHORITATIVE PRODUCT FIDELITY RULES',
-    '- The flattened configured/rendered entrance in Image 2 is the authoritative reference for the final door design. Image 3 is a tight emphasis view of that same exact configured product. The resolved DoorConfiguration confirms its specifications. These are the exact target, NOT inspiration images.',
+    '- The single flattened configured/rendered entrance in Image 2 is the authoritative reference for the final door design. It contains the completed configured door, glass, grids, hardware, sidelites, finish and frame. The resolved DoorConfiguration confirms its specifications. This is the exact target, NOT an inspiration image.',
     '- Preserve the exact configured product design. Do not redesign the door. Do not reinterpret the style. Do not simplify the design. Do not embellish the design. Do not create a similar door. Match the configured door as exactly as possible.',
     `- Preserve exactly: ${snapshot.configurationType === 'single' ? 'one slab' : 'two slabs'}; the selected single/double structure; slab proportions; panel layout; panel count; panel shapes; top-panel shapes; glass-lite count, size, placement and proportions; mullion/grid layout; target sidelite presence and side; sidelite glass; hardware type, exact hardware count (${snapshot.hardware.count}), placement and handing; active/inactive leaf behavior; finish/color; material appearance; and jamb/frame appearance.`,
     '- Do not redesign the door. Do not reinterpret the style. Do not create a new panel layout. Do not change the panel layout. Do not change panel count, panel shapes, or top-panel shapes.',
@@ -391,7 +397,6 @@ export function aiEntranceFitInstructionBlock(context?: ReturnType<typeof entran
 export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot'], corners: AiCorners | null, labels: string[], fitContext?: ReturnType<typeof entranceFitContext>) {
   const roles: Record<string, string> = {
     'authoritative flattened configured entrance': 'the PRIMARY AND AUTHORITATIVE product reference; copy its complete configured entrance design, geometry, proportions, finish, glass, grids, hardware, sidelites and frame as exactly as possible',
-    'authoritative tight configured-entrance geometry crop': 'a SECOND AUTHORITATIVE VIEW of Image 2, cropped tightly only to make panel, lite, grid, hardware, sidelite and frame geometry easier to inspect; it is the same product and must not be interpreted as a different option',
     'original base door design': 'defines the exact slab design, panel geometry, panel depth, grooves, glass opening and underlying material/grain; its original color is not the selected finish',
     'selected glass design': 'defines the exact selected glass shape, decorative detail, pattern and visible glass construction; do not substitute plain glass',
     'selected exterior hardware': 'defines the exact hardware silhouette, proportions, knob/lever/handle/lockset components and finish; preserve its relative placement on the slab',
@@ -407,7 +412,7 @@ export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot
     aiProductFidelityInstructionBlock(snapshot),
     aiDoorGeometryInstructionBlock(snapshot),
     aiDoNotInventInstructionBlock(snapshot),
-    'PRIORITY 2 — PRODUCT FIDELITY. Image 1 is environmental context only. Image 2 is the primary authoritative configured-product target. Image 3 is a tight emphasis view of the same target. Product geometry must come from Images 2 and 3, never from free reinterpretation or the existing photographed door. Adapt only perspective, scene lighting and the surrounding architectural transition; never redesign, generalize, simplify, embellish, stretch or distort the configured product.',
+    'PRIORITY 2 — PRODUCT FIDELITY. Image 1 is environmental context only. Image 2 is the single primary authoritative configured-product target containing the completed door, glass, grids, hardware, sidelites, finish and frame. Product geometry must come from Image 2, never from free reinterpretation or the existing photographed door. Adapt only perspective, scene lighting and the surrounding architectural transition; never redesign, generalize, simplify, embellish, stretch or distort the configured product.',
     ...labels.map((label, index) => `Image ${index + 2} — ${label}: ${roles[label] ?? 'defines the selected product detail'}.`),
     'DETAILS TO PRESERVE. Preserve selected hardware style, silhouette, proportions, finish, handing/active-leaf logic and physical placement. Preserve selected glass style and all visible decorative detail. Preserve configured grid pattern, grid count implied by the selected layout/reference, grid placement, visible grid thickness and color; do not invent an unspecified count. Preserve the TARGET sidelite glass and structure, exact panel geometry, visible panel grooves and depth, and crisp jamb/frame edge definition. Keep the configured single/French/Savannah arrangement and target sidelite count/placement.',
     'PRIORITY 3 — SELECTED FINISHES. Ignore original reference door/sidelite colors. Refinish the slab and sidelites with the SAME specified customer finish/hex while retaining panel geometry and material/grain. Paint must be opaque, not a translucent pale tint. Stain retains natural grain. Respect configured glass coating, grid color/location, jamb finish and hardware finish.',

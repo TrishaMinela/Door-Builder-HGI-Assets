@@ -53,8 +53,12 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
   const corners = optionalCorners(source.corners)
   const fitContext = entranceFitContext(source.entranceDetection, source.fitStrategy)
   const product = resolveAiProduct(source.configuration, source.jambFinishId, source.glassFrameFinishId)
+  const housePreparationStartedAt = Date.now()
   const prepared = await prepareHouseAndMask(source.photo, corners)
+  const housePreparationDurationMs = Date.now() - housePreparationStartedAt
+  const productPreparationStartedAt = Date.now()
   const configuredReferences = source.productReference ? await prepareConfiguredProductReferences(source.productReference) : null
+  const productPreparationDurationMs = Date.now() - productPreparationStartedAt
   const intendedReferenceCount = configuredReferences?.length ?? product.references.length
   console.info('[ai-visualizer:image-prepared]', { request_id: requestId, original_image: originalImageDiagnostic(source.uploadMetadata, prepared.original), normalized_ai_input: prepared.normalized, placement_mode: corners ? 'user-corners' : 'automatic', product_reference_mode: configuredReferences ? 'flattened-configured-render' : 'catalog-fallback', product_reference_count: intendedReferenceCount })
   const form = new FormData()
@@ -82,21 +86,25 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
   const prompt = aiPrompt(product.snapshot, corners, labels, fitContext)
   form.append('prompt', prompt)
   form.append('n', '1')
-  form.append('size', 'auto')
+  const outputSize = prepared.width > prepared.height ? '1536x1024' : prepared.height > prepared.width ? '1024x1536' : '1024x1024'
+  form.append('size', outputSize)
   form.append('quality', AI_QUALITY)
   form.append('output_format', 'jpeg')
   form.append('output_compression', '100')
   const approximateRequestBytes = prepared.photo.length + (prepared.mask?.length ?? 0) + referenceSizes.reduce((sum, size) => sum + size, 0) + Buffer.byteLength(prompt)
-  console.info('[ai-visualizer:request]', { request_id: requestId, original_image: originalImageDiagnostic(source.uploadMetadata, prepared.original), normalized_ai_input: prepared.normalized, placement_mode: corners ? 'user-corners' : 'automatic', product_reference_mode: configuredReferences ? 'flattened-configured-render' : 'catalog-fallback', product_reference_count: labels.length, product_reference_bytes: referenceSizes, approximate_request_bytes: approximateRequestBytes })
+  console.info('[ai-visualizer:request]', { request_id: requestId, original_image: originalImageDiagnostic(source.uploadMetadata, prepared.original), normalized_ai_input: prepared.normalized, output_size: outputSize, placement_mode: corners ? 'user-corners' : 'automatic', product_reference_mode: configuredReferences ? 'flattened-configured-render' : 'catalog-fallback', product_reference_count: labels.length, product_reference_bytes: referenceSizes, approximate_request_bytes: approximateRequestBytes, durations_ms: { house_preparation: housePreparationDurationMs, product_reference_preparation: productPreparationDurationMs, before_openai: Date.now() - startedAt } })
 
   let upstream: Response
+  const openAiStartedAt = Date.now()
   try {
     upstream = await fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${apiKey}` }, body: form, signal: AbortSignal.timeout(OPENAI_TIMEOUT_MS) })
   } catch (error) {
     if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) throw new AiGenerationError('AI_GENERATION_TIMEOUT', 'AI generation took too long. Please try again.', 504, { cause: error })
     throw new AiGenerationError('OPENAI_REQUEST_REJECTED', 'The AI service could not be reached. Please try again.', 502, { cause: error })
   }
+  const openAiDurationMs = Date.now() - openAiStartedAt
   const upstreamRequestId = upstream.headers.get('x-request-id') ?? undefined
+  const resultProcessingStartedAt = Date.now()
   const result = await upstream.json().catch(() => null) as OpenAiResult | null
   const upstreamError = result?.error
   if (!upstream.ok) {
@@ -109,7 +117,7 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
   if (!image) throw new AiGenerationError('NO_GENERATED_IMAGE', 'The AI service completed without returning an image. Please try again.', 502)
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(image)) throw new AiGenerationError('NO_GENERATED_IMAGE', 'The generated image could not be read. Please try again.', 502)
   if (image.length > 4 * 1024 * 1024) throw new AiGenerationError('PAYLOAD_TOO_LARGE', 'The generated visualization was too large to deliver. Please try a less detailed photo.', 502)
-  console.info('[ai-visualizer:success]', { request_id: requestId, openai_request_id: upstreamRequestId, generation_duration_ms: Date.now() - startedAt, output_base64_bytes: image.length })
+  console.info('[ai-visualizer:success]', { request_id: requestId, openai_request_id: upstreamRequestId, output_size: outputSize, output_base64_bytes: image.length, durations_ms: { house_preparation: housePreparationDurationMs, product_reference_preparation: productPreparationDurationMs, before_openai: openAiStartedAt - startedAt, openai: openAiDurationMs, result_processing: Date.now() - resultProcessingStartedAt, total: Date.now() - startedAt } })
   return `data:image/jpeg;base64,${image}`
 }
 
@@ -133,7 +141,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     if (!source) throw new AiInputError('INVALID_REQUEST', 'The visualization request is invalid.')
     const suppliedCorners = optionalCorners(source.corners)
     const product = resolveAiProduct(source.configuration, source.jambFinishId, source.glassFrameFinishId)
-    console.info('[ai-visualizer:received]', { request_id: requestId, uploaded_image: uploadMetadata(source.uploadMetadata), placement_mode: suppliedCorners ? 'user-corners' : 'automatic', product_reference_count: product.references.length, browser_request_bytes: Buffer.byteLength(serialized) })
+    console.info('[ai-visualizer:received]', { request_id: requestId, uploaded_image: uploadMetadata(source.uploadMetadata), placement_mode: suppliedCorners ? 'user-corners' : 'automatic', product_reference_mode: source.productReference ? 'flattened-configured-render' : 'catalog-fallback', product_reference_count: source.productReference ? 1 : product.references.length, browser_request_bytes: Buffer.byteLength(serialized) })
     if (!source.photo) throw new AiInputError('INVALID_IMAGE_INPUT', 'Your house photo is missing.')
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) throw new AiGenerationError('SERVER_CONFIGURATION_ERROR', 'AI visualization is temporarily unavailable. Manual mode is still available.', 503)
