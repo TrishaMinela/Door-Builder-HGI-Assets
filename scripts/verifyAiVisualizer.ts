@@ -1,16 +1,22 @@
 import assert from 'node:assert/strict'
 import sharp from 'sharp'
 import handler from '../api/generate-door-visualization.ts'
+import completeHandler from '../api/complete-ai-visualization.ts'
 import { aiTestConfiguration } from './aiVisualizerFixture'
 import { doorStyles, glassOptions } from '../src/data/options'
 import { aiPixelCorners, aiWorkingSize } from '../src/features/home-visualizer/aiImagePreparation'
 import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiDoorGeometryInstructionBlock, aiEntranceFitInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiStructuralInstructionBlock, entranceFitContext, loadAiReference, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
 import { detectedEntranceStructure, evaluateEntranceCompatibility } from '../src/features/home-visualizer/entranceFitStrategy'
 import { entranceDetectionInstructions, normalizeEntranceDetection, type ModelDetection } from '../api/detect-entrance-structure'
+import { AI_IMAGE_PRICING_USD_PER_MILLION, aiUsageEnvironment, estimateImageGenerationCost, normalizeImageUsage } from '../server/aiUsage'
 
 const originalFetch = globalThis.fetch
 const originalKey = process.env.OPENAI_API_KEY
+const originalSupabaseUrl = process.env.SUPABASE_URL
+const originalServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 process.env.OPENAI_API_KEY = 'mock-only-key'
+process.env.SUPABASE_URL = 'https://telemetry-test.supabase.co'
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'mock-service-role-key'
 const corners = { topLeft: { x: .2, y: .1 }, topRight: { x: .8, y: .1 }, bottomRight: { x: .8, y: .9 }, bottomLeft: { x: .2, y: .9 } }
 const bytes = await sharp({ create: { width: 2400, height: 1600, channels: 3, background: '#888888' } }).jpeg().toBuffer()
 const productReferenceBytes = await sharp({ create: { width: 600, height: 1200, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
@@ -21,8 +27,29 @@ const source = { photo: `data:image/jpeg;base64,${bytes.toString('base64')}`, pr
 let forwardedForm: FormData | null = null
 let calls = 0
 let openAiFailure: 'none' | 'rate' | 'rejected' | 'empty' = 'none'
+let telemetryFailure = false
+const telemetryRows: Array<Record<string, unknown>> = []
+const telemetryUpdates: Array<Record<string, unknown>> = []
+const usage = {
+  input_tokens: 1400,
+  input_tokens_details: { text_tokens: 400, image_tokens: 1000 },
+  output_tokens: 2000,
+  output_tokens_details: { image_tokens: 2000, text_tokens: 0 },
+  total_tokens: 3400,
+}
 let gate: Promise<void> | null = null
 globalThis.fetch = (async (url, init) => {
+  if (String(url).startsWith('https://telemetry-test.supabase.co/rest/v1/ai_generation_usage')) {
+    if (init?.method === 'PATCH') {
+      assert.match(String(url), /completion_token_hash=eq\./)
+      telemetryUpdates.push(JSON.parse(String(init.body)) as Record<string, unknown>)
+      return Response.json([{ id: 'updated' }])
+    }
+    assert.equal(init?.method, 'POST')
+    assert.equal(new Headers(init?.headers).get('apikey'), 'mock-service-role-key')
+    telemetryRows.push(JSON.parse(String(init?.body)) as Record<string, unknown>)
+    return new Response(null, { status: telemetryFailure ? 500 : 201 })
+  }
   calls += 1
   assert.equal(url, 'https://api.openai.com/v1/images/edits', 'Never fetch a browser-supplied URL')
   assert.equal(init?.method, 'POST')
@@ -31,8 +58,8 @@ globalThis.fetch = (async (url, init) => {
   if (gate) await gate
   if (openAiFailure === 'rate') return new Response(JSON.stringify({ error: { code: 'rate_limit_exceeded', message: 'SECRET INTERNAL ERROR' } }), { status: 429, headers: { 'x-request-id': 'openai-rate-test' } })
   if (openAiFailure === 'rejected') return new Response(JSON.stringify({ error: { code: 'invalid_image', type: 'image_generation_user_error', message: 'SECRET INTERNAL ERROR' } }), { status: 400, headers: { 'x-request-id': 'openai-rejected-test' } })
-  if (openAiFailure === 'empty') return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'x-request-id': 'openai-empty-test' } })
-  return new Response(JSON.stringify({ data: [{ b64_json: 'YWktcmVzdWx0' }] }), { status: 200, headers: { 'x-request-id': 'openai-success-test' } })
+  if (openAiFailure === 'empty') return new Response(JSON.stringify({ data: [], usage }), { status: 200, headers: { 'x-request-id': 'openai-empty-test' } })
+  return new Response(JSON.stringify({ data: [{ b64_json: 'YWktcmVzdWx0' }], usage }), { status: 200, headers: { 'x-request-id': 'openai-success-test' } })
 }) as typeof fetch
 
 let checks = 0
@@ -42,7 +69,16 @@ async function request(body: unknown, expected: number, method = 'POST', headers
   await handler({ method, body, headers }, response)
   assert.equal(status, expected)
   checks += 1
-  return result as { image?: string; error_code?: string; user_message?: string; request_id?: string }
+  return result as { image?: string; error_code?: string; user_message?: string; request_id?: string; completion_token?: string }
+}
+
+async function complete(body: unknown, expected: number) {
+  let status = 0, result: unknown
+  const response = { status(code: number) { status = code; return this }, json(body: unknown) { result = body }, setHeader() {} }
+  await completeHandler({ method: 'POST', body }, response)
+  assert.equal(status, expected)
+  checks += 1
+  return result as { ok?: boolean }
 }
 
 try {
@@ -283,6 +319,12 @@ try {
 
   const result = await request(JSON.stringify(source), 200)
   assert.ok(result.image?.startsWith('data:image/jpeg;base64,'))
+  assert.ok(result.request_id)
+  assert.ok(result.completion_token)
+  const completion = await complete({ request_id: result.request_id, completion_token: result.completion_token, total_visualization_duration_ms: 63_800 }, 200)
+  assert.equal(completion.ok, true)
+  assert.deepEqual(telemetryUpdates.at(-1), { total_visualization_duration_ms: 63_800, completion_token_hash: null })
+  await complete({ request_id: result.request_id, completion_token: result.completion_token, total_visualization_duration_ms: -1 }, 400)
   assert.ok(forwardedForm)
   const form = forwardedForm as FormData
   assert.equal(form.get('model'), 'gpt-image-2.5-sunburst')
@@ -312,6 +354,31 @@ try {
   assert.match(prompt, /Smooth steel must remain smooth steel/)
   assert.match(prompt, /Do not oversoften, blur away/)
   assert.doesNotMatch(prompt, /finalEntranceImage|html2canvas|\/assets\//)
+  assert.equal(telemetryRows.length, 1)
+  assert.deepEqual({
+    status: telemetryRows[0].status,
+    model: telemetryRows[0].model,
+    quality: telemetryRows[0].quality,
+    output_size: telemetryRows[0].output_size,
+    output_format: telemetryRows[0].output_format,
+    input_tokens: telemetryRows[0].input_tokens,
+    text_input_tokens: telemetryRows[0].text_input_tokens,
+    image_input_tokens: telemetryRows[0].image_input_tokens,
+    output_tokens: telemetryRows[0].output_tokens,
+    image_output_tokens: telemetryRows[0].image_output_tokens,
+    total_tokens: telemetryRows[0].total_tokens,
+  }, {
+    status: 'succeeded', model: 'gpt-image-2.5-sunburst', quality: 'xhigh', output_size: '1536x1024', output_format: 'jpeg',
+    input_tokens: 1400, text_input_tokens: 400, image_input_tokens: 1000, output_tokens: 2000, image_output_tokens: 2000, total_tokens: 3400,
+  })
+  assert.equal(telemetryRows[0].estimated_cost_usd, .07)
+  assert.equal(telemetryRows[0].environment, 'development')
+  assert.equal(typeof telemetryRows[0].completion_token_hash, 'string')
+  assert.equal(aiUsageEnvironment('production'), 'production')
+  assert.equal(aiUsageEnvironment('preview'), 'preview')
+  assert.equal(aiUsageEnvironment(undefined), 'development')
+  assert.equal(AI_IMAGE_PRICING_USD_PER_MILLION['gpt-image-2.5-sunburst'].imageOutput, 30)
+  assert.equal(estimateImageGenerationCost('gpt-image-2.5-sunburst', normalizeImageUsage(usage)), .07)
 
   const automaticResult = await request({ ...source, corners: undefined }, 200)
   assert.ok(automaticResult.image)
@@ -330,8 +397,12 @@ try {
   openAiFailure = 'empty'
   const empty = await request(source, 502)
   assert.equal(empty.error_code, 'NO_GENERATED_IMAGE')
+  assert.equal(telemetryRows.at(-1)?.status, 'failed')
+  assert.equal(telemetryRows.at(-1)?.error_code, 'NO_GENERATED_IMAGE')
+  assert.equal(telemetryRows.at(-1)?.image_output_tokens, 2000)
   openAiFailure = 'none'
   const before = calls
+  const telemetryBefore = telemetryRows.length
   let release!: () => void
   gate = new Promise<void>(resolve => { release = resolve })
   const first = request(source, 200), second = request(source, 200)
@@ -339,10 +410,19 @@ try {
   release()
   await Promise.all([first, second])
   assert.equal(calls - before, 1, 'Identical simultaneous requests share one OpenAI operation in a warm instance')
+  assert.equal(telemetryRows.length - telemetryBefore, 1, 'One OpenAI operation creates one telemetry record')
+  telemetryFailure = true
+  const succeedsDespiteTelemetryFailure = await request({ ...source, corners: undefined }, 200)
+  assert.ok(succeedsDespiteTelemetryFailure.image, 'Telemetry failure must not fail successful image generation')
+  telemetryFailure = false
   checks += 1
   console.log(`AI Visualizer: ${checks} API/image-preparation/security checks passed (OpenAI fully mocked).`)
 } finally {
   globalThis.fetch = originalFetch
   if (originalKey === undefined) delete process.env.OPENAI_API_KEY
   else process.env.OPENAI_API_KEY = originalKey
+  if (originalSupabaseUrl === undefined) delete process.env.SUPABASE_URL
+  else process.env.SUPABASE_URL = originalSupabaseUrl
+  if (originalServiceRoleKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY
+  else process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceRoleKey
 }

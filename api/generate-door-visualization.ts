@@ -1,10 +1,12 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { AI_MAX_REQUEST_BYTES, AI_MODEL, AI_QUALITY, AiGenerationError, AiInputError, aiPrompt, entranceFitContext, loadAiReference, objectValue, optionalCorners, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct, type AiErrorCode } from '../server/aiDoorVisualization.js'
+import { aiUsageEnvironment, estimateImageGenerationCost, normalizeImageUsage, recordAiGenerationUsage, type OpenAiImageUsage } from '../server/aiUsage.js'
 
 type ApiRequest = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> }
 type ApiResponse = { status: (code: number) => ApiResponse; json: (body: unknown) => void; setHeader: (name: string, value: string) => void }
-type OpenAiResult = { data?: Array<{ b64_json?: string }>; error?: { code?: string; type?: string; message?: string } }
-const inFlight = new Map<string, Promise<string>>()
+type OpenAiResult = { data?: Array<{ b64_json?: string }>; error?: { code?: string; type?: string; message?: string }; usage?: OpenAiImageUsage }
+type GeneratedVisualization = { image: string; requestId: string; completionToken: string }
+const inFlight = new Map<string, Promise<GeneratedVisualization>>()
 const OPENAI_TIMEOUT_MS = 140_000
 const SERVERLESS_BUDGET_MS = 165_000
 
@@ -48,7 +50,7 @@ function withServerlessDeadline<T>(operation: Promise<T>) {
   return Promise.race([operation, deadline]).finally(() => { if (timer) clearTimeout(timer) })
 }
 
-async function generate(source: Record<string, unknown>, apiKey: string, requestId: string) {
+async function generate(source: Record<string, unknown>, apiKey: string, requestId: string, completionToken: string, apiStartedAt: number): Promise<GeneratedVisualization> {
   const startedAt = Date.now()
   const corners = optionalCorners(source.corners)
   const fitContext = entranceFitContext(source.entranceDetection, source.fitStrategy)
@@ -96,29 +98,56 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
 
   let upstream: Response
   const openAiStartedAt = Date.now()
+  const writeUsage = async (status: 'succeeded' | 'failed', errorCode: AiErrorCode | null, usageValue: unknown, openAiDurationMs: number) => {
+    const usage = normalizeImageUsage(usageValue)
+    await recordAiGenerationUsage({
+      completedAt: new Date().toISOString(), status, model: AI_MODEL, quality: AI_QUALITY,
+      outputSize, outputFormat: 'jpeg', usage,
+      estimatedCostUsd: estimateImageGenerationCost(AI_MODEL, usage),
+      openAiGenerationDurationMs: openAiDurationMs,
+      totalApiDurationMs: Date.now() - apiStartedAt,
+      requestId, errorCode,
+      environment: aiUsageEnvironment(),
+      completionTokenHash: status === 'succeeded' ? createHash('sha256').update(completionToken).digest('hex') : null,
+    })
+  }
   try {
     upstream = await fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${apiKey}` }, body: form, signal: AbortSignal.timeout(OPENAI_TIMEOUT_MS) })
   } catch (error) {
-    if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) throw new AiGenerationError('AI_GENERATION_TIMEOUT', 'AI generation took too long. Please try again.', 504, { cause: error })
+    const errorCode = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError') ? 'AI_GENERATION_TIMEOUT' : 'OPENAI_REQUEST_REJECTED'
+    await writeUsage('failed', errorCode, null, Date.now() - openAiStartedAt)
+    if (errorCode === 'AI_GENERATION_TIMEOUT') throw new AiGenerationError(errorCode, 'AI generation took too long. Please try again.', 504, { cause: error })
     throw new AiGenerationError('OPENAI_REQUEST_REJECTED', 'The AI service could not be reached. Please try again.', 502, { cause: error })
   }
-  const openAiDurationMs = Date.now() - openAiStartedAt
   const upstreamRequestId = upstream.headers.get('x-request-id') ?? undefined
-  const resultProcessingStartedAt = Date.now()
   const result = await upstream.json().catch(() => null) as OpenAiResult | null
+  const openAiDurationMs = Date.now() - openAiStartedAt
+  const resultProcessingStartedAt = Date.now()
   const upstreamError = result?.error
   if (!upstream.ok) {
     console.error('[ai-visualizer:openai]', { request_id: requestId, openai_request_id: upstreamRequestId, status: upstream.status, code: upstreamError?.code, type: upstreamError?.type, message: upstreamError?.message, duration_ms: Date.now() - startedAt })
-    if (upstream.status === 429) throw new AiGenerationError('OPENAI_RATE_LIMITED', 'AI visualization is busy right now. Please wait a moment and try again.', 429)
-    if (upstream.status === 401 || upstream.status === 403) throw new AiGenerationError('SERVER_CONFIGURATION_ERROR', 'AI visualization is temporarily unavailable. Manual mode is still available.', 503)
+    const errorCode: AiErrorCode = upstream.status === 429 ? 'OPENAI_RATE_LIMITED' : upstream.status === 401 || upstream.status === 403 ? 'SERVER_CONFIGURATION_ERROR' : 'OPENAI_REQUEST_REJECTED'
+    await writeUsage('failed', errorCode, result?.usage, openAiDurationMs)
+    if (errorCode === 'OPENAI_RATE_LIMITED') throw new AiGenerationError(errorCode, 'AI visualization is busy right now. Please wait a moment and try again.', 429)
+    if (errorCode === 'SERVER_CONFIGURATION_ERROR') throw new AiGenerationError(errorCode, 'AI visualization is temporarily unavailable. Manual mode is still available.', 503)
     throw new AiGenerationError('OPENAI_REQUEST_REJECTED', 'OpenAI could not process this photo. Try another photo or use the doorway locator.', upstream.status >= 500 ? 502 : 422)
   }
   const image = result?.data?.[0]?.b64_json
-  if (!image) throw new AiGenerationError('NO_GENERATED_IMAGE', 'The AI service completed without returning an image. Please try again.', 502)
-  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(image)) throw new AiGenerationError('NO_GENERATED_IMAGE', 'The generated image could not be read. Please try again.', 502)
-  if (image.length > 4 * 1024 * 1024) throw new AiGenerationError('PAYLOAD_TOO_LARGE', 'The generated visualization was too large to deliver. Please try a less detailed photo.', 502)
+  if (!image) {
+    await writeUsage('failed', 'NO_GENERATED_IMAGE', result?.usage, openAiDurationMs)
+    throw new AiGenerationError('NO_GENERATED_IMAGE', 'The AI service completed without returning an image. Please try again.', 502)
+  }
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(image)) {
+    await writeUsage('failed', 'NO_GENERATED_IMAGE', result?.usage, openAiDurationMs)
+    throw new AiGenerationError('NO_GENERATED_IMAGE', 'The generated image could not be read. Please try again.', 502)
+  }
+  if (image.length > 4 * 1024 * 1024) {
+    await writeUsage('failed', 'PAYLOAD_TOO_LARGE', result?.usage, openAiDurationMs)
+    throw new AiGenerationError('PAYLOAD_TOO_LARGE', 'The generated visualization was too large to deliver. Please try a less detailed photo.', 502)
+  }
+  await writeUsage('succeeded', null, result?.usage, openAiDurationMs)
   console.info('[ai-visualizer:success]', { request_id: requestId, openai_request_id: upstreamRequestId, output_size: outputSize, output_base64_bytes: image.length, durations_ms: { house_preparation: housePreparationDurationMs, product_reference_preparation: productPreparationDurationMs, before_openai: openAiStartedAt - startedAt, openai: openAiDurationMs, result_processing: Date.now() - resultProcessingStartedAt, total: Date.now() - startedAt } })
-  return `data:image/jpeg;base64,${image}`
+  return { image: `data:image/jpeg;base64,${image}`, requestId, completionToken }
 }
 
 export default async function handler(request: ApiRequest, response: ApiResponse) {
@@ -148,12 +177,12 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     const key = createHash('sha256').update(serialized).digest('hex')
     let pending = inFlight.get(key)
     if (!pending) {
-      pending = generate(source, apiKey, requestId)
+      pending = generate(source, apiKey, requestId, randomUUID(), startedAt)
       inFlight.set(key, pending)
       void pending.finally(() => { if (inFlight.get(key) === pending) inFlight.delete(key) }).catch(() => {})
     }
-    const image = await withServerlessDeadline(pending)
-    response.status(200).json({ image, request_id: requestId })
+    const generated = await withServerlessDeadline(pending)
+    response.status(200).json({ image: generated.image, request_id: generated.requestId, completion_token: generated.completionToken })
   } catch (error) {
     const duration = Date.now() - startedAt
     if (error instanceof AiInputError || error instanceof AiGenerationError) {

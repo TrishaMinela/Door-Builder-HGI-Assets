@@ -138,7 +138,7 @@ export async function generateAiVisualization(input: {
     throw new AiVisualizationError('The AI service could not be reached. Please confirm the local API runtime is running and try again.', 'API_ROUTE_UNAVAILABLE', '', { cause: error })
   }
   const rawBody = await response.text()
-  let result: { image?: string; error_code?: string; user_message?: string; request_id?: string } | null = null
+  let result: { image?: string; error_code?: string; user_message?: string; request_id?: string; completion_token?: string } | null = null
   try { result = JSON.parse(rawBody) } catch { result = null }
   const responseRequestId = result?.request_id || response.headers.get('x-request-id') || ''
   if (!response.ok) {
@@ -146,5 +146,25 @@ export async function generateAiVisualization(input: {
     throw new AiVisualizationError('The AI API route did not return a valid response. Run the app with the Vercel development runtime and try again.', 'API_ROUTE_UNAVAILABLE', responseRequestId)
   }
   if (!result?.image?.startsWith('data:image/jpeg;base64,')) throw new AiVisualizationError(result?.user_message || 'The AI service completed without returning a usable image.', result?.error_code || 'NO_GENERATED_IMAGE', responseRequestId)
-  return result.image
+  return { image: result.image, requestId: responseRequestId, completionToken: result.completion_token ?? '' }
+}
+
+export async function reportAiVisualizationReady(requestId: string, completionToken: string, totalVisualizationDurationMs: number) {
+  if (!requestId || !completionToken) return false
+  try {
+    const response = await fetch('/api/complete-ai-visualization', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        request_id: requestId,
+        completion_token: completionToken,
+        total_visualization_duration_ms: Math.max(1, Math.round(totalVisualizationDurationMs)),
+      }),
+    })
+    if (!response.ok) console.warn('[ai-usage:completion-failed]', { request_id: requestId, status: response.status })
+    return response.ok
+  } catch (error) {
+    console.warn('[ai-usage:completion-failed]', { request_id: requestId, reason: error instanceof Error ? error.name : 'unknown_error' })
+    return false
+  }
 }

@@ -14,7 +14,7 @@ import { CleanupComparisonSlider } from './CleanupComparisonSlider'
 import { FrameAreaEditor } from './FrameAreaEditor'
 import { AUTO_FRAME_EXPANSION_PX, createAutomaticFrame, expandFrameCorners, recolorPhotoFrame, type FrameMaskCorrections, type FrameSides } from './frameRecolor'
 import { completeEntranceBoundary, dividerJambQuads, initializeSideliteEdges, productLayers as createProductLayers, sideliteOpeningQuads, SideliteSelector, type SideliteEdges, type SideliteSide } from './SideliteSelector'
-import { AiVisualizationError, generateAiVisualization, invalidateAiHousePhotoCache, invalidateAiProductReferenceCache, type AiVisualizationFailure } from './aiVisualization'
+import { AiVisualizationError, generateAiVisualization, invalidateAiHousePhotoCache, invalidateAiProductReferenceCache, reportAiVisualizationReady, type AiVisualizationFailure } from './aiVisualization'
 import { AiGenerationLoading, EntranceDetectionLoading, useAiGenerationLoading, useEntranceDetectionLoading } from './AiGenerationLoading'
 import { detectEntranceStructure } from './entranceDetection'
 import { detectionForManualStructure, evaluateEntranceCompatibility, MANUAL_ENTRANCE_OPTIONS, type EntranceDetection, type EntranceFitStrategy, type ExistingEntranceStructure } from './entranceFitStrategy'
@@ -91,6 +91,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   const aiRequestIdRef = useRef(0)
   const aiPendingRef = useRef(false)
   const aiAbortRef = useRef<AbortController | null>(null)
+  const aiWorkflowStartedAtRef = useRef<number | null>(null)
   const visualizerModeRef = useRef<'manual' | 'ai'>('manual')
   const [photo, setPhoto] = useState<SelectedPhoto | null>(null)
   const [error, setError] = useState('')
@@ -172,6 +173,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     setAiGenerating(false)
     setAiResult(null)
     setAiError(null)
+    aiWorkflowStartedAtRef.current = null
   }
 
   const selectVisualizerMode = (mode: 'manual' | 'ai') => {
@@ -185,6 +187,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
 
   const runEntranceDetection = useCallback(async () => {
     if (!photo || entranceDetectionLoading) return
+    if (aiWorkflowStartedAtRef.current === null) aiWorkflowStartedAtRef.current = performance.now()
     detectionAbortRef.current?.abort()
     const controller = new AbortController()
     detectionAbortRef.current = controller
@@ -195,6 +198,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
       setEntranceDetection(detected)
     } catch (reason) {
       if (reason instanceof Error && reason.name === 'AbortError') return
+      aiWorkflowStartedAtRef.current = null
       setEntranceDetectionError(reason instanceof AiVisualizationError ? reason : { userMessage: 'We could not detect the entrance. Retry or choose a fit option manually.', errorCode: 'ENTRANCE_DETECTION_FAILED', requestId: '' })
     } finally {
       if (detectionAbortRef.current === controller) { detectionAbortRef.current = null; setEntranceDetectionLoading(false) }
@@ -218,8 +222,10 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     aiAbortRef.current = controller
     setAiGenerating(true)
     setAiError(null)
+    const workflowStartedAt = aiWorkflowStartedAtRef.current ?? performance.now()
+    aiWorkflowStartedAtRef.current = workflowStartedAt
     try {
-      const image = await generateAiVisualization({
+      const generated = await generateAiVisualization({
         photoUrl: photo.objectUrl,
         productReferenceUrl: doorSource.url,
         corners: aiCorners,
@@ -231,12 +237,21 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
         uploadMetadata: { mimeType: photo.file.type, format: photo.originalFormat, byteSize: photo.originalByteSize },
         signal: controller.signal,
       })
+      const readyImage = new Image()
+      readyImage.src = generated.image
+      await readyImage.decode()
       if (requestId === aiRequestIdRef.current) {
-        setAiResult({ image, key: requestKey, strategy: activeStrategy })
+        setAiResult({ image: generated.image, key: requestKey, strategy: activeStrategy })
         if (visualizerModeRef.current === 'ai') setWizardStep(4)
+        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+        void reportAiVisualizationReady(generated.requestId, generated.completionToken, performance.now() - workflowStartedAt)
+        aiWorkflowStartedAtRef.current = null
       }
     } catch (reason) {
-      if (requestId === aiRequestIdRef.current) setAiError(reason instanceof AiVisualizationError ? reason : { userMessage: reason instanceof Error ? reason.message : 'The AI visualization could not be created. Please try again.', errorCode: 'UNKNOWN_ERROR', requestId: '' })
+      if (requestId === aiRequestIdRef.current) {
+        aiWorkflowStartedAtRef.current = null
+        setAiError(reason instanceof AiVisualizationError ? reason : { userMessage: reason instanceof Error ? reason.message : 'The AI visualization could not be created. Please try again.', errorCode: 'UNKNOWN_ERROR', requestId: '' })
+      }
     } finally {
       if (requestId === aiRequestIdRef.current) { aiPendingRef.current = false; aiAbortRef.current = null; setAiGenerating(false) }
     }
@@ -327,6 +342,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   useEffect(() => () => {
     aiRequestIdRef.current += 1
     aiAbortRef.current?.abort()
+    aiWorkflowStartedAtRef.current = null
     if (objectUrlRef.current) { invalidateAiHousePhotoCache(objectUrlRef.current); URL.revokeObjectURL(objectUrlRef.current) }
     cleanupUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
     if (frameUrlRef.current) URL.revokeObjectURL(frameUrlRef.current)
@@ -402,6 +418,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     setAiGenerating(false)
     setAiResult(null)
     setAiError(null)
+    aiWorkflowStartedAtRef.current = null
     detectionAbortRef.current?.abort(); detectionAbortRef.current = null
     setEntranceDetection(null); setEntranceDetectionError(null); setEntranceDetectionLoading(false); setManualEntranceStructure('unknown'); autoCompatibilityGenerationKeyRef.current = ''
     setShowAutoFitHelp(false)
@@ -434,6 +451,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     setAiGenerating(false)
     setAiResult(null)
     setAiError(null)
+    aiWorkflowStartedAtRef.current = null
     detectionAbortRef.current?.abort(); detectionAbortRef.current = null
     setEntranceDetection(null); setEntranceDetectionError(null); setEntranceDetectionLoading(false); autoCompatibilityGenerationKeyRef.current = ''
     setShowAutoFitHelp(false)

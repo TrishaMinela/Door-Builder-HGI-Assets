@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test:ai-visualizer": "node --import tsx scripts/verifyAiVisualizer.ts",
+    "test:ai-usage:live": "node --import tsx scripts/verifyAiUsageLive.ts",
     "test:ai-visualizer:ui": "node --import tsx scripts/verifyAiVisualizerUi.ts",
     "test:submission": "node --import tsx scripts/verifySubmissionPayload.ts",
     "test:door-builder-draft": "node --import tsx scripts/verifyDoorBuilderDraft.ts",
