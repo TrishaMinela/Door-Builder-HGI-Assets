@@ -28,6 +28,7 @@ import { HERO_PRESETS, heroDoorFilename, type HeroPreset } from './data/heroPres
 import { HeroDoorGenerator } from './features/hero/HeroDoorGenerator'
 import { sideliteBuilderOptions, sideliteProductCode, sideliteProductLabel } from './data/sideliteConfigurations'
 import { sideliteAssetFamilyForSlab, sideliteGlassMask, sideliteSlabAsset, sideliteStylesForFamily, type SideliteStyleId } from './data/sideliteAssets'
+import { clearDoorBuilderDraft, loadDoorBuilderDraft, saveDoorBuilderDraft, type DoorBuilderDraftConfiguration } from './utils/doorBuilderDraft'
 
 const glassSteps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
 const noGlassSteps = ['Door Style', 'Finish', 'Hardware', 'Review & Quote']
@@ -402,47 +403,48 @@ function EmptyDoorPreview() {
 }
 
 function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
+  const [initialDraft] = useState(loadDoorBuilderDraft)
   const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>('home')
   const [step, setStep] = useState(0)
-  const [selectedDoorConfigurationType, setSelectedDoorConfigurationType] = useState<DoorConfigurationType | ''>('')
+  const [selectedDoorConfigurationType, setSelectedDoorConfigurationType] = useState<DoorConfigurationType | ''>(initialDraft?.selectedDoorConfigurationType ?? '')
   const [showEntrywayGuidance, setShowEntrywayGuidance] = useState(false)
   const [hasShownEntrywayGuidance, setHasShownEntrywayGuidance] = useState(false)
-  const [styleId, setStyleId] = useState('')
-  const [doorLineId, setDoorLineId] = useState('')
-  const [grainId, setGrainId] = useState('')
-  const [sidelites, setSidelites] = useState<SideliteConfiguration | ''>('')
-  const [sideliteStyleId, setSideliteStyleId] = useState('')
-  const [sideliteGlassCategory, setSideliteGlassCategory] = useState<SideliteGlassCategory | ''>('')
-  const [sideliteGlassId, setSideliteGlassId] = useState('')
-  const [sideliteGlassGroupKey, setSideliteGlassGroupKey] = useState('')
-  const [sideliteGlassVariantConfirmed, setSideliteGlassVariantConfirmed] = useState(false)
-  const [sideliteGridLocation, setSideliteGridLocation] = useState<FslGridLocationId | ''>('')
-  const [sideliteGridStyle, setSideliteGridStyle] = useState<GridStyle | ''>('')
-  const [sideliteGridPattern, setSideliteGridPattern] = useState<GridPattern | ''>('')
-  const [sideliteGridColor, setSideliteGridColor] = useState<GridColor | ''>('')
-  const [sideliteGridWidth, setSideliteGridWidth] = useState<GridWidth | ''>('')
-  const [selectedFinishType, setSelectedFinishType] = useState<'' | 'paint' | 'stain'>('')
-  const [selectedPaint, setSelectedPaint] = useState('')
-  const [selectedStain, setSelectedStain] = useState('')
-  const [jambType, setJambType] = useState<'' | 'timber' | 'clad'>('')
-  const [jambFinishType, setJambFinishType] = useState<'' | 'paint' | 'stain' | 'clad'>('')
-  const [jambFinishColor, setJambFinishColor] = useState('')
-  const [jambFinishOverridden, setJambFinishOverridden] = useState(false)
-  const [selectedGlassCategory, setSelectedGlassCategory] = useState<GlassCategory | ''>('')
-  const [glassId, setGlassId] = useState('')
-  const [selectedGlassGroupKey, setSelectedGlassGroupKey] = useState('')
-  const [glassVariantConfirmed, setGlassVariantConfirmed] = useState(false)
-  const [glassFrameColorMode, setGlassFrameColorMode] = useState<'' | 'match-door' | 'custom'>('')
-  const [glassFrameFinishId, setGlassFrameFinishId] = useState('')
-  const [glassFrameFinishType, setGlassFrameFinishType] = useState<'paint' | 'stain'>('paint')
-  const [gridPathId, setGridPathId] = useState('')
-  const [gridStyle, setGridStyle] = useState<GridStyle | ''>('')
-  const [gridPattern, setGridPattern] = useState<GridPattern | ''>('')
-  const [gridColor, setGridColor] = useState<GridColor | ''>('')
-  const [gridWidth, setGridWidth] = useState<GridWidth | ''>('')
-  const [hardwareId, setHardwareId] = useState('')
-  const [doubleDoorLockPrep, setDoubleDoorLockPrep] = useState<DoubleDoorLockPrepCode | ''>('')
-  const [doorSwingId, setDoorSwingId] = useState('')
+  const [styleId, setStyleId] = useState(initialDraft?.styleId ?? '')
+  const [doorLineId, setDoorLineId] = useState(initialDraft?.doorLineId ?? '')
+  const [grainId, setGrainId] = useState(initialDraft?.grainId ?? '')
+  const [sidelites, setSidelites] = useState<SideliteConfiguration | ''>(initialDraft?.sidelites ?? '')
+  const [sideliteStyleId, setSideliteStyleId] = useState(initialDraft?.sideliteStyleId ?? '')
+  const [sideliteGlassCategory, setSideliteGlassCategory] = useState<SideliteGlassCategory | ''>(initialDraft?.sideliteGlassCategory ?? '')
+  const [sideliteGlassId, setSideliteGlassId] = useState(initialDraft?.sideliteGlassId ?? '')
+  const [sideliteGlassGroupKey, setSideliteGlassGroupKey] = useState(initialDraft?.sideliteGlassGroupKey ?? '')
+  const [sideliteGlassVariantConfirmed, setSideliteGlassVariantConfirmed] = useState(initialDraft?.sideliteGlassVariantConfirmed ?? false)
+  const [sideliteGridLocation, setSideliteGridLocation] = useState<FslGridLocationId | ''>(initialDraft?.sideliteGridLocation ?? '')
+  const [sideliteGridStyle, setSideliteGridStyle] = useState<GridStyle | ''>(initialDraft?.sideliteGridStyle ?? '')
+  const [sideliteGridPattern, setSideliteGridPattern] = useState<GridPattern | ''>(initialDraft?.sideliteGridPattern ?? '')
+  const [sideliteGridColor, setSideliteGridColor] = useState<GridColor | ''>(initialDraft?.sideliteGridColor ?? '')
+  const [sideliteGridWidth, setSideliteGridWidth] = useState<GridWidth | ''>(initialDraft?.sideliteGridWidth ?? '')
+  const [selectedFinishType, setSelectedFinishType] = useState<'' | 'paint' | 'stain'>(initialDraft?.selectedFinishType ?? '')
+  const [selectedPaint, setSelectedPaint] = useState(initialDraft?.selectedPaint ?? '')
+  const [selectedStain, setSelectedStain] = useState(initialDraft?.selectedStain ?? '')
+  const [jambType, setJambType] = useState<'' | 'timber' | 'clad'>(initialDraft?.jambType ?? '')
+  const [jambFinishType, setJambFinishType] = useState<'' | 'paint' | 'stain' | 'clad'>(initialDraft?.jambFinishType ?? '')
+  const [jambFinishColor, setJambFinishColor] = useState(initialDraft?.jambFinishColor ?? '')
+  const [jambFinishOverridden, setJambFinishOverridden] = useState(initialDraft?.jambFinishOverridden ?? false)
+  const [selectedGlassCategory, setSelectedGlassCategory] = useState<GlassCategory | ''>(initialDraft?.selectedGlassCategory ?? '')
+  const [glassId, setGlassId] = useState(initialDraft?.glassId ?? '')
+  const [selectedGlassGroupKey, setSelectedGlassGroupKey] = useState(initialDraft?.selectedGlassGroupKey ?? '')
+  const [glassVariantConfirmed, setGlassVariantConfirmed] = useState(initialDraft?.glassVariantConfirmed ?? false)
+  const [glassFrameColorMode, setGlassFrameColorMode] = useState<'' | 'match-door' | 'custom'>(initialDraft?.glassFrameColorMode ?? '')
+  const [glassFrameFinishId, setGlassFrameFinishId] = useState(initialDraft?.glassFrameFinishId ?? '')
+  const [glassFrameFinishType, setGlassFrameFinishType] = useState<'paint' | 'stain'>(initialDraft?.glassFrameFinishType ?? 'paint')
+  const [gridPathId, setGridPathId] = useState(initialDraft?.gridPathId ?? '')
+  const [gridStyle, setGridStyle] = useState<GridStyle | ''>(initialDraft?.gridStyle ?? '')
+  const [gridPattern, setGridPattern] = useState<GridPattern | ''>(initialDraft?.gridPattern ?? '')
+  const [gridColor, setGridColor] = useState<GridColor | ''>(initialDraft?.gridColor ?? '')
+  const [gridWidth, setGridWidth] = useState<GridWidth | ''>(initialDraft?.gridWidth ?? '')
+  const [hardwareId, setHardwareId] = useState(initialDraft?.hardwareId ?? '')
+  const [doubleDoorLockPrep, setDoubleDoorLockPrep] = useState<DoubleDoorLockPrepCode | ''>(initialDraft?.doubleDoorLockPrep ?? '')
+  const [doorSwingId, setDoorSwingId] = useState(initialDraft?.doorSwingId ?? '')
   const [contact, setContact] = useState(initialContact)
   const [errors, setErrors] = useState<Partial<Record<keyof ContactForm, string>>>({})
   const [submitted, setSubmitted] = useState(false)
@@ -463,6 +465,29 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const builderOptionsRef = useRef<HTMLDivElement | null>(null)
   const entrywayDialogRef = useRef<HTMLDivElement | null>(null)
   const entrywayStartButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  useEffect(() => {
+    const configuration: DoorBuilderDraftConfiguration = {
+      selectedDoorConfigurationType, styleId, doorLineId, grainId, sidelites, sideliteStyleId,
+      sideliteGlassCategory, sideliteGlassId, sideliteGlassGroupKey, sideliteGlassVariantConfirmed,
+      sideliteGridLocation, sideliteGridStyle, sideliteGridPattern, sideliteGridColor, sideliteGridWidth,
+      selectedFinishType, selectedPaint, selectedStain, jambType, jambFinishType, jambFinishColor,
+      jambFinishOverridden, selectedGlassCategory, glassId, selectedGlassGroupKey, glassVariantConfirmed,
+      glassFrameColorMode, glassFrameFinishId, glassFrameFinishType, gridPathId, gridStyle, gridPattern,
+      gridColor, gridWidth, hardwareId, doubleDoorLockPrep, doorSwingId,
+    }
+    const hasDraft = Boolean(selectedDoorConfigurationType || styleId || doorLineId || sidelites || hardwareId)
+    if (hasDraft) saveDoorBuilderDraft(configuration)
+    else clearDoorBuilderDraft()
+  }, [
+    selectedDoorConfigurationType, styleId, doorLineId, grainId, sidelites, sideliteStyleId,
+    sideliteGlassCategory, sideliteGlassId, sideliteGlassGroupKey, sideliteGlassVariantConfirmed,
+    sideliteGridLocation, sideliteGridStyle, sideliteGridPattern, sideliteGridColor, sideliteGridWidth,
+    selectedFinishType, selectedPaint, selectedStain, jambType, jambFinishType, jambFinishColor,
+    jambFinishOverridden, selectedGlassCategory, glassId, selectedGlassGroupKey, glassVariantConfirmed,
+    glassFrameColorMode, glassFrameFinishId, glassFrameFinishType, gridPathId, gridStyle, gridPattern,
+    gridColor, gridWidth, hardwareId, doubleDoorLockPrep, doorSwingId,
+  ])
 
   const closeEntrywayGuidance = () => {
     setShowEntrywayGuidance(false)
@@ -1271,6 +1296,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   }
 
   const startOver = () => {
+    clearDoorBuilderDraft()
     setBuilderPreviewView('Exterior')
     setStyleId('')
     setSelectedDoorConfigurationType('')
