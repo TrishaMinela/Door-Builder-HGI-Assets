@@ -6,6 +6,7 @@ import { doorStyles, glassOptions } from '../src/data/options'
 import { aiPixelCorners, aiWorkingSize } from '../src/features/home-visualizer/aiImagePreparation'
 import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiDoorGeometryInstructionBlock, aiEntranceFitInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiStructuralInstructionBlock, entranceFitContext, loadAiReference, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
 import { detectedEntranceStructure, evaluateEntranceCompatibility } from '../src/features/home-visualizer/entranceFitStrategy'
+import { entranceDetectionInstructions, normalizeEntranceDetection, type ModelDetection } from '../api/detect-entrance-structure'
 
 const originalFetch = globalThis.fetch
 const originalKey = process.env.OPENAI_API_KEY
@@ -45,6 +46,19 @@ async function request(body: unknown, expected: number, method = 'POST', headers
 }
 
 try {
+  const leftOnlyDetection = normalizeEntranceDetection({
+    doorStructure: 'single', leftSidelitePresent: true, rightSidelitePresent: false,
+    leftSidelite: { present: true, confidence: .97, evidence: 'A separately framed narrow vertical glazed panel is visible outside the left slab edge.', region: { x: .21, y: .2, width: .1, height: .65 } },
+    rightSidelite: { present: false, confidence: .96, evidence: 'Only jamb and trim are visible outside the right slab edge.', region: null },
+    transom: false, mainDoorRegion: { x: .31, y: .17, width: .35, height: .72 }, transomRegion: null,
+    widthClass: 'wide', approximateWidthRatio: .49, structurallyWide: true, confidence: .95, summary: 'Single door with one left sidelite.',
+  } satisfies ModelDetection)
+  assert.deepEqual({ doorStructure: leftOnlyDetection.doorStructure, leftSidelitePresent: leftOnlyDetection.leftSidelitePresent, rightSidelitePresent: leftOnlyDetection.rightSidelitePresent, sidelites: leftOnlyDetection.sidelites, transom: leftOnlyDetection.transom }, { doorStructure: 'single', leftSidelitePresent: true, rightSidelitePresent: false, sidelites: 'left', transom: false })
+  assert.match(entranceDetectionInstructions, /separate narrow vertical glazed panel beside and outside the main door slab/)
+  assert.match(entranceDetectionInstructions, /Do NOT count glass inside a door slab/)
+  assert.match(entranceDetectionInstructions, /Do not infer symmetry/)
+  checks += 4
+
   await request(source, 405, 'GET')
   await request({ ...source, photo: undefined }, 400)
   await request({ ...source, photo: 'data:image/gif;base64,R0lGODlh' }, 400)

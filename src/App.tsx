@@ -28,7 +28,7 @@ import { HERO_PRESETS, heroDoorFilename, type HeroPreset } from './data/heroPres
 import { HeroDoorGenerator } from './features/hero/HeroDoorGenerator'
 import { sideliteBuilderOptions, sideliteProductCode, sideliteProductLabel } from './data/sideliteConfigurations'
 import { sideliteAssetFamilyForSlab, sideliteGlassMask, sideliteSlabAsset, sideliteStylesForFamily, type SideliteStyleId } from './data/sideliteAssets'
-import { clearDoorBuilderDraft, loadDoorBuilderDraft, saveDoorBuilderDraft, type DoorBuilderDraftConfiguration } from './utils/doorBuilderDraft'
+import { clearDoorBuilderDraft, isDoorBuilderDraftVisualizerReady, loadDoorBuilderDraft, saveDoorBuilderDraft, type DoorBuilderDraftConfiguration } from './utils/doorBuilderDraft'
 
 const glassSteps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
 const noGlassSteps = ['Door Style', 'Finish', 'Hardware', 'Review & Quote']
@@ -404,6 +404,7 @@ function EmptyDoorPreview() {
 
 function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [initialDraft] = useState(loadDoorBuilderDraft)
+  const [restoredDraftEligible, setRestoredDraftEligible] = useState(Boolean(initialDraft))
   const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>('home')
   const [step, setStep] = useState(0)
   const [selectedDoorConfigurationType, setSelectedDoorConfigurationType] = useState<DoorConfigurationType | ''>(initialDraft?.selectedDoorConfigurationType ?? '')
@@ -794,6 +795,50 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     'door-swing',
     'review',
   ]
+  const isBuilderPageComplete = (page: BuilderPage) => {
+    if (page === 'door-configuration') return Boolean(selectedDoorConfigurationType)
+    if (page === 'door-style') return Boolean(selectedStyle)
+    if (page === 'door-line') return Boolean(selectedDoorLine)
+    if (page === 'door-grain') return Boolean(selectedGrain)
+    if (page === 'sidelites') return Boolean(sidelites)
+    if (page === 'sidelite-style') return Boolean(selectedSideliteStyle)
+    if (page === 'door-finish') return Boolean(visibleSelectedFinish)
+    if (page === 'jamb-type') return Boolean(jambType)
+    if (page === 'jamb-finish') return Boolean(jambFinish)
+    if (page === 'glass-type') return Boolean(selectedGlassCategory)
+    if (page === 'glass') return visibleGlass.length === 0 || Boolean(selectedGlass || selectedGlassGroup)
+    if (page === 'glass-variant') return glassVariantConfirmed
+    if (page === 'grid-location') return Boolean(gridPathId)
+    if (page === 'grid-style') return Boolean(gridStyle)
+    if (page === 'grid-pattern') return Boolean(gridPattern)
+    if (page === 'grid-color') return Boolean(gridColor)
+    if (page === 'grid-width') return Boolean(gridWidth)
+    if (page === 'sidelite-glass-type') return Boolean(sideliteGlassCategory)
+    if (page === 'sidelite-glass') return Boolean(selectedFslGlass || selectedSideliteGlassGroup)
+    if (page === 'sidelite-glass-variant') return sideliteGlassVariantConfirmed
+    if (page === 'sidelite-grid-location') return Boolean(sideliteGridLocation)
+    if (page === 'sidelite-grid-style') return Boolean(sideliteGridStyle)
+    if (page === 'sidelite-grid-pattern') return Boolean(sideliteGridPattern)
+    if (page === 'sidelite-grid-color') return Boolean(sideliteGridColor)
+    if (page === 'sidelite-grid-width') return Boolean(sideliteGridWidth)
+    if (page === 'glass-frame-color') return Boolean(glassFrameColorMode)
+    if (page === 'lock-setup') return Boolean(selectedDoubleDoorLockPrep)
+    if (page === 'hardware') return Boolean(selectedHardware)
+    if (page === 'door-swing') return Boolean(selectedDoorSwing)
+    return true
+  }
+  const restoredDraftReferencesValid = Boolean(
+    selectedDoorConfigurationType && selectedStyle && selectedDoorLine
+    && (!grainId || selectedGrain === grainId)
+    && visibleSelectedFinish
+    && jambType && jambFinish
+    && selectedHardware && selectedDoorSwing
+    && (!supportsGlass || selectedGlass)
+    && (!usesMappedSidelites || (selectedSideliteStyle && selectedFslGlass))
+    && (supportsSideliteLine || !sidelites || sidelites === 'none')
+    && (glassFrameColorMode !== 'custom' || customGlassFrameFinish)
+  )
+  const restoredDraftVisualizerReady = restoredDraftEligible && isDoorBuilderDraftVisualizerReady(initialDraft, restoredDraftReferencesValid && pages.every((page) => page === 'review' || isBuilderPageComplete(page)))
   const currentPage = pages[step] ?? pages[pages.length - 1]
   const glassSelectionTarget = mainDoorGlassPages.has(currentPage) ? 'main-door' : sideliteGlassPages.has(currentPage) ? 'sidelite' : null
   const currentStep = currentPage === 'door-configuration' || currentPage === 'door-style' || currentPage === 'door-line' || currentPage === 'door-grain' || currentPage === 'sidelites' || currentPage === 'sidelite-style'
@@ -1297,6 +1342,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
   const startOver = () => {
     clearDoorBuilderDraft()
+    setRestoredDraftEligible(false)
     setBuilderPreviewView('Exterior')
     setStyleId('')
     setSelectedDoorConfigurationType('')
@@ -1899,6 +1945,10 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         </div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
           {currentStep !== 'Review & Quote' && <>
+            {restoredDraftVisualizerReady && <section className="saved-door-visualizer-shortcut" aria-label="Saved door restored">
+              <div><small>Saved door restored</small><strong>Your previous configuration is ready.</strong><span>Continue editing below or view it on your home now.</span></div>
+              <button type="button" onClick={() => requestCustomerAction('open-visualizer')}><Eye size={18} /> Launch Visualizer <ArrowRight size={16} /></button>
+            </section>}
             <div className="section-heading step-heading">
               <div className="step-heading-copy">
                 <div className="step-label-row">
@@ -2004,7 +2054,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <button className="post-submit-visualizer-button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Try the Door Visualizer <ArrowRight size={17} /></button>
           </div>}
 
-              {currentPage !== 'review' && <div className="builder-actions"><button className="back" aria-label="Previous configuration step" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /><span>Previous</span></button><button className="next" aria-label="Next configuration step" disabled={(currentPage === 'door-configuration' && !selectedDoorConfigurationType) || (currentPage === 'door-style' && !selectedStyle) || (currentPage === 'door-line' && !selectedDoorLine) || (currentPage === 'door-grain' && !selectedGrain) || (currentPage === 'sidelites' && !sidelites) || (currentPage === 'sidelite-style' && !selectedSideliteStyle) || (currentPage === 'door-finish' && !visibleSelectedFinish) || (currentPage === 'jamb-type' && !jambType) || (currentPage === 'jamb-finish' && !jambFinish) || (currentPage === 'glass-type' && !selectedGlassCategory) || (currentPage === 'glass' && visibleGlass.length > 0 && !selectedGlass && !selectedGlassGroup) || (currentPage === 'glass-variant' && !glassVariantConfirmed) || (currentPage === 'grid-location' && !gridPathId) || (currentPage === 'grid-style' && !gridStyle) || (currentPage === 'grid-pattern' && !gridPattern) || (currentPage === 'grid-color' && !gridColor) || (currentPage === 'grid-width' && !gridWidth) || (currentPage === 'sidelite-glass-type' && !sideliteGlassCategory) || (currentPage === 'sidelite-glass' && !selectedFslGlass && !selectedSideliteGlassGroup) || (currentPage === 'sidelite-glass-variant' && !sideliteGlassVariantConfirmed) || (currentPage === 'sidelite-grid-location' && !sideliteGridLocation) || (currentPage === 'sidelite-grid-style' && !sideliteGridStyle) || (currentPage === 'sidelite-grid-pattern' && !sideliteGridPattern) || (currentPage === 'sidelite-grid-color' && !sideliteGridColor) || (currentPage === 'sidelite-grid-width' && !sideliteGridWidth) || (currentPage === 'glass-frame-color' && !glassFrameColorMode) || (currentPage === 'hardware' && !selectedHardware) || (currentPage === 'door-swing' && !selectedDoorSwing)} onClick={() => goTo(step + 1)}><span>Next</span><ArrowRight size={17} /></button></div>}
+              {currentPage !== 'review' && <div className="builder-actions"><button className="back" aria-label="Previous configuration step" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /><span>Previous</span></button><button className="next" aria-label="Next configuration step" disabled={!isBuilderPageComplete(currentPage)} onClick={() => goTo(step + 1)}><span>Next</span><ArrowRight size={17} /></button></div>}
         </section>
 
         {!submitted && <aside className={currentPage === 'review' ? 'review-preview-panel' : undefined}>

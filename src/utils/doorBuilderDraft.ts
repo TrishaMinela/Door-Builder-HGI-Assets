@@ -120,6 +120,23 @@ export function loadDoorBuilderDraft(storage: DraftStorage | null = getBrowserSt
   }
 }
 
+export function isDoorBuilderDraftVisualizerReady(configuration: DoorBuilderDraftConfiguration | null, runtimeConfigurationValid: boolean) {
+  if (!configuration || !runtimeConfigurationValid) return false
+  const finishId = configuration.selectedFinishType === 'paint' ? configuration.selectedPaint : configuration.selectedFinishType === 'stain' ? configuration.selectedStain : ''
+  return Boolean(
+    configuration.selectedDoorConfigurationType
+    && configuration.styleId
+    && configuration.doorLineId
+    && finishId
+    && configuration.jambType
+    && configuration.jambFinishType
+    && configuration.jambFinishColor
+    && configuration.hardwareId
+    && configuration.doorSwingId
+    && (configuration.selectedDoorConfigurationType !== 'french' || configuration.doubleDoorLockPrep)
+  )
+}
+
 export function saveDoorBuilderDraft(configuration: DoorBuilderDraftConfiguration, storage: DraftStorage | null = getBrowserStorage()) {
   if (!storage) return
   try {

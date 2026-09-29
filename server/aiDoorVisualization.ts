@@ -80,10 +80,20 @@ export function entranceFitContext(detectionValue: unknown, strategyValue: unkno
   const strategy: EntranceFitStrategy = typeof strategyValue === 'string' && fitStrategies.has(strategyValue as EntranceFitStrategy) ? strategyValue as EntranceFitStrategy : 'use-selected-product'
   const source = objectValue(detectionValue)
   if (!source) return { detection: null, strategy }
+  const sidelites = ['none', 'left', 'right', 'both', 'unknown'].includes(String(source.sidelites)) ? source.sidelites as EntranceDetection['sidelites'] : 'unknown'
+  const leftSidelitePresent = typeof source.leftSidelitePresent === 'boolean' ? source.leftSidelitePresent : sidelites === 'left' || sidelites === 'both'
+  const rightSidelitePresent = typeof source.rightSidelitePresent === 'boolean' ? source.rightSidelitePresent : sidelites === 'right' || sidelites === 'both'
+  const sideliteEvidence = (value: unknown, present: boolean): EntranceDetection['leftSidelite'] => {
+    const item = objectValue(value)
+    return { present, confidence: typeof item?.confidence === 'number' ? Math.max(0, Math.min(1, item.confidence)) : 0, evidence: typeof item?.evidence === 'string' ? item.evidence.slice(0, 240) : '', region: null }
+  }
   const detection: EntranceDetection = {
     doorStructure: ['single', 'double', 'unknown'].includes(String(source.doorStructure)) ? source.doorStructure as EntranceDetection['doorStructure'] : 'unknown',
-    sidelites: ['none', 'left', 'right', 'both', 'unknown'].includes(String(source.sidelites)) ? source.sidelites as EntranceDetection['sidelites'] : 'unknown',
+    leftSidelitePresent, rightSidelitePresent,
+    leftSidelite: sideliteEvidence(source.leftSidelite, leftSidelitePresent), rightSidelite: sideliteEvidence(source.rightSidelite, rightSidelitePresent),
+    sidelites,
     transom: typeof source.transom === 'boolean' ? source.transom : null,
+    mainDoorRegion: null, transomRegion: null,
     widthClass: ['narrow', 'standard', 'wide', 'unknown'].includes(String(source.widthClass)) ? source.widthClass as EntranceDetection['widthClass'] : 'unknown',
     approximateWidthRatio: typeof source.approximateWidthRatio === 'number' && Number.isFinite(source.approximateWidthRatio) ? Math.max(0, Math.min(1, source.approximateWidthRatio)) : null,
     structurallyWide: source.structurallyWide === true,

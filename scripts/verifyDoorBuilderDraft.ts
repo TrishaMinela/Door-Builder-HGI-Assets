@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import {
   DOOR_BUILDER_DRAFT_KEY,
   clearDoorBuilderDraft,
+  isDoorBuilderDraftVisualizerReady,
   loadDoorBuilderDraft,
   saveDoorBuilderDraft,
   type DoorBuilderDraftConfiguration,
@@ -31,6 +32,9 @@ const configuration: DoorBuilderDraftConfiguration = {
 saveDoorBuilderDraft(configuration, storage)
 assert.deepEqual(loadDoorBuilderDraft(storage), configuration, 'saved configuration should restore exactly')
 assert.deepEqual(loadDoorBuilderDraft(storage), configuration, 'the same storage should restore after a simulated reopen')
+assert.equal(isDoorBuilderDraftVisualizerReady(configuration, true), true, 'a complete, runtime-valid restored configuration should be visualizer-ready')
+assert.equal(isDoorBuilderDraftVisualizerReady({ ...configuration, hardwareId: '' }, true), false, 'an incomplete restored configuration must not expose the visualizer shortcut')
+assert.equal(isDoorBuilderDraftVisualizerReady(configuration, false), false, 'a draft referencing unavailable runtime catalog options must not be visualizer-ready')
 
 const savedEnvelope = JSON.parse(storage.getItem(DOOR_BUILDER_DRAFT_KEY) ?? '{}')
 savedEnvelope.configuration.contact = { email: 'should-not-restore@example.com' }
@@ -45,7 +49,9 @@ assert.equal(storage.getItem(DOOR_BUILDER_DRAFT_KEY), null, 'reset should remove
 
 storage.setItem(DOOR_BUILDER_DRAFT_KEY, '{not-json')
 assert.equal(loadDoorBuilderDraft(storage), null, 'malformed JSON should safely fall back')
+assert.equal(isDoorBuilderDraftVisualizerReady(loadDoorBuilderDraft(storage), true), false, 'corrupt storage must not be visualizer-ready')
 storage.setItem(DOOR_BUILDER_DRAFT_KEY, JSON.stringify({ version: 999, configuration }))
 assert.equal(loadDoorBuilderDraft(storage), null, 'incompatible versions should safely fall back')
+assert.equal(isDoorBuilderDraftVisualizerReady(loadDoorBuilderDraft(storage), true), false, 'outdated drafts must not be visualizer-ready')
 
 console.log('Door Builder draft persistence checks passed.')

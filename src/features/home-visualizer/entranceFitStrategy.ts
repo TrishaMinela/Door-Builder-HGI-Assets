@@ -7,8 +7,10 @@ export type EntranceWidthClass = 'narrow' | 'standard' | 'wide' | 'unknown'
 export type ExistingEntranceStructure = 'single' | 'single-left-sidelite' | 'single-right-sidelite' | 'single-both-sidelites' | 'single-both-sidelites-transom' | 'double' | 'double-sidelites' | 'double-transom' | 'double-sidelites-transom' | 'unknown'
 export type EntranceFitStrategy = 'use-selected-product' | 'preserve-sidelites' | 'preserve-sidelites-and-transom' | 'single-with-matching-sidelites' | 'matching-double-doors' | 'convert-opening-to-double' | 'rebuild-opening'
 export type CompatibilityStatus = 'good-fit' | 'caution' | 'not-recommended' | 'unsupported'
+export type EntranceRegion = { x: number; y: number; width: number; height: number }
+export type SideliteEvidence = { present: boolean; confidence: number; evidence: string; region: EntranceRegion | null }
 
-export type EntranceDetection = { doorStructure: DetectedDoorStructure; sidelites: DetectedSidelites; transom: boolean | null; widthClass: EntranceWidthClass; approximateWidthRatio: number | null; structurallyWide: boolean; confidence: number; summary: string }
+export type EntranceDetection = { doorStructure: DetectedDoorStructure; leftSidelitePresent: boolean; rightSidelitePresent: boolean; leftSidelite: SideliteEvidence; rightSidelite: SideliteEvidence; sidelites: DetectedSidelites; transom: boolean | null; mainDoorRegion: EntranceRegion | null; transomRegion: EntranceRegion | null; widthClass: EntranceWidthClass; approximateWidthRatio: number | null; structurallyWide: boolean; confidence: number; summary: string }
 export type EntranceCompatibility = { status: CompatibilityStatus; label: string; detectedSummary: string; selectedSummary: string; notes: string[] }
 
 export const MANUAL_ENTRANCE_OPTIONS: Array<{ value: Exclude<ExistingEntranceStructure, 'unknown'>; label: string }> = [
@@ -35,7 +37,9 @@ export function detectionForManualStructure(structure: Exclude<ExistingEntranceS
   const isDouble = structure.startsWith('double')
   const sidelites: DetectedSidelites = structure.includes('both-sidelites') ? 'both' : structure.includes('left-sidelite') ? 'left' : structure.includes('right-sidelite') ? 'right' : structure.includes('sidelites') ? 'both' : 'none'
   const transom = structure.includes('transom')
-  return { doorStructure: isDouble ? 'double' : 'single', sidelites, transom, widthClass: isDouble || sidelites !== 'none' ? 'wide' : 'standard', approximateWidthRatio: null, structurallyWide: isDouble || sidelites !== 'none', confidence: 1, summary: `Manually identified as ${structure}.` }
+  const leftSidelitePresent = sidelites === 'left' || sidelites === 'both'
+  const rightSidelitePresent = sidelites === 'right' || sidelites === 'both'
+  return { doorStructure: isDouble ? 'double' : 'single', leftSidelitePresent, rightSidelitePresent, leftSidelite: { present: leftSidelitePresent, confidence: 1, evidence: 'Manually identified.', region: null }, rightSidelite: { present: rightSidelitePresent, confidence: 1, evidence: 'Manually identified.', region: null }, sidelites, transom, mainDoorRegion: null, transomRegion: null, widthClass: isDouble || sidelites !== 'none' ? 'wide' : 'standard', approximateWidthRatio: null, structurallyWide: isDouble || sidelites !== 'none', confidence: 1, summary: `Manually identified as ${structure}.` }
 }
 
 function sidelitePhrase(sidelites: DetectedSidelites | ReturnType<typeof sidelitePlacement>) {
