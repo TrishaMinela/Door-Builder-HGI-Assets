@@ -30,6 +30,7 @@
 /* Configurator step shell: fixed heading, scrolling options, fixed navigation */
 @media(min-width:901px){
   .app:not(.home-app) .builder-panel.configuration-step{display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden;padding-top:34px;padding-bottom:0}
+  .configuration-step .builder-step-intro{min-width:0}
   .configuration-step .section-heading{margin-bottom:20px;flex:none}
   .configuration-step .section-heading h1{font-size:clamp(30px,3.2vw,46px);margin-top:7px;margin-bottom:9px}
   .configuration-step .section-heading h1:after{margin-top:11px}
@@ -113,8 +114,8 @@
 @media(max-width:900px){.app:not(.home-app)>main:has(.review-step){padding-top:calc(var(--mobile-header-height) + var(--mobile-progress-height))}.review-step .review-heading{margin-bottom:18px}.review-step .floating-visualizer-launch{margin-top:0;margin-bottom:22px}}
 @media(max-width:420px){.floating-visualizer-launch span{max-width:104px;line-height:1.2;text-align:left}.floating-visualizer-launch{padding:0 13px;gap:7px}}
 @media(prefers-reduced-motion:reduce){.floating-visualizer-launch{animation:none}}
-.saved-door-visualizer-shortcut{margin:0 0 22px;border:1px solid #0e737a38;border-radius:14px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:20px;background:linear-gradient(110deg,#f4fbfa,#fffdf1);box-shadow:0 8px 24px #12383c0d}.saved-door-visualizer-shortcut>div{display:grid;gap:3px}.saved-door-visualizer-shortcut small{color:var(--peacock);font-size:10px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}.saved-door-visualizer-shortcut strong{color:#172f31;font-size:17px}.saved-door-visualizer-shortcut span{color:#536568;font-size:13px}.saved-door-visualizer-shortcut button{min-height:48px;border:0;border-radius:999px;padding:0 18px;display:flex;align-items:center;justify-content:center;gap:8px;flex:none;background:var(--peacock);color:#fff;font-size:11px;font-weight:800;letter-spacing:.035em;text-transform:uppercase;box-shadow:0 8px 20px #09636b2b}.saved-door-visualizer-shortcut button:hover{background:#09545a}.saved-door-visualizer-shortcut button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
-@media(max-width:700px){.saved-door-visualizer-shortcut{align-items:stretch;flex-direction:column;gap:13px}.saved-door-visualizer-shortcut button{width:100%}}
+.saved-door-visualizer-action{margin:0 0 14px;display:flex;justify-content:flex-end}.saved-door-visualizer-action button{min-height:40px;border:1px solid var(--black);border-radius:4px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;gap:7px;background:var(--black);color:#fff;font-size:10px;font-weight:800;letter-spacing:.035em;text-transform:uppercase;transition:background .18s ease,border-color .18s ease,transform .18s ease}.saved-door-visualizer-action button:hover{border-color:#293235;background:#293235;transform:translateY(-1px)}.saved-door-visualizer-action button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}.saved-door-visualizer-action button:disabled{border-color:#92999b;background:#92999b;color:#eef0f0;transform:none;cursor:not-allowed}
+@media(max-width:700px){.saved-door-visualizer-action{justify-content:flex-start}.saved-door-visualizer-action button{min-height:42px}}
 .auto-fit-shape-warning{margin:12px 0 0;border:1px solid #e0b848;border-left:5px solid var(--gold);border-radius:5px;padding:11px 13px;background:#fff8d9;color:#5f4a08;font-size:10px;font-weight:700;line-height:1.5}
 .auto-fit-placement-prompt{margin:11px 0 0;text-align:center;color:#657176;font-size:10px;font-weight:700;line-height:1.5}
 /* Keep the hero artwork unchanged while positioning the copy closer to the top. */
@@ -3116,7 +3117,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
 
 /* Sidelite layout and slab choices use the same restrained HGI catalog card
    treatment as Door Style while retaining their own product artwork. */
-.builder-options-scroll .sidelite-catalog-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.builder-options-scroll .sidelite-catalog-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 .configuration-step .builder-options-scroll .sidelite-catalog-grid>.sidelite-catalog-card{
   height:270px;
   min-height:270px;
@@ -3204,7 +3205,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .builder-options-scroll .sidelite-catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:767px){
-  .builder-options-scroll .sidelite-catalog-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .builder-options-scroll .sidelite-catalog-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
   .configuration-step .builder-options-scroll .sidelite-catalog-grid>.sidelite-catalog-card{
     height:190px;
     min-height:190px;
@@ -3218,6 +3219,22 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .configuration-step .builder-options-scroll .sidelite-catalog-grid>.sidelite-catalog-card .option-visual{padding:2px 4px 7px}
   .configuration-step .builder-options-scroll .sidelite-catalog-grid>.sidelite-catalog-card .sidelite-option-image,
   .configuration-step .builder-options-scroll .sidelite-catalog-grid>.sidelite-catalog-card .sidelite-style-image{height:94px}
+}
+
+/* The compact saved-draft action and heading share one grid child so they
+   cannot push the option area into the panel's viewport-filling row. */
+.builder-step-intro{width:100%;min-width:0}
+
+/* Finish controls remain below the heading and use ordinary document flow. */
+.configuration-step .finish-toolbar{position:static;clear:both;align-self:start}
+@media(max-width:560px){
+  .configuration-step .finish-toolbar .finish-tabs{order:1}
+  .configuration-step .finish-toolbar .finish-logo-slot{order:2}
+}
+
+@media(min-width:901px){
+  .builder-toolbar .stepper button{min-width:0;padding-inline:clamp(8px,1.35vw,20px);font-size:10px}
+  .builder-toolbar .stepper button:not(:last-child):after{width:22px;right:-11px}
 }
 
 /* Door Configuration uses the existing Door Style catalog card proportions. */
@@ -3504,4 +3521,47 @@ body:has(.customer-form-app),
   }
   .visualizer-step-editor-shell > .wizard-navigation .ai-generate-button .wizard-nav-label { display: inline; }
   .visualizer-step-editor-shell > .wizard-navigation .ai-generate-button svg { width: 17px; height: 17px; flex: none; }
+}
+
+/* Builder pages scroll naturally on smaller screens: heading, controls, cards,
+   then Previous/Next. Nothing is pinned over the configuration content. */
+@media(max-width:900px){
+  .configuration-step .step-heading h1,
+  .configuration-step .step-heading-copy>p{display:block}
+  .configuration-step .step-heading{margin-bottom:22px}
+  .configuration-step .builder-options-scroll{padding-bottom:0}
+  .configuration-step .builder-actions{
+    position:static;
+    left:auto;
+    right:auto;
+    bottom:auto;
+    z-index:auto;
+    width:100%;
+    height:auto;
+    margin:26px 0 0;
+    padding:18px 0 24px;
+    border-top:1px solid var(--border);
+    background:transparent;
+    box-shadow:none;
+    pointer-events:auto;
+  }
+  .configuration-step .builder-actions button{
+    width:auto;
+    min-width:0;
+    max-width:none;
+    height:48px;
+    min-height:48px;
+    margin:0;
+    border-width:1px;
+    border-radius:var(--radius-control);
+    padding:0 17px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    line-height:1.2;
+    box-shadow:none;
+  }
+  .configuration-step .builder-actions button span{display:inline}
+  .configuration-step .builder-actions button svg{width:18px;height:18px;margin:0}
 }

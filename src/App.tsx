@@ -30,8 +30,8 @@ import { sideliteBuilderOptions, sideliteProductCode, sideliteProductLabel } fro
 import { sideliteAssetFamilyForSlab, sideliteGlassMask, sideliteSlabAsset, sideliteStylesForFamily, type SideliteStyleId } from './data/sideliteAssets'
 import { clearDoorBuilderDraft, isDoorBuilderDraftVisualizerReady, loadDoorBuilderDraft, saveDoorBuilderDraft, type DoorBuilderDraftConfiguration } from './utils/doorBuilderDraft'
 
-const glassSteps = ['Door Style', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
-const noGlassSteps = ['Door Style', 'Finish', 'Hardware', 'Review & Quote']
+const glassSteps = ['Entry Type', 'Sidelites', 'Door', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
+const noGlassSteps = ['Entry Type', 'Sidelites', 'Door', 'Finish', 'Hardware', 'Review & Quote']
 type BuilderPage = 'door-configuration' | 'door-style' | 'door-line' | 'door-grain' | 'sidelites' | 'sidelite-style' | 'door-finish' | 'jamb-type' | 'jamb-finish' | 'glass-type' | 'glass' | 'glass-variant' | 'glass-frame-color' | 'grid-location' | 'grid-style' | 'grid-pattern' | 'grid-color' | 'grid-width' | 'sidelite-glass-type' | 'sidelite-glass' | 'sidelite-glass-variant' | 'sidelite-grid-location' | 'sidelite-grid-style' | 'sidelite-grid-pattern' | 'sidelite-grid-color' | 'sidelite-grid-width' | 'lock-setup' | 'hardware' | 'door-swing' | 'review'
 const mainDoorGlassPages = new Set<BuilderPage>(['glass-type', 'glass', 'glass-variant', 'grid-location', 'grid-style', 'grid-pattern', 'grid-color', 'grid-width'])
 const sideliteGlassPages = new Set<BuilderPage>(['sidelite-glass-type', 'sidelite-glass', 'sidelite-glass-variant', 'sidelite-grid-location', 'sidelite-grid-style', 'sidelite-grid-pattern', 'sidelite-grid-color', 'sidelite-grid-width'])
@@ -760,10 +760,10 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const availableGlassIds = availableGlass.map((item) => item.id).join('|')
   const pages: BuilderPage[] = [
     'door-configuration',
+    'sidelites',
     'door-style',
     'door-line',
     ...(needsGrainStep ? ['door-grain' as const] : []),
-    ...(supportsSideliteLine ? ['sidelites' as const] : []),
     ...(usesMappedSidelites ? ['sidelite-style' as const] : []),
     'door-finish',
     'jamb-type',
@@ -841,8 +841,12 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const restoredDraftVisualizerReady = restoredDraftEligible && isDoorBuilderDraftVisualizerReady(initialDraft, restoredDraftReferencesValid && pages.every((page) => page === 'review' || isBuilderPageComplete(page)))
   const currentPage = pages[step] ?? pages[pages.length - 1]
   const glassSelectionTarget = mainDoorGlassPages.has(currentPage) ? 'main-door' : sideliteGlassPages.has(currentPage) ? 'sidelite' : null
-  const currentStep = currentPage === 'door-configuration' || currentPage === 'door-style' || currentPage === 'door-line' || currentPage === 'door-grain' || currentPage === 'sidelites' || currentPage === 'sidelite-style'
-    ? 'Door Style'
+  const currentStep = currentPage === 'door-configuration'
+    ? 'Entry Type'
+    : currentPage === 'sidelites'
+      ? 'Sidelites'
+      : currentPage === 'door-style' || currentPage === 'door-line' || currentPage === 'door-grain' || currentPage === 'sidelite-style'
+        ? 'Door'
     : currentPage === 'door-finish' || currentPage === 'jamb-type' || currentPage === 'jamb-finish'
       ? 'Finish'
       : currentPage.startsWith('glass') || currentPage.startsWith('grid-') || currentPage.startsWith('sidelite-glass') || currentPage.startsWith('sidelite-grid')
@@ -1240,21 +1244,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (screen !== 'builder') return
 
     requestAnimationFrame(() => {
-      if (window.matchMedia('(max-width: 900px)').matches) {
-        window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-        builderPanelRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-        builderOptionsRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-        return
-      }
-
-      const selectedCard = builderOptionsRef.current?.querySelector<HTMLElement>('.option-card.selected, .glass-choice-card.selected, .hardware-option-card.selected')
-
-      if (selectedCard) {
-        selectedCard.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' })
-        return
-      }
-
-      builderOptionsRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      builderPanelRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      builderOptionsRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     })
   }, [screen, currentPage])
 
@@ -1393,7 +1385,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     const targetStep = steps[target]
     if (!targetStep) return false
     const targetPage = pages.findIndex((page) => (
-      targetStep === 'Door Style' ? page === 'door-style'
+      targetStep === 'Entry Type' ? page === 'door-configuration'
+        : targetStep === 'Sidelites' ? page === 'sidelites'
+          : targetStep === 'Door' ? page === 'door-style'
         : targetStep === 'Finish' ? page === 'door-finish'
           : targetStep === 'Glass' ? page === 'glass-type'
             : targetStep === 'Hardware' ? page === 'hardware'
@@ -1512,7 +1506,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (!signatureGrainOptions.some((item) => item.id === nextGrain)) return
     if (nextGrain !== grainId) {
       setGrainId(nextGrain)
-      setSidelites('none')
       setSideliteStyleId('')
       setSideliteGlassCategory('')
       setSideliteGlassId('')
@@ -1924,7 +1917,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         <nav className="stepper" aria-label="Configuration progress">
           {steps.map((label, index) => {
             const isReachable = canVisitStep(index)
-            const targetPage = pages.findIndex((page) => label === 'Door Style' ? page === 'door-style' : label === 'Finish' ? page === 'door-finish' : label === 'Glass' ? page === 'glass-type' : label === 'Hardware' ? page === 'hardware' : page === 'review')
+            const targetPage = pages.findIndex((page) => label === 'Entry Type' ? page === 'door-configuration' : label === 'Sidelites' ? page === 'sidelites' : label === 'Door' ? page === 'door-style' : label === 'Finish' ? page === 'door-finish' : label === 'Glass' ? page === 'glass-type' : label === 'Hardware' ? page === 'hardware' : page === 'review')
             return <button key={label} className={`${index === activeMainStepIndex ? 'active' : ''} ${index < activeMainStepIndex ? 'done' : ''}`} disabled={!isReachable} aria-current={index === activeMainStepIndex ? 'step' : undefined} onClick={() => isReachable && goTo(targetPage)}><span>{index + 1}</span><em>{label}</em></button>
           })}
         </nav>
@@ -1945,11 +1938,11 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         </div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
           {currentStep !== 'Review & Quote' && <>
-            {restoredDraftVisualizerReady && <section className="saved-door-visualizer-shortcut" aria-label="Saved door restored">
-              <div><small>Saved door restored</small><strong>Your previous configuration is ready.</strong><span>Continue editing below or view it on your home now.</span></div>
-              <button type="button" onClick={() => requestCustomerAction('open-visualizer')}><Eye size={18} /> Launch Visualizer <ArrowRight size={16} /></button>
-            </section>}
-            <div className="section-heading step-heading">
+            <div className="builder-step-intro">
+              {restoredDraftVisualizerReady && <div className="saved-door-visualizer-action">
+                <button type="button" onClick={() => requestCustomerAction('open-visualizer')}><Eye size={16} /> Launch Visualizer <ArrowRight size={15} /></button>
+              </div>}
+              <div className="section-heading step-heading">
               <div className="step-heading-copy">
                 <div className="step-label-row">
                   <span>Step {activeMainStepIndex + 1} of {steps.length}</span>
@@ -1958,6 +1951,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                   <h1>{currentPage === 'door-configuration' ? 'Choose Your Door Configuration' : currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'sidelites' ? 'Choose Your Sidelites' : currentPage === 'sidelite-style' ? 'Choose Your Sidelite Slab' : currentPage === 'door-finish' ? 'Choose Your Door Finish' : currentPage === 'jamb-type' ? 'Choose Your Jamb Type' : currentPage === 'jamb-finish' ? 'Choose Your Jamb Finish' : currentPage === 'glass-type' ? 'Choose Main Door Glass Type' : currentPage === 'glass' ? 'Choose Main Door Glass' : currentPage === 'glass-variant' ? `Choose ${selectedGlassGroup?.title ?? 'Glass'} Finish` : currentPage === 'glass-frame-color' ? 'Choose Glass Frame Color' : currentPage === 'grid-location' ? 'Choose Main Door Grid Location' : currentPage === 'grid-style' ? 'Choose Main Door Grid Style' : currentPage === 'grid-pattern' ? 'Choose Main Door Grid Pattern' : currentPage === 'grid-color' ? 'Choose Main Door Grid Color' : currentPage === 'grid-width' ? 'Choose Main Door Grid Width' : currentPage === 'sidelite-glass-type' ? 'Choose Sidelite Glass Type' : currentPage === 'sidelite-glass' ? 'Choose Sidelite Glass' : currentPage === 'sidelite-glass-variant' ? `Choose ${selectedSideliteGlassGroup?.title ?? 'Sidelite Glass'} Finish` : currentPage === 'sidelite-grid-location' ? 'Choose Sidelite Grid Location' : currentPage === 'sidelite-grid-style' ? 'Choose Sidelite Grid Style' : currentPage === 'sidelite-grid-pattern' ? 'Choose Sidelite Grid Pattern' : currentPage === 'sidelite-grid-color' ? 'Choose Sidelite Grid Color' : currentPage === 'sidelite-grid-width' ? 'Choose Sidelite Grid Width' : currentPage === 'lock-setup' ? 'Lock Setup' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>
                 </div>
                 <p>{currentPage === 'door-configuration' ? 'Start by choosing the type of entry door you want to build.' : currentPage === 'door-style' ? 'Select a door style to begin your configuration.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'sidelites' ? 'Choose whether sidelites appear beside your selected door.' : currentPage === 'sidelite-style' ? `Select the sidelite slab for your ${selectedDoorLine?.name ?? 'steel'} entry unit.` : currentPage === 'door-finish' ? 'Choose the paint or stain applied to the door slab and sidelites.' : currentPage === 'jamb-type' ? 'Choose timber or clad for the frame, jambs, casing, brickmould, and mullions.' : currentPage === 'jamb-finish' ? 'Choose the finish applied only to the jamb and frame system.' : currentPage === 'glass-type' ? 'Choose the kind of glass you want to explore for the main door.' : currentPage === 'glass' ? 'Choose glass for the main door before selecting sidelite glass.' : currentPage === 'glass-variant' ? 'Choose the available finish for this glass design.' : currentPage === 'glass-frame-color' ? 'Match the insert trim to your door or choose a separate compatible paint color.' : currentPage.startsWith('sidelite-') ? `Choose the compatible ${selectedSideliteStyle?.name ?? ''} sidelite option.` : currentPage === 'grid-location' ? 'Choose where the grids are installed.' : currentPage === 'grid-style' ? 'Choose the profile of your internal grids.' : currentPage === 'grid-pattern' ? 'Choose a pattern compatible with your selected grid style.' : currentPage === 'grid-color' ? 'Choose the confirmed color for this grid pattern.' : currentPage === 'grid-width' ? 'Choose the confirmed grid width.' : currentPage === 'lock-setup' ? 'Choose how you want your double doors prepared for hardware.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
+              </div>
               </div>
             </div>
             <div ref={builderOptionsRef} className="builder-options-scroll">
