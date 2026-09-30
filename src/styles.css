@@ -2812,12 +2812,13 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
 }
 .builder-toolbar .stepper button:not(:last-child):after{
   top:50%;
-  right:0;
-  width:1px;
-  height:18px;
+  right:-11px;
+  width:22px;
+  height:1px;
   background:#d8dfe1;
   transform:translateY(-50%);
 }
+.builder-toolbar .stepper button.done:not(:last-child):after{background:var(--peacock)}
 .builder-toolbar .stepper button.active{
   color:var(--black);
   font-weight:850;
@@ -2874,7 +2875,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
     right:5px;
   }
   .builder-toolbar .stepper button:not(:last-child):after{
-    height:15px;
+    height:1px;
   }
 }
 
@@ -3101,6 +3102,18 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   object-fit:contain;
   object-position:center;
 }
+.configuration-step .builder-options-scroll .door-style-product-grid>.door-catalog-card{
+  height:240px;
+  min-height:240px;
+  border-top:0;
+  border-bottom:1px solid #bec9cc;
+}
+.configuration-step .builder-options-scroll .door-style-product-grid>.door-catalog-card .option-copy{
+  min-height:56px;
+  padding:9px 10px 7px;
+}
+.configuration-step .builder-options-scroll .door-style-product-grid>.door-catalog-card .option-copy small{margin-top:3px}
+.configuration-step .builder-options-scroll .door-style-product-grid>.door-catalog-card .option-visual{padding:2px 8px 8px}
 @media(max-width:767px){
   .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card{
     height:190px;
@@ -3113,6 +3126,15 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .option-copy strong{font-size:9px}
   .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .option-copy small{margin-top:3px;font-size:6px}
   .configuration-step .builder-options-scroll .door-style-catalog-grid>.door-catalog-card .option-visual{padding:2px 4px 7px}
+  .configuration-step .builder-options-scroll .door-style-product-grid>.door-catalog-card{
+    height:178px;
+    min-height:178px;
+  }
+  .configuration-step .builder-options-scroll .door-style-product-grid>.door-catalog-card .option-copy{
+    min-height:46px;
+    padding:7px 6px 4px;
+  }
+  .configuration-step .builder-options-scroll .door-style-product-grid>.door-catalog-card .option-visual{padding:1px 4px 6px}
 }
 
 /* Sidelite layout and slab choices use the same restrained HGI catalog card
@@ -3234,7 +3256,6 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
 
 @media(min-width:901px){
   .builder-toolbar .stepper button{min-width:0;padding-inline:clamp(8px,1.35vw,20px);font-size:10px}
-  .builder-toolbar .stepper button:not(:last-child):after{width:22px;right:-11px}
 }
 
 /* Door Configuration uses the existing Door Style catalog card proportions. */
