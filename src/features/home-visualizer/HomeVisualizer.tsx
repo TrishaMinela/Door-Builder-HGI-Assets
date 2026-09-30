@@ -31,6 +31,14 @@ type SelectedPhoto = {
   originalByteSize: number
 }
 
+type RetainedVisualizerSession = {
+  photo: SelectedPhoto
+  entranceDetection: EntranceDetection
+  manualEntranceStructure: ExistingEntranceStructure
+}
+
+let retainedVisualizerSession: RetainedVisualizerSession | null = null
+
 type Props = {
   onBack: () => void
   onReturnToReview?: () => void
@@ -74,16 +82,19 @@ async function detectedImageFormat(file: File) {
 }
 
 export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, configuredDoorPreview, configurationKey, doorConfiguration }: Props) {
+  const restoredSessionRef = useRef(retainedVisualizerSession)
+  const restoredSession = restoredSessionRef.current
+  if (restoredSession && retainedVisualizerSession === restoredSession) retainedVisualizerSession = null
   const [visualizerMode, setVisualizerMode] = useState<'manual' | 'ai'>('manual')
   const [manualWizardStep, setManualWizardStep] = useState(0)
   const [aiGenerating, setAiGenerating] = useState(false)
   const [aiError, setAiError] = useState<AiVisualizationFailure | null>(null)
   const [aiUseEntranceLocator, setAiUseEntranceLocator] = useState(false)
-  const [entranceDetection, setEntranceDetection] = useState<EntranceDetection | null>(null)
+  const [entranceDetection, setEntranceDetection] = useState<EntranceDetection | null>(() => restoredSession?.entranceDetection ?? null)
   const [entranceDetectionLoading, setEntranceDetectionLoading] = useState(false)
   const [entranceDetectionError, setEntranceDetectionError] = useState<AiVisualizationFailure | null>(null)
   const [requiresExplicitAiGeneration, setRequiresExplicitAiGeneration] = useState(false)
-  const [manualEntranceStructure, setManualEntranceStructure] = useState<ExistingEntranceStructure>('unknown')
+  const [manualEntranceStructure, setManualEntranceStructure] = useState<ExistingEntranceStructure>(() => restoredSession?.manualEntranceStructure ?? 'unknown')
   const detectionAbortRef = useRef<AbortController | null>(null)
   const autoCompatibilityGenerationKeyRef = useRef('')
   const [aiResult, setAiResult] = useState<{ image: string; key: string; strategy: EntranceFitStrategy } | null>(null)
@@ -94,10 +105,12 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   const aiAbortRef = useRef<AbortController | null>(null)
   const aiWorkflowStartedAtRef = useRef<number | null>(null)
   const visualizerModeRef = useRef<'manual' | 'ai'>('manual')
-  const [photo, setPhoto] = useState<SelectedPhoto | null>(null)
+  const [photo, setPhoto] = useState<SelectedPhoto | null>(() => restoredSession?.photo ?? null)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-  const objectUrlRef = useRef<string | null>(null)
+  const objectUrlRef = useRef<string | null>(restoredSession?.photo.objectUrl ?? null)
+  const preserveVisualizerSessionRef = useRef(false)
+  const incompatibilityPrimaryActionRef = useRef<HTMLButtonElement>(null)
   const cachedDoorSourceUrlRef = useRef<string | null>(null)
   const [corners, setCorners] = useState<EntranceCorners>(() => cloneEntranceCorners(INITIAL_ENTRANCE_CORNERS))
   const cornersRef = useRef(corners)
@@ -162,7 +175,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   }, [doorSource.url])
 
   useEffect(() => () => {
-    if (objectUrlRef.current) invalidateAiHousePhotoCache(objectUrlRef.current)
+    if (objectUrlRef.current && !preserveVisualizerSessionRef.current) invalidateAiHousePhotoCache(objectUrlRef.current)
     if (cachedDoorSourceUrlRef.current) invalidateAiProductReferenceCache(cachedDoorSourceUrlRef.current)
   }, [])
 
@@ -213,7 +226,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   useEffect(() => () => detectionAbortRef.current?.abort(), [])
 
   const runAiVisualization = async (strategyOverride?: EntranceFitStrategy) => {
-    if (!photo || !doorConfiguration || !doorSource.ready || !doorSource.url || aiPendingRef.current || (aiUseEntranceLocator && !doorPlacementValid)) return
+    if (!photo || !doorConfiguration || !doorSource.ready || !doorSource.url || aiPendingRef.current || entranceCompatibility?.status === 'incompatible' || (aiUseEntranceLocator && !doorPlacementValid)) return
     setRequiresExplicitAiGeneration(false)
     const aiCorners = aiUseEntranceLocator ? corners : undefined
     const activeStrategy = strategyOverride ?? 'use-selected-product'
@@ -266,6 +279,18 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     autoCompatibilityGenerationKeyRef.current = key
     void runAiVisualization('use-selected-product')
   }, [visualizerMode, requiresExplicitAiGeneration, entranceCompatibility?.status, photo, entranceDetection, doorSource.ready, aiGenerating, aiResult, aiError, configurationKey])
+
+  useEffect(() => {
+    if (entranceCompatibility?.status === 'incompatible') incompatibilityPrimaryActionRef.current?.focus()
+  }, [entranceCompatibility?.status])
+
+  const reviewIncompatibleConfiguration = () => {
+    if (photo && entranceDetection) {
+      retainedVisualizerSession = { photo, entranceDetection, manualEntranceStructure }
+      preserveVisualizerSessionRef.current = true
+    }
+    ;(onReturnToReview ?? onBack)()
+  }
 
   const selectManualEntranceStructure = (structure: ExistingEntranceStructure) => {
     setManualEntranceStructure(structure)
@@ -351,15 +376,14 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     setFlipDoorOrientation(false)
     setAiResult(null)
     setAiError(null)
-    detectionAbortRef.current?.abort(); detectionAbortRef.current = null
-    setEntranceDetection(null); setEntranceDetectionError(null); setEntranceDetectionLoading(false); setManualEntranceStructure('unknown'); autoCompatibilityGenerationKeyRef.current = ''
+    autoCompatibilityGenerationKeyRef.current = ''
   }, [configurationKey, configuredSideliteSides.length])
 
   useEffect(() => () => {
     aiRequestIdRef.current += 1
     aiAbortRef.current?.abort()
     aiWorkflowStartedAtRef.current = null
-    if (objectUrlRef.current) { invalidateAiHousePhotoCache(objectUrlRef.current); URL.revokeObjectURL(objectUrlRef.current) }
+    if (objectUrlRef.current && !preserveVisualizerSessionRef.current) { invalidateAiHousePhotoCache(objectUrlRef.current); URL.revokeObjectURL(objectUrlRef.current) }
     cleanupUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
     if (frameUrlRef.current) URL.revokeObjectURL(frameUrlRef.current)
   }, [])
@@ -426,6 +450,8 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
       setError('That HEIC photo could not be opened. Please try another photo.')
       return
     }
+    retainedVisualizerSession = null
+    preserveVisualizerSessionRef.current = false
     const replacingPhoto = Boolean(objectUrlRef.current)
     if (objectUrlRef.current) { invalidateAiHousePhotoCache(objectUrlRef.current); URL.revokeObjectURL(objectUrlRef.current) }
     const objectUrl = URL.createObjectURL(displayFile)
@@ -461,6 +487,8 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   }
 
   const removePhoto = () => {
+    retainedVisualizerSession = null
+    preserveVisualizerSessionRef.current = false
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
     objectUrlRef.current = null
     setError('')
@@ -678,17 +706,15 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
                 <button type="button" className="visualizer-change-photo" aria-label="Change uploaded house photo" onClick={openPicker}><RefreshCw size={16}/> Change Photo</button>
                 {visualizerMode==='ai'?<div className="ai-photo-placement-area">{aiUseEntranceLocator?<EntranceSelector key={photo.objectUrl} corners={corners} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightedCorners={autoFitAdjustmentCorners} forcedAlignedEdges={autoFitDetectedEdges} forceAligned={autoFitAlreadyAligned||autoFitDetectedEdges?.every(Boolean)===true} onAlignmentReadyChange={setAutoFitAlignmentReady} onViewportMetricsChange={(metrics)=>{entranceViewportMetricsRef.current=metrics}}/>:<div className="visualizer-editor ai-automatic-photo"><img src={photo.objectUrl} alt={`Uploaded entrance photo: ${photo.file.name}`}/></div>}<EntranceDetectionLoading state={entranceDetectionLoadingExperience}/><AiGenerationLoading state={aiLoadingExperience}/></div>:<EntranceSelector key={photo.objectUrl} corners={corners} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightedCorners={autoFitAdjustmentCorners} forcedAlignedEdges={autoFitDetectedEdges} forceAligned={autoFitAlreadyAligned||autoFitDetectedEdges?.every(Boolean)===true} onAlignmentReadyChange={setAutoFitAlignmentReady} onViewportMetricsChange={(metrics)=>{entranceViewportMetricsRef.current=metrics}}/>}
                 <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
-              <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button>{visualizerMode==='ai'?<button type="button" className="wizard-continue ai-generate-button" aria-label={entranceCompatibility?.status==='good-fit'&&!entranceDetection?.sideliteConfidenceLow&&!requiresExplicitAiGeneration?'AI visualization generation status':'Continue anyway with selected configuration'} disabled={!entranceCompatibility||entranceDetectionLoading||aiGenerating||!doorSource.ready||(entranceCompatibility.status==='good-fit'&&!entranceDetection?.sideliteConfidenceLow&&!requiresExplicitAiGeneration)||(aiUseEntranceLocator&&!doorPlacementValid)} onClick={()=>void runAiVisualization('use-selected-product')}><Sparkles size={17}/><span className="wizard-nav-label">{aiGenerating?'Creating Visualization…':entranceDetectionLoading?'Analyzing Entrance…':entranceCompatibility?.status==='good-fit'&&!entranceDetection?.sideliteConfidenceLow&&!requiresExplicitAiGeneration?'Preparing Visualization…':requiresExplicitAiGeneration?'Generate AI Visualization':'Continue Anyway'}</span></button>:<button type="button" className="wizard-continue" aria-label="Continue" disabled={!canContinueDoorPlacement} onClick={handleContinueDoorPlacement}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button>}</div>
+              <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button>{visualizerMode==='ai'?<button type="button" className="wizard-continue ai-generate-button" aria-label={entranceCompatibility?.status==='good-fit'&&!entranceDetection?.sideliteConfidenceLow&&!requiresExplicitAiGeneration?'AI visualization generation status':'Generate AI visualization'} disabled={!entranceCompatibility||entranceCompatibility.status==='incompatible'||entranceDetectionLoading||aiGenerating||!doorSource.ready||(entranceCompatibility.status==='good-fit'&&!entranceDetection?.sideliteConfidenceLow&&!requiresExplicitAiGeneration)||(aiUseEntranceLocator&&!doorPlacementValid)} onClick={()=>void runAiVisualization('use-selected-product')}><Sparkles size={17}/><span className="wizard-nav-label">{aiGenerating?'Creating Visualization…':entranceDetectionLoading?'Analyzing Entrance…':entranceCompatibility?.status==='good-fit'&&!entranceDetection?.sideliteConfidenceLow&&!requiresExplicitAiGeneration?'Preparing Visualization…':'Generate AI Visualization'}</span></button>:<button type="button" className="wizard-continue" aria-label="Continue" disabled={!canContinueDoorPlacement} onClick={handleContinueDoorPlacement}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button>}</div>
               </div>
               {visualizerMode==='ai'&&<div className="ai-visualizer-note"><Sparkles size={18}/><div><strong>AI prototype</strong><p>AI will locate the main exterior entrance in your full photo and use your original product selections to create a natural result.</p></div></div>}
-              {visualizerMode==='ai'&&(entranceDetectionLoading||!entranceCompatibility||entranceCompatibility.status!=='good-fit'||entranceDetection?.sideliteConfidenceLow)&&<section className="ai-fit-strategy" aria-labelledby="ai-fit-strategy-title">
+              {visualizerMode==='ai'&&(entranceDetectionLoading||!entranceCompatibility||entranceDetection?.sideliteConfidenceLow)&&<section className="ai-fit-strategy" aria-labelledby="ai-fit-strategy-title">
                 <div className="ai-fit-strategy-heading"><div><span>Entrance compatibility</span><h3 id="ai-fit-strategy-title">{entranceDetectionLoading?'Analyzing your existing entrance…':entranceCompatibility?'Configuration comparison':'Help us identify the opening'}</h3></div>{entranceCompatibility&&!entranceDetectionLoading&&<Check size={18}/>}</div>
-                {entranceCompatibility&&entranceCompatibility.status!=='good-fit'&&<div className={`ai-compatibility-summary is-${entranceCompatibility.status}`}><strong>{entranceCompatibility.label}</strong><p>{entranceCompatibility.detectedSummary}</p><p>{entranceCompatibility.selectedSummary}</p>{entranceCompatibility.notes.map(note=><p key={note} className="ai-compatibility-note">{note}</p>)}</div>}
-                {entranceDetection?.sideliteConfidenceLow&&entranceCompatibility&&<div className="ai-compatibility-summary is-caution"><strong>We want to make sure we understood your entrance.</strong><p>Confirm the sidelites we detected, or choose the correct option.</p><div className="ai-sidelite-confirmation" role="group" aria-label="Confirm existing sidelites">{(['none','left','right','both'] as const).map(value=><button type="button" key={value} className={entranceDetection.sidelites===value?'is-selected':''} aria-pressed={entranceDetection.sidelites===value} onClick={()=>confirmDetectedSidelites(value)}>{value==='none'?'No sidelites':value[0].toUpperCase()+value.slice(1)}</button>)}</div></div>}
+                {entranceDetection?.sideliteConfidenceLow&&<div className="ai-compatibility-summary is-caution"><strong>We want to make sure we understood your entrance.</strong><p>Confirm the sidelites we detected, or choose the correct option.</p><div className="ai-sidelite-confirmation" role="group" aria-label="Confirm existing sidelites">{(['none','left','right','both'] as const).map(value=><button type="button" key={value} className={entranceDetection.sidelites===value?'is-selected':''} aria-pressed={entranceDetection.sidelites===value} onClick={()=>confirmDetectedSidelites(value)}>{value==='none'?'No sidelites':value[0].toUpperCase()+value.slice(1)}</button>)}</div></div>}
                 {entranceDetection&&!entranceCompatibility&&<p className="ai-detection-summary">We couldn't confidently identify the entrance structure. Please identify it below or retry the analysis.</p>}
                 {entranceDetectionError&&<div className="ai-detection-error" role="alert"><p>{entranceDetectionError.userMessage}</p>{import.meta.env.DEV&&<small>{entranceDetectionError.errorCode}{entranceDetectionError.requestId?` · Reference: ${entranceDetectionError.requestId.slice(0,8)}`:''}</small>}<button type="button" onClick={()=>void runEntranceDetection()}>Retry detection</button></div>}
                 {!entranceDetectionLoading&&(!entranceCompatibility||entranceDetection?.sideliteConfidenceLow)&&<label className="ai-manual-entrance"><span>What does the existing entrance have?</span><select value={manualEntranceStructure} onChange={event=>selectManualEntranceStructure(event.target.value as ExistingEntranceStructure)}><option value="unknown">Choose the existing structure</option>{MANUAL_ENTRANCE_OPTIONS.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}
-                {entranceCompatibility&&entranceCompatibility.status!=='good-fit'&&<button type="button" className="ai-review-configuration" onClick={onReturnToReview??onBack}>Review configuration</button>}
               </section>}
               {visualizerMode==='ai'&&<div className="ai-entrance-locator"><button type="button" aria-expanded={aiUseEntranceLocator} onClick={()=>setAiUseEntranceLocator(value=>!value)}><Crosshair size={16}/>{aiUseEntranceLocator?'Use automatic entrance detection':'Help AI locate the entrance'}</button><p>{aiUseEntranceLocator?'The four points will be sent as an optional location guide.':'Optional fallback: add four points if AI cannot reliably find the entrance.'}</p></div>}
               {visualizerMode==='ai'&&aiError&&<div className="visualizer-error ai-visualizer-error" role="alert"><div><p>{aiError.userMessage}</p>{aiError.requestId&&<small title={aiError.requestId}>Reference: {aiError.requestId.slice(0,8)}</small>}{import.meta.env.DEV&&<small>Error code: {aiError.errorCode}</small>}</div><button type="button" disabled={aiGenerating} onClick={()=>void runAiVisualization()}>Try Again</button></div>}
@@ -729,6 +755,17 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
           </>}
 
           <input ref={inputRef} className="visualizer-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.avif,.heic,.heif" onChange={onInputChange} />
+          {visualizerMode==='ai'&&entranceCompatibility?.status==='incompatible'&&<div className="ai-incompatibility-backdrop">
+            <section className="ai-incompatibility-modal" role="dialog" aria-modal="true" aria-labelledby="ai-incompatibility-title" aria-describedby="ai-incompatibility-description">
+              <span>Entrance compatibility</span>
+              <h2 id="ai-incompatibility-title">This configuration doesn’t match the opening in your photo.</h2>
+              <p id="ai-incompatibility-description">Choose a different photo or update your door configuration to continue.</p>
+              <div className="ai-incompatibility-actions">
+                <button type="button" className="ai-incompatibility-change-photo" onClick={openPicker}><RefreshCw size={16}/> Change Photo</button>
+                <button ref={incompatibilityPrimaryActionRef} type="button" className="ai-incompatibility-review" onClick={reviewIncompatibleConfiguration}>Review Configuration</button>
+              </div>
+            </section>
+          </div>}
           {error && <p className="visualizer-error" role="alert">{error}</p>}
 
           {photo && wizardStep !== 4 && <div className="visualizer-photo-actions">

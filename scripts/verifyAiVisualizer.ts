@@ -6,7 +6,7 @@ import { aiTestConfiguration } from './aiVisualizerFixture'
 import { doorStyles, glassOptions } from '../src/data/options'
 import { aiPixelCorners, aiWorkingSize } from '../src/features/home-visualizer/aiImagePreparation'
 import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiDoorGeometryInstructionBlock, aiEntranceFitInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiStructuralInstructionBlock, entranceFitContext, loadAiReference, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
-import { detectedEntranceStructure, evaluateEntranceCompatibility } from '../src/features/home-visualizer/entranceFitStrategy'
+import { detectedEntranceStructure, evaluateEntranceCompatibility, getDetectedVisualizerOpeningFamily, getSelectedVisualizerOpeningFamily } from '../src/features/home-visualizer/entranceFitStrategy'
 import { conservativeVerifiedSidelites, DETECTION_MODEL, entranceDetectionInstructions, normalizeEntranceDetection, validateSideliteGeometry, type ModelDetection } from '../api/detect-entrance-structure'
 import { AI_IMAGE_PRICING_USD_PER_MILLION, aiUsageEnvironment, estimateImageGenerationCost, normalizeImageUsage } from '../server/aiUsage'
 
@@ -275,15 +275,15 @@ try {
   assert.equal(detectedEntranceStructure({ ...detectedWideEntrance, confidence: .4 }), 'unknown')
   const singleNone = { ...detectedWideEntrance, sidelites: 'none', transom: false, structurallyWide: false } as const
   assert.equal(evaluateEntranceCompatibility(singleNone, aiTestConfiguration)?.status, 'good-fit')
-  assert.equal(evaluateEntranceCompatibility({ ...singleNone, sidelites: 'both' }, aiTestConfiguration)?.status, 'caution')
-  assert.equal(evaluateEntranceCompatibility({ ...singleNone, doorStructure: 'double' }, aiTestConfiguration)?.status, 'caution')
-  assert.equal(evaluateEntranceCompatibility({ ...singleNone, doorStructure: 'double', sidelites: 'both' }, aiTestConfiguration)?.status, 'not-recommended')
-  assert.match(evaluateEntranceCompatibility({ ...singleNone, transom: true }, aiTestConfiguration)?.notes.join(' ') ?? '', /transom was detected/)
+  assert.equal(evaluateEntranceCompatibility({ ...singleNone, sidelites: 'both' }, aiTestConfiguration)?.status, 'incompatible')
+  assert.equal(evaluateEntranceCompatibility({ ...singleNone, doorStructure: 'double' }, aiTestConfiguration)?.status, 'incompatible')
+  assert.equal(evaluateEntranceCompatibility({ ...singleNone, doorStructure: 'double', sidelites: 'both' }, aiTestConfiguration)?.status, 'incompatible')
+  assert.equal(evaluateEntranceCompatibility({ ...singleNone, transom: true }, aiTestConfiguration)?.status, 'good-fit')
   assert.equal(evaluateEntranceCompatibility({ ...singleNone, confidence: .4 }, aiTestConfiguration), null)
   const compatibilityCodes = ['S0', 'SL', 'SR', 'SB', 'D0', 'DL', 'DR', 'DB'] as const
   const sideBySuffix = { '0': 'none', L: 'left', R: 'right', B: 'both' } as const
   const selectedSideBySuffix = { '0': 'none', L: 'hinge-side', R: 'lock-side', B: 'both-sides' } as const
-  const compatibilityCounts = { 'good-fit': 0, caution: 0, 'not-recommended': 0, unsupported: 0 }
+  const compatibilityCounts = { 'good-fit': 0, incompatible: 0 }
   for (const existing of compatibilityCodes) for (const selected of compatibilityCodes) {
     const detectedDoor = existing[0] === 'D' ? 'double' : 'single'
     const selectedDoor = selected[0] === 'D' ? 'french' : 'single'
@@ -293,7 +293,11 @@ try {
     assert.ok(result)
     compatibilityCounts[result!.status] += 1
   }
-  assert.deepEqual(compatibilityCounts, { 'good-fit': 8, caution: 32, 'not-recommended': 24, unsupported: 0 })
+  assert.deepEqual(compatibilityCounts, { 'good-fit': 14, incompatible: 50 })
+  assert.equal(getDetectedVisualizerOpeningFamily({ ...singleNone, sidelites: 'left' }), 'B')
+  assert.equal(getDetectedVisualizerOpeningFamily({ ...singleNone, doorStructure: 'double', sidelites: 'none' }), 'C')
+  assert.equal(getSelectedVisualizerOpeningFamily({ ...aiTestConfiguration, doorConfigurationType: 'french' }), 'C')
+  assert.equal(getSelectedVisualizerOpeningFamily({ ...aiTestConfiguration, doorConfigurationType: 'savannah' }), 'C')
   const doNotInventBlock = aiDoNotInventInstructionBlock(trusted.snapshot)
   assert.match(doNotInventBlock, /DO NOT ADD OR INVENT DETAILS/)
   assert.match(doNotInventBlock, /UNSELECTED FEATURES MUST NOT APPEAR/)

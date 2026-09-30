@@ -3485,6 +3485,19 @@ body:has(.customer-form-app),
 .ai-compatibility-summary.is-not-recommended { border-left-color: #b55b38; background: #fff4ef; }
 .ai-compatibility-summary.is-not-recommended > strong { color: #8e3f25; }
 .ai-compatibility-note { margin-top: 7px!important; }
+.ai-incompatibility-backdrop{position:fixed;z-index:120;inset:0;padding:24px;display:grid;place-items:center;background:#07191bcc;backdrop-filter:blur(3px)}
+.ai-incompatibility-modal{width:min(100%,520px);border:1px solid #d9e1e2;border-top:5px solid var(--gold);border-radius:8px;padding:28px;background:#fff;box-shadow:0 24px 70px #05040b66;text-align:left}
+.ai-incompatibility-modal>span{color:var(--peacock);font-size:9px;font-weight:850;letter-spacing:.15em;text-transform:uppercase}
+.ai-incompatibility-modal h2{margin:8px 0 11px;color:var(--black);font-size:clamp(22px,3vw,29px);line-height:1.18;letter-spacing:-.025em}
+.ai-incompatibility-modal p{margin:0;color:#536064;font-size:13px;line-height:1.6}
+.ai-incompatibility-actions{margin-top:24px;display:flex;justify-content:flex-end;gap:10px}
+.ai-incompatibility-actions button{min-height:46px;border-radius:4px;padding:0 17px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:10px;font-weight:850;letter-spacing:.035em;text-transform:uppercase}
+.ai-incompatibility-change-photo{border:1px solid var(--black);background:var(--black);color:#fff}
+.ai-incompatibility-change-photo:hover{background:#293235}
+.ai-incompatibility-review{border:1px solid var(--peacock);background:var(--peacock);color:#fff}
+.ai-incompatibility-review:hover{background:#09545a}
+.ai-incompatibility-actions button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+@media(max-width:560px){.ai-incompatibility-backdrop{padding:16px}.ai-incompatibility-modal{padding:23px 19px}.ai-incompatibility-actions{align-items:stretch;flex-direction:column}.ai-incompatibility-actions button{width:100%;min-height:48px}.ai-incompatibility-review{order:-1}}
 .ai-review-configuration { margin-top: 12px; border: 1px solid #afc1c3; border-radius: 5px; padding: 9px 13px; background: #fff; color: var(--peacock); font: inherit; font-size: 11px; font-weight: 750; cursor: pointer; }
 .ai-manual-entrance { margin-top: 12px; display: grid; gap: 6px; }
 .ai-manual-entrance > span { color: #314244; font-size: 11px; font-weight: 750; }

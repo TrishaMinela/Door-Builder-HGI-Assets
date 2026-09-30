@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import sharp from 'sharp'
 import { AI_MAX_REQUEST_BYTES, AiInputError, objectValue, prepareHouseAndMask } from '../server/aiDoorVisualization.js'
+import { aiUsageEnvironment, estimateEntranceDetectionCost, normalizeResponseUsage, recordAiEntranceDetectionUsage } from '../server/aiUsage.js'
 import type { EntranceDetection } from '../src/features/home-visualizer/entranceFitStrategy.js'
 
 type ApiRequest = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> }
@@ -153,21 +154,49 @@ function outputText(result: Record<string, unknown>) {
   return ''
 }
 
-async function analyzeEntrance(apiKey: string, image: Buffer, instructions: string) {
-  const upstream = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(45_000),
-    body: JSON.stringify({
-      model: DETECTION_MODEL, store: false,
-      input: [{ role: 'user', content: [
-        { type: 'input_text', text: instructions },
-        { type: 'input_image', image_url: `data:image/webp;base64,${image.toString('base64')}`, detail: 'high' },
-      ] }],
-      text: { format: { type: 'json_schema', name: 'entrance_structure', strict: true, schema } },
-    }),
-  })
-  const result = await upstream.json().catch(() => null) as Record<string, unknown> | null
-  if (!upstream.ok || !result) throw new AiInputError('OPENAI_REQUEST_REJECTED', 'We could not analyze this entrance. Retry or choose the fit manually.', upstream.status === 429 ? 429 : 502)
-  return JSON.parse(outputText(result)) as ModelDetection
+async function analyzeEntrance(apiKey: string, image: Buffer, instructions: string, workflowRequestId: string, passType: 'primary' | 'verification') {
+  const requestId = randomUUID()
+  const startedAt = performance.now()
+  let upstream: Response
+  let result: Record<string, unknown> | null = null
+  try {
+    upstream = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(45_000),
+      body: JSON.stringify({
+        model: DETECTION_MODEL, store: false,
+        input: [{ role: 'user', content: [
+          { type: 'input_text', text: instructions },
+          { type: 'input_image', image_url: `data:image/webp;base64,${image.toString('base64')}`, detail: 'high' },
+        ] }],
+        text: { format: { type: 'json_schema', name: 'entrance_structure', strict: true, schema } },
+      }),
+    })
+    result = await upstream.json().catch(() => null) as Record<string, unknown> | null
+  } catch (error) {
+    const durationMs = Math.round(performance.now() - startedAt)
+    const usage = normalizeResponseUsage(null)
+    await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'failed', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType, usage, estimatedCostUsd: null, detectionDurationMs: durationMs, requestId, workflowRequestId, errorCode: error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError') ? 'AI_GENERATION_TIMEOUT' : 'OPENAI_REQUEST_REJECTED' })
+    throw error
+  }
+  const durationMs = Math.round(performance.now() - startedAt)
+  const usage = normalizeResponseUsage(result?.usage)
+  const estimatedCostUsd = estimateEntranceDetectionCost(DETECTION_MODEL, usage)
+  const upstreamRequestId = upstream.headers.get('x-request-id') ?? undefined
+  if (!upstream.ok || !result) {
+    const errorCode = upstream.status === 429 ? 'OPENAI_RATE_LIMITED' : 'OPENAI_REQUEST_REJECTED'
+    await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'failed', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType, usage, estimatedCostUsd, detectionDurationMs: durationMs, requestId, workflowRequestId, errorCode })
+    throw new AiInputError('OPENAI_REQUEST_REJECTED', 'We could not analyze this entrance. Retry or choose the fit manually.', upstream.status === 429 ? 429 : 502)
+  }
+  let detection: ModelDetection
+  try {
+    detection = JSON.parse(outputText(result)) as ModelDetection
+  } catch {
+    await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'failed', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType, usage, estimatedCostUsd, detectionDurationMs: durationMs, requestId, workflowRequestId, errorCode: 'INVALID_MODEL_RESPONSE' })
+    throw new AiInputError('OPENAI_REQUEST_REJECTED', 'We could not analyze this entrance. Retry or choose the fit manually.', 502)
+  }
+  await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'succeeded', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType, usage, estimatedCostUsd, detectionDurationMs: durationMs, requestId, workflowRequestId, errorCode: null })
+  console.info('[ai-entrance-detection:model-call]', { request_id: requestId, workflow_request_id: workflowRequestId, openai_request_id: upstreamRequestId, pass_type: passType, model: DETECTION_MODEL, usage, estimated_cost_usd: estimatedCostUsd, duration_ms: durationMs })
+  return detection
 }
 
 async function entranceCrop(photo: Buffer, detection: ModelDetection) {
@@ -207,7 +236,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) throw new AiInputError('SERVER_CONFIGURATION_ERROR', 'Entrance detection is temporarily unavailable. You can choose the fit manually.', 503)
     openAiStartedAt = performance.now()
-    let modelDetection = await analyzeEntrance(apiKey, prepared.photo, entranceDetectionInstructions)
+    let modelDetection = await analyzeEntrance(apiKey, prepared.photo, entranceDetectionInstructions, requestId, 'primary')
     const rawValidation = validateSideliteGeometry(modelDetection)
     const bothDetected = modelDetection.hasLeftSidelite === true && modelDetection.hasRightSidelite === true
     const asymmetric = modelDetection.hasLeftSidelite !== modelDetection.hasRightSidelite
@@ -216,7 +245,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     if (bothDetected || asymmetric || uncertainSides || modelDetection.hasLeftSidelite === null || modelDetection.hasRightSidelite === null) {
       const crop = await entranceCrop(prepared.photo, modelDetection)
       verificationPass = true
-      const verified = await analyzeEntrance(apiKey, crop ?? prepared.photo, `${entranceDetectionInstructions}\nThis is an independent confirmation pass focused on the entrance. Answer these separately from visible evidence: (1) Is there a separate, independently framed sidelite OUTSIDE the left edge of the main door slab? (2) Is there a separate, independently framed sidelite OUTSIDE the right edge? Glass within the slab, trim, jamb, casing, brick edges, reflections, shadows, and narrow framing lines are NO. Both is valid only when both separate panels are clearly visible with high confidence. When uncertain between one and both, report only the evidenced one-sided result.`)
+      const verified = await analyzeEntrance(apiKey, crop ?? prepared.photo, `${entranceDetectionInstructions}\nThis is an independent confirmation pass focused on the entrance. Answer these separately from visible evidence: (1) Is there a separate, independently framed sidelite OUTSIDE the left edge of the main door slab? (2) Is there a separate, independently framed sidelite OUTSIDE the right edge? Glass within the slab, trim, jamb, casing, brick edges, reflections, shadows, and narrow framing lines are NO. Both is valid only when both separate panels are clearly visible with high confidence. When uncertain between one and both, report only the evidenced one-sided result.`, requestId, 'verification')
       modelDetection = conservativeVerifiedSidelites(modelDetection, verified)
     }
     openAiDurationMs = Math.round(performance.now() - openAiStartedAt)
