@@ -38,12 +38,13 @@ try {
   for (const width of [1280, 390]) {
     const page = await browser.newPage({ viewport: { width, height: 900 } })
     const goodFit = width === 390
-    let requests = 0, fail = true
+    let requests = 0, detectionRequests = 0, fail = true
     let detectionRouteAvailable = false
     let releaseDetection: (() => void) | undefined
     let release: (() => void) | undefined
     let captured: { corners: unknown; configuration: unknown; productReference?: string; fitStrategy?: string; entranceDetection?: unknown } | null = null
     await page.route('**/api/detect-entrance-structure', async route => {
+      detectionRequests += 1
       if (!detectionRouteAvailable) { await route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not found' }); return }
       await new Promise<void>(resolve => { releaseDetection = resolve })
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ detection: { doorStructure: goodFit ? 'single' : 'double', sidelites: 'none', transom: false, widthClass: goodFit ? 'standard' : 'wide', approximateWidthRatio: .35, structurallyWide: !goodFit, confidence: .96, summary: goodFit ? 'Single door.' : 'Double doors.' }, request_id: 'detection-test' }) })
@@ -144,6 +145,30 @@ try {
     await manual.click()
     await page.locator('.composed-photo-editor').waitFor()
     assert.equal(requests, 2)
+    const replacementPhoto = await sharp({ create: { width: 900, height: 650, channels: 3, background: '#9aa7ad' } }).jpeg().toBuffer()
+    const detectionRequestsBeforeReplacement = detectionRequests
+    releaseDetection = undefined
+    const chooserPromise = page.waitForEvent('filechooser')
+    await page.getByRole('button', { name: 'Change uploaded house photo', exact: true }).click()
+    const chooser = await chooserPromise
+    await chooser.setFiles({ name: 'replacement-home.jpg', mimeType: 'image/jpeg', buffer: replacementPhoto })
+    await page.locator('img[alt="Uploaded entrance photo: replacement-home.jpg"]').waitFor()
+    assert.equal(await page.getByText('AI Result', { exact: true }).count(), 0, 'Changing the photo removes the previous AI result')
+    assert.equal(await page.locator('.entrance-corner-handle').count(), 4, 'Changing the photo resets Manual placement points for the replacement image')
+    await page.getByRole('button', { name: 'Start Placing Points', exact: false }).click()
+    await ai.click()
+    await new Promise<void>(resolve => { const check = () => releaseDetection ? resolve() : setTimeout(check, 25); check() })
+    releaseDetection!()
+    const replacementGenerate = page.locator('.ai-generate-button')
+    await replacementGenerate.waitFor()
+    await page.waitForFunction(() => !(document.querySelector('.ai-generate-button') as HTMLButtonElement | null)?.disabled)
+    assert.equal(detectionRequests, detectionRequestsBeforeReplacement + 1, 'Replacement photo receives fresh entrance detection')
+    assert.equal(requests, 2, 'Replacing and analyzing a photo does not automatically start paid generation')
+    fail = true
+    await replacementGenerate.click()
+    await page.getByRole('button', { name: 'Try Again', exact: true }).waitFor()
+    assert.equal(requests, 3)
+    assert.deepEqual(captured!.configuration, JSON.parse(JSON.stringify(aiTestConfiguration)), 'Replacement generation preserves the configured door')
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
     await page.close()
     console.log(`AI Visualizer UI state, retry, loading, keyboard, retained results and Manual final render passed at ${width}px.`)

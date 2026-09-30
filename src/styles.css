@@ -2359,6 +2359,9 @@ body:has(.home-app){
 .visualizer-zoom-controls span{min-width:42px;text-align:center;font-size:9px;font-weight:750}
 .visualizer-zoom-controls.mobile-external-zoom-controls{display:none}
 .visualizer-step-editor-shell{position:relative}.mobile-photo-tools,.mobile-frame-contextual-action{display:none}.mobile-nav-icon{display:none}
+.visualizer-change-photo{position:absolute;top:12px;right:12px;z-index:45;display:inline-flex;align-items:center;gap:7px;min-height:36px;border:1px solid #ffffffa8;border-radius:var(--radius-control);padding:7px 11px;background:#05040bcf;color:#fff;font:inherit;font-size:12px;font-weight:700;box-shadow:0 3px 12px #05040b45;cursor:pointer;backdrop-filter:blur(4px)}
+.visualizer-change-photo:hover,.visualizer-change-photo:focus-visible{background:var(--peacock);border-color:#fff;outline:2px solid #fff;outline-offset:2px}
+.visualizer-final-result{position:relative}.visualizer-change-photo-final{top:64px}
 .cleanup-comparison-editor{height:min(62vh,680px)}
 .cleanup-comparison-stage{touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .cleanup-comparison-stage>img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}
@@ -2552,7 +2555,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .visualizer-zoom-controls.mobile-external-zoom-controls{position:relative;inset:auto;z-index:8;width:max-content;max-width:100%;min-height:48px;margin:8px auto 0;display:flex;transform:none;white-space:nowrap}
   .visualizer-step-editor-shell .visualizer-zoom-controls button{min-width:48px;width:48px;height:48px;padding:0}
   .visualizer-step-editor-shell .visualizer-zoom-controls button:last-child{width:auto;min-width:48px;padding:0 12px}
-  .mobile-photo-tools{position:absolute;top:12px;right:12px;z-index:20;display:flex;gap:8px;pointer-events:none}
+  .mobile-photo-tools{position:absolute;top:58px;right:12px;z-index:20;display:flex;gap:8px;pointer-events:none}
   .mobile-photo-tools button{width:46px;height:46px;border:1px solid #ffffff88;border-radius:var(--radius-control);padding:0;display:grid;place-items:center;background:#05040bd9;color:#fff;box-shadow:0 3px 12px #05040b55;pointer-events:auto;-webkit-appearance:none;appearance:none}
   .mobile-photo-tools button.remove{color:#fff;background:#8b3125e8}
   .mobile-photo-tools svg{display:block}
@@ -2561,6 +2564,8 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .mobile-frame-contextual-action button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
   .visualizer-step-editor-shell+.automatic-frame-actions{display:none}
   .visualizer-desktop-photo-action{display:none!important}
+  .visualizer-change-photo{top:10px;right:10px;min-height:40px;padding:8px 10px;font-size:11px}
+  .visualizer-change-photo-final{top:58px}
   .configured-door-checkerboard{min-height:260px}
   .entrance-point-magnifier{transform:translate(-50%,-50%)}
   .entrance-corner-handle{width:64px;height:64px}

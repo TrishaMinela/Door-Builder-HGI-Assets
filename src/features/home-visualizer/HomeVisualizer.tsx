@@ -82,6 +82,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   const [entranceDetection, setEntranceDetection] = useState<EntranceDetection | null>(null)
   const [entranceDetectionLoading, setEntranceDetectionLoading] = useState(false)
   const [entranceDetectionError, setEntranceDetectionError] = useState<AiVisualizationFailure | null>(null)
+  const [requiresExplicitAiGeneration, setRequiresExplicitAiGeneration] = useState(false)
   const [manualEntranceStructure, setManualEntranceStructure] = useState<ExistingEntranceStructure>('unknown')
   const detectionAbortRef = useRef<AbortController | null>(null)
   const autoCompatibilityGenerationKeyRef = useRef('')
@@ -213,6 +214,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
 
   const runAiVisualization = async (strategyOverride?: EntranceFitStrategy) => {
     if (!photo || !doorConfiguration || !doorSource.ready || !doorSource.url || aiPendingRef.current || (aiUseEntranceLocator && !doorPlacementValid)) return
+    setRequiresExplicitAiGeneration(false)
     const aiCorners = aiUseEntranceLocator ? corners : undefined
     const activeStrategy = strategyOverride ?? 'use-selected-product'
     const requestKey = JSON.stringify({ configurationKey, corners: aiCorners ?? 'automatic', fitStrategy: activeStrategy, photo: `${photo.file.name}:${photo.file.size}:${photo.file.lastModified}` })
@@ -258,12 +260,12 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   }
 
   useEffect(() => {
-    if (visualizerMode !== 'ai' || entranceCompatibility?.status !== 'good-fit' || entranceDetection?.sideliteConfidenceLow || !photo || !entranceDetection || !doorSource.ready || aiGenerating || aiResult || aiError) return
+    if (visualizerMode !== 'ai' || requiresExplicitAiGeneration || entranceCompatibility?.status !== 'good-fit' || entranceDetection?.sideliteConfidenceLow || !photo || !entranceDetection || !doorSource.ready || aiGenerating || aiResult || aiError) return
     const key = JSON.stringify({ photo: `${photo.file.name}:${photo.file.size}:${photo.file.lastModified}`, configurationKey, detection: entranceDetection })
     if (autoCompatibilityGenerationKeyRef.current === key) return
     autoCompatibilityGenerationKeyRef.current = key
     void runAiVisualization('use-selected-product')
-  }, [visualizerMode, entranceCompatibility?.status, photo, entranceDetection, doorSource.ready, aiGenerating, aiResult, aiError, configurationKey])
+  }, [visualizerMode, requiresExplicitAiGeneration, entranceCompatibility?.status, photo, entranceDetection, doorSource.ready, aiGenerating, aiResult, aiError, configurationKey])
 
   const selectManualEntranceStructure = (structure: ExistingEntranceStructure) => {
     setManualEntranceStructure(structure)
@@ -424,10 +426,12 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
       setError('That HEIC photo could not be opened. Please try another photo.')
       return
     }
+    const replacingPhoto = Boolean(objectUrlRef.current)
     if (objectUrlRef.current) { invalidateAiHousePhotoCache(objectUrlRef.current); URL.revokeObjectURL(objectUrlRef.current) }
     const objectUrl = URL.createObjectURL(displayFile)
     objectUrlRef.current = objectUrl
     setPhoto({ file: displayFile, objectUrl, originalFormat, originalByteSize: file.size })
+    setRequiresExplicitAiGeneration(replacingPhoto)
     aiRequestIdRef.current += 1
     setAiGenerating(false)
     setAiResult(null)
@@ -461,6 +465,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     objectUrlRef.current = null
     setError('')
     setPhoto(null)
+    setRequiresExplicitAiGeneration(false)
     aiRequestIdRef.current += 1
     setAiGenerating(false)
     setAiResult(null)
@@ -670,9 +675,10 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
             {wizardStep===0&&<>
               {!autoFitPlacementComplete&&(visualizerMode==='manual'||aiUseEntranceLocator)&&<div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>{visualizerMode==='ai'?'Help AI locate the entrance':'Outline the Door'}</h3>{visualizerMode==='ai'?<p>Place the four points around the complete entrance to give AI a precise location, then generate again.</p>:<><p>Move the four points near the corners of the center door opening{configuredDoorPreview.doorConfigurationType==='single'?'':', around both door leaves'}.</p><p className="entrance-placement-note">Sidelites will be positioned separately in the next step.</p></>}</div></div>}
               <div className="visualizer-step-editor-shell">
+                <button type="button" className="visualizer-change-photo" aria-label="Change uploaded house photo" onClick={openPicker}><RefreshCw size={16}/> Change Photo</button>
                 {visualizerMode==='ai'?<div className="ai-photo-placement-area">{aiUseEntranceLocator?<EntranceSelector key={photo.objectUrl} corners={corners} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightedCorners={autoFitAdjustmentCorners} forcedAlignedEdges={autoFitDetectedEdges} forceAligned={autoFitAlreadyAligned||autoFitDetectedEdges?.every(Boolean)===true} onAlignmentReadyChange={setAutoFitAlignmentReady} onViewportMetricsChange={(metrics)=>{entranceViewportMetricsRef.current=metrics}}/>:<div className="visualizer-editor ai-automatic-photo"><img src={photo.objectUrl} alt={`Uploaded entrance photo: ${photo.file.name}`}/></div>}<EntranceDetectionLoading state={entranceDetectionLoadingExperience}/><AiGenerationLoading state={aiLoadingExperience}/></div>:<EntranceSelector key={photo.objectUrl} corners={corners} imageSrc={photo.objectUrl} imageAlt={`Uploaded entrance photo: ${photo.file.name}`} onCornersChange={updateManualCorners} onReset={resetPlacement} showToolbar={false} highlightedCorners={autoFitAdjustmentCorners} forcedAlignedEdges={autoFitDetectedEdges} forceAligned={autoFitAlreadyAligned||autoFitDetectedEdges?.every(Boolean)===true} onAlignmentReadyChange={setAutoFitAlignmentReady} onViewportMetricsChange={(metrics)=>{entranceViewportMetricsRef.current=metrics}}/>}
-                <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" aria-label="Replace photo" onClick={openPicker}><RefreshCw size={21}/></button><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
-              <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button>{visualizerMode==='ai'?<button type="button" className="wizard-continue ai-generate-button" aria-label={entranceCompatibility?.status==='good-fit'&&!entranceDetection?.sideliteConfidenceLow?'AI visualization generation status':'Continue anyway with selected configuration'} disabled={!entranceCompatibility||entranceDetectionLoading||aiGenerating||!doorSource.ready||(entranceCompatibility.status==='good-fit'&&!entranceDetection?.sideliteConfidenceLow)||(aiUseEntranceLocator&&!doorPlacementValid)} onClick={()=>void runAiVisualization('use-selected-product')}><Sparkles size={17}/><span className="wizard-nav-label">{aiGenerating?'Creating Visualization…':entranceDetectionLoading?'Analyzing Entrance…':entranceCompatibility?.status==='good-fit'&&!entranceDetection?.sideliteConfidenceLow?'Preparing Visualization…':'Continue Anyway'}</span></button>:<button type="button" className="wizard-continue" aria-label="Continue" disabled={!canContinueDoorPlacement} onClick={handleContinueDoorPlacement}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button>}</div>
+                <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
+              <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button>{visualizerMode==='ai'?<button type="button" className="wizard-continue ai-generate-button" aria-label={entranceCompatibility?.status==='good-fit'&&!entranceDetection?.sideliteConfidenceLow&&!requiresExplicitAiGeneration?'AI visualization generation status':'Continue anyway with selected configuration'} disabled={!entranceCompatibility||entranceDetectionLoading||aiGenerating||!doorSource.ready||(entranceCompatibility.status==='good-fit'&&!entranceDetection?.sideliteConfidenceLow&&!requiresExplicitAiGeneration)||(aiUseEntranceLocator&&!doorPlacementValid)} onClick={()=>void runAiVisualization('use-selected-product')}><Sparkles size={17}/><span className="wizard-nav-label">{aiGenerating?'Creating Visualization…':entranceDetectionLoading?'Analyzing Entrance…':entranceCompatibility?.status==='good-fit'&&!entranceDetection?.sideliteConfidenceLow&&!requiresExplicitAiGeneration?'Preparing Visualization…':requiresExplicitAiGeneration?'Generate AI Visualization':'Continue Anyway'}</span></button>:<button type="button" className="wizard-continue" aria-label="Continue" disabled={!canContinueDoorPlacement} onClick={handleContinueDoorPlacement}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button>}</div>
               </div>
               {visualizerMode==='ai'&&<div className="ai-visualizer-note"><Sparkles size={18}/><div><strong>AI prototype</strong><p>AI will locate the main exterior entrance in your full photo and use your original product selections to create a natural result.</p></div></div>}
               {visualizerMode==='ai'&&(entranceDetectionLoading||!entranceCompatibility||entranceCompatibility.status!=='good-fit'||entranceDetection?.sideliteConfidenceLow)&&<section className="ai-fit-strategy" aria-labelledby="ai-fit-strategy-title">
@@ -693,8 +699,9 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
             {wizardStep===1&&<>
               <div className="entrance-placement-instructions"><Crosshair className="entrance-placement-icon" size={24}/><div><h3>{configuredSideliteSides.length===1&&!photoSideliteSide?'Where Is the Sidelite?':configuredSideliteSides.length===1?'Position the Sidelite Opening':'Position Both Sidelite Openings'}</h3><p>{configuredSideliteSides.length===1&&!photoSideliteSide?'Tap the side where the sidelite appears in your uploaded photo.':configuredSideliteSides.length===1?'Place the four points on the inside corners of the sidelite opening.':'Place each set of points on the inside corners of its sidelite opening.'}</p>{photoSideliteSide&&<p className="entrance-placement-note">{configuredSideliteSides.length===1?'Leave the vertical jamb between the door and sidelite outside the selected sidelite area. It will be colored during the Frame step.':'Keep both divider jambs outside the sidelite selections.'}</p>}</div></div>
               <div className="visualizer-step-editor-shell">
+              <button type="button" className="visualizer-change-photo" aria-label="Change uploaded house photo" onClick={openPicker}><RefreshCw size={16}/> Change Photo</button>
               <SideliteSelector imageSrc={photo.objectUrl} door={corners} edges={sideliteEdges} sides={photoSideliteSides} showSideChoice={configuredSideliteSides.length===1&&!photoSideliteSide} onChooseSide={(side)=>{setPhotoSideliteSide(side);setSideliteEdges(initializeSideliteEdges(corners,[side],doorConfigurationLeafCount(configuredDoorPreview.doorConfigurationType)));clearCleanup()}} onChange={(edges)=>{setSideliteEdges(edges);clearCleanup()}}/>
-                <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" aria-label="Replace photo" onClick={openPicker}><RefreshCw size={21}/></button><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
+                <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
                 <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={()=>setWizardStep(0)}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button><button type="button" className="wizard-continue" aria-label="Continue" disabled={configuredSideliteSides.length===1&&!photoSideliteSide} onClick={finishSidelitePlacement}><span className="wizard-nav-label">Continue</span><ArrowRight className="mobile-nav-icon" size={17}/></button></div>
               </div>
               {configuredSideliteSides.length===1&&photoSideliteSide&&<div className="wizard-secondary"><button type="button" onClick={()=>{const opposite=photoSideliteSide==='left'?'right':'left';setPhotoSideliteSide(opposite);setSideliteEdges(initializeSideliteEdges(corners,[opposite],doorConfigurationLeafCount(configuredDoorPreview.doorConfigurationType)));setFrameConfirmed(false);clearCleanup()}}>Switch Sidelite Side</button></div>}
@@ -703,14 +710,16 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
               <div className="entrance-placement-instructions automatic-frame-status"><Check className="entrance-placement-icon" size={24}/><div><h3>Frame detected from your door placement</h3><p>We've automatically included the surrounding frame, divider jambs, and threshold.</p></div></div>
               <p className="frame-wizard-summary">Frame Finish: {configuredDoorPreview.jambType==='clad'?'Clad Wrap':'Timber Frame'} — {activeJambFinish.name}</p>
               <div className="visualizer-step-editor-shell">
+                <button type="button" className="visualizer-change-photo" aria-label="Change uploaded house photo" onClick={openPicker}><RefreshCw size={16}/> Change Photo</button>
                 <FrameAreaEditor imageSrc={recoloredFrameUrl||photo.objectUrl} inner={entranceBoundary} openings={[corners,...sideliteOpenings]} outer={outerFrame} sides={frameSides} corrections={frameCorrections} wizardMode editable={framePlacementMode==='manual'} onImageSize={(size)=>setFrameImageSize(current=>current.width?current:size)} onOuterChange={(value)=>{setFramePlacementMode('manual');setOuterFrame(value)}} onSidesChange={setFrameSides} onCorrectionsChange={setFrameCorrections} onReset={resetFrameArea} onConfirm={()=>{}}/>
-                <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" aria-label="Replace photo" onClick={openPicker}><RefreshCw size={21}/></button><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
+                <div className="mobile-photo-tools" role="group" aria-label="Photo controls"><button type="button" className="remove" aria-label="Remove photo" onClick={removePhoto}><Trash2 size={21}/></button></div>
                 <div className="mobile-frame-contextual-action">{framePlacementMode==='automatic'?<button type="button" onClick={()=>setFramePlacementMode('manual')}>Adjust Frame</button>:<button type="button" onClick={resetFrameArea}><RotateCcw size={15}/> Reset to Automatic</button>}</div>
                 <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={()=>setWizardStep(configuredSideliteSides.length?1:0)}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button><button type="button" className="wizard-continue" aria-label="Finish visualization" onClick={()=>{setFrameConfirmed(true);setWizardStep(4)}}><span className="wizard-nav-label">Finish Visualization</span><ArrowRight className="mobile-nav-icon" size={17}/></button></div>
               </div>
               <div className="automatic-frame-actions">{framePlacementMode==='automatic'?<button type="button" onClick={()=>setFramePlacementMode('manual')}>Adjust Frame</button>:<button type="button" onClick={resetFrameArea}><RotateCcw size={15}/> Reset to Automatic</button>}</div>
             </>}
             {wizardStep===4&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title">
+              <button type="button" className="visualizer-change-photo visualizer-change-photo-final" aria-label="Change uploaded house photo" onClick={openPicker}><RefreshCw size={16}/> Change Photo</button>
               <div className="visualizer-final-heading"><span>{visualizerMode==='ai'?'AI visualization complete':'Visualization complete'}</span><h2 id="visualizer-final-title">Your new entrance</h2></div>
               {visualizerMode==='ai'?(aiResult?<div className="ai-photo-result-area"><CleanupComparisonSlider originalSrc={photo.objectUrl} cleanupSrc={aiResult.image} imageAlt={`AI visualization: ${photo.file.name}`} originalLabel="Original" resultLabel="AI Result" ariaLabel="Original photo and AI visualization comparison"/><AiGenerationLoading state={aiLoadingExperience}/></div>:<div className="visualizer-source-loading" role="status"><span>Preparing your best-fit AI visualization.</span></div>):doorSource.ready?<ComposedPhotoPreview corners={entranceBoundary} productLayers={visualizerProductLayers} doorSourceUrl={doorSource.url} imageSrc={recoloredFrameUrl||approvedCleanup?.cleanedUrl||photo.objectUrl} originalImageSrc={photo.objectUrl} imageAlt={`Completed visualization: ${photo.file.name}`} showAfter displayMode="final" showZoomControls beforeAfter onExporterReady={setCompositeExporter}/>:<div className="visualizer-source-loading" role={doorSource.error?'alert':'status'}><span>{doorSource.error||'Preparing your configured door…'}</span>{doorSource.error&&doorSource.retry&&<button type="button" onClick={doorSource.retry}><RefreshCw size={16}/> Retry Rendering</button>}</div>}
               {visualizerMode==='ai'&&aiError&&<div className="visualizer-error ai-visualizer-error" role="alert"><div><p>{aiError.userMessage}</p>{aiError.requestId&&<small>Reference: {aiError.requestId.slice(0,8)}</small>}</div><button type="button" disabled={aiGenerating} onClick={()=>void runAiVisualization('use-selected-product')}>Try Again</button></div>}
