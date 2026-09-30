@@ -3434,6 +3434,11 @@ body:has(.customer-form-app),
 .ai-compatibility-summary.is-good-fit > strong { color: #17613f; }
 .ai-compatibility-summary.is-caution { border-left-color: #c59000; background: #fff9e8; }
 .ai-compatibility-summary.is-caution > strong { color: #775900; }
+.ai-sidelite-confirmation { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; margin-top: 10px; }
+.ai-sidelite-confirmation button { min-height: 38px; border: 1px solid #c7b878; border-radius: 5px; padding: 7px 8px; background: #fff; color: #4f4a34; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.ai-sidelite-confirmation button:hover,.ai-sidelite-confirmation button:focus-visible { border-color: var(--peacock); outline: none; }
+.ai-sidelite-confirmation button.is-selected { border-color: var(--peacock); background: var(--peacock); color: #fff; }
+@media (max-width: 560px) { .ai-sidelite-confirmation { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 .ai-compatibility-summary.is-not-recommended { border-left-color: #b55b38; background: #fff4ef; }
 .ai-compatibility-summary.is-not-recommended > strong { color: #8e3f25; }
 .ai-compatibility-note { margin-top: 7px!important; }

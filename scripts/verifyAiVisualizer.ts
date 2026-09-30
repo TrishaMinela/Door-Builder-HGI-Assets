@@ -7,7 +7,7 @@ import { doorStyles, glassOptions } from '../src/data/options'
 import { aiPixelCorners, aiWorkingSize } from '../src/features/home-visualizer/aiImagePreparation'
 import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiDoorGeometryInstructionBlock, aiEntranceFitInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiStructuralInstructionBlock, entranceFitContext, loadAiReference, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
 import { detectedEntranceStructure, evaluateEntranceCompatibility } from '../src/features/home-visualizer/entranceFitStrategy'
-import { entranceDetectionInstructions, normalizeEntranceDetection, type ModelDetection } from '../api/detect-entrance-structure'
+import { conservativeVerifiedSidelites, DETECTION_MODEL, entranceDetectionInstructions, normalizeEntranceDetection, validateSideliteGeometry, type ModelDetection } from '../api/detect-entrance-structure'
 import { AI_IMAGE_PRICING_USD_PER_MILLION, aiUsageEnvironment, estimateImageGenerationCost, normalizeImageUsage } from '../server/aiUsage'
 
 const originalFetch = globalThis.fetch
@@ -82,18 +82,51 @@ async function complete(body: unknown, expected: number) {
 }
 
 try {
+  assert.equal(DETECTION_MODEL, 'gpt-5.4-mini')
   const leftOnlyDetection = normalizeEntranceDetection({
-    doorStructure: 'single', leftSidelitePresent: true, rightSidelitePresent: false,
-    leftSidelite: { present: true, confidence: .97, evidence: 'A separately framed narrow vertical glazed panel is visible outside the left slab edge.', region: { x: .21, y: .2, width: .1, height: .65 } },
-    rightSidelite: { present: false, confidence: .96, evidence: 'Only jamb and trim are visible outside the right slab edge.', region: null },
-    transom: false, mainDoorRegion: { x: .31, y: .17, width: .35, height: .72 }, transomRegion: null,
+    doorStructure: 'single', hasLeftSidelite: true, hasRightSidelite: false,
+    leftSidelite: { present: true, confidence: .97, evidence: 'A separately framed narrow vertical glazed panel is visible outside the left slab edge.', box: { xMin: .18, yMin: .2, xMax: .29, yMax: .85, confidence: .97 } },
+    rightSidelite: { present: false, confidence: .96, evidence: 'Only jamb and trim are visible outside the right slab edge.', box: null },
+    hasTransom: false, mainDoor: { xMin: .31, yMin: .17, xMax: .66, yMax: .89, confidence: .98 }, transom: null,
     widthClass: 'wide', approximateWidthRatio: .49, structurallyWide: true, confidence: .95, summary: 'Single door with one left sidelite.',
   } satisfies ModelDetection)
   assert.deepEqual({ doorStructure: leftOnlyDetection.doorStructure, leftSidelitePresent: leftOnlyDetection.leftSidelitePresent, rightSidelitePresent: leftOnlyDetection.rightSidelitePresent, sidelites: leftOnlyDetection.sidelites, transom: leftOnlyDetection.transom }, { doorStructure: 'single', leftSidelitePresent: true, rightSidelitePresent: false, sidelites: 'left', transom: false })
-  assert.match(entranceDetectionInstructions, /separate narrow vertical glazed panel beside and outside the main door slab/)
+  assert.match(entranceDetectionInstructions, /separate vertical glazed or solid panel beside and OUTSIDE the main door slab/)
   assert.match(entranceDetectionInstructions, /Do NOT count glass inside a door slab/)
   assert.match(entranceDetectionInstructions, /Do not infer symmetry/)
-  checks += 4
+  const modelExample = (left: boolean, right: boolean, doorStructure: 'single' | 'double' = 'single'): ModelDetection => ({
+    doorStructure, hasLeftSidelite: left, hasRightSidelite: right, hasTransom: false,
+    leftSidelite: { present: left, confidence: .96, evidence: left ? 'Separate framed panel outside left slab edge.' : 'No separate left panel.', box: left ? { xMin: .1, yMin: .2, xMax: .22, yMax: .85, confidence: .96 } : null },
+    rightSidelite: { present: right, confidence: .96, evidence: right ? 'Separate framed panel outside right slab edge.' : 'No separate right panel.', box: right ? { xMin: .72, yMin: .2, xMax: .84, yMax: .85, confidence: .96 } : null },
+    mainDoor: { xMin: .25, yMin: .15, xMax: .7, yMax: .9, confidence: .97 }, transom: null, widthClass: left || right || doorStructure === 'double' ? 'wide' : 'standard', approximateWidthRatio: .45, structurallyWide: left || right || doorStructure === 'double', confidence: .94, summary: 'Entrance fixture.',
+  })
+  const detectionFixtures = [
+    { name: 'single only', model: modelExample(false, false), expected: 'none' },
+    { name: 'single plus left', model: modelExample(true, false), expected: 'left' },
+    { name: 'single plus right', model: modelExample(false, true), expected: 'right' },
+    { name: 'single plus both', model: modelExample(true, true), expected: 'both' },
+    { name: 'double only', model: modelExample(false, false, 'double'), expected: 'none' },
+    { name: 'double plus one sidelite', model: modelExample(false, true, 'double'), expected: 'right' },
+    { name: 'double plus sidelites', model: modelExample(true, true, 'double'), expected: 'both' },
+    { name: 'door glass is not a sidelite', model: { ...modelExample(false, false), hasLeftSidelite: true, leftSidelite: { present: true, confidence: .92, evidence: 'Mistaken slab glass.', box: { xMin: .3, yMin: .25, xMax: .42, yMax: .72, confidence: .92 } }, summary: 'Glass exists only inside the slab.' }, expected: 'none' },
+    { name: 'thick jamb is not a sidelite', model: { ...modelExample(false, false), hasRightSidelite: true, rightSidelite: { present: true, confidence: .9, evidence: 'Mistaken thick trim.', box: { xMin: .705, yMin: .15, xMax: .73, yMax: .9, confidence: .9 } } }, expected: 'none' },
+  ] as const
+  for (const fixture of detectionFixtures) assert.equal(normalizeEntranceDetection(fixture.model).sidelites, fixture.expected, fixture.name)
+  const firstBoth = modelExample(true, true)
+  const confirmedRightOnly = modelExample(false, true)
+  const conservativeRight = normalizeEntranceDetection(conservativeVerifiedSidelites(firstBoth, confirmedRightOnly))
+  assert.deepEqual({ doorStructure: conservativeRight.doorStructure, hasLeftSidelite: conservativeRight.leftSidelitePresent, hasRightSidelite: conservativeRight.rightSidelitePresent }, { doorStructure: 'single', hasLeftSidelite: false, hasRightSidelite: true })
+  const uncertainBoth = modelExample(true, true)
+  uncertainBoth.leftSidelite.confidence = .7
+  uncertainBoth.rightSidelite.confidence = .82
+  const conservativeOneSide = normalizeEntranceDetection(conservativeVerifiedSidelites(firstBoth, uncertainBoth))
+  assert.equal(conservativeOneSide.sidelites, 'right', 'Ambiguous both must conservatively prefer the stronger one-sided result')
+  const suppliedRegression = modelExample(true, true)
+  suppliedRegression.leftSidelite = { present: true, confidence: .93, evidence: 'Model mistook the left jamb for a sidelite.', box: { xMin: .225, yMin: .16, xMax: .245, yMax: .89, confidence: .93 } }
+  assert.equal(suppliedRegression.hasLeftSidelite && suppliedRegression.hasRightSidelite ? 'both' : 'not-both', 'both', 'Raw model fixture reproduces the false both result')
+  assert.equal(validateSideliteGeometry(suppliedRegression).left.reason, 'region is trim / insufficient width')
+  assert.equal(normalizeEntranceDetection(suppliedRegression).sidelites, 'right', 'Spatial validation rejects left trim and retains the real right sidelite')
+  checks += 16
 
   await request(source, 405, 'GET')
   await request({ ...source, photo: undefined }, 400)

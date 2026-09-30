@@ -10,7 +10,7 @@ export type CompatibilityStatus = 'good-fit' | 'caution' | 'not-recommended' | '
 export type EntranceRegion = { x: number; y: number; width: number; height: number }
 export type SideliteEvidence = { present: boolean; confidence: number; evidence: string; region: EntranceRegion | null }
 
-export type EntranceDetection = { doorStructure: DetectedDoorStructure; leftSidelitePresent: boolean; rightSidelitePresent: boolean; leftSidelite: SideliteEvidence; rightSidelite: SideliteEvidence; sidelites: DetectedSidelites; transom: boolean | null; mainDoorRegion: EntranceRegion | null; transomRegion: EntranceRegion | null; widthClass: EntranceWidthClass; approximateWidthRatio: number | null; structurallyWide: boolean; confidence: number; summary: string }
+export type EntranceDetection = { doorStructure: DetectedDoorStructure; leftSidelitePresent: boolean; rightSidelitePresent: boolean; leftSidelite: SideliteEvidence; rightSidelite: SideliteEvidence; sidelites: DetectedSidelites; sideliteConfidenceLow?: boolean; transom: boolean | null; mainDoorRegion: EntranceRegion | null; transomRegion: EntranceRegion | null; widthClass: EntranceWidthClass; approximateWidthRatio: number | null; structurallyWide: boolean; confidence: number; summary: string }
 export type EntranceCompatibility = { status: CompatibilityStatus; label: string; detectedSummary: string; selectedSummary: string; notes: string[] }
 
 export const MANUAL_ENTRANCE_OPTIONS: Array<{ value: Exclude<ExistingEntranceStructure, 'unknown'>; label: string }> = [

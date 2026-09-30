@@ -1,27 +1,16 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import sharp from 'sharp'
 import handler from '../api/generate-door-visualization'
 import completeHandler from '../api/complete-ai-visualization'
+import detectHandler from '../api/detect-entrance-structure'
 import { aiTestConfiguration } from './aiVisualizerFixture'
 
 for (const name of ['OPENAI_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']) {
   if (!process.env[name]) throw new Error(`${name} is required for the live AI usage acceptance test.`)
 }
 
-const houseSvg = Buffer.from(`
-  <svg width="1536" height="1024" xmlns="http://www.w3.org/2000/svg">
-    <rect width="1536" height="1024" fill="#b8d4e8"/>
-    <rect y="430" width="1536" height="594" fill="#d6cfbd"/>
-    <polygon points="80,430 768,80 1456,430" fill="#4a4a4a"/>
-    <rect x="590" y="430" width="356" height="594" fill="#f0ece2"/>
-    <rect x="650" y="500" width="236" height="524" fill="#714b32"/>
-    <circle cx="840" cy="770" r="12" fill="#d2ad55"/>
-    <rect x="180" y="560" width="260" height="220" fill="#8fb4c8" stroke="#f7f4ec" stroke-width="26"/>
-    <rect x="1096" y="560" width="260" height="220" fill="#8fb4c8" stroke="#f7f4ec" stroke-width="26"/>
-    <rect y="940" width="1536" height="84" fill="#617b43"/>
-  </svg>
-`)
-const house = await sharp(houseSvg).jpeg({ quality: 92 }).toBuffer()
+const house = await readFile(new URL('../public/assets/hero/hero-entryway.webp', import.meta.url))
 const productSvg = Buffer.from(`
   <svg width="600" height="1200" xmlns="http://www.w3.org/2000/svg">
     <rect width="600" height="1200" fill="none"/>
@@ -34,14 +23,27 @@ const product = await sharp(productSvg).png().toBuffer()
 
 let status = 0
 const stopwatchStartedAt = performance.now()
+const detectionStartedAt = performance.now()
+let detectionStatus = 0
+let detectionBody: { detection?: unknown; error_code?: string; user_message?: string; request_id?: string } = {}
+await detectHandler({ method: 'POST', body: { photo: `data:image/webp;base64,${house.toString('base64')}` }, headers: {} }, {
+  status(code) { detectionStatus = code; return this },
+  json(body) { detectionBody = body as typeof detectionBody },
+  setHeader() {},
+})
+const entranceDetectionDurationMs = Math.round(performance.now() - detectionStartedAt)
+assert.equal(detectionStatus, 200, detectionBody.user_message ?? detectionBody.error_code ?? 'Entrance detection failed.')
+assert.ok(detectionBody.detection)
 let responseBody: { image?: string; request_id?: string; completion_token?: string; error_code?: string; user_message?: string } = {}
 await handler({
   method: 'POST',
   body: {
-    photo: `data:image/jpeg;base64,${house.toString('base64')}`,
+    photo: `data:image/webp;base64,${house.toString('base64')}`,
     productReference: `data:image/png;base64,${product.toString('base64')}`,
     configuration: aiTestConfiguration,
-    uploadMetadata: { mimeType: 'image/jpeg', format: 'jpeg', byteSize: house.length, width: 1536, height: 1024 },
+    entranceDetection: detectionBody.detection,
+    fitStrategy: 'use-selected-product',
+    uploadMetadata: { mimeType: 'image/webp', format: 'webp', byteSize: house.length },
   },
   headers: {},
 }, {
@@ -76,5 +78,5 @@ if (process.env.AI_USAGE_EXPECT_FAILURE === '1') {
   assert.equal(stored.length, 1)
   assert.equal(stored[0].environment, 'development')
   assert.ok(Math.abs(stored[0].total_visualization_duration_ms - stopwatchDurationMs) < 1_500)
-  console.log(JSON.stringify({ ok: true, request_id: responseBody.request_id, stopwatch_duration_ms: stopwatchDurationMs, ...stored[0] }))
+  console.log(JSON.stringify({ ok: true, request_id: responseBody.request_id, entrance_detection_occurred: true, entrance_detection_duration_ms: entranceDetectionDurationMs, stopwatch_duration_ms: stopwatchDurationMs, ...stored[0] }))
 }
