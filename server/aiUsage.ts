@@ -113,13 +113,13 @@ export async function recordAiGenerationUsage(record: AiUsageRecord) {
   }
 
   try {
-    const response = await fetch(`${supabaseUrl}/rest/v1/ai_generation_usage`, {
+    const response = await fetch(`${supabaseUrl}/rest/v1/ai_generation_usage?select=id`, {
       method: 'POST',
       headers: {
         apikey: serviceRoleKey,
         Authorization: `Bearer ${serviceRoleKey}`,
         'Content-Type': 'application/json',
-        Prefer: 'return=minimal',
+        Prefer: 'return=representation',
       },
       body: JSON.stringify({
         completed_at: record.completedAt,
@@ -143,10 +143,13 @@ export async function recordAiGenerationUsage(record: AiUsageRecord) {
         completion_token_hash: record.completionTokenHash,
       }),
     })
+    const savedRows = await response.json().catch(() => null) as Array<{ id?: unknown }> | null
     if (!response.ok) {
-      console.error('[ai-usage:write-failed]', { request_id: record.requestId, status: response.status })
+      console.error('[ai-usage:write-failed]', { request_id: record.requestId, reason: 'supabase_http_error', status: response.status })
       return false
     }
+    const rowId = typeof savedRows?.[0]?.id === 'string' ? savedRows[0].id : 'not_returned'
+    console.info('[ai-usage:saved]', { request_id: record.requestId, row_id: rowId })
     return true
   } catch (error) {
     console.error('[ai-usage:write-failed]', {
@@ -179,13 +182,13 @@ export async function recordAiEntranceDetectionUsage(record: EntranceDetectionUs
     return false
   }
   try {
-    const response = await fetch(`${supabaseUrl}/rest/v1/ai_entrance_detection_usage`, {
+    const response = await fetch(`${supabaseUrl}/rest/v1/ai_entrance_detection_usage?select=id`, {
       method: 'POST',
       headers: {
         apikey: serviceRoleKey,
         Authorization: `Bearer ${serviceRoleKey}`,
         'Content-Type': 'application/json',
-        Prefer: 'return=minimal',
+        Prefer: 'return=representation',
       },
       body: JSON.stringify({
         completed_at: record.completedAt,
@@ -205,10 +208,13 @@ export async function recordAiEntranceDetectionUsage(record: EntranceDetectionUs
         error_code: record.errorCode,
       }),
     })
+    const savedRows = await response.json().catch(() => null) as Array<{ id?: unknown }> | null
     if (!response.ok) {
-      console.error('[ai-entrance-usage:write-failed]', { request_id: record.requestId, status: response.status })
+      console.error('[ai-entrance-usage:write-failed]', { request_id: record.requestId, reason: 'supabase_http_error', status: response.status })
       return false
     }
+    const rowId = typeof savedRows?.[0]?.id === 'string' ? savedRows[0].id : 'not_returned'
+    console.info('[ai-entrance-usage:saved]', { request_id: record.requestId, row_id: rowId })
     return true
   } catch (error) {
     console.error('[ai-entrance-usage:write-failed]', { request_id: record.requestId, reason: error instanceof Error ? error.name : 'unknown_error' })

@@ -5,7 +5,7 @@ import completeHandler from '../api/complete-ai-visualization.ts'
 import { aiTestConfiguration } from './aiVisualizerFixture'
 import { doorStyles, glassOptions } from '../src/data/options'
 import { aiPixelCorners, aiWorkingSize } from '../src/features/home-visualizer/aiImagePreparation'
-import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiDoorGeometryInstructionBlock, aiEntranceFitInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiSideliteProductFidelityInstructionBlock, aiStructuralInstructionBlock, entranceFitContext, loadAiReference, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
+import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiDoorGeometryInstructionBlock, aiEntranceFitInstructionBlock, aiFixedOuterEntranceInstructionBlock, aiGlassGeometryInstructionBlock, aiHousePreservationInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiSideliteProductFidelityInstructionBlock, aiStructuralInstructionBlock, automaticEntranceMaskCorners, constrainGeneratedImageToMask, detectedOuterEntranceCorners, entranceFitContext, loadAiReference, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
 import { detectedEntranceStructure, evaluateEntranceCompatibility, getDetectedVisualizerOpeningFamily, getSelectedVisualizerOpeningFamily } from '../src/features/home-visualizer/entranceFitStrategy'
 import { conservativeVerifiedSidelites, DETECTION_MODEL, entranceDetectionInstructions, normalizeEntranceDetection, validateSideliteGeometry, type ModelDetection } from '../api/detect-entrance-structure'
 import { AI_IMAGE_PRICING_USD_PER_MILLION, aiUsageEnvironment, estimateImageGenerationCost, normalizeImageUsage } from '../server/aiUsage'
@@ -23,7 +23,15 @@ const productReferenceBytes = await sharp({ create: { width: 600, height: 1200, 
   .composite([{ input: Buffer.from('<svg width="600" height="1200"><rect x="90" y="40" width="420" height="1120" rx="4" fill="#242424"/><rect x="250" y="210" width="100" height="360" fill="#b9d5df"/></svg>') }])
   .png().toBuffer()
 const productReference = `data:image/png;base64,${productReferenceBytes.toString('base64')}`
-const source = { photo: `data:image/jpeg;base64,${bytes.toString('base64')}`, productReference, corners, configuration: aiTestConfiguration }
+const generatedBytes = await sharp({ create: { width: 1536, height: 1024, channels: 3, background: '#b42727' } }).jpeg({ quality: 95 }).toBuffer()
+const entranceDetection = {
+  doorStructure: 'single', sidelites: 'none', leftSidelitePresent: false, rightSidelitePresent: false, transom: false,
+  mainDoorRegion: { x: .4, y: .18, width: .2, height: .68 }, transomRegion: null,
+  leftSidelite: { present: false, confidence: .98, evidence: 'absent', region: null },
+  rightSidelite: { present: false, confidence: .98, evidence: 'absent', region: null },
+  widthClass: 'standard', approximateWidthRatio: .2, structurallyWide: false, confidence: .98, summary: 'Single door.',
+}
+const source = { photo: `data:image/jpeg;base64,${bytes.toString('base64')}`, productReference, corners, configuration: aiTestConfiguration, entranceDetection }
 let forwardedForm: FormData | null = null
 let calls = 0
 let openAiFailure: 'none' | 'rate' | 'rejected' | 'empty' = 'none'
@@ -48,7 +56,7 @@ globalThis.fetch = (async (url, init) => {
     assert.equal(init?.method, 'POST')
     assert.equal(new Headers(init?.headers).get('apikey'), 'mock-service-role-key')
     telemetryRows.push(JSON.parse(String(init?.body)) as Record<string, unknown>)
-    return new Response(null, { status: telemetryFailure ? 500 : 201 })
+    return telemetryFailure ? new Response(null, { status: 500 }) : Response.json([{ id: `generation-row-${telemetryRows.length}` }], { status: 201 })
   }
   calls += 1
   assert.equal(url, 'https://api.openai.com/v1/images/edits', 'Never fetch a browser-supplied URL')
@@ -59,7 +67,7 @@ globalThis.fetch = (async (url, init) => {
   if (openAiFailure === 'rate') return new Response(JSON.stringify({ error: { code: 'rate_limit_exceeded', message: 'SECRET INTERNAL ERROR' } }), { status: 429, headers: { 'x-request-id': 'openai-rate-test' } })
   if (openAiFailure === 'rejected') return new Response(JSON.stringify({ error: { code: 'invalid_image', type: 'image_generation_user_error', message: 'SECRET INTERNAL ERROR' } }), { status: 400, headers: { 'x-request-id': 'openai-rejected-test' } })
   if (openAiFailure === 'empty') return new Response(JSON.stringify({ data: [], usage }), { status: 200, headers: { 'x-request-id': 'openai-empty-test' } })
-  return new Response(JSON.stringify({ data: [{ b64_json: 'YWktcmVzdWx0' }], usage }), { status: 200, headers: { 'x-request-id': 'openai-success-test' } })
+  return new Response(JSON.stringify({ data: [{ b64_json: generatedBytes.toString('base64') }], usage }), { status: 200, headers: { 'x-request-id': 'openai-success-test' } })
 }) as typeof fetch
 
 let checks = 0
@@ -187,8 +195,33 @@ try {
   assert.equal(mismatched.original.format, 'jpeg', 'Actual bytes, not the declared MIME, determine the format')
   fixtureReport.push({ name: 'misleading PNG MIME with JPEG data', before: `2400x1600 / ${bytes.length} bytes`, after: `${mismatched.normalized.width}x${mismatched.normalized.height} / ${mismatched.normalized.byteSize} bytes` })
   await assert.rejects(() => prepareHouseAndMask('data:image/jpeg;base64,aW52YWxpZA==', null), (error: unknown) => error instanceof AiInputError && error.code === 'IMAGE_DECODE_FAILED')
+  const detectedContext = entranceFitContext({
+    doorStructure: 'single', sidelites: 'both', leftSidelitePresent: true, rightSidelitePresent: true, transom: false,
+    mainDoorRegion: { x: .4, y: .2, width: .2, height: .65 },
+    leftSidelite: { present: true, confidence: .95, evidence: 'separate panel', region: { x: .3, y: .2, width: .08, height: .65 } },
+    rightSidelite: { present: true, confidence: .95, evidence: 'separate panel', region: { x: .62, y: .2, width: .08, height: .65 } },
+    widthClass: 'wide', confidence: .95,
+  }, 'use-selected-product')
+  const automaticMaskBounds = automaticEntranceMaskCorners(detectedContext.detection)
+  const fixedOuterBounds = detectedOuterEntranceCorners(detectedContext.detection)
+  assert.ok(automaticMaskBounds)
+  assert.ok(fixedOuterBounds)
+  assert.ok(automaticMaskBounds.topLeft.x < fixedOuterBounds.topLeft.x && automaticMaskBounds.topRight.x > fixedOuterBounds.topRight.x, 'blend mask is separate and slightly larger than fixed opening')
+  assert.ok(automaticMaskBounds.topLeft.x > .25 && automaticMaskBounds.topRight.x < .75, 'automatic mask stays tight to the entrance')
+  const automaticallyMasked = await prepareHouseAndMask(source.photo, null, automaticMaskBounds)
+  assert.ok(automaticallyMasked.mask)
+  const maskPixels = await sharp(automaticallyMasked.mask!).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+  const alphaAt = (x: number, y: number) => maskPixels.data[(y * maskPixels.info.width + x) * 4 + 3]
+  assert.equal(alphaAt(10, 10), 255, 'unrelated facade remains protected')
+  assert.equal(alphaAt(Math.round(maskPixels.info.width / 2), Math.round(maskPixels.info.height / 2)), 0, 'detected entrance remains editable')
+  const constrained = await constrainGeneratedImageToMask(generatedBytes, automaticallyMasked.photo, automaticallyMasked.mask!, automaticallyMasked.width, automaticallyMasked.height)
+  const constrainedSamples = await sharp(constrained).raw().toBuffer({ resolveWithObject: true })
+  const pixelAt = (x: number, y: number) => Array.from(constrainedSamples.data.subarray((y * constrainedSamples.info.width + x) * 3, (y * constrainedSamples.info.width + x) * 3 + 3))
+  const protectedPixel = pixelAt(10, 10), editablePixel = pixelAt(Math.round(constrainedSamples.info.width / 2), Math.round(constrainedSamples.info.height / 2))
+  assert.ok(Math.abs(protectedPixel[0] - protectedPixel[1]) < 3 && Math.abs(protectedPixel[1] - protectedPixel[2]) < 3, 'outside-mask facade pixel is restored from the original house')
+  assert.ok(editablePixel[0] > editablePixel[1] * 2, `inside-mask entrance pixel comes from the generated result (${editablePixel.join(',')})`)
   console.log('AI house-photo normalization fixtures:', fixtureReport)
-  checks += 10
+  checks += 24
 
   const trusted = resolveAiProduct(aiTestConfiguration)
   const configuredReferences = await prepareConfiguredProductReferences(productReference)
@@ -216,6 +249,23 @@ try {
   const sideliteConflictPrompt = aiPrompt(squareLiteSidelites.snapshot, null, ['authoritative flattened configured entrance'])
   assert.match(sideliteConflictPrompt, /existing photographed door or sidelites/)
   assert.match(sideliteConflictPrompt, /If Image 1 and Image 2 conflict about any product detail, Image 2 ALWAYS wins/)
+  const houseRules = aiHousePreservationInstructionBlock(null, true)
+  assert.match(houseRules, /immutable environment reference/)
+  assert.match(houseRules, /Do not modify pixels outside it/)
+  assert.match(houseRules, /Major pixels outside the entrance must remain aligned for the before\/after slider/)
+  const glassRules = aiGlassGeometryInstructionBlock()
+  assert.match(glassRules, /width-to-height aspect ratio exactly/)
+  assert.match(glassRules, /Square or near-square glass must remain square or near-square/)
+  assert.match(glassRules, /Never distort or redesign the configured product/)
+  const boundaryRules = aiFixedOuterEntranceInstructionBlock(fixedOuterBounds, { width: 1536, height: 1024 })
+  assert.match(boundaryRules, /complete configured entrance must occupy essentially this same outer boundary/)
+  assert.match(boundaryRules, /Scale and perspective-place the COMPLETE configured entrance assembly as one unit/)
+  assert.match(boundaryRules, /Never resize individual product pieces independently/)
+  assert.match(boundaryRules, /outer width-to-height ratio/)
+  const squareGlassPrompt = aiPrompt(squareLiteSidelites.snapshot, null, ['authoritative flattened configured entrance'], detectedContext, true, fixedOuterBounds, { width: 1536, height: 1024 })
+  assert.match(squareGlassPrompt, /automatically detected edit mask tightly encloses the entrance assembly/)
+  assert.match(squareGlassPrompt, /Do not stretch square glass vertically or horizontally/)
+  assert.match(squareGlassPrompt, /FIXED OUTER ENTRANCE BOUNDARY — AUTHORITATIVE PLACEMENT TARGET/)
   const hrt = doorStyles.find(item => item.code === 'HRT')!
   const hrtVariant = hrt.variants.find(item => item.lineId === '22-gauge-steel')!
   const glassProduct = resolveAiProduct({ ...aiTestConfiguration, style: hrt,
@@ -265,7 +315,8 @@ try {
   assert.match(fidelityBlock, /Do not simplify the configured product into a generic door\./)
   assert.match(fidelityBlock, /Do not redesign, embellish, or simplify the selected product\./)
   assert.match(fidelityBlock, /Do not add optional features that were not selected\./)
-  assert.match(fidelityBlock, /adjust architecture around the configured door rather than redesigning the door itself/)
+  assert.match(fidelityBlock, /tiny jamb\/casing transition directly touching the configured frame/)
+  assert.match(fidelityBlock, /Do not change brick, stone, siding, opening height, porch, steps, flooring, columns, landscaping/)
   assert.match(fidelityBlock, /flattened configured\/rendered entrance in Image 2 is the authoritative reference/)
   assert.match(fidelityBlock, /Do not reinterpret the style\./)
   assert.match(fidelityBlock, /Do not simplify the design\./)
@@ -280,7 +331,8 @@ try {
   assert.match(geometryBlock, /exact hardware type, exact count \(1\)/)
   assert.match(geometryBlock, /Do not elongate, widen, narrow, shrink, crop, merge, divide, rotate, or reposition glass lites arbitrarily/)
   assert.match(geometryBlock, /Make the result photorealistic, but keep the same geometry and proportions from the configured render/)
-  assert.match(geometryBlock, /Adjust the surrounding architecture to fit the configured door, not the configured door to fit the surrounding architecture/)
+  assert.match(geometryBlock, /Preserve architecture outside the masked entrance/)
+  assert.match(geometryBlock, /only a tiny jamb\/frame transition directly adjacent/)
   assert.match(mismatchPrompt, /AUTHORITATIVE PRODUCT FIDELITY RULES/)
   const detectedWideEntrance = { doorStructure: 'single', sidelites: 'both', transom: true, widthClass: 'wide', approximateWidthRatio: .42, structurallyWide: true, confidence: .94, summary: 'Single door with two sidelites and a transom.' } as const
   const fitBlock = aiEntranceFitInstructionBlock(entranceFitContext(detectedWideEntrance, 'use-selected-product'))
@@ -335,13 +387,12 @@ try {
     ['double to single', /Original double -> target single:/],
     ['single both sidelites to single none', /Existing single with both sidelites -> target single with none:/],
     ['single both sidelites to double none', /Existing single with both sidelites -> target double with none:/],
-    ['double none to single none', /Original double -> target single: install one normally proportioned slab/],
+    ['double none to single none', /Original double -> target single: this mismatch must be handled by compatibility rules before generation/],
     ['double none to single both', /Existing double with none -> target single with both:/],
     ['double both sidelites to single left', /Existing double with both sidelites -> target single with left only:/],
     ['both sidelites to left only', /Existing both sidelites -> target left only:/],
     ['left only to right only', /Existing left only -> target right only:/],
-    ['target wider than source', /If the target is wider than the existing entrance/],
-    ['target narrower than source', /If the target is narrower/],
+    ['preserve architecture for width mismatch', /Preserve the existing architecture outside the entrance opening/],
     ['existing transom', /Preserve an existing transom by default/],
     ['storm or screen door', /A storm or screen door is not the configured primary entry door/],
     ['nearby windows are not sidelites', /Do not mistake an adjacent house window for a sidelite/],
@@ -351,14 +402,14 @@ try {
   assert.match(mismatchPrompt, /Do not preserve an original door leaf or sidelite merely because it exists in the photo/)
   assert.match(mismatchPrompt, /target sidelite_structure is the sole authority/)
   assert.match(mismatchPrompt, /DOOR SLABS, SIDELITES, AND SURROUNDING ARCHITECTURE ARE THREE SEPARATE WIDTH REGIONS/)
-  assert.match(mismatchPrompt, /Do not interpret the entire original framed opening or entrance composition as the width of the new target slab or slab pair/)
+  assert.match(mismatchPrompt, /Do not interpret the entire original framed opening as flexible product width/)
   assert.equal(AI_SINGLE_DOOR_WIDTH_BIAS, .94)
   assert.match(mismatchPrompt, /apply a subtle width bias of 0\.94 \(about 6% narrower\)/)
   assert.match(mismatchPrompt, /keeping its height unchanged/)
   assert.match(mismatchPrompt, /approximately 0\.35 of the adjusted single slab/)
-  assert.match(mismatchPrompt, /Do not shrink the whole entrance, jamb, or surrounding architecture with the slab/)
+  assert.match(mismatchPrompt, /never change porch, steps, columns, wall, masonry, siding/)
   assert.match(mismatchPrompt, /DOUBLE-DOOR RULE: a target double entrance must remain exactly two normally proportioned residential door slabs/)
-  assert.match(mismatchPrompt, /reconstruct every unused side region/)
+  assert.match(mismatchPrompt, /minimum jamb\/frame\/opening boundary inside the mask/)
   assert.match(mismatchPrompt, /The slab must not become oversized because the old composition was wide/)
   assert.match(mismatchPrompt, /BAD RESULTS TO AVOID: one giant single slab/)
   assert.match(mismatchPrompt, /ghost seams left by removed sidelites/)
@@ -373,9 +424,9 @@ try {
   assert.ok(result.image?.startsWith('data:image/jpeg;base64,'))
   assert.ok(result.request_id)
   assert.ok(result.completion_token)
-  const completion = await complete({ request_id: result.request_id, completion_token: result.completion_token, total_visualization_duration_ms: 63_800 }, 200)
+  const completion = await complete({ request_id: result.request_id, completion_token: result.completion_token, total_visualization_duration_ms: 63_800, entrance_stage_duration_ms: 8_450 }, 200)
   assert.equal(completion.ok, true)
-  assert.deepEqual(telemetryUpdates.at(-1), { total_visualization_duration_ms: 63_800, completion_token_hash: null })
+  assert.deepEqual(telemetryUpdates.at(-1), { total_visualization_duration_ms: 63_800, entrance_stage_duration_ms: 8_450, completion_token_hash: null })
   await complete({ request_id: result.request_id, completion_token: result.completion_token, total_visualization_duration_ms: -1 }, 400)
   assert.ok(forwardedForm)
   const form = forwardedForm as FormData
@@ -435,8 +486,11 @@ try {
 
   const automaticResult = await request({ ...source, corners: undefined }, 200)
   assert.ok(automaticResult.image)
-  assert.equal((forwardedForm as FormData).get('mask'), null)
+  assert.ok((forwardedForm as FormData).get('mask') instanceof Blob)
   assert.match(String((forwardedForm as FormData).get('prompt')), /Locate the existing main exterior entrance/)
+  const unmasked = await request({ ...source, corners: undefined, entranceDetection: undefined }, 422)
+  assert.equal(unmasked.error_code, 'INVALID_REQUEST')
+  assert.match(unmasked.user_message!, /Help AI locate the entrance/)
 
   openAiFailure = 'rate'
   const failed = await request(source, 429)

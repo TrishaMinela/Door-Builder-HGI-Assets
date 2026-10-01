@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { AI_MAX_REQUEST_BYTES, AI_MODEL, AI_QUALITY, AiGenerationError, AiInputError, aiPrompt, entranceFitContext, loadAiReference, objectValue, optionalCorners, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct, type AiErrorCode } from '../server/aiDoorVisualization.js'
+import { AI_MAX_REQUEST_BYTES, AI_MODEL, AI_QUALITY, AiGenerationError, AiInputError, aiPrompt, automaticEntranceMaskCorners, constrainGeneratedImageToMask, detectedOuterEntranceCorners, entranceFitContext, loadAiReference, objectValue, optionalCorners, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct, type AiErrorCode } from '../server/aiDoorVisualization.js'
 import { aiUsageEnvironment, estimateImageGenerationCost, normalizeImageUsage, recordAiGenerationUsage, type OpenAiImageUsage } from '../server/aiUsage.js'
 
 type ApiRequest = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> }
@@ -54,9 +54,12 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
   const startedAt = Date.now()
   const corners = optionalCorners(source.corners)
   const fitContext = entranceFitContext(source.entranceDetection, source.fitStrategy)
+  const fixedOuterBounds = corners ?? detectedOuterEntranceCorners(fitContext.detection)
+  const automaticMaskCorners = corners ? null : automaticEntranceMaskCorners(fitContext.detection)
+  if (!corners && !automaticMaskCorners) throw new AiInputError('INVALID_REQUEST', 'We could not safely isolate the entrance. Use “Help AI locate the entrance” and select its four corners.', 422)
   const product = resolveAiProduct(source.configuration, source.jambFinishId, source.glassFrameFinishId)
   const housePreparationStartedAt = Date.now()
-  const prepared = await prepareHouseAndMask(source.photo, corners)
+  const prepared = await prepareHouseAndMask(source.photo, corners, automaticMaskCorners)
   const housePreparationDurationMs = Date.now() - housePreparationStartedAt
   const productPreparationStartedAt = Date.now()
   const configuredReferences = source.productReference ? await prepareConfiguredProductReferences(source.productReference) : null
@@ -99,7 +102,7 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
       throw new AiGenerationError('REFERENCE_IMAGE_FAILED', `Product reference failed to load: ${reference.label}`, 500, { cause: error })
     }
   }
-  const prompt = aiPrompt(product.snapshot, corners, labels, fitContext)
+  const prompt = aiPrompt(product.snapshot, corners, labels, fitContext, Boolean(automaticMaskCorners), fixedOuterBounds, { width: prepared.width, height: prepared.height })
   form.append('prompt', prompt)
   form.append('n', '1')
   const outputSize = prepared.width > prepared.height ? '1536x1024' : prepared.height > prepared.width ? '1024x1536' : '1024x1024'
@@ -108,7 +111,9 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
   form.append('output_format', 'jpeg')
   form.append('output_compression', '100')
   const approximateRequestBytes = prepared.photo.length + (prepared.mask?.length ?? 0) + referenceSizes.reduce((sum, size) => sum + size, 0) + Buffer.byteLength(prompt)
-  console.info('[ai-visualizer:request]', { request_id: requestId, original_image: originalImageDiagnostic(source.uploadMetadata, prepared.original), normalized_ai_input: prepared.normalized, output_size: outputSize, placement_mode: corners ? 'user-corners' : 'automatic', product_reference_mode: configuredReferences ? 'flattened-configured-render' : 'catalog-fallback', product_reference_count: labels.length, product_reference_bytes: referenceSizes, approximate_request_bytes: approximateRequestBytes, durations_ms: { house_preparation: housePreparationDurationMs, product_reference_preparation: productPreparationDurationMs, before_openai: Date.now() - startedAt } })
+  const fixedWidthPx = fixedOuterBounds ? (fixedOuterBounds.topRight.x - fixedOuterBounds.topLeft.x) * prepared.width : null
+  const fixedHeightPx = fixedOuterBounds ? (fixedOuterBounds.bottomLeft.y - fixedOuterBounds.topLeft.y) * prepared.height : null
+  console.info('[ai-visualizer:request]', { request_id: requestId, original_image: originalImageDiagnostic(source.uploadMetadata, prepared.original), normalized_ai_input: prepared.normalized, output_size: outputSize, placement_mode: corners ? 'user-corners' : 'automatic', fixed_outer_entrance_bounds: fixedOuterBounds, fixed_outer_entrance_pixels: fixedWidthPx && fixedHeightPx ? { width: Math.round(fixedWidthPx), height: Math.round(fixedHeightPx), aspect_ratio: Number((fixedWidthPx / fixedHeightPx).toFixed(4)) } : null, edit_mask_mode: corners ? 'user-corners' : automaticMaskCorners ? 'detected-entrance-tight' : 'none', edit_mask_bounds: corners ?? automaticMaskCorners, product_reference_mode: configuredReferences ? 'flattened-configured-render' : 'catalog-fallback', product_reference_count: labels.length, product_reference_bytes: referenceSizes, product_reference_dimensions: configuredReferences?.map(reference => ({ width: reference.width, height: reference.height, aspect_ratio: Number((reference.width / reference.height).toFixed(4)) })) ?? [], approximate_request_bytes: approximateRequestBytes, durations_ms: { house_preparation: housePreparationDurationMs, product_reference_preparation: productPreparationDurationMs, before_openai: Date.now() - startedAt } })
 
   let upstream: Response
   const openAiStartedAt = Date.now()
@@ -146,15 +151,22 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
     if (errorCode === 'SERVER_CONFIGURATION_ERROR') throw new AiGenerationError(errorCode, 'AI visualization is temporarily unavailable. Manual mode is still available.', 503)
     throw new AiGenerationError('OPENAI_REQUEST_REJECTED', 'OpenAI could not process this photo. Try another photo or use the doorway locator.', upstream.status >= 500 ? 502 : 422)
   }
-  const image = result?.data?.[0]?.b64_json
-  if (!image) {
+  const generatedImage = result?.data?.[0]?.b64_json
+  if (!generatedImage) {
     await writeUsage('failed', 'NO_GENERATED_IMAGE', result?.usage, openAiDurationMs)
     throw new AiGenerationError('NO_GENERATED_IMAGE', 'The AI service completed without returning an image. Please try again.', 502)
   }
-  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(image)) {
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(generatedImage)) {
     await writeUsage('failed', 'NO_GENERATED_IMAGE', result?.usage, openAiDurationMs)
     throw new AiGenerationError('NO_GENERATED_IMAGE', 'The generated image could not be read. Please try again.', 502)
   }
+  if (generatedImage.length > 4 * 1024 * 1024) {
+    await writeUsage('failed', 'PAYLOAD_TOO_LARGE', result?.usage, openAiDurationMs)
+    throw new AiGenerationError('PAYLOAD_TOO_LARGE', 'The generated visualization was too large to deliver. Please try a less detailed photo.', 502)
+  }
+  if (!prepared.mask) throw new AiGenerationError('NO_GENERATED_IMAGE', 'The entrance protection mask was unavailable. Please retry using the doorway locator.', 502)
+  const constrainedImage = await constrainGeneratedImageToMask(Buffer.from(generatedImage, 'base64'), prepared.photo, prepared.mask, prepared.width, prepared.height)
+  const image = constrainedImage.toString('base64')
   if (image.length > 4 * 1024 * 1024) {
     await writeUsage('failed', 'PAYLOAD_TOO_LARGE', result?.usage, openAiDurationMs)
     throw new AiGenerationError('PAYLOAD_TOO_LARGE', 'The generated visualization was too large to deliver. Please try a less detailed photo.', 502)

@@ -48,7 +48,12 @@ try {
       detectionRequests += 1
       if (!detectionRouteAvailable) { await route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not found' }); return }
       await new Promise<void>(resolve => { releaseDetection = resolve })
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ detection: { doorStructure: detectedDoor, sidelites: 'none', transom: false, widthClass: detectedDoor === 'single' ? 'standard' : 'wide', approximateWidthRatio: .35, structurallyWide: detectedDoor === 'double', confidence: .96, summary: detectedDoor === 'single' ? 'Single door.' : 'Double doors.' }, request_id: 'detection-test' }) })
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ detection: {
+        doorStructure: detectedDoor, sidelites: 'none', leftSidelitePresent: false, rightSidelitePresent: false,
+        leftSidelite: { present: false, confidence: .96, evidence: 'Absent.', region: null }, rightSidelite: { present: false, confidence: .96, evidence: 'Absent.', region: null },
+        transom: false, mainDoorRegion: { x: .36, y: .18, width: .28, height: .68 }, transomRegion: null,
+        widthClass: detectedDoor === 'single' ? 'standard' : 'wide', approximateWidthRatio: .35, structurallyWide: detectedDoor === 'double', confidence: .96, summary: detectedDoor === 'single' ? 'Single door.' : 'Double doors.',
+      }, request_id: 'detection-test' }) })
     })
     await page.route('**/api/generate-door-visualization', async route => {
       requests += 1
@@ -108,12 +113,9 @@ try {
       await chooser.setFiles({ name: 'compatible-home.jpg', mimeType: 'image/jpeg', buffer: compatiblePhoto })
       await new Promise<void>(resolve => { const check = () => releaseDetection ? resolve() : setTimeout(check, 25); check() })
       releaseDetection!()
-      const generate = page.getByRole('button', { name: 'Generate AI visualization', exact: true })
-      await generate.waitFor()
-      await page.waitForFunction(() => !(document.querySelector('.ai-generate-button') as HTMLButtonElement | null)?.disabled)
-      assert.equal(requests, 0, 'Changing an incompatible photo does not automatically spend a generation')
-      await generate.click()
       await page.getByRole('button', { name: 'Try Again', exact: true }).waitFor()
+      assert.equal(requests, 1, 'A compatible replacement photo automatically starts exactly one generation')
+      assert.equal(await page.getByRole('button', { name: 'Generate AI visualization', exact: true }).count(), 0, 'Compatible flow has no extra Generate button')
       photoBefore = await page.locator('img[alt^="Uploaded entrance photo"]').getAttribute('src')
     }
     await page.getByRole('button', { name: 'Try Again', exact: true }).waitFor()
@@ -136,7 +138,7 @@ try {
     await page.getByText('Analyzing your doorway', { exact: true }).waitFor()
     await page.getByText('This may take a minute or two.', { exact: true }).waitFor()
     assert.equal(await page.getByText('Status messages are illustrative.', { exact: false }).count(), 0)
-    assert.equal(await page.getByRole('button', { name: 'AI visualization generation status' }).isDisabled(), true)
+    assert.equal(await page.getByRole('button', { name: 'Generate AI visualization', exact: true }).count(), 0, 'Generation starts without a second CTA')
     await page.waitForFunction(() => document.querySelector('.ai-photo-loading-overlay') !== null)
     const overlayBounds = await page.locator('.ai-photo-loading-overlay').boundingBox()
     const photoBounds = await page.locator('.ai-photo-placement-area .visualizer-editor').boundingBox()
@@ -182,17 +184,13 @@ try {
     assert.equal(await page.locator('.entrance-corner-handle').count(), 4, 'Changing the photo resets Manual placement points for the replacement image')
     await page.getByRole('button', { name: 'Start Placing Points', exact: false }).click()
     await ai.click()
+    fail = true
     await new Promise<void>(resolve => { const check = () => releaseDetection ? resolve() : setTimeout(check, 25); check() })
     releaseDetection!()
-    const replacementGenerate = page.locator('.ai-generate-button')
-    await replacementGenerate.waitFor()
-    await page.waitForFunction(() => !(document.querySelector('.ai-generate-button') as HTMLButtonElement | null)?.disabled)
-    assert.equal(detectionRequests, detectionRequestsBeforeReplacement + 1, 'Replacement photo receives fresh entrance detection')
-    assert.equal(requests, 2, 'Replacing and analyzing a photo does not automatically start paid generation')
-    fail = true
-    await replacementGenerate.click()
     await page.getByRole('button', { name: 'Try Again', exact: true }).waitFor()
-    assert.equal(requests, 3)
+    assert.equal(detectionRequests, detectionRequestsBeforeReplacement + 1, 'Replacement photo receives fresh entrance detection')
+    assert.equal(requests, 3, 'Replacing and analyzing a compatible photo automatically starts one generation')
+    assert.equal(await page.locator('.ai-generate-button').count(), 0, 'Replacement flow has no obsolete Generate button')
     assert.deepEqual(captured!.configuration, JSON.parse(JSON.stringify(aiTestConfiguration)), 'Replacement generation preserves the configured door')
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
     await page.close()

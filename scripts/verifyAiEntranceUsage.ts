@@ -33,7 +33,7 @@ globalThis.fetch = (async (url, init) => {
   if (String(url).startsWith('https://telemetry-test.supabase.co/rest/v1/ai_entrance_detection_usage')) {
     assert.equal(init?.method, 'POST')
     telemetryRows.push(JSON.parse(String(init.body)) as Record<string, unknown>)
-    return new Response(null, { status: telemetryFailure ? 500 : 201 })
+    return telemetryFailure ? new Response(null, { status: 500 }) : Response.json([{ id: `entrance-row-${telemetryRows.length}` }], { status: 201 })
   }
   throw new Error(`Unexpected fetch: ${url}`)
 }) as typeof fetch

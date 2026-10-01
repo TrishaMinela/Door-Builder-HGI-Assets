@@ -175,7 +175,7 @@ export async function generateAiVisualization(input: {
   return { image: result.image, requestId: responseRequestId, completionToken: result.completion_token ?? '' }
 }
 
-export async function reportAiVisualizationReady(requestId: string, completionToken: string, totalVisualizationDurationMs: number) {
+export async function reportAiVisualizationReady(requestId: string, completionToken: string, totalVisualizationDurationMs: number, entranceStageDurationMs: number | null) {
   if (!requestId || !completionToken) return false
   try {
     const response = await fetch('/api/complete-ai-visualization', {
@@ -185,6 +185,7 @@ export async function reportAiVisualizationReady(requestId: string, completionTo
         request_id: requestId,
         completion_token: completionToken,
         total_visualization_duration_ms: Math.max(1, Math.round(totalVisualizationDurationMs)),
+        entrance_stage_duration_ms: entranceStageDurationMs === null ? null : Math.max(1, Math.round(entranceStageDurationMs)),
       }),
     })
     if (!response.ok) console.warn('[ai-usage:completion-failed]', { request_id: requestId, status: response.status })

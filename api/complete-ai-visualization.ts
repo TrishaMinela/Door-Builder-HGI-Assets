@@ -23,7 +23,8 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   const requestId = typeof source?.request_id === 'string' ? source.request_id : ''
   const completionToken = typeof source?.completion_token === 'string' ? source.completion_token : ''
   const duration = source?.total_visualization_duration_ms
-  if (!UUID_PATTERN.test(requestId) || !UUID_PATTERN.test(completionToken) || !Number.isSafeInteger(duration) || (duration as number) < 1 || (duration as number) > MAX_VISUALIZATION_DURATION_MS) {
+  const entranceStageDuration = source?.entrance_stage_duration_ms
+  if (!UUID_PATTERN.test(requestId) || !UUID_PATTERN.test(completionToken) || !Number.isSafeInteger(duration) || (duration as number) < 1 || (duration as number) > MAX_VISUALIZATION_DURATION_MS || (entranceStageDuration !== null && (!Number.isSafeInteger(entranceStageDuration) || (entranceStageDuration as number) < 1 || (entranceStageDuration as number) > MAX_VISUALIZATION_DURATION_MS))) {
     response.status(400).json({ ok: false })
     return
   }
@@ -52,7 +53,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
         'Content-Type': 'application/json',
         Prefer: 'return=representation',
       },
-      body: JSON.stringify({ total_visualization_duration_ms: duration, completion_token_hash: null }),
+      body: JSON.stringify({ total_visualization_duration_ms: duration, entrance_stage_duration_ms: entranceStageDuration, completion_token_hash: null }),
     })
     const updated = update.ok ? await update.json().catch(() => []) as unknown[] : []
     if (!update.ok || updated.length !== 1) {
