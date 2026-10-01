@@ -78,7 +78,10 @@ async function prepareAiConfiguredProductReferenceUncached(source: string) {
     context.imageSmoothingQuality = 'high'
     context.clearRect(0, 0, canvas.width, canvas.height)
     context.drawImage(image, 0, 0, canvas.width, canvas.height)
-    return canvas.toDataURL('image/webp', .98)
+    // Product geometry is authoritative and contains small sidelite/grid and
+    // hardware details. Keep this single reference lossless; the house photo
+    // remains WebP-compressed independently.
+    return canvas.toDataURL('image/png')
   } finally {
     URL.revokeObjectURL(objectUrl)
   }
@@ -125,7 +128,30 @@ export async function generateAiVisualization(input: {
     entranceDetection: input.entranceDetection, fitStrategy: input.fitStrategy,
     uploadMetadata: { ...input.uploadMetadata, width: prepared.naturalWidth, height: prepared.naturalHeight },
     jambFinishId: input.jambFinish?.id, glassFrameFinishId: input.glassFrameFinish?.id })
-  console.info('[ai-visualizer:browser-prepared]', { house_cache_hit: houseCacheHit, product_reference_cache_hit: productReferenceCacheHit, browser_request_bytes: new Blob([requestBody]).size, durations_ms: { house_normalization: Math.round(houseDurationMs), product_reference_preparation: Math.round(productDurationMs), total: Math.round(performance.now() - preparationStartedAt) } })
+  if (import.meta.env.DEV) {
+    const sidelitePlacement = input.configuration.sidelites === 'both-sides' ? 'both' : input.configuration.sidelites === 'hinge-side' ? 'left' : input.configuration.sidelites === 'lock-side' ? 'right' : 'none'
+    console.info('[ai-visualizer:browser-prepared]', {
+      house_cache_hit: houseCacheHit,
+      product_reference_cache_hit: productReferenceCacheHit,
+      product_reference_mode: 'flattened-configured-render',
+      product_reference_count: 1,
+      product_reference_format: 'png',
+      configured_sidelites: {
+        exists: sidelitePlacement !== 'none',
+        count: sidelitePlacement === 'both' ? 2 : sidelitePlacement === 'none' ? 0 : 1,
+        placement: sidelitePlacement,
+        slab: input.configuration.sideliteSlab ?? null,
+        glass: input.configuration.sideliteGlass?.glass ?? null,
+        grid: input.configuration.sideliteGlass ? {
+          location: input.configuration.sideliteGlass.gridLocation ?? null,
+          style: input.configuration.sideliteGlass.gridStyle ?? null,
+          pattern: input.configuration.sideliteGlass.gridPattern ?? null,
+        } : null,
+      },
+      browser_request_bytes: new Blob([requestBody]).size,
+      durations_ms: { house_normalization: Math.round(houseDurationMs), product_reference_preparation: Math.round(productDurationMs), total: Math.round(performance.now() - preparationStartedAt) },
+    })
+  }
   let response: Response
   try {
     response = await fetch('/api/generate-door-visualization', {

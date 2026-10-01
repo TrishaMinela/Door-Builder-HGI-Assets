@@ -121,7 +121,7 @@ try {
     assert.deepEqual(captured!.configuration, JSON.parse(JSON.stringify(aiTestConfiguration)))
     assert.equal(captured!.fitStrategy, 'use-selected-product')
     assert.ok(captured!.entranceDetection)
-    assert.match(captured!.productReference ?? '', /^data:image\/webp;base64,/, 'AI request includes the flattened configured render')
+    assert.match(captured!.productReference ?? '', /^data:image\/png;base64,/, 'AI request includes the lossless flattened configured render')
     assert.equal(captured!.corners, undefined)
     assert.match(await page.getByRole('alert').innerText(), /OpenAI could not process this photo/)
     assert.match(await page.getByRole('alert').innerText(), /Reference: safe-tes/)

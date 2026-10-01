@@ -63,6 +63,20 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
   const productPreparationDurationMs = Date.now() - productPreparationStartedAt
   const intendedReferenceCount = configuredReferences?.length ?? product.references.length
   console.info('[ai-visualizer:image-prepared]', { request_id: requestId, original_image: originalImageDiagnostic(source.uploadMetadata, prepared.original), normalized_ai_input: prepared.normalized, placement_mode: corners ? 'user-corners' : 'automatic', product_reference_mode: configuredReferences ? 'flattened-configured-render' : 'catalog-fallback', product_reference_count: intendedReferenceCount })
+  if (process.env.NODE_ENV !== 'production') console.info('[ai-visualizer:configured-product-reference]', {
+    request_id: requestId,
+    product_reference_count: intendedReferenceCount,
+    flattened_entrance_reference_used: Boolean(configuredReferences),
+    flattened_reference_dimensions: configuredReferences?.map(reference => ({ width: reference.width, height: reference.height })) ?? [],
+    configured_sidelites: {
+      exists: product.snapshot.sidelites.count > 0,
+      count: product.snapshot.sidelites.count,
+      placement: product.snapshot.sidelites.placement,
+      slab: product.snapshot.sidelites.style,
+      glass: product.snapshot.sidelites.glass,
+      grids: product.snapshot.sidelites.grids,
+    },
+  })
   const form = new FormData()
   form.append('model', AI_MODEL)
   form.append('image[]', new Blob([new Uint8Array(prepared.photo)], { type: 'image/webp' }), 'house.webp')

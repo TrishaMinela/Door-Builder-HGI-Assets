@@ -5,7 +5,7 @@ import completeHandler from '../api/complete-ai-visualization.ts'
 import { aiTestConfiguration } from './aiVisualizerFixture'
 import { doorStyles, glassOptions } from '../src/data/options'
 import { aiPixelCorners, aiWorkingSize } from '../src/features/home-visualizer/aiImagePreparation'
-import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiDoorGeometryInstructionBlock, aiEntranceFitInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiStructuralInstructionBlock, entranceFitContext, loadAiReference, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
+import { AI_SINGLE_DOOR_WIDTH_BIAS, AiInputError, aiDoNotInventInstructionBlock, aiDoorGeometryInstructionBlock, aiEntranceFitInstructionBlock, aiProductFidelityInstructionBlock, aiPrompt, aiSideliteProductFidelityInstructionBlock, aiStructuralInstructionBlock, entranceFitContext, loadAiReference, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct } from '../server/aiDoorVisualization'
 import { detectedEntranceStructure, evaluateEntranceCompatibility, getDetectedVisualizerOpeningFamily, getSelectedVisualizerOpeningFamily } from '../src/features/home-visualizer/entranceFitStrategy'
 import { conservativeVerifiedSidelites, DETECTION_MODEL, entranceDetectionInstructions, normalizeEntranceDetection, validateSideliteGeometry, type ModelDetection } from '../api/detect-entrance-structure'
 import { AI_IMAGE_PRICING_USD_PER_MILLION, aiUsageEnvironment, estimateImageGenerationCost, normalizeImageUsage } from '../server/aiUsage'
@@ -194,6 +194,8 @@ try {
   const configuredReferences = await prepareConfiguredProductReferences(productReference)
   assert.equal(configuredReferences.length, 1)
   assert.equal(configuredReferences[0].label, 'authoritative flattened configured entrance')
+  assert.deepEqual({ width: configuredReferences[0].width, height: configuredReferences[0].height }, { width: 600, height: 1200 })
+  assert.equal((await sharp(configuredReferences[0].bytes).metadata()).format, 'png')
   const hostile = resolveAiProduct({ ...aiTestConfiguration, style: { ...aiTestConfiguration.style, image: 'https://evil.example/image.png' }, hardware: { ...aiTestConfiguration.hardware, asset: '../../secrets' } })
   assert.deepEqual(hostile.references, trusted.references)
   for (const reference of trusted.references) assert.ok((await loadAiReference(reference.paths)).length > 0)
@@ -201,6 +203,19 @@ try {
   assert.equal(sidelite.snapshot.sidelites.count, 2)
   assert.ok(sidelite.references.some(item => item.label === 'original sidelite slab'))
   for (const reference of sidelite.references) assert.ok((await loadAiReference(reference.paths)).length > 0)
+  const squareLiteSidelites = resolveAiProduct({ ...aiTestConfiguration, sidelites: 'both-sides', sideliteSlab: 's2sl', sideliteGlass: { glass: 'Clear Glass with No Grids' } })
+  const sideliteFidelityBlock = aiSideliteProductFidelityInstructionBlock(squareLiteSidelites.snapshot)
+  assert.match(sideliteFidelityBlock, /authoritative product specification for the ENTIRE replacement entrance assembly/)
+  assert.match(sideliteFidelityBlock, /house photo is authoritative only for installation context/)
+  assert.match(sideliteFidelityBlock, /Image 2 ALWAYS wins/)
+  assert.match(sideliteFidelityBlock, /full-height glass sidelites/)
+  assert.match(sideliteFidelityBlock, /small square glass lites from Image 2/)
+  assert.match(sideliteFidelityBlock, /Do not retain, blend with, or recreate the full-height sidelite glass/)
+  assert.match(sideliteFidelityBlock, /Selected sidelite specification: 2 sidelites in the configured both arrangement/)
+  assert.match(sideliteFidelityBlock, /Never solve fit by stretching sidelite glass/)
+  const sideliteConflictPrompt = aiPrompt(squareLiteSidelites.snapshot, null, ['authoritative flattened configured entrance'])
+  assert.match(sideliteConflictPrompt, /existing photographed door or sidelites/)
+  assert.match(sideliteConflictPrompt, /If Image 1 and Image 2 conflict about any product detail, Image 2 ALWAYS wins/)
   const hrt = doorStyles.find(item => item.code === 'HRT')!
   const hrtVariant = hrt.variants.find(item => item.lineId === '22-gauge-steel')!
   const glassProduct = resolveAiProduct({ ...aiTestConfiguration, style: hrt,
@@ -379,6 +394,7 @@ try {
   assert.match(prompt, /AUTHORITATIVE TARGET ENTRANCE STRUCTURE/)
   assert.match(prompt, /AUTHORITATIVE DOOR GEOMETRY RULES/)
   assert.match(prompt, /Image 2 is the single primary authoritative configured-product target/)
+  assert.match(prompt, /AUTHORITATIVE COMPLETE ENTRANCE AND SIDELITE RULES/)
   assert.match(prompt, /single primary authoritative configured-product target/)
   assert.match(prompt, /door_structure: single/)
   assert.match(prompt, /sidelite_structure: none/)
@@ -448,11 +464,21 @@ try {
   await Promise.all([first, second])
   assert.equal(calls - before, 1, 'Identical simultaneous requests share one OpenAI operation in a warm instance')
   assert.equal(telemetryRows.length - telemetryBefore, 1, 'One OpenAI operation creates one telemetry record')
+  const sequentialCallsBefore = calls
+  const sequentialRowsBefore = telemetryRows.length
+  const sequentialResults = [
+    await request(source, 200),
+    await request(source, 200),
+    await request(source, 200),
+  ]
+  assert.equal(calls - sequentialCallsBefore, 3, 'Three consecutive requests create three OpenAI operations')
+  assert.equal(telemetryRows.length - sequentialRowsBefore, 3, 'Three consecutive OpenAI operations create three telemetry records')
+  assert.equal(new Set(sequentialResults.map((result) => result.request_id)).size, 3, 'Consecutive generations receive unique request IDs')
   telemetryFailure = true
   const succeedsDespiteTelemetryFailure = await request({ ...source, corners: undefined }, 200)
   assert.ok(succeedsDespiteTelemetryFailure.image, 'Telemetry failure must not fail successful image generation')
   telemetryFailure = false
-  checks += 1
+  checks += 2
   console.log(`AI Visualizer: ${checks} API/image-preparation/security checks passed (OpenAI fully mocked).`)
 } finally {
   globalThis.fetch = originalFetch

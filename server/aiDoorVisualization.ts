@@ -331,6 +331,26 @@ export function aiProductFidelityInstructionBlock(snapshot: ReturnType<typeof re
   ].join('\n')
 }
 
+export function aiSideliteProductFidelityInstructionBlock(snapshot: ReturnType<typeof resolveAiProduct>['snapshot']) {
+  const placement = sidelitePlacement(snapshot.sidelites.placement)
+  const selectedDescription = snapshot.sidelites.count === 0
+    ? 'no sidelites'
+    : `${snapshot.sidelites.count} sidelite${snapshot.sidelites.count === 1 ? '' : 's'} in the configured ${placement} arrangement, using sidelite slab ${snapshot.sidelites.style ?? 'shown in Image 2'} and sidelite glass ${snapshot.sidelites.glass ?? 'shown in Image 2'}`
+  return [
+    'AUTHORITATIVE COMPLETE ENTRANCE AND SIDELITE RULES',
+    '- The configured entrance reference in Image 2 is the authoritative product specification for the ENTIRE replacement entrance assembly—not only the main door. Its door, sidelites, glass, grids, panels, finish, hardware, proportions, and internal frame relationships must all be reproduced.',
+    '- The house photo is authoritative only for installation context: entrance location, perspective, camera angle, lighting, shadows, surrounding wall/brick/siding, porch/floor, and realistic architectural blending. The photographed old door and sidelites are replaceable product details, not design references.',
+    '- If any photographed door or sidelite product detail conflicts with Image 2, Image 2 ALWAYS wins for the product itself. Do not borrow, preserve, blend, trace, or reinterpret the old door or sidelite design from the house photo.',
+    `- Selected sidelite specification: ${selectedDescription}. Sidelites shown in Image 2 are mandatory selected product components, not optional visual suggestions.`,
+    '- Preserve the exact configured sidelite count, selected side/placement, relative width, panel geometry, glass location, glass height, glass width, lite shape, lite count, grid design, frame borders, and relative proportions shown in Image 2. Do not independently redesign either sidelite.',
+    '- Do not preserve or copy the photographed entrance’s original sidelite glass shape, height, lite pattern, grids, panel design, decorative glass, color, door glass, door panels, or hardware when those conflict with Image 2.',
+    '- SPECIFIC CONFLICT RULE: If the house photo contains full-height glass sidelites but Image 2 contains sidelites with small square glass lites, the final visualization must use the small square glass lites from Image 2. Do not retain, blend with, or recreate the full-height sidelite glass from the house photo.',
+    '- Never solve fit by stretching sidelite glass, turning small square lites into tall rectangles, changing lite count, removing selected sidelites, inventing glass, copying old sidelite geometry, or making matching configured sidelites use different designs.',
+    '- Preserve the project’s configured hinge-side/lock-side mapping as rendered in Image 2. Do not mirror or relocate a configured one-sided sidelite merely because the photographed old entrance places a sidelite elsewhere.',
+    '- Adjust only the surrounding opening and architecture as needed. Do not redesign the configured entrance to resemble the old entrance.',
+  ].join('\n')
+}
+
 export function aiDoorGeometryInstructionBlock(snapshot: ReturnType<typeof resolveAiProduct>['snapshot']) {
   return [
     'AUTHORITATIVE DOOR GEOMETRY RULES',
@@ -420,9 +440,10 @@ export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot
     aiStructuralInstructionBlock(snapshot),
     aiEntranceFitInstructionBlock(fitContext),
     aiProductFidelityInstructionBlock(snapshot),
+    aiSideliteProductFidelityInstructionBlock(snapshot),
     aiDoorGeometryInstructionBlock(snapshot),
     aiDoNotInventInstructionBlock(snapshot),
-    'PRIORITY 2 — PRODUCT FIDELITY. Image 1 is environmental context only. Image 2 is the single primary authoritative configured-product target containing the completed door, glass, grids, hardware, sidelites, finish and frame. Product geometry must come from Image 2, never from free reinterpretation or the existing photographed door. Adapt only perspective, scene lighting and the surrounding architectural transition; never redesign, generalize, simplify, embellish, stretch or distort the configured product.',
+    'PRIORITY 2 — PRODUCT FIDELITY. Image 1 is environmental context only. Image 2 is the single primary authoritative configured-product target containing the completed door, glass, grids, hardware, sidelites, finish and frame. Product geometry must come from Image 2, never from free reinterpretation or the existing photographed door or sidelites. If Image 1 and Image 2 conflict about any product detail, Image 2 ALWAYS wins. Adapt only perspective, scene lighting and the surrounding architectural transition; never redesign, generalize, simplify, embellish, stretch or distort the configured product.',
     ...labels.map((label, index) => `Image ${index + 2} — ${label}: ${roles[label] ?? 'defines the selected product detail'}.`),
     'DETAILS TO PRESERVE. Preserve selected hardware style, silhouette, proportions, finish, handing/active-leaf logic and physical placement. Preserve selected glass style and all visible decorative detail. Preserve configured grid pattern, grid count implied by the selected layout/reference, grid placement, visible grid thickness and color; do not invent an unspecified count. Preserve the TARGET sidelite glass and structure, exact panel geometry, visible panel grooves and depth, and crisp jamb/frame edge definition. Keep the configured single/French/Savannah arrangement and target sidelite count/placement.',
     'PRIORITY 3 — SELECTED FINISHES. Ignore original reference door/sidelite colors. Refinish the slab and sidelites with the SAME specified customer finish/hex while retaining panel geometry and material/grain. Paint must be opaque, not a translucent pale tint. Stain retains natural grain. Respect configured glass coating, grid color/location, jamb finish and hardware finish.',
