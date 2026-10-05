@@ -90,9 +90,11 @@ export function DoorFrame({
   const isInterior = view === 'Interior'
   const frameFill = finishColor
   const edgeAmount = variant === 'exterior' ? 0.035 : finishType === 'stain' ? 0.075 : 0.055
-  const highlightAmount = variant === 'exterior' ? 0.03 : 0.035
   const frameEdge = mixHex(frameFill, '#000000', edgeAmount)
-  const frameHighlight = mixHex(frameFill, '#ffffff', highlightAmount)
+  // The selected jamb color is the brightest face color. Mixing white into
+  // dark finishes washes them out in the preview and flattened AI reference.
+  // Retain depth through darker edges, not a lighter substitute finish.
+  const frameHighlight = frameFill
   const faceGradientId = `door-frame-face-${frameId}`
   const mullionGradientId = `door-frame-mullion-${frameId}`
   const sideliteMaskId = sideliteMaskSrc?.split('/').pop()?.replace(/\.png$/i, '').toLowerCase() ?? 'default'

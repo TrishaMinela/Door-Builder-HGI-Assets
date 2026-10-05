@@ -8,6 +8,7 @@ type Props = {
   configurationKey: string
   onStateChange?: (state: DoorSourceState) => void
   previewProps: DoorPreviewProps
+  includeConfiguredFrame?: boolean
 }
 
 type CaptureState = {
@@ -22,8 +23,9 @@ const MAX_SOURCE_CAPTURE_ATTEMPTS = 3
 const ENTRANCE_CAPTURE_PIPELINE_VERSION = 'resolved-material-multiply-v5'
 const waitForLayout = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
-export function ConfiguredDoorSource({ configurationKey, onStateChange, previewProps }: Props) {
-  const captureKey = `${ENTRANCE_CAPTURE_PIPELINE_VERSION}:${configurationKey}`
+export function ConfiguredDoorSource({ configurationKey, onStateChange, previewProps, includeConfiguredFrame = false }: Props) {
+  const frameMode = includeConfiguredFrame ? 'visible' : 'opening-only'
+  const captureKey = `${ENTRANCE_CAPTURE_PIPELINE_VERSION}:${frameMode}:${configurationKey}`
   const captureRootRef = useRef<HTMLDivElement>(null)
   const outputUrlRef = useRef<string | null>(null)
   const captureRunRef = useRef(0)
@@ -61,12 +63,10 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         for (let attempt = 1; attempt <= MAX_SOURCE_CAPTURE_ATTEMPTS; attempt += 1) {
           await waitForLayout()
           try {
-            // The visualizer placement points describe the photographed
-            // opening, not the decorative outer frame. Capture the same
-            // opening-only assembly used by the previously correct mapping;
-            // the photographed frame is recolored separately on the base.
+            // AI uses the complete configured jamb/profile as its visual
+            // reference. Manual placement retains its opening-only source.
             result = await captureFinalDoorPreview(root, {
-              frameMode: 'opening-only',
+              frameMode,
               preserveCanonicalFrameBounds: true,
               expectedConfigurationKey: configurationKey,
             })
@@ -95,7 +95,7 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
 
     void captureCurrentDoor()
     return () => { captureRunRef.current += 1 }
-  }, [captureKey, configurationKey, readyConfigurationKey, retry])
+  }, [captureKey, configurationKey, readyConfigurationKey, retry, frameMode])
 
   useEffect(() => () => {
     if (outputUrlRef.current) URL.revokeObjectURL(outputUrlRef.current)
@@ -128,5 +128,5 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         <button type="button" onClick={() => setRetry((value) => value + 1)}><RefreshCw size={16} /> Retry</button>
       </div>}
     </div>
-  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} renderConfigurationKey={configurationKey} onRenderReadinessChange={updateRenderReadiness} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} placementMode="opening-only" /></div></>
+  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} renderConfigurationKey={configurationKey} onRenderReadinessChange={updateRenderReadiness} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} placementMode={includeConfiguredFrame ? undefined : 'opening-only'} /></div></>
 }
