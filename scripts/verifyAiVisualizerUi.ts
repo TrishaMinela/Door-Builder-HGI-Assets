@@ -86,8 +86,9 @@ try {
     } else {
       const modal = page.getByRole('dialog', { name: 'This door configuration doesn’t match your entrance' })
       await modal.waitFor()
-      await modal.getByText('The entrance in your photo does not match the door configuration you selected.', { exact: true }).waitFor()
+      await modal.getByText('We detected double doors with no sidelites. You selected a single door with no sidelites.', { exact: true }).waitFor()
       await modal.getByText('Choose a different photo or review your door configuration to continue.', { exact: true }).waitFor()
+      await modal.getByText('If this seems wrong, the photo may be too far away, poorly lit, or unclear for accurate AI detection.', { exact: true }).waitFor()
       assert.equal(await page.getByText('Configuration comparison', { exact: true }).count(), 0)
       assert.equal(await page.locator('.ai-compatibility-summary').count(), 0)
       assert.equal(await modal.locator('button').count(), 2)

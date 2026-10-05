@@ -946,8 +946,8 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
     ...(maskCode === 'CR14' || maskCode === 'CR14PL' ? { backgroundColor: '#eef1f2' } : {}),
     WebkitMaskImage: `url("${glassMask}")`,
     maskImage: `url("${glassMask}")`,
-    WebkitMaskSize: 'contain',
-    maskSize: 'contain',
+    WebkitMaskSize: '100% 100%',
+    maskSize: '100% 100%',
     WebkitMaskPosition: 'center',
     maskPosition: 'center',
     WebkitMaskRepeat: 'no-repeat',
@@ -1065,7 +1065,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
           {isHrtDoor
             ? glassOverlay && <>
               <img className="door-glass-overlay door-hrt-caming-layer" src={glassOverlay} alt="" decoding="async" style={isHrtClearGlass ? glassOverlayStyle : undefined} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />
-              {isHrtClearGlass && glassFrameFinish && hrtClearTrimMask?.source === glassOverlay && <div className="door-glass-overlay door-hrt-trim-tint" style={{ backgroundColor: glassFrameFinish.color, WebkitMaskImage: `url("${hrtClearTrimMask.url}")`, maskImage: `url("${hrtClearTrimMask.url}")`, WebkitMaskSize: 'contain', maskSize: 'contain', WebkitMaskPosition: 'center', maskPosition: 'center', WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat' }} />}
+              {isHrtClearGlass && glassFrameFinish && hrtClearTrimMask?.source === glassOverlay && <div className="door-glass-overlay door-hrt-trim-tint" style={{ backgroundColor: glassFrameFinish.color, WebkitMaskImage: `url("${hrtClearTrimMask.url}")`, maskImage: `url("${hrtClearTrimMask.url}")`, WebkitMaskSize: '100% 100%', maskSize: '100% 100%', WebkitMaskPosition: 'center', maskPosition: 'center', WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat' }} />}
             </>
             : isSatDoor
               ? glassOverlay && <img className="door-glass-overlay door-sat-glass-layer" src={glassOverlay} alt="" decoding="async" onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />
