@@ -167,9 +167,14 @@ async function resolveSurfaceMaterialBlends(root: HTMLElement) {
 }
 
 function parseInsetClipPath(value: string) {
-  const match = value.match(/^inset\(\s*([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s*\)$/i)
+  // Browsers serialize equal left/right values as a three-value shorthand.
+  // Accept every CSS inset shorthand so knob-only hardware is rasterized
+  // before html2canvas (which otherwise captures the full lockset).
+  const match = value.match(/^inset\(\s*((?:[\d.]+%\s*){1,4})\)$/i)
   if (!match) return null
-  return { top: Number(match[1]), right: Number(match[2]), bottom: Number(match[3]), left: Number(match[4]) }
+  const values = match[1].trim().split(/\s+/).map(part => Number.parseFloat(part))
+  const [top, right = top, bottom = top, left = right] = values
+  return { top, right, bottom, left }
 }
 
 /** html2canvas does not consistently preserve percentage inset clip paths on

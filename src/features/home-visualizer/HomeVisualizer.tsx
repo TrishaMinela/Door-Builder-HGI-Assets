@@ -622,7 +622,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
               <span>{photo ? 'Guided visualizer' : 'Step 1'}</span>
               <h2 id="visualizer-photo-title">{photo ? ['Entry Placement','Sidelite Placement','Frame Selection','Cleanup','Completed Visualization'][wizardStep] : 'Add your house photo'}</h2>
             </div>
-            {photo && <span className="visualizer-photo-ready"><Check size={15} /> Photo ready</span>}
+            {photo && <div className="visualizer-photo-heading-actions"><span className="visualizer-photo-ready"><Check size={15} /> Photo ready</span><button type="button" className="visualizer-secondary-button" aria-label="Replace uploaded house photo" onClick={openPicker}><RefreshCw size={17} /> Replace Photo</button></div>}
           </div>
 
           {!photo ? <>
@@ -712,7 +712,6 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
           {error && <p className="visualizer-error" role="alert">{error}</p>}
 
           {photo && wizardStep !== 4 && <div className="visualizer-photo-actions">
-            <button type="button" className="visualizer-secondary-button visualizer-desktop-photo-action" onClick={openPicker}><RefreshCw size={17} /> Replace Photo</button>
             <button type="button" className="visualizer-remove-button visualizer-desktop-photo-action" onClick={removePhoto}><Trash2 size={17} /> Remove Photo</button>
             <button type="button" className="visualizer-back-button visualizer-back-button-inline" onClick={leaveVisualizer}><ArrowLeft size={17} /> Back to Door Builder</button>
           </div>}
