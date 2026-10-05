@@ -8,7 +8,6 @@ type Props = {
   configurationKey: string
   onStateChange?: (state: DoorSourceState) => void
   previewProps: DoorPreviewProps
-  includeConfiguredFrame?: boolean
 }
 
 type CaptureState = {
@@ -23,8 +22,8 @@ const MAX_SOURCE_CAPTURE_ATTEMPTS = 3
 const ENTRANCE_CAPTURE_PIPELINE_VERSION = 'resolved-material-multiply-v5'
 const waitForLayout = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
-export function ConfiguredDoorSource({ configurationKey, onStateChange, previewProps, includeConfiguredFrame = false }: Props) {
-  const frameMode = includeConfiguredFrame ? 'visible' : 'opening-only'
+export function ConfiguredDoorSource({ configurationKey, onStateChange, previewProps }: Props) {
+  const frameMode = 'visible'
   const captureKey = `${ENTRANCE_CAPTURE_PIPELINE_VERSION}:${frameMode}:${configurationKey}`
   const captureRootRef = useRef<HTMLDivElement>(null)
   const outputUrlRef = useRef<string | null>(null)
@@ -63,8 +62,7 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         for (let attempt = 1; attempt <= MAX_SOURCE_CAPTURE_ATTEMPTS; attempt += 1) {
           await waitForLayout()
           try {
-            // AI uses the complete configured jamb/profile as its visual
-            // reference. Manual placement retains its opening-only source.
+            // AI always uses the complete configured jamb/profile reference.
             result = await captureFinalDoorPreview(root, {
               frameMode,
               preserveCanonicalFrameBounds: true,
@@ -128,5 +126,5 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         <button type="button" onClick={() => setRetry((value) => value + 1)}><RefreshCw size={16} /> Retry</button>
       </div>}
     </div>
-  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} renderConfigurationKey={configurationKey} onRenderReadinessChange={updateRenderReadiness} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} placementMode={includeConfiguredFrame ? undefined : 'opening-only'} /></div></>
+  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} renderConfigurationKey={configurationKey} onRenderReadinessChange={updateRenderReadiness} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} /></div></>
 }

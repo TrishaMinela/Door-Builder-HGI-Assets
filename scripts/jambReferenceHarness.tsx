@@ -13,6 +13,6 @@ function Harness() {
   const [source, setSource] = useState<DoorSourceState | null>(null)
   const jambFinish = finishes.find(item => item.id === color)!
   const props = { ...aiTestConfiguration, applyFinish: true, jambFinish }
-  return <>{['paint-white', 'paint-brown', 'paint-black', 'stain-midnight-blue'].map(id => <button key={id} onClick={() => setColor(id)}>{id} jamb</button>)}<div style={{ height: 650 }}><DoorPreview {...props} renderConfigurationKey={color}/></div><ConfiguredDoorSource configurationKey={color} previewProps={props} onStateChange={setSource} includeConfiguredFrame/>{source?.ready && <img data-reference={color} src={source.url} alt="Configured reference"/>}</>
+  return <>{['paint-white', 'paint-brown', 'paint-black', 'stain-midnight-blue'].map(id => <button key={id} onClick={() => setColor(id)}>{id} jamb</button>)}<div style={{ height: 650 }}><DoorPreview {...props} renderConfigurationKey={color}/></div><ConfiguredDoorSource configurationKey={color} previewProps={props} onStateChange={setSource}/>{source?.ready && <img data-reference={color} src={source.url} alt="Configured reference"/>}</>
 }
 createRoot(document.getElementById('root')!).render(<Harness />)

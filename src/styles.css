@@ -48,7 +48,8 @@
 
 /* Dealer finder final step */
 .attachment-card{max-width:750px;background:#edf6f6;border:1px solid #b9d5d7;border-left:5px solid var(--gold);border-radius:6px;padding:16px 18px;margin-bottom:18px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;box-shadow:0 5px 18px #05040b09}.attachment-icon{width:48px;height:48px;border-radius:50%;background:var(--peacock);color:var(--white);display:grid;place-items:center}.attachment-copy{min-width:0;display:grid;gap:3px}.attachment-copy small{color:var(--peacock);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.13em}.attachment-copy strong{color:var(--black);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.attachment-copy em{color:#596166;font-size:8px;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.attachment-copy span{color:#5f686c;font-size:8px}.attachment-card button{border:1px solid var(--peacock);border-radius:3px;background:#fff;color:var(--peacock);padding:9px 11px;display:flex;align-items:center;gap:6px;font-size:9px;text-transform:uppercase;white-space:nowrap}.attachment-card button:hover{background:var(--peacock);color:var(--white)}.review-step .quote-fields{grid-template-columns:repeat(2,1fr)}.review-step .field-wide{grid-column:1/-1}
-.availability-notice{max-width:750px;margin:-2px 0 18px;padding:0 2px;color:#697176;font-size:10px;line-height:1.55}
+.availability-notice{width:100%;max-width:750px;margin:0 0 20px;padding:14px 16px;border:1px solid #d9e2e5;border-left:4px solid var(--gold);border-radius:5px;background:#f3f7f7;color:#424c50;font-size:13px;line-height:1.65;overflow-wrap:break-word}
+.availability-notice strong{display:block;margin-bottom:4px;color:var(--black);font-weight:750}
 .review-download-form{display:block;width:100%;max-width:750px}
 .customer-form-page{width:100%;min-height:calc(100vh - 94px);min-height:calc(100dvh - 94px);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:48px 24px 96px;background:#f4f7f7;overflow-x:hidden}
 .customer-form-screen{width:min(100%,720px);margin:auto}
@@ -177,20 +178,6 @@ body:has(.visualizer-app){
 }
 
 /* Persistent beta feedback */
-.beta-access-page{box-sizing:border-box;display:grid;grid-template-columns:1fr;place-items:center;width:100%;min-height:100vh;min-height:100dvh;padding:24px;background:radial-gradient(circle at 50% 20%,#13383b 0,#071719 44%,#03090a 100%);color:#fff}
-.beta-access-card{box-sizing:border-box;width:min(440px,100%);padding:38px;border-top:4px solid #ffd600;border-radius:3px;background:#f8f9f9;color:#080912;box-shadow:0 28px 80px rgba(0,0,0,.48);text-align:center}
-.beta-access-icon{display:grid;place-items:center;width:54px;height:54px;margin:0 auto 16px;border-radius:50%;background:#e5eff0;color:#08777d}
-.beta-access-eyebrow{display:block;margin-bottom:7px;color:#08777d;font-size:11px;font-weight:850;letter-spacing:.17em;text-transform:uppercase}
-.beta-access-card h1{margin:0;font-size:31px;line-height:1.08}
-.beta-access-card>p{margin:11px 0 24px;color:#606970;font-size:14px}
-.beta-access-card form{display:grid;gap:9px;width:min(320px,100%);margin:0 auto;text-align:left}
-.beta-access-card label{font-size:12px;font-weight:800}
-.beta-access-card input{box-sizing:border-box;width:100%;height:48px;padding:0 13px;border:1px solid #aab9bc;border-radius:2px;background:#fff;color:#080912;font:600 17px/1 inherit}
-.beta-access-card input:focus{border-color:#08777d;outline:3px solid rgba(8,119,125,.18)}
-.beta-access-card button{height:48px;margin-top:5px;border:0;border-radius:2px;background:#08777d;color:#fff;font-weight:850;cursor:pointer}
-.beta-access-card button:hover{background:#06676c}
-.beta-access-error{margin:0;color:#a51d25;font-size:12px;font-weight:750}
-@media(max-width:520px){.beta-access-page{padding:16px}.beta-access-card{padding:30px 20px}.beta-access-card h1{font-size:27px}}
 
 .beta-feedback-trigger{position:fixed;right:22px;bottom:22px;z-index:90;display:flex;align-items:center;gap:7px;min-height:42px;padding:0 13px;border:1px solid rgba(255,255,255,.28);border-radius:3px;background:#086f75;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.24);font:700 13px/1 inherit;cursor:pointer}
 .beta-feedback-trigger:hover{background:#075f64;transform:translateY(-1px)}

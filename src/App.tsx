@@ -6,7 +6,6 @@ import { HardwareOptionCard } from './components/HardwareOptionCard'
 import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
 import { BetaFeedback } from './components/BetaFeedback'
-import { BetaAccessGate } from './components/BetaAccessGate'
 import { DealerContextGate } from './components/DealerContextGate'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
@@ -2037,7 +2036,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
               <div className="summary-title"><h2>Configuration Summary</h2></div>
               {configurationSummaryRows.map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span>{target >= 0 && <button onClick={() => goTo(target)}>Edit</button>}</div>)}
             </div>
-            <p className="availability-notice">Availability Notice: Some door styles, finishes, glass, hardware, and other options may not be available with every door configuration. Final availability depends on the selected door style and product specifications.</p>
+            <p className="availability-notice"><strong>Availability Notice:</strong> Some door styles, finishes, glass, hardware, and other options may not be available with every door configuration. Final availability depends on the selected door style and product specifications.</p>
             <div className={`review-download-form ${testMode ? '' : 'form-only'}`}>
               <div className="attachment-card">
                 <span className="attachment-icon"><FileText size={25} /></span>
@@ -2095,5 +2094,5 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 }
 
 export default function App() {
-  return <DealerContextGate>{(dealerSlug) => <BetaAccessGate><DoorBuilderApp dealerSlug={dealerSlug}/></BetaAccessGate>}</DealerContextGate>
+  return <DealerContextGate>{(dealerSlug) => <DoorBuilderApp dealerSlug={dealerSlug}/>}</DealerContextGate>
 }
