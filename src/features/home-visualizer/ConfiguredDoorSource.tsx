@@ -19,7 +19,7 @@ type CaptureState = {
 
 export type DoorSourceState = Omit<CaptureState, 'configurationKey'> & { error: string; ready: boolean; retry?: () => void }
 const MAX_SOURCE_CAPTURE_ATTEMPTS = 3
-const ENTRANCE_CAPTURE_PIPELINE_VERSION = 'lossless-complete-entrance-v6'
+const ENTRANCE_CAPTURE_PIPELINE_VERSION = 'resolved-material-multiply-v5'
 const waitForLayout = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
 
 export function ConfiguredDoorSource({ configurationKey, onStateChange, previewProps }: Props) {

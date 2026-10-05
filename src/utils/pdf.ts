@@ -375,7 +375,10 @@ export async function generateSummaryPdf(
   doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null,
 ) {
   if (!previewDataUrl) throw new Error('The completed configured-door preview is required for PDF export.')
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
+  // Match the supplied Canva template pages exactly instead of relying on
+  // jsPDF's slightly different built-in A4 dimensions.
+  const templatePageSize = { width: 595.5, height: 842.25 } as const
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: [templatePageSize.width, templatePageSize.height] })
   let font = 'helvetica'
   try {
     await applyBrandFont(pdf)
@@ -386,14 +389,17 @@ export async function generateSummaryPdf(
 
   const pageWidth = pdf.internal.pageSize.getWidth()
   const pageHeight = pdf.internal.pageSize.getHeight()
-  const template = await loadImage('/assets/pdf/home-guard-door-configuration-template.png')
-  pdf.addImage(template, 'PNG', 0, 0, pageWidth, pageHeight)
+  const [pageOneTemplate, pageTwoTemplate] = await Promise.all([
+    loadImage('/assets/pdf/home-guard-door-configuration-template.png'),
+    loadImage('/assets/pdf/home-guard-door-configuration-template-page-2.png'),
+  ])
+  pdf.addImage(pageOneTemplate, 'PNG', 0, 0, pageWidth, pageHeight)
 
   const generatedDate = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(new Date())
   pdf.setFont(font, 'bold')
   pdf.setFontSize(10)
   pdf.setTextColor(...COLORS.teal)
-  pdf.text(generatedDate, 114, 135)
+  pdf.text(generatedDate, 145, 169)
   // The entry configuration is already listed in the left specification
   // column. Keep the right side exclusively for the configured-door image.
 
@@ -401,28 +407,25 @@ export async function generateSummaryPdf(
   const placement = sideliteProductLabel(sidelites)
   const gridDetails = grid ? [grid.glassCoating !== 'Standard / No Low-E' ? grid.glassCoating : '', grid.gridLocation, grid.gridStyle, grid.gridPattern, grid.gridColor, grid.gridWidth].filter(Boolean).join(' / ') : ''
   const sideliteGridDetails = sideliteGlass ? [sideliteGlass.glassCoating, sideliteGlass.gridLocation, sideliteGlass.gridStyle, sideliteGlass.gridPattern, sideliteGlass.gridColor, sideliteGlass.gridWidth].filter(Boolean).join(' / ') : ''
-  const rowValues = [
+  const pageOneValues = [
     doorConfigurationLabel(doorConfigurationType),
     grain ? `${material} - ${grain}` : material,
-    style.name,
     placement,
+    style.name,
     sidelites === 'none' ? 'Not applicable' : sideliteStyle ?? 'Not selected',
     sidelites === 'none' ? 'Not applicable' : [sideliteGlass?.glass ?? 'Not selected', sideliteGridDetails].filter(Boolean).join(' - '),
     finish.finishType === 'paint' ? 'Paint' : 'Stain',
     finish.name,
     jamb?.jambType === 'clad' ? 'Clad' : 'Timber',
     jamb?.jambFinishType === 'clad' ? 'Clad' : jamb?.jambFinishType === 'stain' ? 'Stain' : 'Paint',
+  ]
+  const pageTwoValues = [
     jamb?.jambFinishColor || 'Not selected',
     [glass?.name ?? 'No glass', gridDetails].filter(Boolean).join(' - '),
     [hardwareDisplayName(hardware), doorConfigurationType === 'french' ? `Lock Setup: ${doubleDoorLockPrepOption(doubleDoorLockPrep)?.name ?? 'Locks on Both Doors'}` : null].filter(Boolean).join(' — '),
     doorSwing.name,
   ]
-  // Each value sits immediately above its corresponding divider in the exact
-  // order printed by the supplied template.
-  const rowBaselines = [214, 259.5, 305, 350.5, 396, 441.5, 487, 532.5, 578, 623.5, 669, 714.5, 760, 805.5]
-  pdf.setFont(font, 'bold')
-  pdf.setTextColor(...COLORS.dark)
-  rowValues.forEach((value, index) => {
+  const drawTemplateValues = (values: string[], baselines: number[]) => values.forEach((value, index) => {
     const availableWidth = 268
     let fontSize = 9
     pdf.setFontSize(fontSize)
@@ -431,10 +434,25 @@ export async function generateSummaryPdf(
       pdf.setFontSize(fontSize)
     }
     const lines = wrapText(pdf, value, availableWidth, 1)
-    pdf.text(lines[0], 39, rowBaselines[index])
+    // The supplied template's category labels and divider lines begin at
+    // 60 pt. Keep every generated value on that same left edge.
+    pdf.text(lines[0], 60, baselines[index])
   })
 
-  addImageContained(pdf, previewDataUrl, 350, 214, 210, 340)
+  pdf.setFont(font, 'bold')
+  pdf.setTextColor(...COLORS.dark)
+  // Page 1 contains the first ten specification rows. Each baseline sits just
+  // above its corresponding divider in the supplied design.
+  drawTemplateValues(pageOneValues, [247, 292.5, 338, 383.5, 429, 474.5, 520, 565.5, 611, 656.5])
+  addImageContained(pdf, previewDataUrl, 350, 226, 210, 340)
+
+  // Page 2 has an independent coordinate system and carries the remaining
+  // four specification rows plus the disclaimer already baked into the art.
+  pdf.addPage([templatePageSize.width, templatePageSize.height], 'portrait')
+  pdf.addImage(pageTwoTemplate, 'PNG', 0, 0, pageWidth, pageHeight)
+  pdf.setFont(font, 'bold')
+  pdf.setTextColor(...COLORS.dark)
+  drawTemplateValues(pageTwoValues, [84, 129.5, 175, 220.5])
 
   return pdf
 }
@@ -442,7 +460,15 @@ export async function generateSummaryPdf(
 export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary, doorConfigurationType: DoorConfigurationType = 'single', previewDataUrl?: string, doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null) {
   if (!previewDataUrl) throw new Error('The completed configured-door preview is required for PDF export.')
   const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb, doorConfigurationType, previewDataUrl, doubleDoorLockPrep)
-  pdf.save(configurationPdfName)
+  const blob = pdf.output('blob')
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = configurationPdfName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000)
 }
 
 export async function generateSummaryAttachment(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary, doorConfigurationType: DoorConfigurationType = 'single', previewDataUrl?: string, doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null) {

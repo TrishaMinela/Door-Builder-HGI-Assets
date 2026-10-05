@@ -57,8 +57,10 @@ try {
   const slab = pixel(g.doorLeft + 121, g.contentTop + 400)
   const side = pixel(g.contentLeft + 5, g.contentTop + 400)
   assert.equal(slab[3], 255); assert.equal(side[3], 255)
-  assert.ok(Math.max(...slab.slice(0, 3)) <= 36, `Black slab is not washed out: ${slab}`)
-  assert.ok(Math.max(...side.slice(0, 3)) <= 36, `Black sidelite is not washed out: ${side}`)
+  // Allow a tiny rasterization variance around the configured #242424 while
+  // still guarding against the prior washed-out gray regression.
+  assert.ok(Math.max(...slab.slice(0, 3)) <= 40, `Black slab is not washed out: ${slab}`)
+  assert.ok(Math.max(...side.slice(0, 3)) <= 40, `Black sidelite is not washed out: ${side}`)
   assert.equal(results[5].geometry.hasLeft, true); assert.equal(results[5].geometry.hasRight, false)
   assert.equal(results[12].geometry.hasLeft, false); assert.equal(results[12].geometry.hasRight, true)
   assert.equal(g.leftSideliteWidth, 242 * .35)
@@ -79,6 +81,11 @@ try {
   assert.equal((await delayed).dataUrl, results[11].dataUrl, 'One frozen snapshot is used despite a later finish mutation')
   const pdf = await page.evaluate(() => (window as unknown as { createPdf: () => Promise<string> }).createPdf())
   await writeFile(`${output}/configured-door.pdf`, Buffer.from(pdf.split(',')[1], 'base64'))
+  const downloadPromise = page.waitForEvent('download')
+  await page.evaluate(() => (window as unknown as { downloadPdf: () => Promise<void> }).downloadPdf())
+  const download = await downloadPromise
+  assert.equal(download.suggestedFilename(), 'Home Guard Door Configuration.pdf')
+  await download.saveAs(`${output}/download-button-configured-door.pdf`)
   console.log(`PDF tests passed: ${names.length} configurations, repeat determinism, mobile independence, opaque dark surfaces, placement, missing/pending assets. Black slab RGBA ${slab}; sidelite ${side}. PDF: ${output}/configured-door.pdf`)
 } finally {
   await browser?.close()

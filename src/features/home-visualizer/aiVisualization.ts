@@ -13,22 +13,7 @@ export class AiVisualizationError extends Error implements AiVisualizationFailur
   }
 }
 
-type PreparedAiHousePhoto = Awaited<ReturnType<typeof prepareAiHousePhotoUncached>>
-const housePhotoCache = new Map<string, Promise<PreparedAiHousePhoto>>()
-const productReferenceCache = new Map<string, Promise<string>>()
-const MAX_PREPROCESSING_CACHE_ENTRIES = 4
-
-function memoizePreparation<T>(cache: Map<string, Promise<T>>, key: string, prepare: () => Promise<T>) {
-  const cached = cache.get(key)
-  if (cached) return cached
-  const pending = prepare()
-  cache.set(key, pending)
-  void pending.catch(() => { if (cache.get(key) === pending) cache.delete(key) })
-  while (cache.size > MAX_PREPROCESSING_CACHE_ENTRIES) cache.delete(cache.keys().next().value!)
-  return pending
-}
-
-async function prepareAiHousePhotoUncached(source: string) {
+export async function prepareAiHousePhoto(source: string) {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve(image)
@@ -52,11 +37,7 @@ async function prepareAiHousePhotoUncached(source: string) {
   throw new Error('This photo is too detailed for AI generation. Please try a smaller photo.')
 }
 
-export function prepareAiHousePhoto(source: string) {
-  return memoizePreparation(housePhotoCache, source, () => prepareAiHousePhotoUncached(source))
-}
-
-async function prepareAiConfiguredProductReferenceUncached(source: string) {
+export async function prepareAiConfiguredProductReference(source: string) {
   const response = await fetch(source)
   if (!response.ok) throw new Error('The configured door render could not be loaded.')
   const blob = await response.blob()
@@ -78,27 +59,10 @@ async function prepareAiConfiguredProductReferenceUncached(source: string) {
     context.imageSmoothingQuality = 'high'
     context.clearRect(0, 0, canvas.width, canvas.height)
     context.drawImage(image, 0, 0, canvas.width, canvas.height)
-    // Product geometry is authoritative and contains small sidelite/grid and
-    // hardware details. Keep this single reference lossless; the house photo
-    // remains WebP-compressed independently.
-    return canvas.toDataURL('image/png')
+    return canvas.toDataURL('image/webp', .98)
   } finally {
     URL.revokeObjectURL(objectUrl)
   }
-}
-
-export function prepareAiConfiguredProductReference(source: string) {
-  return memoizePreparation(productReferenceCache, source, () => prepareAiConfiguredProductReferenceUncached(source))
-}
-
-export function invalidateAiHousePhotoCache(source?: string) {
-  if (source) housePhotoCache.delete(source)
-  else housePhotoCache.clear()
-}
-
-export function invalidateAiProductReferenceCache(source?: string) {
-  if (source) productReferenceCache.delete(source)
-  else productReferenceCache.clear()
 }
 
 export async function generateAiVisualization(input: {
@@ -116,55 +80,26 @@ export async function generateAiVisualization(input: {
   // The completed configured render is the authoritative product image. The
   // server still validates the configuration and normalizes this image before
   // forwarding it; browser-provided catalog paths remain ignored.
-  const preparationStartedAt = performance.now()
-  const houseCacheHit = housePhotoCache.has(input.photoUrl)
-  const productReferenceCacheHit = productReferenceCache.has(input.productReferenceUrl)
-  const houseStartedAt = performance.now()
-  const housePromise = prepareAiHousePhoto(input.photoUrl).then(value => ({ value, durationMs: performance.now() - houseStartedAt }))
-  const productStartedAt = performance.now()
-  const productPromise = prepareAiConfiguredProductReference(input.productReferenceUrl).then(value => ({ value, durationMs: performance.now() - productStartedAt }))
-  const [{ value: prepared, durationMs: houseDurationMs }, { value: productReference, durationMs: productDurationMs }] = await Promise.all([housePromise, productPromise])
-  const requestBody = JSON.stringify({ photo: prepared.photo, productReference, corners: input.corners, configuration: input.configuration,
-    entranceDetection: input.entranceDetection, fitStrategy: input.fitStrategy,
-    uploadMetadata: { ...input.uploadMetadata, width: prepared.naturalWidth, height: prepared.naturalHeight },
-    jambFinishId: input.jambFinish?.id, glassFrameFinishId: input.glassFrameFinish?.id })
-  if (import.meta.env.DEV) {
-    const sidelitePlacement = input.configuration.sidelites === 'both-sides' ? 'both' : input.configuration.sidelites === 'hinge-side' ? 'left' : input.configuration.sidelites === 'lock-side' ? 'right' : 'none'
-    console.info('[ai-visualizer:browser-prepared]', {
-      house_cache_hit: houseCacheHit,
-      product_reference_cache_hit: productReferenceCacheHit,
-      product_reference_mode: 'flattened-configured-render',
-      product_reference_count: 1,
-      product_reference_format: 'png',
-      configured_sidelites: {
-        exists: sidelitePlacement !== 'none',
-        count: sidelitePlacement === 'both' ? 2 : sidelitePlacement === 'none' ? 0 : 1,
-        placement: sidelitePlacement,
-        slab: input.configuration.sideliteSlab ?? null,
-        glass: input.configuration.sideliteGlass?.glass ?? null,
-        grid: input.configuration.sideliteGlass ? {
-          location: input.configuration.sideliteGlass.gridLocation ?? null,
-          style: input.configuration.sideliteGlass.gridStyle ?? null,
-          pattern: input.configuration.sideliteGlass.gridPattern ?? null,
-        } : null,
-      },
-      browser_request_bytes: new Blob([requestBody]).size,
-      durations_ms: { house_normalization: Math.round(houseDurationMs), product_reference_preparation: Math.round(productDurationMs), total: Math.round(performance.now() - preparationStartedAt) },
-    })
-  }
+  const [prepared, productReference] = await Promise.all([
+    prepareAiHousePhoto(input.photoUrl),
+    prepareAiConfiguredProductReference(input.productReferenceUrl),
+  ])
   let response: Response
   try {
     response = await fetch('/api/generate-door-visualization', {
       method: 'POST', signal: input.signal,
       headers: { 'Content-Type': 'application/json' },
-      body: requestBody,
+      body: JSON.stringify({ photo: prepared.photo, productReference, corners: input.corners, configuration: input.configuration,
+        entranceDetection: input.entranceDetection, fitStrategy: input.fitStrategy,
+        uploadMetadata: { ...input.uploadMetadata, width: prepared.naturalWidth, height: prepared.naturalHeight },
+        jambFinishId: input.jambFinish?.id, glassFrameFinishId: input.glassFrameFinish?.id }),
     })
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error
     throw new AiVisualizationError('The AI service could not be reached. Please confirm the local API runtime is running and try again.', 'API_ROUTE_UNAVAILABLE', '', { cause: error })
   }
   const rawBody = await response.text()
-  let result: { image?: string; error_code?: string; user_message?: string; request_id?: string; completion_token?: string } | null = null
+  let result: { image?: string; error_code?: string; user_message?: string; request_id?: string } | null = null
   try { result = JSON.parse(rawBody) } catch { result = null }
   const responseRequestId = result?.request_id || response.headers.get('x-request-id') || ''
   if (!response.ok) {
@@ -172,26 +107,5 @@ export async function generateAiVisualization(input: {
     throw new AiVisualizationError('The AI API route did not return a valid response. Run the app with the Vercel development runtime and try again.', 'API_ROUTE_UNAVAILABLE', responseRequestId)
   }
   if (!result?.image?.startsWith('data:image/jpeg;base64,')) throw new AiVisualizationError(result?.user_message || 'The AI service completed without returning a usable image.', result?.error_code || 'NO_GENERATED_IMAGE', responseRequestId)
-  return { image: result.image, requestId: responseRequestId, completionToken: result.completion_token ?? '' }
-}
-
-export async function reportAiVisualizationReady(requestId: string, completionToken: string, totalVisualizationDurationMs: number, entranceStageDurationMs: number | null) {
-  if (!requestId || !completionToken) return false
-  try {
-    const response = await fetch('/api/complete-ai-visualization', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        request_id: requestId,
-        completion_token: completionToken,
-        total_visualization_duration_ms: Math.max(1, Math.round(totalVisualizationDurationMs)),
-        entrance_stage_duration_ms: entranceStageDurationMs === null ? null : Math.max(1, Math.round(entranceStageDurationMs)),
-      }),
-    })
-    if (!response.ok) console.warn('[ai-usage:completion-failed]', { request_id: requestId, status: response.status })
-    return response.ok
-  } catch (error) {
-    console.warn('[ai-usage:completion-failed]', { request_id: requestId, reason: error instanceof Error ? error.name : 'unknown_error' })
-    return false
-  }
+  return result.image
 }

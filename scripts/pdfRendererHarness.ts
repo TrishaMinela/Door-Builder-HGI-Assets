@@ -3,7 +3,7 @@ import { resolveDoorProduct } from '../src/data/productCatalog'
 import { sideliteAssetFamilyForSlab, sideliteSlabAsset, sideliteGlassMask } from '../src/data/sideliteAssets'
 import { fslGlassOptions, fslGridAsset } from '../src/data/fslGlass'
 import { renderPdfProduct, type PdfProductAppearance } from '../src/utils/pdfProductRenderer'
-import { generateSummaryPdf } from '../src/utils/pdf'
+import { downloadSummary, generateSummaryPdf } from '../src/utils/pdf'
 import type { DoorConfiguration } from '../src/types'
 
 function fixture(code: string, finishId: string, sidelites: DoorConfiguration['sidelites'] = 'none', double: DoorConfiguration['doorConfigurationType'] = 'single', glassId?: string) {
@@ -89,5 +89,10 @@ Object.assign(window, {
     const result = await renderPdfProduct(c, appearance)
     const pdf = await generateSummaryPdf({ fullName: 'PDF Test Customer', email: 'test@example.com', phone: '5551234567', zip: '12345', notes: '' }, c.product, c.style, c.grain, c.finish, c.glass, c.grid, c.hardware, c.doorSwing, c.sidelites, 'FSL', c.sideliteGlass, { jambType: 'timber', jambFinishType: 'paint', jambFinishColor: 'Brown', jambFinishOverridden: true }, c.doorConfigurationType, result.dataUrl, c.doubleDoorLockPrep)
     return pdf.output('datauristring')
+  },
+  async downloadPdf() {
+    const { configuration: c, appearance } = complex
+    const result = await renderPdfProduct(c, appearance)
+    await downloadSummary({ fullName: 'PDF Test Customer', email: 'test@example.com', phone: '5551234567', zip: '12345', notes: '' }, c.product, c.style, c.grain, c.finish, c.glass, c.grid, c.hardware, c.doorSwing, c.sidelites, 'FSL', c.sideliteGlass, { jambType: 'timber', jambFinishType: 'paint', jambFinishColor: 'Brown', jambFinishOverridden: true }, c.doorConfigurationType, result.dataUrl, c.doubleDoorLockPrep)
   },
 })

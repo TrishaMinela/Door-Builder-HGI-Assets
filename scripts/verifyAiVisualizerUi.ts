@@ -37,23 +37,16 @@ try {
   const aiResult = `data:image/jpeg;base64,${photo.toString('base64')}`
   for (const width of [1280, 390]) {
     const page = await browser.newPage({ viewport: { width, height: 900 } })
-    const goodFit = width === 390
-    let detectedDoor: 'single' | 'double' = goodFit ? 'single' : 'double'
-    let requests = 0, detectionRequests = 0, fail = true
+    let goodFit = false
+    let requests = 0, fail = true
     let detectionRouteAvailable = false
     let releaseDetection: (() => void) | undefined
     let release: (() => void) | undefined
     let captured: { corners: unknown; configuration: unknown; productReference?: string; fitStrategy?: string; entranceDetection?: unknown } | null = null
     await page.route('**/api/detect-entrance-structure', async route => {
-      detectionRequests += 1
       if (!detectionRouteAvailable) { await route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not found' }); return }
       await new Promise<void>(resolve => { releaseDetection = resolve })
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ detection: {
-        doorStructure: detectedDoor, sidelites: 'none', leftSidelitePresent: false, rightSidelitePresent: false,
-        leftSidelite: { present: false, confidence: .96, evidence: 'Absent.', region: null }, rightSidelite: { present: false, confidence: .96, evidence: 'Absent.', region: null },
-        transom: false, mainDoorRegion: { x: .36, y: .18, width: .28, height: .68 }, transomRegion: null,
-        widthClass: detectedDoor === 'single' ? 'standard' : 'wide', approximateWidthRatio: .35, structurallyWide: detectedDoor === 'double', confidence: .96, summary: detectedDoor === 'single' ? 'Single door.' : 'Double doors.',
-      }, request_id: 'detection-test' }) })
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ detection: { doorStructure: goodFit ? 'single' : 'double', sidelites: 'none', transom: false, widthClass: goodFit ? 'standard' : 'wide', approximateWidthRatio: .35, structurallyWide: !goodFit, confidence: .96, summary: goodFit ? 'Single door.' : 'Double doors.' }, request_id: 'detection-test' }) })
     })
     await page.route('**/api/generate-door-visualization', async route => {
       requests += 1
@@ -91,39 +84,38 @@ try {
       assert.equal(requests, 1, 'Good fits automatically continue into generation')
       assert.equal(await page.getByText('Good fit', { exact: true }).count(), 0, 'Good fits do not stop on a compatibility screen')
     } else {
-      const modal = page.getByRole('dialog')
-      await modal.getByRole('heading', { name: 'This configuration doesn’t match the opening in your photo.', exact: true }).waitFor()
-      await modal.getByText('Choose a different photo or update your door configuration to continue.', { exact: true }).waitFor()
-      assert.equal(await page.getByRole('button', { name: /Continue Anyway/i }).count(), 0)
-      assert.equal(requests, 0, 'Incompatible families never call image generation')
-      const detectionRequestsBeforeReview = detectionRequests
-      const retainedPhoto = await page.locator('img[alt^="Uploaded entrance photo"]').getAttribute('src')
-      await modal.getByRole('button', { name: 'Review Configuration', exact: true }).click()
-      await page.getByRole('button', { name: 'Reopen Visualizer', exact: true }).click()
-      await page.getByRole('button', { name: 'AI Beta', exact: true }).click()
-      await page.getByRole('dialog').waitFor()
-      assert.equal(await page.locator('img[alt^="Uploaded entrance photo"]').getAttribute('src'), retainedPhoto, 'Review Configuration preserves the uploaded photo')
-      assert.equal(detectionRequests, detectionRequestsBeforeReview, 'Review Configuration reuses the valid entrance detection')
-      detectedDoor = 'single'
+      const modal = page.getByRole('dialog', { name: 'This door configuration doesn’t match your entrance' })
+      await modal.waitFor()
+      await modal.getByText('The entrance in your photo does not match the door configuration you selected.', { exact: true }).waitFor()
+      await modal.getByText('Choose a different photo or review your door configuration to continue.', { exact: true }).waitFor()
+      assert.equal(await page.getByText('Configuration comparison', { exact: true }).count(), 0)
+      assert.equal(await page.locator('.ai-compatibility-summary').count(), 0)
+      assert.equal(await modal.locator('button').count(), 2)
+      await page.keyboard.press('Escape')
+      assert.equal(await modal.isVisible(), true, 'Escape cannot bypass incompatibility')
+      await modal.getByRole('button', { name: 'Review Configuration', exact: true }).focus()
+      await page.keyboard.press('Tab')
+      assert.equal(await modal.getByRole('button', { name: 'Change Photo', exact: true }).evaluate(element => element === document.activeElement), true)
+      assert.equal(requests, 0, 'Incompatible entrances never generate')
+      assert.deepEqual(await page.locator('.ai-incompatibility-actions button').allTextContents(), ['Change Photo', 'Review Configuration'])
+      assert.equal(await page.getByRole('button', { name: /Continue anyway/i }).count(), 0)
+      assert.equal(await page.getByRole('button', { name: 'AI visualization generation status' }).count(), 0)
+      await page.getByRole('button', { name: 'Change Photo', exact: true }).click()
+      await page.getByText('Drag and drop or choose a file', { exact: true }).waitFor()
+      assert.equal(requests, 0)
+      goodFit = true
       releaseDetection = undefined
-      const compatiblePhoto = await sharp({ create: { width: 820, height: 620, channels: 3, background: '#b8c2c5' } }).jpeg().toBuffer()
-      const chooserPromise = page.waitForEvent('filechooser')
-      await page.getByRole('dialog').getByRole('button', { name: 'Change Photo', exact: true }).click()
-      const chooser = await chooserPromise
-      await chooser.setFiles({ name: 'compatible-home.jpg', mimeType: 'image/jpeg', buffer: compatiblePhoto })
+      await page.locator('input[type=file]').setInputFiles({ name: 'compatible-home.jpg', mimeType: 'image/jpeg', buffer: photo })
       await new Promise<void>(resolve => { const check = () => releaseDetection ? resolve() : setTimeout(check, 25); check() })
-      releaseDetection!()
-      await page.getByRole('button', { name: 'Try Again', exact: true }).waitFor()
-      assert.equal(requests, 1, 'A compatible replacement photo automatically starts exactly one generation')
-      assert.equal(await page.getByRole('button', { name: 'Generate AI visualization', exact: true }).count(), 0, 'Compatible flow has no extra Generate button')
       photoBefore = await page.locator('img[alt^="Uploaded entrance photo"]').getAttribute('src')
+      releaseDetection!()
     }
     await page.getByRole('button', { name: 'Try Again', exact: true }).waitFor()
     assert.equal(requests, 1)
     assert.deepEqual(captured!.configuration, JSON.parse(JSON.stringify(aiTestConfiguration)))
     assert.equal(captured!.fitStrategy, 'use-selected-product')
     assert.ok(captured!.entranceDetection)
-    assert.match(captured!.productReference ?? '', /^data:image\/png;base64,/, 'AI request includes the lossless flattened configured render')
+    assert.match(captured!.productReference ?? '', /^data:image\/webp;base64,/, 'AI request includes the flattened configured render')
     assert.equal(captured!.corners, undefined)
     assert.match(await page.getByRole('alert').innerText(), /OpenAI could not process this photo/)
     assert.match(await page.getByRole('alert').innerText(), /Reference: safe-tes/)
@@ -138,7 +130,7 @@ try {
     await page.getByText('Analyzing your doorway', { exact: true }).waitFor()
     await page.getByText('This may take a minute or two.', { exact: true }).waitFor()
     assert.equal(await page.getByText('Status messages are illustrative.', { exact: false }).count(), 0)
-    assert.equal(await page.getByRole('button', { name: 'Generate AI visualization', exact: true }).count(), 0, 'Generation starts without a second CTA')
+    assert.equal(await page.getByRole('button', { name: 'AI visualization generation status' }).isDisabled(), true)
     await page.waitForFunction(() => document.querySelector('.ai-photo-loading-overlay') !== null)
     const overlayBounds = await page.locator('.ai-photo-loading-overlay').boundingBox()
     const photoBounds = await page.locator('.ai-photo-placement-area .visualizer-editor').boundingBox()
@@ -172,26 +164,6 @@ try {
     await manual.click()
     await page.locator('.composed-photo-editor').waitFor()
     assert.equal(requests, 2)
-    const replacementPhoto = await sharp({ create: { width: 900, height: 650, channels: 3, background: '#9aa7ad' } }).jpeg().toBuffer()
-    const detectionRequestsBeforeReplacement = detectionRequests
-    releaseDetection = undefined
-    const chooserPromise = page.waitForEvent('filechooser')
-    await page.getByRole('button', { name: 'Change uploaded house photo', exact: true }).click()
-    const chooser = await chooserPromise
-    await chooser.setFiles({ name: 'replacement-home.jpg', mimeType: 'image/jpeg', buffer: replacementPhoto })
-    await page.locator('img[alt="Uploaded entrance photo: replacement-home.jpg"]').waitFor()
-    assert.equal(await page.getByText('AI Result', { exact: true }).count(), 0, 'Changing the photo removes the previous AI result')
-    assert.equal(await page.locator('.entrance-corner-handle').count(), 4, 'Changing the photo resets Manual placement points for the replacement image')
-    await page.getByRole('button', { name: 'Start Placing Points', exact: false }).click()
-    await ai.click()
-    fail = true
-    await new Promise<void>(resolve => { const check = () => releaseDetection ? resolve() : setTimeout(check, 25); check() })
-    releaseDetection!()
-    await page.getByRole('button', { name: 'Try Again', exact: true }).waitFor()
-    assert.equal(detectionRequests, detectionRequestsBeforeReplacement + 1, 'Replacement photo receives fresh entrance detection')
-    assert.equal(requests, 3, 'Replacing and analyzing a compatible photo automatically starts one generation')
-    assert.equal(await page.locator('.ai-generate-button').count(), 0, 'Replacement flow has no obsolete Generate button')
-    assert.deepEqual(captured!.configuration, JSON.parse(JSON.stringify(aiTestConfiguration)), 'Replacement generation preserves the configured door')
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
     await page.close()
     console.log(`AI Visualizer UI state, retry, loading, keyboard, retained results and Manual final render passed at ${width}px.`)

@@ -1423,7 +1423,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
   const requestCustomerAction = (action: 'download-pdf' | 'open-visualizer') => {
     if (testMode || customerFormCompleted) {
-      if (action === 'download-pdf') void downloadPdf().catch(() => {}) // PDF error is displayed below its action.
+      if (action === 'download-pdf') void downloadPdf().catch(() => undefined)
       else showScreen('visualizer')
       return
     }
@@ -1736,11 +1736,17 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
   const downloadPdf = async () => {
     if (!selectedHardware || !selectedDoorSwing) return
-    const { downloadSummary } = await import('./utils/pdf')
-    const exactPreview = pdfProductRender?.configurationKey === pdfProductKey
-      ? pdfProductRender.dataUrl
-      : await renderConfiguredPdfProduct()
-    await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }, selectedDoorConfigurationType || 'single', exactPreview, selectedDoorConfigurationType === 'french' ? doubleDoorLockPrep || 'DDLLBO' : null)
+    setPdfError('')
+    try {
+      const { downloadSummary } = await import('./utils/pdf')
+      const exactPreview = pdfProductRender?.configurationKey === pdfProductKey
+        ? pdfProductRender.dataUrl
+        : await renderConfiguredPdfProduct()
+      await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }, selectedDoorConfigurationType || 'single', exactPreview, selectedDoorConfigurationType === 'french' ? doubleDoorLockPrep || 'DDLLBO' : null)
+    } catch (error) {
+      setPdfError(error instanceof Error ? error.message : 'The configuration PDF could not be downloaded. Please retry.')
+      throw error
+    }
   }
 
   const configurationSummaryRows: [string, string, number][] = [
@@ -2031,6 +2037,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
               <div className="summary-title"><h2>Configuration Summary</h2></div>
               {configurationSummaryRows.map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span>{target >= 0 && <button onClick={() => goTo(target)}>Edit</button>}</div>)}
             </div>
+            <p className="availability-notice">Availability Notice: Some door styles, finishes, glass, hardware, and other options may not be available with every door configuration. Final availability depends on the selected door style and product specifications.</p>
             <div className={`review-download-form ${testMode ? '' : 'form-only'}`}>
               <div className="attachment-card">
                 <span className="attachment-icon"><FileText size={25} /></span>

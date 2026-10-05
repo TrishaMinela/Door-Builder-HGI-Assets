@@ -64,7 +64,7 @@ if (process.env.AI_USAGE_EXPECT_FAILURE === '1') {
   console.log(JSON.stringify({ ok: true, expected_failure: responseBody.error_code, request_id: responseBody.request_id }))
 } else {
   assert.equal(status, 200, responseBody.user_message ?? responseBody.error_code ?? 'Live AI generation failed.')
-  assert.ok(responseBody.image?.startsWith('data:image/jpeg;base64,'))
+  assert.ok(responseBody.image?.startsWith('data:image/webp;base64,'))
   assert.ok(responseBody.completion_token)
   await sharp(Buffer.from(responseBody.image!.split(',')[1], 'base64')).metadata()
   const stopwatchDurationMs = Math.round(performance.now() - stopwatchStartedAt)

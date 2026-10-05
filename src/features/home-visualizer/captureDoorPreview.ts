@@ -346,10 +346,6 @@ export async function captureFinalDoorPreview(previewRoot: HTMLElement, options:
   }
   const sidelites = Array.from(frame.querySelectorAll<HTMLElement>('.door-frame-sidelite-slot'))
     .filter((slot) => Boolean(slot.querySelector('.door-frame-sidelite')))
-  const expectedSideliteCount = frame.dataset.sidelites === 'both' ? 2 : frame.dataset.sidelites === 'none' ? 0 : 1
-  if (sidelites.length !== expectedSideliteCount) {
-    throw new Error('The complete configured sidelite assembly did not finish rendering. Please retry.')
-  }
   if (sidelites.some((slot) => !slot.querySelector('.door-frame-sidelite-finish'))) {
     throw new Error('A configured sidelite finish asset did not finish loading. Please retry.')
   }
@@ -408,10 +404,6 @@ export async function captureFinalDoorPreview(previewRoot: HTMLElement, options:
     devicePixelRatio: window.devicePixelRatio,
     imageAssets: sourceImages.length,
     loadedImageAssets: sourceImages.filter((asset) => asset.complete && asset.naturalWidth > 0 && asset.naturalHeight > 0).length,
-    configuredSidelites: frame.dataset.sidelites ?? 'none',
-    capturedSideliteCount: sidelites.length,
-    capturedSideliteGlassLayers: captureTarget.querySelectorAll('.door-frame-sidelite-glass,.door-frame-sidelite-clear-glass').length,
-    capturedSideliteGridLayers: captureTarget.querySelectorAll('.door-frame-sidelite-grid-art').length,
     nonTransparentPixelCount: coverage.nonTransparentPixelCount,
     sourceCoverageRatio: coverage.coverageRatio,
     captureStartTime,

@@ -80,28 +80,10 @@ export function entranceFitContext(detectionValue: unknown, strategyValue: unkno
   const strategy: EntranceFitStrategy = typeof strategyValue === 'string' && fitStrategies.has(strategyValue as EntranceFitStrategy) ? strategyValue as EntranceFitStrategy : 'use-selected-product'
   const source = objectValue(detectionValue)
   if (!source) return { detection: null, strategy }
-  const sidelites = ['none', 'left', 'right', 'both', 'unknown'].includes(String(source.sidelites)) ? source.sidelites as EntranceDetection['sidelites'] : 'unknown'
-  const leftSidelitePresent = typeof source.leftSidelitePresent === 'boolean' ? source.leftSidelitePresent : sidelites === 'left' || sidelites === 'both'
-  const rightSidelitePresent = typeof source.rightSidelitePresent === 'boolean' ? source.rightSidelitePresent : sidelites === 'right' || sidelites === 'both'
-  const region = (value: unknown): EntranceDetection['mainDoorRegion'] => {
-    const item = objectValue(value)
-    if (!item || typeof item.x !== 'number' || typeof item.y !== 'number' || typeof item.width !== 'number' || typeof item.height !== 'number') return null
-    if (![item.x, item.y, item.width, item.height].every(Number.isFinite) || item.width <= 0 || item.height <= 0) return null
-    const x = Math.max(0, Math.min(1, item.x)), y = Math.max(0, Math.min(1, item.y))
-    const width = Math.max(0, Math.min(1 - x, item.width)), height = Math.max(0, Math.min(1 - y, item.height))
-    return width > 0 && height > 0 ? { x, y, width, height } : null
-  }
-  const sideliteEvidence = (value: unknown, present: boolean): EntranceDetection['leftSidelite'] => {
-    const item = objectValue(value)
-    return { present, confidence: typeof item?.confidence === 'number' ? Math.max(0, Math.min(1, item.confidence)) : 0, evidence: typeof item?.evidence === 'string' ? item.evidence.slice(0, 240) : '', region: region(item?.region) }
-  }
   const detection: EntranceDetection = {
     doorStructure: ['single', 'double', 'unknown'].includes(String(source.doorStructure)) ? source.doorStructure as EntranceDetection['doorStructure'] : 'unknown',
-    leftSidelitePresent, rightSidelitePresent,
-    leftSidelite: sideliteEvidence(source.leftSidelite, leftSidelitePresent), rightSidelite: sideliteEvidence(source.rightSidelite, rightSidelitePresent),
-    sidelites,
+    sidelites: ['none', 'left', 'right', 'both', 'unknown'].includes(String(source.sidelites)) ? source.sidelites as EntranceDetection['sidelites'] : 'unknown',
     transom: typeof source.transom === 'boolean' ? source.transom : null,
-    mainDoorRegion: region(source.mainDoorRegion), transomRegion: region(source.transomRegion),
     widthClass: ['narrow', 'standard', 'wide', 'unknown'].includes(String(source.widthClass)) ? source.widthClass as EntranceDetection['widthClass'] : 'unknown',
     approximateWidthRatio: typeof source.approximateWidthRatio === 'number' && Number.isFinite(source.approximateWidthRatio) ? Math.max(0, Math.min(1, source.approximateWidthRatio)) : null,
     structurallyWide: source.structurallyWide === true,
@@ -111,45 +93,7 @@ export function entranceFitContext(detectionValue: unknown, strategyValue: unkno
   return { detection, strategy }
 }
 
-export function detectedOuterEntranceCorners(detection: EntranceDetection | null): AiCorners | null {
-  if (!detection?.mainDoorRegion) return null
-  const regions = [
-    detection.mainDoorRegion,
-    detection.leftSidelite.present ? detection.leftSidelite.region : null,
-    detection.rightSidelite.present ? detection.rightSidelite.region : null,
-    detection.transom ? detection.transomRegion : null,
-  ].filter((value): value is NonNullable<typeof value> => Boolean(value))
-  const xMin = Math.min(...regions.map(value => value.x)), yMin = Math.min(...regions.map(value => value.y))
-  const xMax = Math.max(...regions.map(value => value.x + value.width)), yMax = Math.max(...regions.map(value => value.y + value.height))
-  // Detector boxes describe slab/sidelite faces. This very small expansion
-  // includes the enclosing entrance frame without reaching porch or facade.
-  const horizontalPadding = Math.min(.01, Math.max(.003, (xMax - xMin) * .018))
-  const verticalPadding = Math.min(.006, Math.max(.002, (yMax - yMin) * .006))
-  return {
-    topLeft: { x: Math.max(0, xMin - horizontalPadding), y: Math.max(0, yMin - verticalPadding) },
-    topRight: { x: Math.min(1, xMax + horizontalPadding), y: Math.max(0, yMin - verticalPadding) },
-    bottomRight: { x: Math.min(1, xMax + horizontalPadding), y: Math.min(1, yMax + verticalPadding) },
-    bottomLeft: { x: Math.max(0, xMin - horizontalPadding), y: Math.min(1, yMax + verticalPadding) },
-  }
-}
-
-export function automaticEntranceMaskCorners(detection: EntranceDetection | null): AiCorners | null {
-  const outer = detectedOuterEntranceCorners(detection)
-  if (!outer) return null
-  const width = outer.topRight.x - outer.topLeft.x, height = outer.bottomLeft.y - outer.topLeft.y
-  // Separate blend allowance outside the fixed placement boundary. Sunburst
-  // may soften this narrow ring, but product placement targets `outer` itself.
-  const horizontalBlend = Math.min(.008, Math.max(.003, width * .018))
-  const verticalBlend = Math.min(.006, Math.max(.002, height * .008))
-  return {
-    topLeft: { x: Math.max(0, outer.topLeft.x - horizontalBlend), y: Math.max(0, outer.topLeft.y - verticalBlend) },
-    topRight: { x: Math.min(1, outer.topRight.x + horizontalBlend), y: Math.max(0, outer.topRight.y - verticalBlend) },
-    bottomRight: { x: Math.min(1, outer.bottomRight.x + horizontalBlend), y: Math.min(1, outer.bottomRight.y + verticalBlend) },
-    bottomLeft: { x: Math.max(0, outer.bottomLeft.x - horizontalBlend), y: Math.min(1, outer.bottomLeft.y + verticalBlend) },
-  }
-}
-
-export async function prepareHouseAndMask(value: unknown, corners: AiCorners | null, automaticMaskCorners: AiCorners | null = null) {
+export async function prepareHouseAndMask(value: unknown, corners: AiCorners | null) {
   if (typeof value !== 'string') throw new AiInputError('INVALID_IMAGE_INPUT', 'Your house photo is missing.')
   const match = /^data:image\/([a-z0-9.+-]+);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(value)
   if (!match) throw new AiInputError('INVALID_IMAGE_INPUT', 'Please use a valid JPG, PNG, WebP, AVIF, HEIC, or HEIF photo.')
@@ -173,10 +117,9 @@ export async function prepareHouseAndMask(value: unknown, corners: AiCorners | n
       .toBuffer()
     if (photo.length > AI_MAX_PHOTO_BYTES) throw new AiInputError('PAYLOAD_TOO_LARGE', 'This photo could not be compressed enough for AI generation. Please choose a less detailed photo.', 413)
     let mask: Buffer | undefined
-    const maskCorners = corners ?? automaticMaskCorners
-    if (maskCorners) {
+    if (corners) {
       const padding = AI_MASK_PADDING_PX * Math.max(size.width, size.height) / AI_MAX_PHOTO_EDGE
-      const polygon = aiPixelCorners(maskCorners, size.width, size.height).map(point => `${point.x},${point.y}`).join(' ')
+      const polygon = aiPixelCorners(corners, size.width, size.height).map(point => `${point.x},${point.y}`).join(' ')
       const cutout = Buffer.from(`<svg width="${size.width}" height="${size.height}"><polygon points="${polygon}" fill="black" stroke="black" stroke-width="${padding * 2}" stroke-linejoin="round"/></svg>`)
       mask = await sharp({ create: { ...size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } } }).composite([{ input: cutout, blend: 'dest-out' }]).webp({ lossless: true, effort: 5 }).toBuffer()
     }
@@ -188,26 +131,6 @@ export async function prepareHouseAndMask(value: unknown, corners: AiCorners | n
   } catch (error) {
     if (error instanceof AiInputError) throw error
     throw new AiInputError('IMAGE_DECODE_FAILED', 'Your house photo could not be decoded. Please choose another photo.', 400, { cause: error })
-  }
-}
-
-export async function constrainGeneratedImageToMask(generated: Buffer, originalHouse: Buffer, protectionMask: Buffer, width: number, height: number) {
-  try {
-    const generatedMetadata = await sharp(generated).metadata()
-    if (!generatedMetadata.width || !generatedMetadata.height) throw new Error('Generated image dimensions are unavailable.')
-    // The request mask is opaque outside the entrance and transparent inside.
-    // Feather only its immediate boundary, then restore the normalized original
-    // house over every protected pixel so model drift cannot alter the facade.
-    const featheredProtectionMask = await sharp(protectionMask).ensureAlpha().blur(.8).png().toBuffer()
-    const protectedHouse = await sharp(originalHouse).resize(width, height, { fit: 'fill' }).ensureAlpha()
-      .composite([{ input: featheredProtectionMask, blend: 'dest-in' }]).png().toBuffer()
-    return await sharp(generated)
-      .resize(width, height, { fit: 'fill' })
-      .composite([{ input: protectedHouse, blend: 'over' }])
-      .jpeg({ quality: 100, chromaSubsampling: '4:4:4' })
-      .toBuffer()
-  } catch (error) {
-    throw new AiGenerationError('NO_GENERATED_IMAGE', 'The generated visualization could not be finalized. Please try again.', 502, { cause: error })
   }
 }
 
@@ -226,8 +149,15 @@ export async function prepareConfiguredProductReferences(value: unknown) {
       .png({ compressionLevel: 9, adaptiveFiltering: true })
       .toBuffer()
     const primaryMetadata = await sharp(primary).metadata()
+    const emphasis = await sharp(primary)
+      .trim({ background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .resize({ width: AI_MAX_REFERENCE_EDGE, height: AI_MAX_REFERENCE_EDGE, fit: 'inside', withoutEnlargement: true })
+      .png({ compressionLevel: 9, adaptiveFiltering: true })
+      .toBuffer()
+    const emphasisMetadata = await sharp(emphasis).metadata()
     return [
       { label: 'authoritative flattened configured entrance', bytes: primary, width: primaryMetadata.width!, height: primaryMetadata.height! },
+      { label: 'authoritative tight configured-entrance geometry crop', bytes: emphasis, width: emphasisMetadata.width!, height: emphasisMetadata.height! },
     ]
   } catch (error) {
     throw new AiInputError('REFERENCE_IMAGE_FAILED', 'The configured product render could not be decoded.', 400, { cause: error })
@@ -245,10 +175,7 @@ function gridValues(value: unknown) {
   }))
 }
 
-const resolvedProductCache = new Map<string, ReturnType<typeof resolveAiProductUncached>>()
-const MAX_RESOLVED_PRODUCT_CACHE_ENTRIES = 32
-
-function resolveAiProductUncached(value: unknown, jambFinishId?: unknown, glassFrameFinishId?: unknown) {
+export function resolveAiProduct(value: unknown, jambFinishId?: unknown, glassFrameFinishId?: unknown) {
   const source = objectValue(value)
   if (!source || JSON.stringify(source).length > 64 * 1024) throw new AiInputError('INVALID_REQUEST', 'Door configuration is missing or invalid.')
   const style = doorStyles.find(item => item.id === objectValue(source.style)?.id)
@@ -306,16 +233,6 @@ function resolveAiProductUncached(value: unknown, jambFinishId?: unknown, glassF
   ] }
 }
 
-export function resolveAiProduct(value: unknown, jambFinishId?: unknown, glassFrameFinishId?: unknown) {
-  const key = JSON.stringify([value, jambFinishId ?? null, glassFrameFinishId ?? null])
-  const cached = resolvedProductCache.get(key)
-  if (cached) return cached
-  const resolved = resolveAiProductUncached(value, jambFinishId, glassFrameFinishId)
-  resolvedProductCache.set(key, resolved)
-  while (resolvedProductCache.size > MAX_RESOLVED_PRODUCT_CACHE_ENTRIES) resolvedProductCache.delete(resolvedProductCache.keys().next().value!)
-  return resolved
-}
-
 export async function loadAiReference(paths: string[]) {
   for (const path of paths) {
     // Paths originate only from imported application catalogs, never the browser.
@@ -358,23 +275,23 @@ export function aiStructuralInstructionBlock(snapshot: ReturnType<typeof resolve
     `selected_hardware_handing_active_leaf: ${activeLeaf}`,
     `selected_jamb_frame: ${selectedJambFrame}`,
     'STRUCTURAL CONVERSION RULES',
-    '- First inspect the existing entrance in the house photo: determine single versus double main door, existing sidelites and their exterior-view sides, transom, storm/screen door, jamb/casing/trim/mullions, nearby windows that are not sidelites, arches or unusual openings, and recesses. Then replace only the masked entrance region with exactly the authoritative target above.',
+    '- First inspect the existing entrance in the house photo: determine single versus double main door, existing sidelites and their exterior-view sides, transom, storm/screen door, jamb/casing/trim/mullions, nearby windows that are not sidelites, arches or unusual openings, recesses, columns, masonry, and siding constraints. Then replace only the necessary entrance region with exactly the authoritative target above.',
     '- The target fields above are authoritative. Do not preserve an original door leaf or sidelite merely because it exists in the photo, and do not remove or add a sidelite unless the target structure requires that result.',
     '- Treat the original photo only as the source of entrance location, camera perspective, lighting, scale cues, and surrounding architecture. Treat the selected configuration and product references as the source of truth for door count, sidelite count and side, style, material, finish/color, glass, grids, hardware, and jamb/frame.',
     'PROPORTION ENFORCEMENT — DOOR SLABS, SIDELITES, AND SURROUNDING ARCHITECTURE ARE THREE SEPARATE WIDTH REGIONS.',
-    '- Do not interpret the entire original framed opening as flexible product width. Preserve configured slab and sidelite proportions and limit any fit correction to the jamb/frame boundary inside the mask.',
+    '- Do not interpret the entire original framed opening or entrance composition as the width of the new target slab or slab pair. First detect the existing composition, then determine the target composition, assign realistic slab and sidelite widths, and finally reconstruct leftover or newly required surrounding architecture.',
     `- Use one normal residential door slab as the reference width. For a SINGLE target only, first estimate that normal slab from the photo's height and scale cues, then apply a subtle width bias of ${AI_SINGLE_DOOR_WIDTH_BIAS.toFixed(2)} (about 6% narrower) while keeping its height unchanged. This is a modest correction, not an undersized door. A sidelite remains a separate narrow region, approximately 0.35 of the adjusted single slab unless the supplied product reference establishes a more exact proportion. Jambs, casing, mullions, and reconstructed wall are separate from both slab and sidelite width.`,
-    '- SINGLE-DOOR RULE: a target single entrance must remain exactly one normally proportioned residential door slab with the subtle single-only width correction above. The slab must not become oversized because the old composition was wide. Permit only a minimal jamb/frame transition inside the editable mask; never change porch, steps, columns, wall, masonry, siding, or other surrounding architecture.',
+    '- SINGLE-DOOR RULE: a target single entrance must remain exactly one normally proportioned residential door slab with the subtle single-only width correction above. Do not shrink the whole entrance, jamb, or surrounding architecture with the slab. The slab must not become oversized because the old composition was wide. Keep or update its jamb/frame independently, preserve believable spacing, then reconstruct every unused side region with matching wall, trim, casing, masonry, siding, or other entrance-adjacent architecture, with no ghost seams from removed sidelites.',
     '- DOUBLE-DOOR RULE: a target double entrance must remain exactly two normally proportioned residential door slabs. The entrance may use former sidelite space or widen only as needed, but never create two skinny slabs squeezed into a former single opening and never stretch two oversized slabs across the entire old composition.',
     '- Original single -> target double: construct a realistic two-slab opening at the same entrance location. Use available existing entrance composition first, including former sidelite space when the target omits those sidelites; modify adjacent entrance construction only if more width is genuinely needed.',
-    '- Original double -> target single: this mismatch must be handled by compatibility rules before generation. Do not redesign the house or stretch a slab to force an incompatible fit.',
+    '- Original double -> target single: install one normally proportioned slab; reconstruct any leftover former-door space as believable matching surrounding wall, trim, masonry/siding, or jamb construction instead of stretching the slab.',
     '- Existing single with both sidelites -> target single with none: keep one normal-width single slab and its jamb/frame, remove both sidelites completely, and reconstruct both unused side regions as seamless matching architecture. Never widen the slab to consume those regions.',
     '- Existing single with both sidelites -> target double with none: remove both sidelites and let the realistically proportioned double-door system legitimately use their former entrance space; do not preserve them as windows or narrow the two slabs unnaturally.',
     '- Existing double with none -> target single with both: create one normal single slab plus one proportional sidelite on each side; do not stretch the slab across the old double-door width.',
     '- Existing double with both sidelites -> target single with left only: create one normal-width single slab plus exactly one proportional left sidelite, then seamlessly reconstruct every remaining former slab/sidelite region on the unselected side.',
     '- Existing both sidelites -> target left only: retain or create only the left sidelite and reconstruct the former right-sidelite region. Existing left only -> target right only: remove/reconstruct the left region and create only the right sidelite.',
     '- For every sidelite transition, the target sidelite_structure is the sole authority: none means no sidelites; left or right means exactly one on that exterior-view side; both means exactly one on each side. Never invent an extra sidelite. Do not mistake an adjacent house window for a sidelite or absorb it into the entrance.',
-    '- Preserve the existing architecture outside the entrance opening. Modify only the minimum jamb/frame/opening boundary inside the mask. Do not alter porch steps, flooring, columns, walls, siding, stone, lighting, landscaping, or other surrounding structures.',
+    '- If the target is wider than the existing entrance, use existing entrance space first, then expand only the minimum contiguous entrance construction genuinely required. If the target is narrower, keep normal product proportions and rebuild leftover former door/sidelite space with matching wall, trim, jamb, masonry, siding, or casing.',
     'BAD RESULTS TO AVOID: one giant single slab filling a former single-plus-sidelite or double opening; two giant slabs spanning the entire former sidelite width; tiny double slabs squeezed into a former single opening; any faint outlines, glass traces, mullion traces, color bands, or ghost seams left by removed sidelites.',
     '- Preserve an existing transom by default because the Door Builder does not configure transoms. Alter it only if required for a physically plausible conversion; never invent a new transom.',
     '- A storm or screen door is not the configured primary entry door. Ignore or visually remove it as necessary so the selected entry door and hardware are shown clearly.',
@@ -386,7 +303,7 @@ export function aiStructuralInstructionBlock(snapshot: ReturnType<typeof resolve
 export function aiProductFidelityInstructionBlock(snapshot: ReturnType<typeof resolveAiProduct>['snapshot']) {
   return [
     'AUTHORITATIVE PRODUCT FIDELITY RULES',
-    '- The single flattened configured/rendered entrance in Image 2 is the authoritative reference for the final door design. It contains the completed configured door, glass, grids, hardware, sidelites, finish and frame. The resolved DoorConfiguration confirms its specifications. This is the exact target, NOT an inspiration image.',
+    '- The flattened configured/rendered entrance in Image 2 is the authoritative reference for the final door design. Image 3 is a tight emphasis view of that same exact configured product. The resolved DoorConfiguration confirms its specifications. These are the exact target, NOT inspiration images.',
     '- Preserve the exact configured product design. Do not redesign the door. Do not reinterpret the style. Do not simplify the design. Do not embellish the design. Do not create a similar door. Match the configured door as exactly as possible.',
     `- Preserve exactly: ${snapshot.configurationType === 'single' ? 'one slab' : 'two slabs'}; the selected single/double structure; slab proportions; panel layout; panel count; panel shapes; top-panel shapes; glass-lite count, size, placement and proportions; mullion/grid layout; target sidelite presence and side; sidelite glass; hardware type, exact hardware count (${snapshot.hardware.count}), placement and handing; active/inactive leaf behavior; finish/color; material appearance; and jamb/frame appearance.`,
     '- Do not redesign the door. Do not reinterpret the style. Do not create a new panel layout. Do not change the panel layout. Do not change panel count, panel shapes, or top-panel shapes.',
@@ -394,27 +311,7 @@ export function aiProductFidelityInstructionBlock(snapshot: ReturnType<typeof re
     `- Do not change hardware count. The final entrance must show exactly ${snapshot.hardware.count} configured visible hardware placement${snapshot.hardware.count === 1 ? '' : 's'}. Do not replace the selected hardware with a different type or layout, move it, or remove one handle when two are configured.`,
     '- Do not redesign, embellish, or simplify the selected product. Do not add optional features that were not selected. Do not invent decorative details that are absent from the configured product. Do not simplify the configured product into a generic door. Do not substitute a visually similar door style.',
     '- HOUSE VERSUS PRODUCT SEPARATION: the house photo supplies location, perspective, lighting, shadows and surrounding facade. The configured product references and DoorConfiguration supply the exact door design and product details.',
-    '- Change only the tiny jamb/casing transition directly touching the configured frame when necessary for blending. Do not change brick, stone, siding, opening height, porch, steps, flooring, columns, landscaping, or other architecture.',
-  ].join('\n')
-}
-
-export function aiSideliteProductFidelityInstructionBlock(snapshot: ReturnType<typeof resolveAiProduct>['snapshot']) {
-  const placement = sidelitePlacement(snapshot.sidelites.placement)
-  const selectedDescription = snapshot.sidelites.count === 0
-    ? 'no sidelites'
-    : `${snapshot.sidelites.count} sidelite${snapshot.sidelites.count === 1 ? '' : 's'} in the configured ${placement} arrangement, using sidelite slab ${snapshot.sidelites.style ?? 'shown in Image 2'} and sidelite glass ${snapshot.sidelites.glass ?? 'shown in Image 2'}`
-  return [
-    'AUTHORITATIVE COMPLETE ENTRANCE AND SIDELITE RULES',
-    '- The configured entrance reference in Image 2 is the authoritative product specification for the ENTIRE replacement entrance assembly—not only the main door. Its door, sidelites, glass, grids, panels, finish, hardware, proportions, and internal frame relationships must all be reproduced.',
-    '- The house photo is authoritative only for installation context: entrance location, perspective, camera angle, lighting, shadows, surrounding wall/brick/siding, porch/floor, and realistic architectural blending. The photographed old door and sidelites are replaceable product details, not design references.',
-    '- If any photographed door or sidelite product detail conflicts with Image 2, Image 2 ALWAYS wins for the product itself. Do not borrow, preserve, blend, trace, or reinterpret the old door or sidelite design from the house photo.',
-    `- Selected sidelite specification: ${selectedDescription}. Sidelites shown in Image 2 are mandatory selected product components, not optional visual suggestions.`,
-    '- Preserve the exact configured sidelite count, selected side/placement, relative width, panel geometry, glass location, glass height, glass width, lite shape, lite count, grid design, frame borders, and relative proportions shown in Image 2. Do not independently redesign either sidelite.',
-    '- Do not preserve or copy the photographed entrance’s original sidelite glass shape, height, lite pattern, grids, panel design, decorative glass, color, door glass, door panels, or hardware when those conflict with Image 2.',
-    '- SPECIFIC CONFLICT RULE: If the house photo contains full-height glass sidelites but Image 2 contains sidelites with small square glass lites, the final visualization must use the small square glass lites from Image 2. Do not retain, blend with, or recreate the full-height sidelite glass from the house photo.',
-    '- Never solve fit by stretching sidelite glass, turning small square lites into tall rectangles, changing lite count, removing selected sidelites, inventing glass, copying old sidelite geometry, or making matching configured sidelites use different designs.',
-    '- Preserve the project’s configured hinge-side/lock-side mapping as rendered in Image 2. Do not mirror or relocate a configured one-sided sidelite merely because the photographed old entrance places a sidelite elsewhere.',
-    '- Adjust only the immediate jamb/frame boundary inside the mask. Do not redesign either the configured entrance or surrounding house.',
+    '- Change only the surrounding architectural context when necessary for a realistic fit: trim, casing, brick, stone, siding, opening width, former sidelite space, jamb transition, contact shadows and immediate entrance architecture. If the opening must change, adjust architecture around the configured door rather than redesigning the door itself.',
   ].join('\n')
 }
 
@@ -429,55 +326,8 @@ export function aiDoorGeometryInstructionBlock(snapshot: ReturnType<typeof resol
     '- Do not elongate, widen, narrow, shrink, crop, merge, divide, rotate, or reposition glass lites arbitrarily. Do not stretch the slab, panels, sidelites, glass, grids, hardware or frame to make them fit the photographed opening.',
     '- Make the result photorealistic, but keep the same geometry and proportions from the configured render.',
     '- Adjust realism using lighting, texture, perspective, contact shadows, and architectural blending—not by changing the configured door geometry.',
-    '- Preserve architecture outside the masked entrance. Allow only a tiny jamb/frame transition directly adjacent to the configured product.',
+    '- Adjust the surrounding architecture to fit the configured door, not the configured door to fit the surrounding architecture.',
   ].join('\n')
-}
-
-export function aiHousePreservationInstructionBlock(corners: AiCorners | null, hasAutomaticMask: boolean) {
-  const maskRule = corners
-    ? 'The supplied edit mask is the only editable entrance region, with a very small edge-blending allowance.'
-    : hasAutomaticMask
-      ? 'The supplied automatically detected edit mask tightly encloses the entrance assembly and its minimal jamb/casing transition. Do not modify pixels outside it.'
-      : 'Locate the entrance conservatively and modify only the smallest entrance region required.'
-  return [
-    'IMMUTABLE HOUSE ENVIRONMENT RULES',
-    `- ${maskRule}`,
-    '- The uploaded house photo is the immutable environment reference. Preserve the surrounding photograph, architecture, camera perspective, framing, exposure, lighting, shadows, materials, siding, brick, stone, columns, porch, flooring, roof/overhang, lights, landscaping, and trim outside the entrance assembly as closely as possible.',
-    '- Modify only the minimum entrance region necessary to install the configured entrance. Do not beautify, redesign, simplify, rebuild, reinterpret, relight, recolor, sharpen, blur, or regenerate unrelated parts of the house.',
-    '- Photorealism must come from locally blending the configured entrance into the existing photograph, not from regenerating the facade. Major pixels outside the entrance must remain aligned for the before/after slider.',
-    '- THRESHOLD AND SILL LOCK: preserve the photographed threshold, porch floor, landing, and every step exactly. Do not add or remove a step, change step height/depth, create a landing, raise/lower the doorway, or shift the entrance vertically.',
-    '- The original photographed door and entrance product details are replaceable. Preserve the surrounding house, but do not preserve old door, sidelite, glass, grid, panel, hardware, or finish details when they conflict with Image 2.',
-  ].join('\n')
-}
-
-export function aiGlassGeometryInstructionBlock() {
-  return [
-    'FIXED GLASS AND PRODUCT GEOMETRY RULES',
-    '- The configured entrance reference is authoritative geometry, not flexible visual material. Match its door slabs, panels, glass, grids, sidelites, frame relationships, finish, and hardware without geometric reinterpretation.',
-    '- Preserve every configured glass/lite width-to-height aspect ratio exactly as shown in Image 2. Square or near-square glass must remain square or near-square; short horizontal glass must remain short and horizontal; tall glass may remain tall.',
-    '- Do not stretch square glass vertically or horizontally, elongate decorative lites, compress glass panels, alter glass position, change lite shapes/count, or distort glass to resemble the photographed opening.',
-    '- Do not widen or narrow slabs or panels unnaturally, alter panel proportions/count, change sidelite width or glass geometry, invent or remove grids, or invent decorative glass.',
-    '- Compatibility is resolved before generation. Allow only the minimum jamb/frame transition inside the mask. Never distort or redesign the configured product, and never compensate by changing unrelated architecture.',
-  ].join('\n')
-}
-
-export function aiFixedOuterEntranceInstructionBlock(bounds: AiCorners | null, imageSize?: { width: number; height: number }) {
-  if (!bounds) return 'FIXED OUTER ENTRANCE BOUNDARY\n- No reliable automatic outer boundary is available. Do not generate until the doorway locator supplies one.'
-  const normalizedWidth = bounds.topRight.x - bounds.topLeft.x
-  const normalizedHeight = bounds.bottomLeft.y - bounds.topLeft.y
-  const pixelWidth = imageSize ? normalizedWidth * imageSize.width : null
-  const pixelHeight = imageSize ? normalizedHeight * imageSize.height : null
-  const pixelAspectRatio = pixelWidth && pixelHeight ? pixelWidth / pixelHeight : null
-  return [
-    'FIXED OUTER ENTRANCE BOUNDARY — AUTHORITATIVE PLACEMENT TARGET',
-    `- Fixed normalized boundary: ${JSON.stringify(bounds)}.`,
-    pixelAspectRatio ? `- Fixed opening dimensions at AI working resolution: approximately ${Math.round(pixelWidth!)} × ${Math.round(pixelHeight!)} pixels; outer width-to-height ratio ${pixelAspectRatio.toFixed(4)}.` : '',
-    '- This boundary represents the complete existing framed entrance assembly: main door plus validated sidelites/transom and enclosing entrance frame. It is not the porch or surrounding facade.',
-    '- For a compatible replacement, the complete configured entrance must occupy essentially this same outer boundary. Keep its left, right, top, and threshold edges aligned with this target.',
-    '- Do not make the complete entrance narrower or wider, shift it, raise or lower the threshold, crop it, compress it, shrink sidelites, or enlarge jamb/frame areas to consume product width.',
-    '- Scale and perspective-place the COMPLETE configured entrance assembly as one unit into this boundary. Preserve its internal slab-to-sidelite ratios, panels, glass, grids, hardware, and frame relationships. Never resize individual product pieces independently.',
-    '- The narrow extra area exposed by the edit mask is only for edge blending. It does not enlarge or redefine this fixed placement boundary.',
-  ].filter(Boolean).join('\n')
 }
 
 function hasConfiguredGrid(value: ReturnType<typeof gridValues>) {
@@ -519,7 +369,7 @@ export function aiDoNotInventInstructionBlock(snapshot: ReturnType<typeof resolv
     `- Show exactly ${snapshot.hardware.count} configured visible hardware placement${snapshot.hardware.count === 1 ? '' : 's'}—no more and no fewer. Use the selected hardware type, finish, handing and placement only.`,
     '- Show the exact selected panel count, panel layout and panel shapes, with no added panels, grooves, moulding, embossing or edge lines that change the composition.',
     '- Show the exact selected glass-lite count and layout, with no added, removed, divided, merged, widened or narrowed lites.',
-    '- Preserve architecture outside the entrance mask; never add product features or redesign the house to fill the available opening.',
+    '- Adjust surrounding architecture to fit the configured product; never add product features to fill or decorate the available opening.',
   ].join('\n')
 }
 
@@ -538,9 +388,10 @@ export function aiEntranceFitInstructionBlock(context?: ReturnType<typeof entran
   return ['ENTRANCE FIT STRATEGY — AUTHORITATIVE FOR ARCHITECTURAL FIT', `Detected existing entrance: ${detected}`, `Selected strategy: ${context.strategy}`, `- ${rules[context.strategy]}`, '- Product configuration remains authoritative for each slab’s style, panels, glass, grids, finish, material and hardware details. Fit strategy controls the architectural arrangement: effective slab count, retained existing sidelites/transom, and reconstruction of unused opening space.', '- If a configured door_structure or sidelite_structure statement conflicts with this explicitly selected fit strategy, the FIT STRATEGY wins for structure only. Never use that exception to redesign the product details.', '- Do not silently choose a different fit strategy. Do not stretch door slabs to consume leftover opening width.'].join('\n')
 }
 
-export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot'], corners: AiCorners | null, labels: string[], fitContext?: ReturnType<typeof entranceFitContext>, hasAutomaticMask = false, fixedOuterBounds: AiCorners | null = corners, imageSize?: { width: number; height: number }) {
+export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot'], corners: AiCorners | null, labels: string[], fitContext?: ReturnType<typeof entranceFitContext>) {
   const roles: Record<string, string> = {
     'authoritative flattened configured entrance': 'the PRIMARY AND AUTHORITATIVE product reference; copy its complete configured entrance design, geometry, proportions, finish, glass, grids, hardware, sidelites and frame as exactly as possible',
+    'authoritative tight configured-entrance geometry crop': 'a SECOND AUTHORITATIVE VIEW of Image 2, cropped tightly only to make panel, lite, grid, hardware, sidelite and frame geometry easier to inspect; it is the same product and must not be interpreted as a different option',
     'original base door design': 'defines the exact slab design, panel geometry, panel depth, grooves, glass opening and underlying material/grain; its original color is not the selected finish',
     'selected glass design': 'defines the exact selected glass shape, decorative detail, pattern and visible glass construction; do not substitute plain glass',
     'selected exterior hardware': 'defines the exact hardware silhouette, proportions, knob/lever/handle/lockset components and finish; preserve its relative placement on the slab',
@@ -551,19 +402,16 @@ export function aiPrompt(snapshot: ReturnType<typeof resolveAiProduct>['snapshot
     corners
       ? 'PRIORITY 1 — PRESERVE THE HOUSE. The FIRST image is the original customer house and the base scene. The transparent PNG mask indicates the only editable entrance region, including a small blending allowance. Preserve architecture, siding, windows, roof, porch, masonry, landscaping, steps and surroundings. Do not redesign unrelated pixels.'
       : 'PRIORITY 1 — PRESERVE THE HOUSE. The FIRST image is the full original customer house and the base scene. Identify the existing main exterior entrance in that photograph and replace only that entrance. Preserve the full photo framing and all unrelated architecture, siding, windows, roof, porch, masonry, landscaping, steps and surroundings. Do not crop or redesign unrelated pixels.',
-    aiHousePreservationInstructionBlock(corners, hasAutomaticMask),
-    aiFixedOuterEntranceInstructionBlock(fixedOuterBounds, imageSize),
     aiStructuralInstructionBlock(snapshot),
     aiEntranceFitInstructionBlock(fitContext),
     aiProductFidelityInstructionBlock(snapshot),
-    aiSideliteProductFidelityInstructionBlock(snapshot),
     aiDoorGeometryInstructionBlock(snapshot),
-    aiGlassGeometryInstructionBlock(),
     aiDoNotInventInstructionBlock(snapshot),
-    'PRIORITY 2 — PRODUCT FIDELITY. Image 1 is environmental context only. Image 2 is the single primary authoritative configured-product target containing the completed door, glass, grids, hardware, sidelites, finish and frame. Product geometry must come from Image 2, never from free reinterpretation or the existing photographed door or sidelites. If Image 1 and Image 2 conflict about any product detail, Image 2 ALWAYS wins. Adapt only perspective, scene lighting and the surrounding architectural transition; never redesign, generalize, simplify, embellish, stretch or distort the configured product.',
+    'PRIORITY 2 — PRODUCT FIDELITY. Image 1 is environmental context only. Image 2 is the primary authoritative configured-product target. Image 3 is a tight emphasis view of the same target. Product geometry must come from Images 2 and 3, never from free reinterpretation or the existing photographed door. Adapt only perspective, scene lighting and the surrounding architectural transition; never redesign, generalize, simplify, embellish, stretch or distort the configured product.',
     ...labels.map((label, index) => `Image ${index + 2} — ${label}: ${roles[label] ?? 'defines the selected product detail'}.`),
     'DETAILS TO PRESERVE. Preserve selected hardware style, silhouette, proportions, finish, handing/active-leaf logic and physical placement. Preserve selected glass style and all visible decorative detail. Preserve configured grid pattern, grid count implied by the selected layout/reference, grid placement, visible grid thickness and color; do not invent an unspecified count. Preserve the TARGET sidelite glass and structure, exact panel geometry, visible panel grooves and depth, and crisp jamb/frame edge definition. Keep the configured single/French/Savannah arrangement and target sidelite count/placement.',
     'PRIORITY 3 — SELECTED FINISHES. Ignore original reference door/sidelite colors. Refinish the slab and sidelites with the SAME specified customer finish/hex while retaining panel geometry and material/grain. Paint must be opaque, not a translucent pale tint. Stain retains natural grain. Respect configured glass coating, grid color/location, jamb finish and hardware finish.',
+    'The door frame/jamb shown in Image 2 is part of the configured entrance and must be replaced with the same configured finish and color. Preserve only the exterior house trim outside the entrance. Do not keep the old door-frame color.',
     'MATERIAL FIDELITY. The configured door line and grain define the underlying material. Smooth steel must remain smooth steel; brushed/smooth fiberglass must remain that fiberglass surface; textured or oak-grain fiberglass must retain its texture/oak grain. Preserve any configured visible woodgrain, its direction and relief while applying paint or stain naturally. Do not turn steel into wood or textured fiberglass into a generic flat surface. The selected finish changes color, not material type.',
     `PRIORITY 4 — NATURAL INSTALLATION. ${corners ? 'Fit to the selected perspective' : 'Use the perspective and exact opening of the detected existing main exterior entrance'}; match scene lighting, exposure, color temperature, highlights, glass reflections/transparency and believable contact shadows. The result must look physically installed, not pasted. Preserve photo framing/aspect ratio. Do not invent decorative architecture, plants, lights, windows, columns, transoms or extra trim.`,
     'AVOID. Do not substitute a different or generic knob, lever, lockset or pull handle. Do not add, remove, simplify or flatten configured glass details. Do not add, remove, reduce or reinterpret configured grids. Do not replace configured glass with plain generic glass. Do not change material type or flatten panel depth. Do not oversoften, blur away or smooth out product-defining details. Preserve fine edges without artificial sharpening halos. Do not invent unrelated architecture or redesign the house.',
