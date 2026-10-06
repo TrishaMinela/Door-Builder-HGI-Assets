@@ -405,6 +405,9 @@ function EmptyDoorPreview() {
 
 function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [initialDraft] = useState(loadDoorBuilderDraft)
+  const restoredDoorFinishId = initialDraft?.selectedFinishType === 'stain' ? initialDraft.selectedStain : initialDraft?.selectedFinishType === 'paint' ? initialDraft.selectedPaint : ''
+  const lastJambDoorFinishId = useRef(restoredDoorFinishId)
+  const lastGlassFrameDoorFinishId = useRef(restoredDoorFinishId)
   const [returningFromVisualizer, setReturningFromVisualizer] = useState(false)
   const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>('home')
   const [step, setStep] = useState(0)
@@ -428,7 +431,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [selectedFinishType, setSelectedFinishType] = useState<'' | 'paint' | 'stain'>(initialDraft?.selectedFinishType ?? '')
   const [selectedPaint, setSelectedPaint] = useState(initialDraft?.selectedPaint ?? '')
   const [selectedStain, setSelectedStain] = useState(initialDraft?.selectedStain ?? '')
-  const [jambType, setJambType] = useState<'' | 'timber' | 'clad'>(initialDraft?.jambType ?? '')
+  const [jambType, setJambType] = useState<'' | 'timber' | 'clad'>(initialDraft?.jambType || (builderUx.showJambMaterialSelection ? '' : 'timber'))
   const [jambFinishType, setJambFinishType] = useState<'' | 'paint' | 'stain' | 'clad'>(initialDraft?.jambFinishType ?? '')
   const [jambFinishColor, setJambFinishColor] = useState(initialDraft?.jambFinishColor ?? '')
   const [jambFinishOverridden, setJambFinishOverridden] = useState(initialDraft?.jambFinishOverridden ?? false)
@@ -561,7 +564,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const compatibleGlassFrameDefault = glassFrameFinishOptions.find((item) => item.id === 'paint-white') ?? glassFrameFinishOptions[0] ?? finish
   const matchedGlassFrameFinish = finish.finishType === 'paint' || supportsGlassFrameStain ? finish : compatibleGlassFrameDefault
   const customGlassFrameFinish = glassFrameFinishOptions.find((item) => item.id === glassFrameFinishId)
-  const resolvedGlassFrameFinish = builderUx.showGlassFrameColorSelection && glassFrameColorMode === 'custom' ? customGlassFrameFinish ?? compatibleGlassFrameDefault : matchedGlassFrameFinish
+  const resolvedGlassFrameFinish = glassFrameColorMode === 'custom' ? customGlassFrameFinish ?? compatibleGlassFrameDefault : matchedGlassFrameFinish
   const appliedGlassFrameFinish = (glassFrameColorMode || (!builderUx.showGlassFrameColorSelection && selectedFinish)) ? resolvedGlassFrameFinish : null
   const sideliteAssetFamily = sideliteAssetFamilyForSlab({
     doorLineId: selectedDoorLine?.id,
@@ -767,7 +770,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     ...(needsGrainStep ? ['door-grain' as const] : []),
     ...(usesMappedSidelites ? ['sidelite-style' as const] : []),
     'door-finish',
-    'jamb-type',
+    ...(builderUx.showJambMaterialSelection ? ['jamb-type' as const] : []),
     ...(builderUx.showJambColorSelection ? ['jamb-finish' as const] : []),
     ...(supportsGlass ? ['glass-type' as const, 'glass' as const] : []),
     ...(selectedGlassGroup && selectedGlassGroup.options.length > 1 ? ['glass-variant' as const] : []),
@@ -1229,20 +1232,29 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   }, [usesFslGridFlow, sideliteGridLocation, availableSideliteGridLocations, sideliteGridStyle, fslGridStyles, sideliteGridPattern, fslPatterns, sideliteGridColor, fslColors, sideliteGridWidth, fslWidths])
 
   useEffect(() => {
-    if (!selectedFinish || (builderUx.showJambColorSelection && jambFinishOverridden)) return
+    if (!selectedFinish) return
+    const doorColorChanged = lastJambDoorFinishId.current !== selectedFinish.id
+    lastJambDoorFinishId.current = selectedFinish.id
+    if (builderUx.showJambColorSelection && jambFinishOverridden) return
+    // Loading a valid saved color is not a customer color change.
+    if (!builderUx.showJambColorSelection && !doorColorChanged && jambFinish) return
     if (!jambType) setJambType('timber')
     const match = matchingJambFinish(selectedFinish, jambType, cladFinishes)
     setJambFinishType(jambType === 'clad' ? 'clad' : selectedFinish.finishType)
     setJambFinishColor(match?.id ?? '')
     if (!builderUx.showJambColorSelection) setJambFinishOverridden(false)
-  }, [selectedFinish?.id, jambType, jambFinishOverridden])
+  }, [selectedFinish?.id, jambType, jambFinishOverridden, jambFinish?.id])
 
   useEffect(() => {
-    if (builderUx.showGlassFrameColorSelection || !selectedFinish) return
+    if (!selectedFinish) return
+    const doorColorChanged = lastGlassFrameDoorFinishId.current !== selectedFinish.id
+    lastGlassFrameDoorFinishId.current = selectedFinish.id
+    if (builderUx.showGlassFrameColorSelection) return
+    if (!doorColorChanged && glassFrameColorMode && (glassFrameColorMode !== 'custom' || customGlassFrameFinish)) return
     setGlassFrameColorMode('match-door')
     setGlassFrameFinishId(matchedGlassFrameFinish.id)
     setGlassFrameFinishType(matchedGlassFrameFinish.finishType)
-  }, [selectedFinish?.id, matchedGlassFrameFinish.id, matchedGlassFrameFinish.finishType])
+  }, [selectedFinish?.id, matchedGlassFrameFinish.id, matchedGlassFrameFinish.finishType, glassFrameColorMode, customGlassFrameFinish?.id])
 
   useEffect(() => {
     if (screen !== 'builder') return
@@ -1349,7 +1361,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     setSelectedFinishType('')
     setSelectedPaint('')
     setSelectedStain('')
-    setJambType('')
+    setJambType(builderUx.showJambMaterialSelection ? '' : 'timber')
     setJambFinishType('')
     setJambFinishColor('')
     setJambFinishOverridden(false)
