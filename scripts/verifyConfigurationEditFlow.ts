@@ -24,9 +24,38 @@ try {
     await page.route('**/api/generate-door-visualization', route => { generations++; payloads.push(route.request().postDataJSON()); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ image: `data:image/jpeg;base64,${photo.toString('base64')}` }) }) })
     const next = () => page.getByRole('button', { name: 'Next configuration step' }).click()
     const summary = () => page.getByRole('heading', { name: 'Configuration Summary' }).waitFor()
+    const normalLayouts = new Map<string, unknown>()
+    const stepLayout = () => page.evaluate(() => {
+      const panel = document.querySelector('.builder-panel')!.getBoundingClientRect()
+      return ['.step-label-row', '.step-heading h1', '.step-heading-copy > p', '.options-grid'].map(selector => {
+        const rect = document.querySelector(selector)?.getBoundingClientRect()
+        // Card/image height may settle by a pixel as assets load; compare the
+        // heading geometry and the grid's origin, not asynchronous image height.
+        return rect ? { top: Math.round(rect.top - panel.top), height: selector === '.options-grid' ? undefined : Math.round(rect.height), width: Math.round(rect.width) } : null
+      })
+    })
+    const assertFloatingControl = async () => {
+      const button = page.getByRole('button', { name: 'Done Editing', exact: true })
+      assert.equal(await button.count(), 1, 'Only the responsive preview control is accessible')
+      assert.ok(await button.evaluate(element => {
+        const overlay = element.closest('.configuration-edit-return')!
+        const preview = overlay.parentElement!
+        const bounds = preview.getBoundingClientRect(), rect = overlay.getBoundingClientRect()
+        return getComputedStyle(overlay).position === 'absolute'
+          && preview.matches('.mobile-live-preview, .aside-preview-area')
+          && rect.left >= bounds.left && rect.right <= bounds.right && rect.top >= bounds.top
+      }), 'Control floats inside preview bounds')
+      const rect = await button.boundingBox()
+      for (const utility of await page.locator('.preview-view-toggle:visible, .preview-reset-design:visible').all()) {
+        const other = await utility.boundingBox()
+        if (rect && other) assert.ok(rect.x + rect.width <= other.x || other.x + other.width <= rect.x || rect.y + rect.height <= other.y || other.y + other.height <= rect.y, 'Done Editing does not cover preview utilities')
+      }
+    }
     const walkToSummary = async () => {
       for (let i = 0; i < 30 && await page.getByRole('button', { name: 'Next configuration step' }).count(); i++) {
         if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
+        await page.waitForTimeout(100)
+        if (!await page.getByRole('button', { name: 'Done Editing', exact: true }).count()) normalLayouts.set(await page.locator('.step-heading h1').innerText(), await stepLayout())
         await next(); await page.waitForTimeout(120)
       }
       await summary()
@@ -40,6 +69,10 @@ try {
     for (const [area, heading] of [['Color', 'Choose Your Door Finish'], ['Hardware', 'Choose Your Hardware'], ['Glass', 'Choose Main Door Glass Type'], ['Sidelites', 'Choose Your Sidelites'], ['Door', 'Choose a Door Style']]) {
       await page.getByRole('button', { name: `Edit ${area}`, exact: true }).click()
       await page.getByRole('heading', { name: heading, exact: true }).waitFor()
+      await page.waitForTimeout(150)
+      await assertFloatingControl()
+      assert.deepEqual(await stepLayout(), normalLayouts.get(heading), `${width}px ${area}: edit mode leaves normal headings/grid geometry unchanged`)
+      if (area === 'Door' || area === 'Sidelites') await page.screenshot({ path: `/tmp/floating-edit-${area.toLowerCase()}-${width}.png` })
       if (area === 'Color') await card(/^White$/).click()
       if (area === 'Hardware') await page.locator('.hardware-card-main').last().click()
       if (area === 'Glass') {
@@ -55,6 +88,8 @@ try {
     await page.locator('input[type=file]').setInputFiles({ name: 'same-house.jpg', mimeType: 'image/jpeg', buffer: photo })
     await page.getByText('AI Result', { exact: true }).waitFor({ timeout: 30000 })
     const originalUrl = await page.locator('.cleanup-comparison-original').getAttribute('src')
+    assert.ok(await page.locator('.configuration-edit-actions-floating').evaluate(element => getComputedStyle(element).position === 'absolute' && Boolean(element.closest('.ai-photo-result-area'))), 'Visualizer edit toolbar floats over the result viewfinder')
+    await page.screenshot({ path: `/tmp/floating-visualizer-edit-${width}.png` })
     for (const [area, heading] of [['Color', 'Choose Your Door Finish'], ['Hardware', 'Choose Your Hardware'], ['Glass', 'Choose Main Door Glass Type'], ['Door', 'Choose a Door Style']]) {
       const previousGenerations = generations
       await page.getByRole('button', { name: `Edit ${area}`, exact: true }).click()

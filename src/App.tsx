@@ -1501,6 +1501,11 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     }
   }
 
+  const editModeControls = editReturnTo && <div className="configuration-edit-return">
+    <button type="button" onClick={doneEditing}>Done Editing</button>
+    {editReturnError && <p role="status">{editReturnError}</p>}
+  </div>
+
   const requestCustomerAction = (action: 'download-pdf' | 'open-visualizer') => {
     if (testMode || customerFormCompleted) {
       if (action === 'download-pdf') void downloadPdf().catch(() => undefined)
@@ -2011,13 +2016,10 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           {selectedStyle && <div className="preview-view-toggle mobile-preview-view-toggle" role="group" aria-label="Preview view">
             {previewModes.map((view) => <button type="button" className={builderPreviewView === view ? 'active' : ''} aria-pressed={builderPreviewView === view} key={view} onClick={() => setBuilderPreviewView(view)}>{view}</button>)}
           </div>}
+          {editModeControls}
           {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
         </div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
-          {editReturnTo && <div className="configuration-edit-return">
-            <button type="button" onClick={doneEditing}>Done Editing</button>
-            {editReturnError && <p role="status">{editReturnError}</p>}
-          </div>}
           {currentStep !== 'Review & Quote' && <>
             <div className="builder-step-intro">
               {returningFromVisualizer && !editReturnTo && <div className="saved-door-visualizer-action">
@@ -2103,7 +2105,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
             {!testMode && <button className="mobile-quote-form-cta" type="button" onClick={() => { setPendingCustomerAction(null); setSubmitted(false); showScreen('customer-form') }}>Continue to Quote Form <ArrowRight size={17}/></button>}
             <button className="floating-visualizer-launch" type="button" onClick={() => requestCustomerAction('open-visualizer')} aria-label="Launch Door Visualizer"><Eye size={19} /><span>Launch Door Visualizer</span><ArrowRight size={16} /></button>
-            <div className="mobile-review-preview">{renderConfiguredPreviewMode()}</div>
+            <div className="mobile-review-preview">{editModeControls}{renderConfiguredPreviewMode()}</div>
             <section className="visualizer-promo-card visualizer-promo-card-mobile" aria-labelledby="mobile-visualizer-promo-title">
               <div className="visualizer-promo-graphic" aria-hidden="true"><img src="/assets/visualizer/view-on-your-home-tablet.webp" alt="" /></div>
               <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow">Home Visualizer</span><h2 id="mobile-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => requestCustomerAction('open-visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
@@ -2137,6 +2139,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         {!submitted && <aside className={currentPage === 'review' ? 'review-preview-panel' : undefined}>
           <div className="beta-feedback-context-host beta-feedback-preview-host" data-feedback-trigger-host="preview" />
           <div className="aside-preview-area">
+            {editModeControls}
             {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
           </div>
           {currentPage === 'review' && <section className="visualizer-promo-card visualizer-promo-card-desktop" aria-labelledby="desktop-visualizer-promo-title">
