@@ -8,7 +8,8 @@ import { glassDoorCodes } from '../data/productCatalog'
 import { resolveGlassMaskAsset } from '../data/glassMaskAssets'
 import { glassFrameMaskForOpening, type GlassFrameMaskDefinition, type GlassFrameShape } from '../data/glassFrameMasks'
 import { DoorFrame } from './preview/DoorFrame'
-import { sidelitePlacement } from '../data/sideliteConfigurations'
+import { resolveSidelitePosition } from '../data/sideliteConfigurations'
+import { doorHandingSides } from '../data/doorHanding'
 
 const hexToRgb = (hex: string) => {
   const normalized = hex.replace('#', '')
@@ -103,15 +104,6 @@ function canonicalSurfaceDetailStyle(mask: string, finishType: Finish['finishTyp
 type PixelBounds = { x: number; y: number; width: number; height: number }
 type HardwareSide = 'left' | 'right'
 
-const hardwarePlacementByDoorSwing: Record<DoorSwing['id'], {
-  hardwareSideExterior: HardwareSide
-  hardwareSideInterior: HardwareSide
-}> = {
-  LHI: { hardwareSideExterior: 'right', hardwareSideInterior: 'left' },
-  LHO: { hardwareSideExterior: 'left', hardwareSideInterior: 'right' },
-  RHI: { hardwareSideExterior: 'left', hardwareSideInterior: 'right' },
-  RHO: { hardwareSideExterior: 'right', hardwareSideInterior: 'left' },
-}
 
 const sourceHardwareSideByView: Record<HardwareView, HardwareSide> = {
   Exterior: 'right',
@@ -542,9 +534,8 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const [internalPreviewView, setInternalPreviewView] = useState<HardwareView>('Exterior')
   const previewView = view ?? internalPreviewView
   const setPreviewView = onViewChange ?? setInternalPreviewView
-  const hardwarePlacement = doorSwing ? hardwarePlacementByDoorSwing[doorSwing.id] : null
-  const hardwareSideExterior = hardwarePlacement?.hardwareSideExterior ?? 'right'
-  const hardwareSideInterior = hardwarePlacement?.hardwareSideInterior ?? 'left'
+  const hardwareSideExterior = doorHandingSides(doorSwing?.id ?? 'LHI').lockSide
+  const hardwareSideInterior = doorHandingSides(doorSwing?.id ?? 'LHI', 'Interior').lockSide
   const hardwareSide = previewView === 'Exterior' ? hardwareSideExterior : hardwareSideInterior
   const hardwareSourceSide = sourceHardwareSideByView[previewView]
   const keepHardwareReadable = preservesReadableHardware(hardware)
@@ -554,10 +545,8 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
       : 'hardware-image-mirrored'
     : ''
   const selectedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView, doorSwing)
-  const configuredSidelitePlacement = sidelitePlacement(sidelites)
-  const semanticSideliteSide: HardwareSide | null = configuredSidelitePlacement === 'left' ? 'left' : configuredSidelitePlacement === 'right' ? 'right' : null
-  const visualSideliteSide = previewView === 'Interior' && semanticSideliteSide ? (semanticSideliteSide === 'left' ? 'right' : 'left') : semanticSideliteSide
-  const frameSidelites = compact || configuredSidelitePlacement === 'none' ? 'none' : configuredSidelitePlacement === 'both' ? 'both' : visualSideliteSide ?? 'none'
+  const configuredSidelitePlacement = resolveSidelitePosition({ relationship: sidelites, handing: doorSwing?.id, view: previewView })
+  const frameSidelites = compact ? 'none' : configuredSidelitePlacement ?? 'none'
   const defaultHardware = hardwareOptions.find((option) => Boolean(hardwarePreviewAssetUrl(option, previewView, doorSwing)))
   const previewHardware: PreviewHardware = selectedHardwareImage ? hardware : defaultHardware ?? hardware
   const requestedHardwareImage = selectedHardwareImage || hardwarePreviewAssetUrl(previewHardware, previewView, doorSwing)

@@ -28,18 +28,19 @@ import { cladColors } from './data/finishes'
 import { HomeVisualizer } from './features/home-visualizer/HomeVisualizer'
 import { HERO_PRESETS, heroDoorFilename, type HeroPreset } from './data/heroPresets'
 import { HeroDoorGenerator } from './features/hero/HeroDoorGenerator'
-import { sideliteBuilderOptions, sideliteProductCode, sideliteProductLabel } from './data/sideliteConfigurations'
+import { sideliteBuilderOptions, sideliteProductCode, sideliteProductLabel, sideliteRelationshipLabel } from './data/sideliteConfigurations'
 import { sideliteAssetFamilyForSlab, sideliteGlassMask, sideliteSlabAsset, sideliteStylesForFamily, type SideliteStyleId } from './data/sideliteAssets'
 import { clearDoorBuilderDraft, loadDoorBuilderDraft, saveDoorBuilderDraft, type DoorBuilderDraftConfiguration } from './utils/doorBuilderDraft'
 
-const glassSteps = ['Entry Type', 'Sidelites', 'Door', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
-const noGlassSteps = ['Entry Type', 'Sidelites', 'Door', 'Finish', 'Hardware', 'Review & Quote']
+const glassSteps = ['Entry Type', 'Sidelites', 'Door Swing', 'Door', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
+const noGlassSteps = ['Entry Type', 'Sidelites', 'Door Swing', 'Door', 'Finish', 'Hardware', 'Review & Quote']
 type BuilderPage = 'door-configuration' | 'door-style' | 'door-line' | 'door-grain' | 'sidelites' | 'sidelite-style' | 'door-finish' | 'jamb-type' | 'jamb-finish' | 'glass-type' | 'glass' | 'glass-variant' | 'glass-frame-color' | 'grid-location' | 'grid-style' | 'grid-pattern' | 'grid-color' | 'grid-width' | 'sidelite-glass-type' | 'sidelite-glass' | 'sidelite-glass-variant' | 'sidelite-grid-location' | 'sidelite-grid-style' | 'sidelite-grid-pattern' | 'sidelite-grid-color' | 'sidelite-grid-width' | 'lock-setup' | 'hardware' | 'door-swing' | 'review'
 const mainDoorGlassPages = new Set<BuilderPage>(['glass-type', 'glass', 'glass-variant', 'grid-location', 'grid-style', 'grid-pattern', 'grid-color', 'grid-width'])
 const sideliteGlassPages = new Set<BuilderPage>(['sidelite-glass-type', 'sidelite-glass', 'sidelite-glass-variant', 'sidelite-grid-location', 'sidelite-grid-style', 'sidelite-grid-pattern', 'sidelite-grid-color', 'sidelite-grid-width'])
 type GlassCategory = 'clear' | 'decorative' | 'privacy' | 'blinds' | 'clic' | 'retro'
 const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '', notes: '' }
 const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
+const temporaryPreviewHardware = hardwareOptions.find(item => item.manufacturer === 'Schlage' && item.style === 'Georgian Knob with Deadbolt' && item.finish === 'Matte Black')
 const proMatchTooltipTitle = 'About ProMatch® Colors'
 const proMatchTooltipText = 'ProMatch® colors are custom-blended to coordinate across select HGI products. Each painted door is carefully prepared, finished with two coats of enamel, and oven-baked for a smooth, durable finish backed by a 15-year warranty.'
 const timberStainTooltipTitle = 'About TimberStain®'
@@ -546,7 +547,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const glass = glassOptions.find((item) => item.id === glassId) ?? null
   const selectedHardware = hardwareOptions.find((item) => item.id === hardwareId)
   const selectedDoubleDoorLockPrep = doubleDoorLockPrepOption(doubleDoorLockPrep)
-  const hardware = selectedHardware ?? emptyPreviewHardware
+  const hardware = selectedHardware ?? temporaryPreviewHardware ?? emptyPreviewHardware
   const selectedDoorSwing = doorSwingOptions.find((item) => item.id === doorSwingId)
   const sideliteOptions = sideliteBuilderOptions(selectedDoorConfigurationType)
   const selectedStyleCodes = selectedStyle
@@ -766,6 +767,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const pages: BuilderPage[] = [
     'door-configuration',
     'sidelites',
+    'door-swing',
     'door-style',
     'door-line',
     ...(needsGrainStep ? ['door-grain' as const] : []),
@@ -797,7 +799,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     ...(supportsGlassFrameColor && builderUx.showGlassFrameColorSelection ? ['glass-frame-color' as const] : []),
     ...(selectedDoorConfigurationType === 'french' ? ['lock-setup' as const] : []),
     'hardware',
-    'door-swing',
     'review',
   ]
   const isBuilderPageComplete = (page: BuilderPage) => {
@@ -850,13 +851,14 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     ? 'Entry Type'
     : currentPage === 'sidelites'
       ? 'Sidelites'
+      : currentPage === 'door-swing' ? 'Door Swing'
       : currentPage === 'door-style' || currentPage === 'door-line' || currentPage === 'door-grain' || currentPage === 'sidelite-style'
         ? 'Door'
     : currentPage === 'door-finish' || currentPage === 'jamb-type' || currentPage === 'jamb-finish'
       ? 'Finish'
       : currentPage.startsWith('glass') || currentPage.startsWith('grid-') || currentPage.startsWith('sidelite-glass') || currentPage.startsWith('sidelite-grid')
         ? 'Glass'
-        : currentPage === 'lock-setup' || currentPage === 'hardware' || currentPage === 'door-swing'
+        : currentPage === 'lock-setup' || currentPage === 'hardware'
           ? 'Hardware'
           : 'Review & Quote'
   const activeMainStepIndex = steps.indexOf(currentStep)
@@ -882,7 +884,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     finish: previewConfig.finish,
     glass: previewConfig.glass,
     hardware: previewConfig.hardware,
-    showHardware: Boolean(selectedHardware),
+    showHardware: Boolean(selectedHardware || temporaryPreviewHardware),
     grain: selectedGrain,
     product,
     tintColor: previewConfig.tintColor,
@@ -1404,6 +1406,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     const targetPage = pages.findIndex((page) => (
       targetStep === 'Entry Type' ? page === 'door-configuration'
         : targetStep === 'Sidelites' ? page === 'sidelites'
+          : targetStep === 'Door Swing' ? page === 'door-swing'
           : targetStep === 'Door' ? page === 'door-style'
         : targetStep === 'Finish' ? page === 'door-finish'
           : targetStep === 'Glass' ? page === 'glass-type'
@@ -1693,8 +1696,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     doorSwing: selectedDoorSwing,
     sidelites: sidelites || 'none',
     sidelitePlacement: sidelites || 'none',
-    sideliteConfigurationCode: sideliteProductCode(sidelites || 'none'),
-    sideliteConfigurationLabel: sideliteProductLabel(sidelites || 'none'),
+    sideliteConfigurationCode: sideliteProductCode(sidelites || 'none', selectedDoorSwing.id),
+    sideliteConfigurationLabel: sideliteProductLabel(sidelites || 'none', selectedDoorSwing.id),
     ...((sidelites || 'none') !== 'none' && selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}),
     ...((sidelites || 'none') !== 'none' && sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}),
   } : null
@@ -1770,7 +1773,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     ...(selectedDoorConfigurationType === 'french' && selectedDoubleDoorLockPrep ? [['Lock Setup', selectedDoubleDoorLockPrep.name, pages.indexOf('lock-setup')] as [string, string, number]] : []),
     ['Door style', style.name, pages.indexOf('door-style')],
     ['Door Line', selectedDoorLine?.name ?? product.doorType, pages.indexOf('door-line')],
-    ['Sidelite Configuration', sideliteProductLabel(sidelites || 'none'), pages.indexOf('sidelites')],
+    ['Sidelite Configuration', sideliteRelationshipLabel(sidelites || 'none'), pages.indexOf('sidelites')],
     ...(selectedSideliteStyle ? [['Sidelite Slab', selectedSideliteStyle.name, pages.indexOf('sidelite-style')] as [string, string, number]] : []),
     ...(selectedFslGlass ? [
       ['Sidelite Glass', selectedFslGlass.name, pages.indexOf('sidelite-glass')] as [string, string, number],
@@ -1805,7 +1808,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const feedbackConfiguration = {
     doorStyle: selectedStyle?.name ?? 'Not selected',
     doorConfiguration: selectedDoorConfigurationType ? doorConfigurationLabel(selectedDoorConfigurationType) : 'Not selected',
-    sidelites: sideliteProductLabel(sidelites || 'none'),
+    sidelites: sideliteRelationshipLabel(sidelites || 'none'),
     glass: configuredGlass?.name ?? (compatibilitySupportsGlass ? 'Not selected' : 'Not applicable'),
     sideliteGlass: selectedFslGlass?.name ?? ((sidelites || 'none') === 'none' ? 'Not applicable' : 'Not selected'),
     doorFinish: selectedFinish?.name ?? 'Not selected',
@@ -1939,7 +1942,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         <nav className="stepper" aria-label="Configuration progress">
           {steps.map((label, index) => {
             const isReachable = canVisitStep(index)
-            const targetPage = pages.findIndex((page) => label === 'Entry Type' ? page === 'door-configuration' : label === 'Sidelites' ? page === 'sidelites' : label === 'Door' ? page === 'door-style' : label === 'Finish' ? page === 'door-finish' : label === 'Glass' ? page === 'glass-type' : label === 'Hardware' ? page === 'hardware' : page === 'review')
+            const targetPage = pages.findIndex((page) => label === 'Entry Type' ? page === 'door-configuration' : label === 'Sidelites' ? page === 'sidelites' : label === 'Door Swing' ? page === 'door-swing' : label === 'Door' ? page === 'door-style' : label === 'Finish' ? page === 'door-finish' : label === 'Glass' ? page === 'glass-type' : label === 'Hardware' ? page === 'hardware' : page === 'review')
             return <button key={label} className={`${index === activeMainStepIndex ? 'active' : ''} ${index < activeMainStepIndex ? 'done' : ''}`} disabled={!isReachable} aria-current={index === activeMainStepIndex ? 'step' : undefined} onClick={() => isReachable && goTo(targetPage)}><span>{index + 1}</span><em>{label}</em></button>
           })}
         </nav>
@@ -1979,7 +1982,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <div ref={builderOptionsRef} className="builder-options-scroll">
               {glassSelectionTarget && <div className={`glass-target-banner glass-target-${glassSelectionTarget}`} role="status" aria-live="polite">
                 <span className="glass-target-icon" aria-hidden="true">{glassSelectionTarget === 'main-door' ? 'D' : 'SL'}</span>
-                <span><small>You are choosing glass for</small><strong>{glassSelectionTarget === 'main-door' ? 'Main Door' : 'Sidelite'}</strong>{glassSelectionTarget === 'sidelite' && <em>{selectedSideliteStyle?.name}{sidelites && sidelites !== 'none' ? ` · ${sideliteProductLabel(sidelites)}` : ''}</em>}</span>
+                <span><small>You are choosing glass for</small><strong>{glassSelectionTarget === 'main-door' ? 'Main Door' : 'Sidelite'}</strong>{glassSelectionTarget === 'sidelite' && <em>{selectedSideliteStyle?.name}{sidelites && sidelites !== 'none' ? ` · ${sideliteRelationshipLabel(sidelites)}` : ''}</em>}</span>
               </div>}
               {(currentPage === 'door-finish' || currentPage === 'jamb-finish') && selectedDoorLine && <div className="finish-toolbar">
                 {(currentPage === 'door-finish' || jambType === 'timber') && <div className="finish-tabs" role="tablist" aria-label="Finish type">{effectiveFinishTypes.map((type) => <button type="button" role="tab" aria-selected={(currentPage === 'door-finish' ? activeFinishType : jambFinishType) === type} className={(currentPage === 'door-finish' ? activeFinishType : jambFinishType) === type ? 'active' : ''} key={type} onClick={() => currentPage === 'door-finish' ? selectFinishTab(type) : (setJambFinishType(type), setJambFinishColor(''), setJambFinishOverridden(true))}>{type === 'paint' ? 'Paint' : 'Stain'}</button>)}</div>}
@@ -2087,7 +2090,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <span><b>Door Style</b><strong>{selectedStyle?.code ?? 'Not selected'}</strong></span>
             <span><b>Finish</b><strong>{selectedFinish?.name ?? 'Not selected'}</strong></span>
             <span><b>Glass</b><strong>{compatibilitySupportsGlass ? (configuredGlass?.name ?? 'Clear') : 'Not applicable'}</strong></span>
-            <span><b>Sidelites</b><strong>{sideliteProductLabel(sidelites || 'none')}</strong></span>
+            <span><b>Sidelites</b><strong>{sideliteRelationshipLabel(sidelites || 'none')}</strong></span>
             {selectedDoorConfigurationType === 'french' && <span><b>Lock Setup</b><strong>{selectedDoubleDoorLockPrep?.name ?? 'Not selected'}</strong></span>}
             <span><b>Hardware</b><strong>{selectedHardware ? hardwareDisplayName(selectedHardware) : 'Not selected'}</strong></span>
             <span><b>Door Swing</b><strong>{selectedDoorSwing ? `${selectedDoorSwing.id} — ${selectedDoorSwing.name}` : 'Not selected'}</strong></span>

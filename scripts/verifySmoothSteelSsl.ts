@@ -36,7 +36,7 @@ try {
     await page.goto('http://127.0.0.1:5196/')
     await page.getByRole('button', { name: 'Start Building', exact: true }).click()
     await page.getByRole('button', { name: 'Next configuration step' }).waitFor()
-    for (let step = 0; step < 3; step++) {
+    for (let step = 0; step < 4; step++) {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
       await page.getByRole('button', { name: 'Next configuration step' }).click()
       await page.waitForTimeout(150)

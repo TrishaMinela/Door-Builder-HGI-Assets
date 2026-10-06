@@ -1,5 +1,6 @@
 import { doorConfigurationHingeOptionLabel, doorConfigurationLabel, doubleDoorLockPrepOption } from '../data/doorConfigurationRules'
 import { hardwareDisplayName } from '../data/hardware'
+import { sidelitePlacement } from '../data/sideliteConfigurations'
 import type { ContactForm, DoorConfiguration, GridConfiguration, SideliteGlassConfiguration } from '../types'
 
 export type DoorBuilderSubmissionPayload = {
@@ -83,10 +84,10 @@ function readableSideliteGlass(glass?: SideliteGlassConfiguration | null) {
 }
 
 function readableSidelitePlacement(configuration: DoorConfiguration) {
-  const placement = configuration.sidelitePlacement ?? configuration.sidelites
-  if (placement === 'both-sides') return 'Sidelites on Both Sides'
-  if (placement === 'hinge-side') return 'Sidelite on Left'
-  if (placement === 'lock-side') return 'Sidelite on Right'
+  const placement = sidelitePlacement(configuration.sidelitePlacement ?? configuration.sidelites, configuration.doorSwing.id)
+  if (placement === 'both') return 'Sidelites on Both Sides'
+  if (placement === 'left') return 'Sidelite on Left'
+  if (placement === 'right') return 'Sidelite on Right'
   return 'No Sidelites'
 }
 

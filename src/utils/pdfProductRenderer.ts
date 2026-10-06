@@ -8,6 +8,7 @@ import { glassOptions } from '../data/glassOptions'
 import { hardwarePreviewAssetUrl } from '../data/hardware'
 import { doorHardwarePlacements } from '../data/doorConfigurationRules'
 import { sidelitePlacement } from '../data/sideliteConfigurations'
+import { doorHandingSides } from '../data/doorHanding'
 import { createCanonicalEntranceGeometry, ENTRANCE_GEOMETRY } from '../features/home-visualizer/entranceGeometry'
 
 // Resolved asset selection is shared with the builder, not re-guessed from
@@ -155,7 +156,7 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
   const clearUrl = gridClear ? glassOptions.find(item => item.id === (code === 'S' ? 's-clear-no-grids' : ['F48', 'F482'].includes(code) ? 'f48-clear-no-grids' : 'f-clear-no-grids'))?.overlaysByDoorStyle[code] : undefined
   const hardwareUrl = hardwarePreviewAssetUrl(config.hardware, 'Exterior', config.doorSwing)
   if (!hardwareUrl) throw new Error(`No PDF hardware asset is mapped for ${config.hardware.manufacturer} / ${config.hardware.style} / ${config.hardware.finish}.`)
-  const placement = sidelitePlacement(config.sidelites)
+  const placement = sidelitePlacement(config.sidelites, config.doorSwing.id)
   if (placement !== 'none' && (!assets.sideliteAssetSrc || !assets.sideliteMaskSrc)) throw new Error('PDF sidelite slab/mask assets are missing.')
   if (placement !== 'none' && config.sideliteGlass && !assets.sideliteGlassSrc && !assets.sideliteClearGlassBase) throw new Error(`PDF sidelite glass asset is missing: ${config.sideliteGlass.glass}`)
   const urls = [maskUrl, code === 'HRT' ? '/assets/masks/HRT.png' : undefined, glassUrl, clearUrl, hardwareUrl, ...(placement !== 'none' ? [assets.sideliteAssetSrc, assets.sideliteMaskSrc, assets.sideliteGlassSrc] : []), assets.glassFrameFinish?.finishType === 'stain' ? assets.glassFrameFinish.image : undefined].filter((url): url is string => Boolean(url))
@@ -224,7 +225,7 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
   }
   if (geometry.hasLeft) drawSide(geometry.contentLeft)
   if (geometry.hasRight) drawSide(geometry.doorLeft + geometry.doorAssemblyWidth + geometry.rightMullionWidth)
-  const exteriorSide = ['LHI', 'RHO'].includes(config.doorSwing.id) ? 'right' : 'left'
+  const exteriorSide = doorHandingSides(config.doorSwing.id).lockSide
   const placements = doorHardwarePlacements(config.doorConfigurationType, exteriorSide, exteriorSide, config.doubleDoorLockPrep)
   const leaves = config.doorConfigurationType === 'french' || config.doorConfigurationType === 'savannah' ? 2 : 1
   for (let leaf = 0; leaf < leaves; leaf += 1) {

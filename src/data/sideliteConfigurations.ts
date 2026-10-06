@@ -1,4 +1,5 @@
-import type { DoorConfigurationType, SideliteConfiguration, SideliteProductCode } from '../types.js'
+import type { DoorConfigurationType, DoorSwing, HardwareView, SideliteConfiguration, SideliteProductCode } from '../types.js'
+import { doorHandingSides } from './doorHanding.js'
 
 export type { SideliteProductCode } from '../types.js'
 export type SideliteInput = SideliteConfiguration | SideliteProductCode | 'both' | 'left' | 'right' | '' | null | undefined
@@ -33,7 +34,7 @@ const singleDoorBuilderOptions: readonly SideliteBuilderOption[] = [
 
 const doubleDoorBuilderOptions: readonly SideliteBuilderOption[] = sideliteProductOptions.map((option) => ({
   id: option.legacyValue,
-  name: option.label,
+  name: singleDoorBuilderOptions.find(item => item.id === option.legacyValue)!.name,
   image: option.code === 'NOSIDE'
     ? '/assets/hgi-assets/Sidelites/options/Double Door No Side.webp'
     : option.code === 'BOTHSIDES'
@@ -66,18 +67,38 @@ export function sideliteProductOption(value: SideliteInput): SideliteProductOpti
   return optionByCode.get(codeByInput[String(value ?? '')] ?? 'NOSIDE') ?? sideliteProductOptions[0]
 }
 
-export function sideliteProductCode(value: SideliteInput): SideliteProductCode {
-  return sideliteProductOption(value).code
+export function sideliteProductCode(value: SideliteInput, handing?: DoorSwing['id']): SideliteProductCode {
+  const placement = sidelitePlacement(value, handing)
+  return placement === 'left' ? 'LEFTSIDE' : placement === 'right' ? 'RIGHTSIDE' : placement === 'both' ? 'BOTHSIDES' : 'NOSIDE'
 }
 
-export function sideliteProductLabel(value: SideliteInput): string {
-  return sideliteProductOption(value).label
+export function sideliteProductLabel(value: SideliteInput, handing?: DoorSwing['id']): string {
+  return optionByCode.get(sideliteProductCode(value, handing))!.label
 }
 
-export function normalizeLegacySidelite(value: SideliteInput): SideliteConfiguration {
+export function normalizeLegacySidelite(value: SideliteInput, handing?: DoorSwing['id']): SideliteConfiguration {
+  if (handing && ['LEFTSIDE', 'RIGHTSIDE', 'left', 'right'].includes(String(value))) {
+    return sideliteProductOption(value).placement === doorHandingSides(handing).hingeSide ? 'hinge-side' : 'lock-side'
+  }
   return sideliteProductOption(value).legacyValue
 }
 
-export function sidelitePlacement(value: SideliteInput): SideliteProductOption['placement'] {
-  return sideliteProductOption(value).placement
+export function resolveSidelitePosition({ relationship, handing, view = 'Exterior' }: { relationship: SideliteInput; handing?: DoorSwing['id'] | null; view?: HardwareView }): SideliteProductOption['placement'] | null {
+  if (relationship === 'hinge-side' || relationship === 'lock-side') {
+    if (!handing) return null
+    const sides = doorHandingSides(handing, view)
+    return relationship === 'hinge-side' ? sides.hingeSide : sides.lockSide
+  }
+  const physical = sideliteProductOption(relationship).placement
+  return view === 'Interior' && (physical === 'left' || physical === 'right') ? (physical === 'left' ? 'right' : 'left') : physical
+}
+
+/** Legacy callers without handing retain their existing LHI convention.
+ * Customer previews use resolveSidelitePosition and wait for actual handing. */
+export function sidelitePlacement(value: SideliteInput, handing: DoorSwing['id'] = 'LHI'): SideliteProductOption['placement'] {
+  return resolveSidelitePosition({ relationship: value, handing })!
+}
+
+export function sideliteRelationshipLabel(value: SideliteInput) {
+  return singleDoorBuilderOptions.find(item => item.id === value)?.name ?? sideliteProductLabel(value)
 }

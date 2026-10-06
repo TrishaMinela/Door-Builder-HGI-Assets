@@ -8,6 +8,8 @@ import type {
   SideliteConfiguration,
 } from '../types'
 import type { FslGridLocationId, SideliteGlassCategory } from '../data/fslGlass'
+import { normalizeLegacySidelite, type SideliteInput } from '../data/sideliteConfigurations'
+import type { DoorSwing } from '../types'
 
 export const DOOR_BUILDER_DRAFT_KEY = 'hgi-door-builder-draft'
 export const DOOR_BUILDER_DRAFT_VERSION = 1
@@ -88,7 +90,9 @@ export function sanitizeDoorBuilderDraft(value: unknown): DoorBuilderDraftConfig
     ...blankDraft,
     selectedDoorConfigurationType: allowed(input.selectedDoorConfigurationType, ['', 'single', 'french', 'savannah'], ''),
     styleId: text(input.styleId), doorLineId: text(input.doorLineId), grainId: text(input.grainId),
-    sidelites: allowed(input.sidelites, ['', 'none', 'hinge-side', 'lock-side', 'both-sides'], ''),
+    sidelites: ['LEFTSIDE', 'RIGHTSIDE', 'left', 'right', 'NOSIDE', 'BOTHSIDES', 'both'].includes(String(input.sidelites))
+      ? normalizeLegacySidelite(input.sidelites as SideliteInput, ['LHI', 'LHO', 'RHI', 'RHO'].includes(String(input.doorSwingId)) ? input.doorSwingId as DoorSwing['id'] : undefined)
+      : allowed(input.sidelites, ['', 'none', 'hinge-side', 'lock-side', 'both-sides'], ''),
     sideliteStyleId: text(input.sideliteStyleId),
     sideliteGlassCategory: allowed(input.sideliteGlassCategory, ['', 'clear', 'decorative', 'privacy', 'clic', 'blinds'], ''),
     sideliteGlassId: text(input.sideliteGlassId), sideliteGlassGroupKey: text(input.sideliteGlassGroupKey),

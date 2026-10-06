@@ -9,6 +9,7 @@ import { glassOptions } from '../src/data/glassOptions.js'
 import { sideliteAssetFamilyForSlab, sideliteSlabAsset } from '../src/data/sideliteAssets.js'
 import { sidelitePlacement } from '../src/data/sideliteConfigurations.js'
 import { doorHardwarePlacements } from '../src/data/doorConfigurationRules.js'
+import { doorHandingSides } from '../src/data/doorHanding.js'
 import { fslGlassOptions } from '../src/data/fslGlass.js'
 import { f48slGlassOptions } from '../src/data/f48slGlass.js'
 import { sslGlassOptions } from '../src/data/sslGlass.js'
@@ -215,7 +216,7 @@ export function resolveAiProduct(value: unknown, jambFinishId?: unknown, glassFr
   const glassFrameFinish = finishes.find(item => item.id === glassFrameFinishId) ?? (source.glassFrameColorMode === 'match-door' ? finish : null)
   if (glassFrameFinishId !== undefined && !finishes.some(item => item.id === glassFrameFinishId)) throw new AiInputError('INVALID_REQUEST', 'Selected glass frame finish is invalid.')
   const doubleDoorLockPrep = ['DDLLBO', 'DDLLAC', 'DDLLKP'].includes(String(source.doubleDoorLockPrep)) ? source.doubleDoorLockPrep as DoorConfiguration['doubleDoorLockPrep'] : null
-  const exteriorHardwareSide = ['LHI', 'RHO'].includes(String(swing)) ? 'right' : 'left'
+  const exteriorHardwareSide = doorHandingSides(swing as DoorConfiguration['doorSwing']['id']).lockSide
   const hardwareCount = doorHardwarePlacements(type as DoorConfiguration['doorConfigurationType'], exteriorHardwareSide, exteriorHardwareSide, doubleDoorLockPrep).length
   const snapshot = {
     schemaVersion: 1, configurationType: type, doorLine: line?.name, product: selectedProduct.doorType,
@@ -258,7 +259,7 @@ function structuralValue(value: unknown) {
 
 export function aiStructuralInstructionBlock(snapshot: ReturnType<typeof resolveAiProduct>['snapshot']) {
   const doorStructure = snapshot.configurationType === 'single' ? 'single' : 'double'
-  const sideliteStructure = sidelitePlacement(snapshot.sidelites.placement)
+  const sideliteStructure = sidelitePlacement(snapshot.sidelites.placement, snapshot.doorSwing as DoorConfiguration['doorSwing']['id'])
   const selectedHardware = `${snapshot.hardware.manufacturer}; ${snapshot.hardware.style}; ${snapshot.hardware.finish}; ${snapshot.hardware.handing}; exact visible hardware count: ${snapshot.hardware.count}`
   const selectedJambFrame = `${snapshot.jamb.type}; ${snapshot.jamb.finish} ${snapshot.jamb.hex}; glass frame: ${structuralValue(snapshot.glassFrame)}`
   const activeLeaf = snapshot.configurationType === 'single'
@@ -346,7 +347,7 @@ export function aiDoNotInventInstructionBlock(snapshot: ReturnType<typeof resolv
   const plainGlass = /\b(clear|plain)\b/i.test(snapshot.glass) && !/decorative/i.test(snapshot.glass)
   const sideliteRule = snapshot.sidelites.count === 0
     ? '- No sidelites are selected. Do not add, retain, imply, or fabricate sidelites; reconstruct former sidelite space as matching surrounding architecture under the structural-conversion rules.'
-    : `- Preserve exactly ${snapshot.sidelites.count} selected sidelite${snapshot.sidelites.count === 1 ? '' : 's'} in the configured ${sidelitePlacement(snapshot.sidelites.placement)} arrangement. Do not add another sidelite, a fake sidelite, or a nearby window that reads as a sidelite.`
+    : `- Preserve exactly ${snapshot.sidelites.count} selected sidelite${snapshot.sidelites.count === 1 ? '' : 's'} in the configured ${sidelitePlacement(snapshot.sidelites.placement, snapshot.doorSwing as DoorConfiguration['doorSwing']['id'])} arrangement. Do not add another sidelite, a fake sidelite, or a nearby window that reads as a sidelite.`
   const glassRule = noGlass
     ? '- No door glass is selected. Do not create glass panes, lites, glazing, divided-light patterns, grille bars, or reflections that imply glass.'
     : plainGlass

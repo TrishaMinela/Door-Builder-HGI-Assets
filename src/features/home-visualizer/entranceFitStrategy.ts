@@ -54,7 +54,7 @@ export function detectionSummary(detection: EntranceDetection) {
 
 export function selectedConfigurationSummary(configuration: DoorConfiguration) {
   const door = configuration.doorConfigurationType === 'single' ? 'a single door' : 'double doors'
-  return `You selected ${door} with ${sidelitePhrase(sidelitePlacement(configuration.sidelites))}.`
+  return `You selected ${door} with ${sidelitePhrase(sidelitePlacement(configuration.sidelites, configuration.doorSwing.id))}.`
 }
 
 function openingFamily(door: DetectedDoorStructure, sidelites: DetectedSidelites): VisualizerOpeningFamily | null {
@@ -69,13 +69,13 @@ export function getDetectedVisualizerOpeningFamily(detection: EntranceDetection)
 }
 
 export function getSelectedVisualizerOpeningFamily(configuration: DoorConfiguration): VisualizerOpeningFamily {
-  return openingFamily(configuration.doorConfigurationType === 'single' ? 'single' : 'double', sidelitePlacement(configuration.sidelites))!
+  return openingFamily(configuration.doorConfigurationType === 'single' ? 'single' : 'double', sidelitePlacement(configuration.sidelites, configuration.doorSwing.id))!
 }
 
 export function evaluateEntranceCompatibility(detection: EntranceDetection, configuration: DoorConfiguration): EntranceCompatibility | null {
   if (detectedEntranceStructure(detection) === 'unknown') return null
   const selectedDoor = configuration.doorConfigurationType === 'single' ? 'single' : 'double'
-  const selectedSidelites = sidelitePlacement(configuration.sidelites)
+  const selectedSidelites = sidelitePlacement(configuration.sidelites, configuration.doorSwing.id)
   const doorMismatch = detection.doorStructure !== selectedDoor
   const sideliteMismatch = detection.sidelites !== selectedSidelites
   const notes: string[] = []
