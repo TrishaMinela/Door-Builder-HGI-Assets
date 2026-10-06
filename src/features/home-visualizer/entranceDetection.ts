@@ -1,9 +1,10 @@
-import { prepareAiHousePhoto, AiVisualizationError } from './aiVisualization'
+import { prepareAiHousePhoto, AiVisualizationError, imageDataDiagnostic } from './aiVisualization'
 import type { EntranceDetection } from './entranceFitStrategy'
 
 export async function detectEntranceStructure(photoUrl: string, signal?: AbortSignal): Promise<EntranceDetection> {
   const startedAt = performance.now()
   const prepared = await prepareAiHousePhoto(photoUrl)
+  if (import.meta.env.DEV) console.debug('[ai-entrance-detection:input]', { source_dimensions: [prepared.naturalWidth, prepared.naturalHeight], normalized_dimensions: [prepared.width, prepared.height], normalized_image: imageDataDiagnostic(prepared.photo), normalization_ms: Math.round(performance.now() - startedAt), customer_image_count: 1 })
   let response: Response
   try {
     response = await fetch('/api/detect-entrance-structure', {

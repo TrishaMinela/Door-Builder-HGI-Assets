@@ -87,6 +87,8 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
   form.append('output_format', 'jpeg')
   form.append('output_compression', '100')
   const approximateRequestBytes = prepared.photo.length + (prepared.mask?.length ?? 0) + referenceSizes.reduce((sum, size) => sum + size, 0) + Buffer.byteLength(prompt)
+  const multipartBytes = (await new Response(form).blob()).size
+  console.info('[ai-visualizer:payload-components]', { request_id: requestId, house: { ...prepared.normalized, mime: 'image/webp' }, mask_bytes: prepared.mask?.length ?? 0, references: configuredReferences?.map(reference => ({ label: reference.label, width: reference.width, height: reference.height, mime: 'image/png', bytes: reference.bytes.length })) ?? referenceSizes.map(bytes => ({ bytes })), customer_image_count: 1, reference_image_count: labels.length, approximate_image_and_prompt_bytes: approximateRequestBytes, multipart_bytes: multipartBytes, preparation_ms: Date.now() - startedAt })
   console.info('[ai-visualizer:request]', { request_id: requestId, original_image: originalImageDiagnostic(source.uploadMetadata, prepared.original), normalized_ai_input: prepared.normalized, placement_mode: corners ? 'user-corners' : 'automatic', product_reference_mode: configuredReferences ? 'flattened-configured-render' : 'catalog-fallback', product_reference_count: labels.length, product_reference_bytes: referenceSizes, approximate_request_bytes: approximateRequestBytes })
 
   let upstream: Response
@@ -125,9 +127,19 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     return
   }
   try {
-    if (Number(request.headers?.['content-length'] ?? 0) > AI_MAX_REQUEST_BYTES) throw new AiInputError('PAYLOAD_TOO_LARGE', 'The AI request is too large. Please choose a smaller photo.', 413)
     const serialized = typeof request.body === 'string' ? request.body : JSON.stringify(request.body ?? null)
-    if (Buffer.byteLength(serialized) > AI_MAX_REQUEST_BYTES) throw new AiInputError('PAYLOAD_TOO_LARGE', 'The AI request is too large. Please choose a smaller photo.', 413)
+    const headerBytes = Number(request.headers?.['content-length'] ?? 0)
+    const bodyBytes = Buffer.byteLength(serialized)
+    if (headerBytes > AI_MAX_REQUEST_BYTES || bodyBytes > AI_MAX_REQUEST_BYTES) {
+      let parts: Record<string, unknown> = {}
+      try {
+        const rejected = JSON.parse(serialized)
+        const stats = (value: unknown) => typeof value === 'string' ? { data_url_bytes: Buffer.byteLength(value), base64_characters: value.length - value.indexOf(',') - 1, mime: value.slice(5, value.indexOf(';')) } : undefined
+        parts = { photo: stats(rejected.photo), product_reference: stats(rejected.productReference), configuration_bytes: Buffer.byteLength(JSON.stringify(rejected.configuration ?? null)), original: uploadMetadata(rejected.uploadMetadata) }
+      } catch { /* Do not log malformed request contents. */ }
+      console.warn('[ai-visualizer:payload-rejected]', { request_id: requestId, rejecting_layer: 'api-json-body-budget', header_bytes: headerBytes, body_bytes: bodyBytes, limit_bytes: AI_MAX_REQUEST_BYTES, ...parts })
+      throw new AiInputError('PAYLOAD_TOO_LARGE', 'The AI request is too large. Please choose a smaller photo.', 413)
+    }
     let source: Record<string, unknown> | null
     try { source = objectValue(JSON.parse(serialized)) } catch { source = null }
     if (!source) throw new AiInputError('INVALID_REQUEST', 'The visualization request is invalid.')

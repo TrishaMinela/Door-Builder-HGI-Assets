@@ -1,6 +1,8 @@
 // AI-only limits; Manual photo/render resolution is deliberately unchanged.
 export const AI_MAX_PHOTO_EDGE = 1536
 export const AI_MAX_PHOTO_BYTES = 2 * 1024 * 1024
+// Budget the actual JSON body, including Base64 expansion and product data.
+export const AI_MAX_REQUEST_BYTES = 3 * 1024 * 1024
 export const AI_MASK_PADDING_PX = 18 // At a 1536px working edge; adjustable prototype blend allowance.
 export const AI_CORNER_ORDER = ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'] as const
 export type AiCorners = Record<typeof AI_CORNER_ORDER[number], { x: number; y: number }>

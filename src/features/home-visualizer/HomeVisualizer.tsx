@@ -10,7 +10,9 @@ import { AiGenerationLoading, EntranceDetectionLoading, useAiGenerationLoading, 
 import { detectEntranceStructure } from './entranceDetection'
 import { detectionForManualStructure, evaluateEntranceCompatibility, MANUAL_ENTRANCE_OPTIONS, type EntranceDetection, type EntranceFitStrategy, type ExistingEntranceStructure } from './entranceFitStrategy'
 
-const MAX_PHOTO_SIZE = 15 * 1024 * 1024
+// Original uploads are decoded locally; only the budgeted normalized image is
+// sent to the API. Retain a resource guard without rejecting normal 48MP files.
+const MAX_PHOTO_SIZE = 50 * 1024 * 1024
 const SUPPORTED_PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/heic', 'image/heif'])
 const SUPPORTED_PHOTO_EXTENSIONS = /\.(?:jpe?g|png|webp|avif|heic|heif)$/i
 const HEIC_PHOTO_TYPES = new Set(['image/heic', 'image/heif'])
@@ -20,6 +22,7 @@ type SelectedPhoto = {
   objectUrl: string
   originalFormat: string
   originalByteSize: number
+  originalMimeType: string
 }
 
 type Props = {
@@ -33,7 +36,7 @@ type Props = {
 
 function fileError(file: File) {
   if (!SUPPORTED_PHOTO_TYPES.has(file.type.toLowerCase()) && !SUPPORTED_PHOTO_EXTENSIONS.test(file.name)) return 'Please choose a JPG, PNG, WebP, AVIF, HEIC, or HEIF image.'
-  if (file.size > MAX_PHOTO_SIZE) return 'That photo is larger than 15 MB. Please choose a smaller image.'
+  if (file.size > MAX_PHOTO_SIZE) return 'That photo is larger than 50 MB. Please choose a smaller image.'
   return ''
 }
 
@@ -41,8 +44,8 @@ function isHeicPhoto(file: File) {
   return HEIC_PHOTO_TYPES.has(file.type.toLowerCase()) || /\.(?:heic|heif)$/i.test(file.name)
 }
 
-async function normalizePhoto(file: File) {
-  if (!isHeicPhoto(file)) return file
+export async function normalizePhoto(file: File, actualFormat?: string) {
+  if (!isHeicPhoto(file) && actualFormat !== 'heif') return file
   const { default: heic2any } = await import('heic2any')
   const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: .94 })
   const blob = Array.isArray(converted) ? converted[0] : converted
@@ -178,7 +181,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
         glassFrameFinish: configuredDoorPreview.glassFrameFinish,
         entranceDetection,
         fitStrategy: activeStrategy,
-        uploadMetadata: { mimeType: photo.file.type, format: photo.originalFormat, byteSize: photo.originalByteSize },
+        uploadMetadata: { mimeType: photo.originalMimeType, format: photo.originalFormat, byteSize: photo.originalByteSize },
         signal: controller.signal,
       })
       if (requestId === aiRequestIdRef.current) {
@@ -249,7 +252,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     let originalFormat = 'unknown'
     try {
       originalFormat = await detectedImageFormat(file)
-      displayFile = await normalizePhoto(file)
+      displayFile = await normalizePhoto(file, originalFormat)
     } catch (reason) {
       console.error('[home-visualizer:photo-conversion]', reason)
       setError('That HEIC photo could not be opened. Please try another photo.')
@@ -258,7 +261,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
     const objectUrl = URL.createObjectURL(displayFile)
     objectUrlRef.current = objectUrl
-    setPhoto({ file: displayFile, objectUrl, originalFormat, originalByteSize: file.size })
+    setPhoto({ file: displayFile, objectUrl, originalFormat, originalByteSize: file.size, originalMimeType: file.type })
     invalidateAiResult()
     detectionAbortRef.current?.abort(); detectionAbortRef.current = null
     setEntranceDetection(null); setEntranceDetectionError(null); setEntranceDetectionLoading(false); setManualEntranceStructure('unknown'); autoCompatibilityGenerationKeyRef.current = ''
@@ -338,7 +341,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
               <span className="photo-drop-icon"><ImagePlus size={30} /></span>
               <strong>Upload a photo of your entrance</strong>
               <span>Drag and drop or choose a file</span>
-              <small>JPG, PNG, WebP, AVIF, or HEIC · Maximum 15 MB</small>
+              <small>JPG, PNG, WebP, AVIF, or HEIC · Maximum 50 MB</small>
               <span className="photo-picker-button"><Upload size={17} /> Choose Photo</span>
             </div>
           </> : <>

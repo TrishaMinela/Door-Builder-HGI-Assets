@@ -48,7 +48,7 @@ export class AiGenerationError extends Error {
 export const AI_MODEL = 'gpt-image-2.5-sunburst'
 export const AI_QUALITY = 'xhigh' // Favor product detail; keep below the maximum cost tier.
 export const AI_SINGLE_DOOR_WIDTH_BIAS = 0.94 // Small AI-only correction after estimating a normal slab from photo scale cues.
-export const AI_MAX_REQUEST_BYTES = 3 * 1024 * 1024
+export { AI_MAX_REQUEST_BYTES } from '../src/features/home-visualizer/aiImagePreparation.js'
 export const AI_MAX_REFERENCE_EDGE = 1536
 export const AI_MAX_ORIGINAL_PHOTO_BYTES = 30 * 1024 * 1024
 export const AI_MAX_ORIGINAL_PIXELS = 40_000_000
@@ -107,14 +107,19 @@ export async function prepareHouseAndMask(value: unknown, corners: AiCorners | n
     const swapsAxes = [5, 6, 7, 8].includes(metadata.orientation ?? 1)
     const orientedWidth = swapsAxes ? metadata.height : metadata.width
     const orientedHeight = swapsAxes ? metadata.width : metadata.height
-    const size = aiWorkingSize(orientedWidth, orientedHeight)
+    let size = aiWorkingSize(orientedWidth, orientedHeight)
     const alreadyNormalized = metadata.format === 'webp' && (metadata.orientation ?? 1) === 1 && !metadata.hasAlpha && metadata.width === size.width && metadata.height === size.height && bytes.length <= AI_MAX_PHOTO_BYTES
-    const photo = alreadyNormalized ? bytes : await sharp(bytes, { limitInputPixels: AI_MAX_ORIGINAL_PIXELS })
+    let photo = alreadyNormalized ? bytes : await sharp(bytes, { limitInputPixels: AI_MAX_ORIGINAL_PIXELS })
       .rotate()
       .resize(size.width, size.height, { fit: 'inside', withoutEnlargement: true })
       .flatten({ background: '#ffffff' })
       .webp({ quality: AI_NORMALIZED_QUALITY, effort: 5, smartSubsample: true })
       .toBuffer()
+    for (const edge of [1280, 1024]) {
+      if (photo.length <= AI_MAX_PHOTO_BYTES) break
+      size = aiWorkingSize(orientedWidth, orientedHeight, edge)
+      photo = await sharp(bytes, { limitInputPixels: AI_MAX_ORIGINAL_PIXELS }).rotate().resize(size.width, size.height, { fit: 'inside', withoutEnlargement: true }).flatten({ background: '#ffffff' }).webp({ quality: AI_NORMALIZED_QUALITY, effort: 5, smartSubsample: true }).toBuffer()
+    }
     if (photo.length > AI_MAX_PHOTO_BYTES) throw new AiInputError('PAYLOAD_TOO_LARGE', 'This photo could not be compressed enough for AI generation. Please choose a less detailed photo.', 413)
     let mask: Buffer | undefined
     if (corners) {
