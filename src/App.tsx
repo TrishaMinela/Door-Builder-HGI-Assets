@@ -13,6 +13,7 @@ import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, 
 import { approvedPrivacyGlassIds } from './data/privacyGlass'
 import { builderUx } from './config/builderUx'
 import { matchingJambFinish } from './utils/matchingFrameFinish'
+import { isCustomerSelectableGlass } from './data/customerGlassAvailability'
 import type { ContactForm, DoorConfiguration, DoorConfigurationType, DoorSwing, DoubleDoorLockPrepCode, GlassCoating, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, HardwareView, PreviewHardware, SideliteConfiguration, SideliteGlassConfiguration } from './types'
 import { doorConfigurationLabel, doubleDoorLockPrepOption, doubleDoorLockPrepOptions, requiredDoorConfigurationProductOption } from './data/doorConfigurationRules'
 import { configurationPdfName } from './utils/pdfConfig'
@@ -596,7 +597,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const selectedSideliteCatalog = selectedSideliteStyle ? sideliteGlassCatalogs[selectedSideliteStyle.id] : null
   const defaultSideliteGlass = defaultClearSideliteGlass(selectedSideliteCatalog)
   const usesFslGlassFlow = Boolean(selectedSideliteCatalog)
-  const visibleFslGlass = sideliteGlassCategory ? selectedSideliteCatalog?.options.filter((option) => option.category === sideliteGlassCategory) ?? [] : []
+  const visibleFslGlass = sideliteGlassCategory ? selectedSideliteCatalog?.options.filter((option) => option.category === sideliteGlassCategory && isCustomerSelectableGlass(option)) ?? [] : []
   const sideliteGlassOptionGroups = groupSideliteGlassOptions(visibleFslGlass)
   const selectedSideliteGlassGroup = sideliteGlassOptionGroups.find((group) => group.key === sideliteGlassGroupKey)
   const selectedFslGlass = selectedSideliteCatalog?.options.find((option) => option.id === sideliteGlassId)
@@ -748,11 +749,11 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const availableGlassCategories = usesRetroGlassCategory
     ? [retroGlassCategory]
     : glassCategoryChoices.filter((category) => availableGlass.some((option) => glassCategory(option) === category.id))
-  const visibleGlass = selectedGlassCategory
+  const visibleGlass = (selectedGlassCategory
     ? usesRetroGlassCategory && selectedGlassCategory === 'retro'
       ? availableGlass
       : availableGlass.filter((option) => glassCategory(option) === selectedGlassCategory)
-    : []
+    : []).filter(isCustomerSelectableGlass)
   const glassOptionGroups = [...visibleGlass.reduce((groups, option) => {
     const key = glassGroupKey(option)
     const group = groups.get(key) ?? { key, title: glassGroupTitle(option), options: [] }
