@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import { createPortal } from 'react-dom'
 import { ArrowLeft, Check, Download, FileText, ImagePlus, RefreshCw, Trash2, Upload } from 'lucide-react'
 import type { DoorPreviewProps } from '../../components/DoorPreview'
+import { ConfigurationEditActions, type ConfigurationEditArea } from '../../components/ConfigurationEditActions'
 import type { DoorConfiguration } from '../../types'
 import { ConfiguredDoorSource, type DoorSourceState } from './ConfiguredDoorSource'
 import { CleanupComparisonSlider } from './CleanupComparisonSlider'
@@ -26,6 +27,8 @@ type SelectedPhoto = {
 }
 
 type Props = {
+  active?: boolean
+  onEditConfiguration?: (area: ConfigurationEditArea) => void
   onBack: () => void
   onReturnToReview?: () => void
   onDownloadPdf?: () => Promise<void>
@@ -67,7 +70,7 @@ async function detectedImageFormat(file: File) {
   return 'unknown'
 }
 
-export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, configuredDoorPreview, configurationKey, doorConfiguration }: Props) {
+export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onReturnToReview, onDownloadPdf, configuredDoorPreview, configurationKey, doorConfiguration }: Props) {
   const [aiGenerating, setAiGenerating] = useState(false)
   const [aiError, setAiError] = useState<AiVisualizationFailure | null>(null)
   const [entranceDetection, setEntranceDetection] = useState<EntranceDetection | null>(null)
@@ -92,7 +95,7 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   const incompatibilityDialogRef = useRef<HTMLDivElement>(null)
   const [doorSource, setDoorSource] = useState<DoorSourceState>({ url: '', width: 0, height: 0, error: '', ready: false })
   const entranceCompatibility = useMemo(() => entranceDetection && doorConfiguration ? evaluateEntranceCompatibility(entranceDetection, doorConfiguration) : null, [entranceDetection, doorConfiguration])
-  const showIncompatibilityModal = Boolean(photo) && Boolean(entranceCompatibility && entranceCompatibility.status !== 'good-fit')
+  const showIncompatibilityModal = active && Boolean(photo) && Boolean(entranceCompatibility && entranceCompatibility.status !== 'good-fit')
 
   useEffect(() => {
     if (!showIncompatibilityModal) return
@@ -156,13 +159,13 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   }, [photo, entranceDetectionLoading, doorConfiguration])
 
   useEffect(() => {
-    if (photo && !entranceDetection && !entranceDetectionError && !entranceDetectionLoading) void runEntranceDetection()
-  }, [photo, entranceDetection, entranceDetectionError, entranceDetectionLoading, runEntranceDetection])
+    if (active && photo && !entranceDetection && !entranceDetectionError && !entranceDetectionLoading) void runEntranceDetection()
+  }, [active, photo, entranceDetection, entranceDetectionError, entranceDetectionLoading, runEntranceDetection])
 
   useEffect(() => () => detectionAbortRef.current?.abort(), [])
 
   const runAiVisualization = async (strategyOverride?: EntranceFitStrategy) => {
-    if (entranceCompatibility?.status !== 'good-fit' || !photo || !doorConfiguration || !doorSource.ready || !doorSource.url || aiPendingRef.current) return
+    if (!active || entranceCompatibility?.status !== 'good-fit' || !photo || !doorConfiguration || !doorSource.ready || !doorSource.url || aiPendingRef.current) return
     const activeStrategy = strategyOverride ?? 'use-selected-product'
     const requestKey = JSON.stringify({ configurationKey, corners: 'automatic', fitStrategy: activeStrategy, photo: `${photo.file.name}:${photo.file.size}:${photo.file.lastModified}` })
     const requestId = ++aiRequestIdRef.current
@@ -196,12 +199,12 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
   }
 
   useEffect(() => {
-    if (entranceCompatibility?.status !== 'good-fit' || !photo || !entranceDetection || !doorSource.ready || aiGenerating || aiResult || aiError) return
+    if (!active || entranceCompatibility?.status !== 'good-fit' || !photo || !entranceDetection || !doorSource.ready || aiGenerating || aiResult || aiError) return
     const key = JSON.stringify({ photo: `${photo.file.name}:${photo.file.size}:${photo.file.lastModified}`, configurationKey, detection: entranceDetection })
     if (autoCompatibilityGenerationKeyRef.current === key) return
     autoCompatibilityGenerationKeyRef.current = key
     void runAiVisualization('use-selected-product')
-  }, [entranceCompatibility?.status, photo, entranceDetection, doorSource.ready, aiGenerating, aiResult, aiError, configurationKey])
+  }, [active, entranceCompatibility?.status, photo, entranceDetection, doorSource.ready, aiGenerating, aiResult, aiError, configurationKey])
 
   const selectManualEntranceStructure = (structure: ExistingEntranceStructure) => {
     setManualEntranceStructure(structure)
@@ -230,9 +233,21 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
 
   useEffect(() => {
     invalidateAiResult()
-    detectionAbortRef.current?.abort(); detectionAbortRef.current = null
-    setEntranceDetection(null); setEntranceDetectionError(null); setEntranceDetectionLoading(false); setManualEntranceStructure('unknown'); autoCompatibilityGenerationKeyRef.current = ''
+    setShowResult(false)
+    setDoorSource({ url: '', width: 0, height: 0, error: '', ready: false })
+    // The photo analysis belongs to the photo, not the product being edited.
+    // Compatibility is derived above from that analysis and the latest product.
+    autoCompatibilityGenerationKeyRef.current = ''
   }, [configurationKey])
+  useEffect(() => {
+    if (!active) {
+      aiRequestIdRef.current += 1
+      aiAbortRef.current?.abort(); aiPendingRef.current = false; setAiGenerating(false)
+      detectionAbortRef.current?.abort(); detectionAbortRef.current = null; setEntranceDetectionLoading(false)
+      setDoorSource({ url: '', width: 0, height: 0, error: '', ready: false })
+      autoCompatibilityGenerationKeyRef.current = ''
+    }
+  }, [active])
   useEffect(() => () => {
     aiRequestIdRef.current += 1
     aiAbortRef.current?.abort()
@@ -294,9 +309,11 @@ export function HomeVisualizer({ onBack, onReturnToReview, onDownloadPdf, config
 
   const leaveVisualizer = () => onBack()
   const returnFromFinal = () => setShowResult(false)
+  if (!active) return null
   return (
     <main className="visualizer-page">
       <div className="visualizer-shell">
+        {onEditConfiguration && <ConfigurationEditActions onEdit={onEditConfiguration} hasGlass={Boolean(configuredDoorPreview.glass || configuredDoorPreview.sideliteGlassSrc)} />}
         <div className="visualizer-heading">
           <span>AI Visualizer</span>
           <h1>See your entry in context</h1>

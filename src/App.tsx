@@ -4,6 +4,7 @@ import { DoorPreview, type DoorPreviewProps } from './components/DoorPreview'
 import { DoorStyleThumbnail } from './components/DoorStyleThumbnail'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
 import { OptionCard } from './components/OptionCard'
+import { ConfigurationEditActions } from './components/ConfigurationEditActions'
 import { QuoteForm } from './components/QuoteForm'
 import { BetaFeedback } from './components/BetaFeedback'
 import { DealerContextGate } from './components/DealerContextGate'
@@ -412,6 +413,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const lastJambDoorFinishId = useRef(restoredDoorFinishId)
   const lastGlassFrameDoorFinishId = useRef(restoredDoorFinishId)
   const [returningFromVisualizer, setReturningFromVisualizer] = useState(false)
+  const [editReturnTo, setEditReturnTo] = useState<'summary' | 'visualizer' | null>(null)
+  const [editReturnError, setEditReturnError] = useState('')
+  const [visualizerSessionStarted, setVisualizerSessionStarted] = useState(false)
   const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>('home')
   const [step, setStep] = useState(0)
   const [selectedDoorConfigurationType, setSelectedDoorConfigurationType] = useState<DoorConfigurationType | ''>(initialDraft?.selectedDoorConfigurationType ?? '')
@@ -1063,9 +1067,16 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       setGlassId('')
     }
     if (glassId && selectedGlassCategory && !visibleGlass.some((item) => item.id === glassId)) setGlassId('')
-    if (glassId && (!supportsGlass || !availableGlass.some((item) => item.id === glassId))) setGlassId('')
+    if (glassId && (!supportsGlass || !availableGlass.some((item) => item.id === glassId))) {
+      setGlassId('')
+      if (editReturnTo) {
+        setSelectedGlassGroupKey('')
+        setGlassVariantConfirmed(false)
+        setGridPathId(''); setGridStyle(''); setGridPattern(''); setGridColor(''); setGridWidth('')
+      }
+    }
     if (step >= pages.length) setStep(pages.length - 1)
-  }, [styleId, doorLineId, grainId, availableDoorLineIds, isSignatureDoorLine, selectedDoorLineLineIdsKey, needsGrainStep, effectiveFinishTypes, selectedFinishType, finishId, availableFinishIds, selectedGlassCategory, glassId, availableGlassIds, supportsGlass, step, pages.length])
+  }, [styleId, doorLineId, grainId, availableDoorLineIds, isSignatureDoorLine, selectedDoorLineLineIdsKey, needsGrainStep, effectiveFinishTypes, selectedFinishType, finishId, availableFinishIds, selectedGlassCategory, glassId, availableGlassIds, supportsGlass, step, pages.length, editReturnTo])
 
   useEffect(() => {
     if (screen !== 'builder') return
@@ -1336,6 +1347,12 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const selectDoorStyle = (nextStyleId: string) => {
     const nextStyle = doorStyles.find((item) => item.id === nextStyleId)
     if (!nextStyle) return
+    if (editReturnTo && nextStyleId !== styleId) {
+      // Existing catalog reconciliation effects clear incompatible choices.
+      // Do not discard still-valid material/finish/glass during a summary edit.
+      setStyleId(nextStyleId)
+      return
+    }
     if (nextStyleId !== styleId) {
       setStyleId(nextStyleId)
       setDoorLineId('')
@@ -1355,6 +1372,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const startOver = () => {
     clearDoorBuilderDraft()
     setReturningFromVisualizer(false)
+    setEditReturnTo(null)
+    setEditReturnError('')
+    setVisualizerSessionStarted(false)
     setBuilderPreviewView('Exterior')
     setStyleId('')
     setSelectedDoorConfigurationType('')
@@ -1429,7 +1449,12 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       return
     }
     if (next === 'builder') setBuilderPreviewView('Exterior')
-    if (next === 'visualizer' || next === 'home') setReturningFromVisualizer(false)
+    if (next === 'visualizer' || next === 'home') {
+      setReturningFromVisualizer(false)
+      setEditReturnTo(null)
+      setEditReturnError('')
+    }
+    if (next === 'visualizer') setVisualizerSessionStarted(true)
     if (next === 'builder' && screen === 'home') {
       // Starting again from Home begins a fresh pass through the workflow while
       // retaining the customer's configured door and contact selections.
@@ -1441,6 +1466,39 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (next !== 'builder') setShowEntrywayGuidance(false)
     setScreen(next)
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const editConfiguration = (page: BuilderPage, returnTo: 'summary' | 'visualizer') => {
+    const target = pages.indexOf(page)
+    if (target < 0) return
+    setEditReturnTo(returnTo)
+    setEditReturnError('')
+    setSubmitted(false)
+    if (returnTo === 'visualizer') setReturningFromVisualizer(true)
+    showScreen('builder')
+    goTo(target)
+  }
+
+  const doneEditing = () => {
+    // Use the normal validators and runtime catalog resolutions, not a parallel
+    // edit-only configuration model. Dependency effects have already reconciled
+    // the current choices before this explicit user action.
+    const missingPage = pages.find(page => page !== 'review' && !isBuilderPageComplete(page))
+      ?? (usesMappedSidelites && !selectedSideliteStyle ? 'sidelite-style' : undefined)
+      ?? (!selectedGlass && supportsGlass ? 'glass' : undefined)
+      ?? (usesMappedSidelites && !selectedFslGlass ? 'sidelite-glass' : undefined)
+    if (missingPage || !visualizerConfigurationReady) {
+      goTo(pages.indexOf(missingPage ?? 'door-line'))
+      setEditReturnError('Please complete the required selection below before returning.')
+      return
+    }
+    if (editReturnTo === 'visualizer') requestCustomerAction('open-visualizer')
+    else {
+      goTo(pages.indexOf('review'))
+      setEditReturnTo(null)
+      setEditReturnError('')
+      setReturningFromVisualizer(false)
+    }
   }
 
   const requestCustomerAction = (action: 'download-pdf' | 'open-visualizer') => {
@@ -1931,14 +1989,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             </div>
           </div> : <div className="success visualizer-form-confirmation"><span><Check size={32} /></span><small>Configuration received</small><h1>Thanks, {contact.fullName}.</h1><p>Your configuration PDF has been prepared. You can now see the same configured door on a photo of your home.</p><div className="visualizer-confirmation-action"><strong>Next: View your door on your home</strong><span>Upload a clear entrance photo and follow the guided placement steps.</span><button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Continue to Home Visualizer <ArrowRight size={17} /></button></div><button type="button" onClick={() => { setSubmitted(false); setCompletedCustomerAction(null); goTo(pages.indexOf('review')); showScreen('builder') }}>Return to Review</button></div>}
         </section>
-      </main> : screen === 'visualizer' ? <HomeVisualizer
-        onBack={() => showScreen('builder')}
-        onReturnToReview={() => { setReturningFromVisualizer(true); goTo(pages.indexOf('review')); showScreen('builder') }}
-        onDownloadPdf={downloadPdf}
-        configuredDoorPreview={configuredDoorPreview}
-        configurationKey={configuredDoorKey}
-        doorConfiguration={currentDoorConfiguration}
-      /> : <>
+      </main> : screen === 'visualizer' ? null : <>
       <div className={`builder-toolbar ${currentPage === 'review' && submitted ? 'confirmation-toolbar' : ''}`}>
         <nav className="stepper" aria-label="Configuration progress">
           {steps.map((label, index) => {
@@ -1963,9 +2014,13 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
         </div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
+          {editReturnTo && <div className="configuration-edit-return">
+            <button type="button" onClick={doneEditing}>Done Editing</button>
+            {editReturnError && <p role="status">{editReturnError}</p>}
+          </div>}
           {currentStep !== 'Review & Quote' && <>
             <div className="builder-step-intro">
-              {returningFromVisualizer && <div className="saved-door-visualizer-action">
+              {returningFromVisualizer && !editReturnTo && <div className="saved-door-visualizer-action">
                 <button type="button" disabled={!visualizerConfigurationReady} onClick={() => requestCustomerAction('open-visualizer')}><Eye size={16} /> Return to Visualizer <ArrowRight size={15} /></button>
               </div>}
               <div className="section-heading step-heading">
@@ -2055,7 +2110,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             </section>
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
-              {configurationSummaryRows.map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span>{target >= 0 && <button onClick={() => goTo(target)}>Edit</button>}</div>)}
+              <ConfigurationEditActions hasGlass={supportsGlass || usesFslGlassFlow} onEdit={page => editConfiguration(page === 'glass-type' && !supportsGlass ? 'sidelite-glass-type' : page, 'summary')} />
+              {configurationSummaryRows.map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span>{target >= 0 && <button onClick={() => editConfiguration(pages[target], 'summary')}>Edit</button>}</div>)}
             </div>
             <p className="availability-notice"><strong>Availability Notice:</strong> Some door styles, finishes, glass, hardware, and other options may not be available with every door configuration. Final availability depends on the selected door style and product specifications.</p>
             <div className={`review-download-form ${testMode ? '' : 'form-only'}`}>
@@ -2099,6 +2155,16 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         </aside>}
       </main>
       </>}
+      {visualizerSessionStarted && <HomeVisualizer
+        active={screen === 'visualizer'}
+        onBack={() => showScreen('builder')}
+        onEditConfiguration={page => editConfiguration(page === 'glass-type' && !supportsGlass ? 'sidelite-glass-type' : page, 'visualizer')}
+        onReturnToReview={() => { setReturningFromVisualizer(true); goTo(pages.indexOf('review')); showScreen('builder') }}
+        onDownloadPdf={downloadPdf}
+        configuredDoorPreview={configuredDoorPreview}
+        configurationKey={configuredDoorKey}
+        doorConfiguration={currentDoorConfiguration}
+      />}
       <BetaFeedback currentStep={feedbackStep} configuration={feedbackConfiguration}/>
       <footer className="site-footer">
         <div className="site-footer-contact">
