@@ -1,4 +1,5 @@
 import { hardwareCardAssetUrl } from '../data/hardware'
+import { sortByDisplayLabel } from '../utils/sortByDisplayLabel'
 import type { HardwareOption } from '../types'
 
 type Props = {
@@ -23,7 +24,7 @@ export function HardwareOptionCard({ options, selectedId, onSelect }: Props) {
         </span>
       </button>
       <div className="hardware-finish-options" role="group" aria-label={`${displayOption.manufacturer} ${displayOption.style} finish`}>
-        {options.map((option) => <button
+        {sortByDisplayLabel(options, option => option.finish).map((option) => <button
           type="button"
           className={option.id === selectedId ? 'selected' : ''}
           aria-label={option.finish}
