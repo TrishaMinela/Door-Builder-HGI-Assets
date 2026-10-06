@@ -3662,6 +3662,7 @@ body:has(.customer-form-app),
 .configuration-edit-actions-visualizer { width: 100%; margin: 0 0 14px; }
 .configuration-edit-actions-visualizer > div { justify-content: center; gap: 7px; }
 .configuration-edit-actions-visualizer button { padding: 7px 13px; min-height: 34px; font-size: 12px; }
+.visualizer-final-result:has(.configuration-edit-actions-visualizer) .visualizer-final-heading { display: block; }
 @media(max-width:900px) {
   /* Below the existing Reset and Exterior/Interior/Both utility row. */
   .mobile-live-preview > .configuration-edit-return { top: 50px; }

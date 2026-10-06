@@ -90,6 +90,7 @@ try {
     await page.getByText('AI Result', { exact: true }).waitFor({ timeout: 30000 })
     const originalUrl = await page.locator('.cleanup-comparison-original').getAttribute('src')
     const editToolbar = page.locator('.configuration-edit-actions-visualizer')
+    assert.ok(await page.getByRole('heading', { name: 'Your new entrance', exact: true }).isVisible(), 'Result heading stays visible above the pills on desktop and mobile')
     assert.equal(await editToolbar.locator('h3').count(), 0, 'No Edit label above the pills')
     assert.deepEqual(await editToolbar.getByRole('button').allTextContents(), ['Door', 'Sidelites', 'Color', 'Glass', 'Hardware'])
     assert.ok(await editToolbar.evaluate(element => {
