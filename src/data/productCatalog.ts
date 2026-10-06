@@ -41,15 +41,15 @@ const textured = parseStyles([
 
 export const productCatalog: DoorLine[] = [
   ...Object.entries(signatureStyles).map(([grain, styles]) => ({ id: `signature-${grain.toLowerCase()}`, name: 'Signature Series Fiberglass Grained', grains: [grain], allowsColors: true, styles })),
-  { id: '20-gauge-smooth-steel', name: '20-Gauge Smooth Steel', grains: [], allowsColors: true, styles: steel20 },
-  { id: '22-gauge-steel', name: '22-Gauge Paintable and Stainable Steel', grains: ['Oak'], allowsColors: true, styles: steel22 },
+  { id: '20-gauge-smooth-steel', name: 'Smooth Steel', grains: [], allowsColors: true, styles: steel20 },
+  { id: '22-gauge-steel', name: 'Paintable and Stainable Steel', grains: ['Oak'], allowsColors: true, styles: steel22 },
   { id: 'brushed-smooth-fiberglass', name: 'Brushed Smooth Fiberglass', grains: [], allowsColors: true, styles: brushed },
   { id: 'textured-fiberglass', name: 'Textured Fiberglass', grains: ['Oak'], allowsColors: true, styles: textured },
 ]
 
 export const doorTypeOptions: DoorTypeOption[] = [
-  { id: 'paintable-stainable-steel', name: '22-Gauge Paintable and Stainable Steel', lineIds: ['22-gauge-steel'], requiresGrain: false, grains: [] },
-  { id: 'smooth-steel', name: '20-Gauge Smooth Steel', lineIds: ['20-gauge-smooth-steel'], requiresGrain: false, grains: [] },
+  { id: 'paintable-stainable-steel', name: 'Paintable and Stainable Steel', lineIds: ['22-gauge-steel'], requiresGrain: false, grains: [] },
+  { id: 'smooth-steel', name: 'Smooth Steel', lineIds: ['20-gauge-smooth-steel'], requiresGrain: false, grains: [] },
   { id: 'signature-fiberglass', name: 'Signature Series Fiberglass Grained', lineIds: Object.keys(signatureStyles).map((grain) => `signature-${grain.toLowerCase()}`), requiresGrain: true, grains: Object.keys(signatureStyles) },
   { id: 'brushed-smooth-fiberglass', name: 'Brushed Smooth Fiberglass', lineIds: ['brushed-smooth-fiberglass'], requiresGrain: false, grains: [] },
   { id: 'textured-fiberglass', name: 'Textured Fiberglass', lineIds: ['textured-fiberglass'], requiresGrain: false, grains: [] },
@@ -65,7 +65,7 @@ export const doorLineChoices: DoorLineChoice[] = [
   },
   {
     id: '20-gauge-smooth-steel',
-    name: '20-Gauge Smooth Steel',
+    name: 'Smooth Steel',
     description: 'Smooth steel material. Paint finishes only.',
     image: '/assets/door-lines/20-gauge-smooth-steel.webp',
     lineIds: ['20-gauge-smooth-steel'],
@@ -73,7 +73,7 @@ export const doorLineChoices: DoorLineChoice[] = [
   },
   {
     id: '22-gauge-steel',
-    name: '22-Gauge Paintable and Stainable Steel',
+    name: 'Paintable and Stainable Steel',
     description: 'Paintable and stainable steel with Oak grain when stainable.',
     image: '/assets/door-lines/22-gauge-steel.webp',
     lineIds: ['22-gauge-steel'],

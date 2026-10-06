@@ -27,7 +27,7 @@ import { HERO_PRESETS, heroDoorFilename, type HeroPreset } from './data/heroPres
 import { HeroDoorGenerator } from './features/hero/HeroDoorGenerator'
 import { sideliteBuilderOptions, sideliteProductCode, sideliteProductLabel } from './data/sideliteConfigurations'
 import { sideliteAssetFamilyForSlab, sideliteGlassMask, sideliteSlabAsset, sideliteStylesForFamily, type SideliteStyleId } from './data/sideliteAssets'
-import { clearDoorBuilderDraft, isDoorBuilderDraftVisualizerReady, loadDoorBuilderDraft, saveDoorBuilderDraft, type DoorBuilderDraftConfiguration } from './utils/doorBuilderDraft'
+import { clearDoorBuilderDraft, loadDoorBuilderDraft, saveDoorBuilderDraft, type DoorBuilderDraftConfiguration } from './utils/doorBuilderDraft'
 
 const glassSteps = ['Entry Type', 'Sidelites', 'Door', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
 const noGlassSteps = ['Entry Type', 'Sidelites', 'Door', 'Finish', 'Hardware', 'Review & Quote']
@@ -403,7 +403,7 @@ function EmptyDoorPreview() {
 
 function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [initialDraft] = useState(loadDoorBuilderDraft)
-  const [restoredDraftEligible, setRestoredDraftEligible] = useState(Boolean(initialDraft))
+  const [returningFromVisualizer, setReturningFromVisualizer] = useState(false)
   const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>('home')
   const [step, setStep] = useState(0)
   const [selectedDoorConfigurationType, setSelectedDoorConfigurationType] = useState<DoorConfigurationType | ''>(initialDraft?.selectedDoorConfigurationType ?? '')
@@ -837,7 +837,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     && (supportsSideliteLine || !sidelites || sidelites === 'none')
     && (glassFrameColorMode !== 'custom' || customGlassFrameFinish)
   )
-  const restoredDraftVisualizerReady = restoredDraftEligible && isDoorBuilderDraftVisualizerReady(initialDraft, restoredDraftReferencesValid && pages.every((page) => page === 'review' || isBuilderPageComplete(page)))
+  const visualizerConfigurationReady = restoredDraftReferencesValid && pages.every((page) => page === 'review' || isBuilderPageComplete(page))
   const currentPage = pages[step] ?? pages[pages.length - 1]
   const glassSelectionTarget = mainDoorGlassPages.has(currentPage) ? 'main-door' : sideliteGlassPages.has(currentPage) ? 'sidelite' : null
   const currentStep = currentPage === 'door-configuration'
@@ -1333,7 +1333,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
   const startOver = () => {
     clearDoorBuilderDraft()
-    setRestoredDraftEligible(false)
+    setReturningFromVisualizer(false)
     setBuilderPreviewView('Exterior')
     setStyleId('')
     setSelectedDoorConfigurationType('')
@@ -1407,6 +1407,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       return
     }
     if (next === 'builder') setBuilderPreviewView('Exterior')
+    if (next === 'visualizer' || next === 'home') setReturningFromVisualizer(false)
     if (next === 'builder' && screen === 'home') {
       // Starting again from Home begins a fresh pass through the workflow while
       // retaining the customer's configured door and contact selections.
@@ -1912,7 +1913,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         </section>
       </main> : screen === 'visualizer' ? <HomeVisualizer
         onBack={() => showScreen('builder')}
-        onReturnToReview={() => { goTo(pages.indexOf('review')); showScreen('builder') }}
+        onReturnToReview={() => { setReturningFromVisualizer(true); goTo(pages.indexOf('review')); showScreen('builder') }}
         onDownloadPdf={downloadPdf}
         configuredDoorPreview={configuredDoorPreview}
         configurationKey={configuredDoorKey}
@@ -1944,8 +1945,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
           {currentStep !== 'Review & Quote' && <>
             <div className="builder-step-intro">
-              {restoredDraftVisualizerReady && <div className="saved-door-visualizer-action">
-                <button type="button" onClick={() => requestCustomerAction('open-visualizer')}><Eye size={16} /> Launch Visualizer <ArrowRight size={15} /></button>
+              {returningFromVisualizer && <div className="saved-door-visualizer-action">
+                <button type="button" disabled={!visualizerConfigurationReady} onClick={() => requestCustomerAction('open-visualizer')}><Eye size={16} /> Return to Visualizer <ArrowRight size={15} /></button>
               </div>}
               <div className="section-heading step-heading">
               <div className="step-heading-copy">

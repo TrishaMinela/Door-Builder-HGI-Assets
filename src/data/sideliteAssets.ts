@@ -1,5 +1,5 @@
 export type SideliteStyleId = 'fsl' | 'f48sl' | 'ssl' | 's2sl' | 'cr14sl'
-export type SideliteAssetFamily = '20-gauge' | '22-gauge' | 'cherry' | 'fir' | 'mahogany' | 'oak'
+export type SideliteAssetFamily = 'smooth-steel' | '20-gauge' | '22-gauge' | 'cherry' | 'fir' | 'mahogany' | 'oak'
 
 type SideliteFamilySelection = {
   doorLineId?: string | null
@@ -8,6 +8,14 @@ type SideliteFamilySelection = {
 }
 
 const SIDELITE_SLABS: Record<SideliteAssetFamily, Partial<Record<SideliteStyleId, string>>> = {
+  // Smooth Steel supports the existing shared SSL product regardless of the
+  // gauge labels on its source artwork. Keep fiberglass's family unchanged.
+  'smooth-steel': {
+    fsl: '/assets/hgi-assets/Sidelites/20 Gauge/FSL.webp',
+    f48sl: '/assets/hgi-assets/Sidelites/20 Gauge/F48SL.webp',
+    ssl: '/assets/hgi-assets/Sidelites/Signature/Oak/SSL.webp',
+    s2sl: '/assets/hgi-assets/Sidelites/20 Gauge/S2SL.webp',
+  },
   '20-gauge': {
     fsl: '/assets/hgi-assets/Sidelites/20 Gauge/FSL.webp',
     f48sl: '/assets/hgi-assets/Sidelites/20 Gauge/F48SL.webp',
@@ -61,7 +69,8 @@ export function sideliteAssetFamilyForSlab({ doorLineId, grain }: SideliteFamily
     if (normalizedGrain === 'cherry' || normalizedGrain === 'fir' || normalizedGrain === 'mahogany' || normalizedGrain === 'oak') return normalizedGrain
     return null
   }
-  if (doorLineId === '20-gauge-smooth-steel' || doorLineId === 'brushed-smooth-fiberglass') return '20-gauge'
+  if (doorLineId === '20-gauge-smooth-steel') return 'smooth-steel'
+  if (doorLineId === 'brushed-smooth-fiberglass') return '20-gauge'
   if (doorLineId === '22-gauge-steel' || doorLineId === 'textured-fiberglass') return '22-gauge'
   return null
 }
