@@ -37,6 +37,7 @@ try {
     const assertFloatingControl = async () => {
       const button = page.getByRole('button', { name: 'Done Editing', exact: true })
       assert.equal(await button.count(), 1, 'Only the responsive preview control is accessible')
+      assert.deepEqual(await button.evaluate(element => ({ background: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color })), { background: 'rgb(17, 17, 17)', color: 'rgb(255, 255, 255)' }, 'Done Editing uses matching black/white styling')
       assert.ok(await button.evaluate(element => {
         const overlay = element.closest('.configuration-edit-return')!
         const preview = overlay.parentElement!
@@ -88,8 +89,21 @@ try {
     await page.locator('input[type=file]').setInputFiles({ name: 'same-house.jpg', mimeType: 'image/jpeg', buffer: photo })
     await page.getByText('AI Result', { exact: true }).waitFor({ timeout: 30000 })
     const originalUrl = await page.locator('.cleanup-comparison-original').getAttribute('src')
-    assert.ok(await page.locator('.configuration-edit-actions-floating').evaluate(element => getComputedStyle(element).position === 'absolute' && Boolean(element.closest('.ai-photo-result-area'))), 'Visualizer edit toolbar floats over the result viewfinder')
-    await page.screenshot({ path: `/tmp/floating-visualizer-edit-${width}.png` })
+    const editToolbar = page.locator('.configuration-edit-actions-visualizer')
+    assert.equal(await editToolbar.locator('h3').count(), 0, 'No Edit label above the pills')
+    assert.deepEqual(await editToolbar.getByRole('button').allTextContents(), ['Door', 'Sidelites', 'Color', 'Glass', 'Hardware'])
+    assert.ok(await editToolbar.evaluate(element => {
+      const section = element.closest('.visualizer-final-result')!
+      const heading = section.querySelector('.visualizer-final-heading')!.getBoundingClientRect()
+      const image = section.querySelector('.ai-photo-result-area')!.getBoundingClientRect()
+      const toolbar = element.getBoundingClientRect()
+      return toolbar.top >= heading.bottom && toolbar.bottom <= image.top && toolbar.left >= image.left && toolbar.right <= image.right
+    }), 'Pills are inside the final result container below the heading and above the comparison, without covering image controls')
+    for (const pill of await editToolbar.getByRole('button').all()) {
+      assert.deepEqual(await pill.evaluate(element => ({ background: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color })), { background: 'rgb(17, 17, 17)', color: 'rgb(255, 255, 255)' })
+    }
+    await page.waitForTimeout(1200)
+    await page.screenshot({ path: `/tmp/refined-visualizer-edit-${width}.png` })
     for (const [area, heading] of [['Color', 'Choose Your Door Finish'], ['Hardware', 'Choose Your Hardware'], ['Glass', 'Choose Main Door Glass Type'], ['Door', 'Choose a Door Style']]) {
       const previousGenerations = generations
       await page.getByRole('button', { name: `Edit ${area}`, exact: true }).click()

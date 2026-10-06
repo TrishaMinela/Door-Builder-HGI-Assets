@@ -309,7 +309,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
 
   const leaveVisualizer = () => onBack()
   const returnFromFinal = () => setShowResult(false)
-  const editToolbar = onEditConfiguration && <ConfigurationEditActions floating onEdit={onEditConfiguration} hasGlass={Boolean(configuredDoorPreview.glass || configuredDoorPreview.sideliteGlassSrc)} />
+  const editToolbar = onEditConfiguration && <ConfigurationEditActions visualizer onEdit={onEditConfiguration} hasGlass={Boolean(configuredDoorPreview.glass || configuredDoorPreview.sideliteGlassSrc)} />
   if (!active) return null
   return (
     <main className="visualizer-page">
@@ -362,7 +362,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
               <span className="photo-picker-button"><Upload size={17} /> Choose Photo</span>
             </div>
           </> : <>
-{!showResult && <><div className="ai-photo-placement-area">{editToolbar}<div className="visualizer-editor ai-automatic-photo"><img src={photo.objectUrl} alt={'Uploaded entrance photo: ' + photo.file.name}/></div><EntranceDetectionLoading state={entranceDetectionLoadingExperience}/><AiGenerationLoading state={aiLoadingExperience}/></div>
+{!showResult && <>{editToolbar}<div className="ai-photo-placement-area"><div className="visualizer-editor ai-automatic-photo"><img src={photo.objectUrl} alt={'Uploaded entrance photo: ' + photo.file.name}/></div><EntranceDetectionLoading state={entranceDetectionLoadingExperience}/><AiGenerationLoading state={aiLoadingExperience}/></div>
               {(entranceDetectionLoading||!entranceCompatibility)&&<section className="ai-fit-strategy" aria-labelledby="ai-fit-strategy-title">
                 <div className="ai-fit-strategy-heading"><div><span>Entrance compatibility</span><h3 id="ai-fit-strategy-title">{entranceDetectionLoading?'Analyzing your existing entrance…':entranceCompatibility?'Configuration comparison':'Help us identify the opening'}</h3></div>{entranceCompatibility&&!entranceDetectionLoading&&<Check size={18}/>}</div>
                 {entranceDetection&&!entranceCompatibility&&<p className="ai-detection-summary">We couldn't confidently identify the entrance structure. Please identify it below or retry the analysis.</p>}
@@ -373,7 +373,8 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
 <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button></div></>}
             {showResult&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title">
               <div className="visualizer-final-heading"><span>AI visualization complete</span><h2 id="visualizer-final-title">Your new entrance</h2></div>
-              {aiResult?<div className="ai-photo-result-area">{editToolbar}<CleanupComparisonSlider originalSrc={photo.objectUrl} cleanupSrc={aiResult.image} imageAlt={'AI visualization: ' + photo.file.name} originalLabel="Original" resultLabel="AI Result" ariaLabel="Original photo and AI visualization comparison"/><AiGenerationLoading state={aiLoadingExperience}/></div>:<div className="visualizer-source-loading" role="status"><span>Preparing your best-fit AI visualization.</span></div>}
+              {editToolbar}
+              {aiResult?<div className="ai-photo-result-area"><CleanupComparisonSlider originalSrc={photo.objectUrl} cleanupSrc={aiResult.image} imageAlt={'AI visualization: ' + photo.file.name} originalLabel="Original" resultLabel="AI Result" ariaLabel="Original photo and AI visualization comparison"/><AiGenerationLoading state={aiLoadingExperience}/></div>:<div className="visualizer-source-loading" role="status"><span>Preparing your best-fit AI visualization.</span></div>}
               {aiError&&<div className="visualizer-error ai-visualizer-error" role="alert"><div><p>{aiError.userMessage}</p>{aiError.requestId&&<small>Reference: {aiError.requestId.slice(0,8)}</small>}</div><button type="button" disabled={aiGenerating} onClick={()=>void runAiVisualization('use-selected-product')}>Try Again</button></div>}
               <div className="visualizer-final-actions"><button type="button" className="visualizer-download-button" aria-label="Download completed home visualization photo" disabled={!aiResult} onClick={downloadAiVisualization}><Download size={18}/>Download Photo</button>{onDownloadPdf&&<button type="button" className="visualizer-download-button" aria-label="Download configured door PDF" disabled={pdfDownloadPreparing} onClick={downloadConfigurationPdf}><FileText size={18}/>{pdfDownloadPreparing?'Preparing PDF…':'Download Configuration PDF'}</button>}<button type="button" className="visualizer-review-button" aria-label="Return to the previous visualizer step" onClick={returnFromFinal}>Return to Previous Step</button></div>
               <div className="visualizer-final-text-actions"><button type="button" onClick={onReturnToReview??onBack}>Return to Review</button></div><span className="visualizer-download-status" role="status" aria-live="polite">{aiGenerating?'Creating your AI visualization. This may take a moment.':pdfDownloadPreparing?'Preparing your configuration PDF.':''}</span>{downloadError&&<p className="visualizer-error" role="alert">{downloadError}</p>}

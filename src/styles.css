@@ -3647,20 +3647,21 @@ body:has(.customer-form-app),
 .configuration-edit-actions h3 { margin: 0 0 9px; font-size: 14px; font-weight: 600; color: #414141; }
 .configuration-edit-actions > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .configuration-edit-actions button,
-.configuration-edit-return button { background: #fff; color: #242424; border: 1px solid #c6c6c6; border-radius: 18px; padding: 8px 14px; font: inherit; font-size: 13px; font-weight: 600; min-height: 36px; cursor: pointer; }
+.configuration-edit-return button { background: #111; color: #fff; border: 1px solid #111; border-radius: 18px; padding: 8px 14px; font: inherit; font-size: 13px; font-weight: 600; min-height: 36px; cursor: pointer; }
 .configuration-edit-actions button:hover:not(:disabled),
-.configuration-edit-return button:hover { background: #f1f1f1; border-color: #787878; }
+.configuration-edit-return button:hover { background: #303030; border-color: #303030; }
+.configuration-edit-actions button:active:not(:disabled),
+.configuration-edit-return button:active { background: #000; border-color: #000; }
 .configuration-edit-actions button:focus-visible,
-.configuration-edit-return button:focus-visible { outline: 2px solid #136668; outline-offset: 3px; }
+.configuration-edit-return button:focus-visible { outline: 2px solid #136668; outline-offset: 3px; box-shadow: 0 0 0 2px #fff; }
 .configuration-edit-actions button:disabled { opacity: .5; cursor: not-allowed; }
 .configuration-edit-return { position: absolute; top: 10px; left: 12px; z-index: 35; max-width: calc(100% - 24px); }
 .mobile-review-preview { position: relative; }
 .configuration-edit-return button { box-shadow: 0 2px 8px #00000018; }
 .configuration-edit-return p { color: #444; background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; max-width: 260px; font-size: 12px; margin: 8px 0 0; box-shadow: 0 2px 8px #00000018; }
-.configuration-edit-actions-floating { position: absolute; top: 44px; left: 12px; z-index: 8; max-width: calc(100% - 24px); margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; pointer-events: none; }
-.configuration-edit-actions-floating h3 { font-size: 12px; margin: 0; padding: 5px 7px; border-radius: 5px; background: #fffffff2; }
-.configuration-edit-actions-floating > div { gap: 5px; }
-.configuration-edit-actions-floating button { pointer-events: auto; padding: 6px 10px; min-height: 32px; font-size: 12px; box-shadow: 0 2px 6px #00000018; }
+.configuration-edit-actions-visualizer { width: 100%; margin: 0 0 14px; }
+.configuration-edit-actions-visualizer > div { justify-content: center; gap: 7px; }
+.configuration-edit-actions-visualizer button { padding: 7px 13px; min-height: 34px; font-size: 12px; }
 @media(max-width:900px) {
   /* Below the existing Reset and Exterior/Interior/Both utility row. */
   .mobile-live-preview > .configuration-edit-return { top: 50px; }
