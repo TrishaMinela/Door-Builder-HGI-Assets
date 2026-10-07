@@ -414,6 +414,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const lastGlassFrameDoorFinishId = useRef(restoredDoorFinishId)
   const [returningFromVisualizer, setReturningFromVisualizer] = useState(false)
   const [editReturnTo, setEditReturnTo] = useState<'summary' | 'visualizer' | null>(null)
+  const [editPageId, setEditPageId] = useState<BuilderPage | null>(null)
   const [editReturnError, setEditReturnError] = useState('')
   const [visualizerSessionStarted, setVisualizerSessionStarted] = useState(false)
   const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>('home')
@@ -850,7 +851,17 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     && (glassFrameColorMode !== 'custom' || customGlassFrameFinish)
   )
   const visualizerConfigurationReady = restoredDraftReferencesValid && pages.every((page) => page === 'review' || isBuilderPageComplete(page))
-  const currentPage = pages[step] ?? pages[pages.length - 1]
+  const currentPage = editReturnTo && editPageId && pages.includes(editPageId) ? editPageId : pages[step] ?? pages[pages.length - 1]
+  const currentPageIndex = pages.indexOf(currentPage)
+  const pageSequenceKey = pages.join('|')
+  useEffect(() => {
+    if (editReturnTo && editPageId && pages.includes(editPageId) && step !== pages.indexOf(editPageId)) setStep(pages.indexOf(editPageId))
+  }, [editReturnTo, editPageId, pageSequenceKey, step])
+  useEffect(() => {
+    if (screen !== 'builder' && editReturnTo) {
+      setEditReturnTo(null); setEditPageId(null); setEditReturnError('')
+    }
+  }, [screen, editReturnTo])
   const glassSelectionTarget = mainDoorGlassPages.has(currentPage) ? 'main-door' : sideliteGlassPages.has(currentPage) ? 'sidelite' : null
   const currentStep = currentPage === 'door-configuration'
     ? 'Entry Type'
@@ -1075,7 +1086,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         setGridPathId(''); setGridStyle(''); setGridPattern(''); setGridColor(''); setGridWidth('')
       }
     }
-    if (step >= pages.length) setStep(pages.length - 1)
+    if (!editReturnTo && step >= pages.length) setStep(pages.length - 1)
   }, [styleId, doorLineId, grainId, availableDoorLineIds, isSignatureDoorLine, selectedDoorLineLineIdsKey, needsGrainStep, effectiveFinishTypes, selectedFinishType, finishId, availableFinishIds, selectedGlassCategory, glassId, availableGlassIds, supportsGlass, step, pages.length, editReturnTo])
 
   useEffect(() => {
@@ -1322,6 +1333,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const goTo = (next: number) => {
     if (next < 0 || next >= pages.length) return
     setStep(next)
+    if (editReturnTo) setEditPageId(pages[next])
     if (pages[next] === 'door-style' && !hasShownEntrywayGuidance) {
       setHasShownEntrywayGuidance(true)
       setShowEntrywayGuidance(true)
@@ -1341,7 +1353,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     setDoubleDoorLockPrep(configurationType === 'french' ? 'DDLLBO' : '')
     // Give the customer an immediate configured preview. Door Style remains
     // the next editable step, with the first catalog option selected there.
-    if (doorStyles[0]) setStyleId(doorStyles[0].id)
+    if ((!editReturnTo || !selectedStyle) && doorStyles[0]) setStyleId(doorStyles[0].id)
   }
 
   const selectDoorStyle = (nextStyleId: string) => {
@@ -1366,13 +1378,14 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       setGlassFrameFinishType('paint')
       resetGridOptions()
     }
-    if (doorStyles.length === 1) goTo(step + 1)
+    if (!editReturnTo && doorStyles.length === 1) goTo(step + 1)
   }
 
   const startOver = () => {
     clearDoorBuilderDraft()
     setReturningFromVisualizer(false)
     setEditReturnTo(null)
+    setEditPageId(null)
     setEditReturnError('')
     setVisualizerSessionStarted(false)
     setBuilderPreviewView('Exterior')
@@ -1434,11 +1447,11 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             : targetStep === 'Hardware' ? page === 'hardware'
               : page === 'review'
     ))
-    return targetPage >= 0 && targetPage <= step
+    return targetPage >= 0 && (Boolean(editReturnTo) || targetPage <= step)
   }
 
   const showScreen = (next: 'home' | 'builder' | 'customer-form' | 'visualizer') => {
-    if (next === 'visualizer' && !testMode && !customerFormCompleted) {
+    if (next === 'visualizer' && !testMode && !customerFormCompleted && !(editReturnTo === 'visualizer' && visualizerSessionStarted)) {
       void (async () => {
         setPendingCustomerAction('open-visualizer')
         setSubmitted(false)
@@ -1452,6 +1465,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (next === 'visualizer' || next === 'home') {
       setReturningFromVisualizer(false)
       setEditReturnTo(null)
+      setEditPageId(null)
       setEditReturnError('')
     }
     if (next === 'visualizer') setVisualizerSessionStarted(true)
@@ -1472,6 +1486,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     const target = pages.indexOf(page)
     if (target < 0) return
     setEditReturnTo(returnTo)
+    setEditPageId(page)
     setEditReturnError('')
     setSubmitted(false)
     if (returnTo === 'visualizer') setReturningFromVisualizer(true)
@@ -1480,22 +1495,39 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   }
 
   const doneEditing = () => {
-    // Use the normal validators and runtime catalog resolutions, not a parallel
-    // edit-only configuration model. Dependency effects have already reconciled
-    // the current choices before this explicit user action.
-    const missingPage = pages.find(page => page !== 'review' && !isBuilderPageComplete(page))
-      ?? (usesMappedSidelites && !selectedSideliteStyle ? 'sidelite-style' : undefined)
-      ?? (!selectedGlass && supportsGlass ? 'glass' : undefined)
-      ?? (usesMappedSidelites && !selectedFslGlass ? 'sidelite-glass' : undefined)
-    if (missingPage || !visualizerConfigurationReady) {
-      goTo(pages.indexOf(missingPage ?? 'door-line'))
-      setEditReturnError('Please complete the required selection below before returning.')
+    // Validate actual configured products against existing availability lists.
+    // UI-only group/confirmation flags are not reasons to redo a valid product.
+    const validForPreview = (page: BuilderPage) => {
+      if (page === 'glass-type') return availableGlassCategories.some(option => option.id === selectedGlassCategory)
+      if (page === 'glass' || page === 'glass-variant') return Boolean(selectedGlass && availableGlass.some(option => option.id === glassId))
+      if (page === 'sidelite-glass-type') return Boolean(selectedSideliteCatalog?.categories.some(option => option.id === sideliteGlassCategory))
+      if (page === 'sidelite-glass' || page === 'sidelite-glass-variant') return Boolean(selectedFslGlass)
+      if (page === 'grid-location') return availableGridLocations.some(option => option.id === gridPathId)
+      if (page === 'grid-style') return lowEGridStyles.some(option => option.id === gridStyle)
+      if (page === 'grid-pattern') return compatibleGridPatterns.some(option => option.id === gridPattern)
+      if (page === 'grid-color') return compatibleGridColors.includes(gridColor as GridColor)
+      if (page === 'grid-width') return compatibleGridWidths.includes(gridWidth as GridWidth)
+      if (page === 'sidelite-grid-location') return availableSideliteGridLocations.some(option => option.id === sideliteGridLocation)
+      if (page === 'sidelite-grid-style') return fslGridStyles.includes(sideliteGridStyle as GridStyle)
+      if (page === 'sidelite-grid-pattern') return fslPatterns.includes(sideliteGridPattern as GridPattern)
+      if (page === 'sidelite-grid-color') return fslColors.includes(sideliteGridColor as GridColor)
+      if (page === 'sidelite-grid-width') return fslWidths.includes(sideliteGridWidth as GridWidth)
+      return isBuilderPageComplete(page)
+    }
+    const missingPage = pages.find(page => page !== 'review' && !validForPreview(page))
+      ?? (!supportsSideliteLine && sidelites && sidelites !== 'none' ? 'sidelites' : undefined)
+      ?? (!jambFinish ? (pages.includes('jamb-finish') ? 'jamb-finish' : 'door-finish') : undefined)
+      ?? (glassFrameColorMode === 'custom' && !customGlassFrameFinish ? (pages.includes('glass-frame-color') ? 'glass-frame-color' : 'door-finish') : undefined)
+    if (missingPage) {
+      goTo(pages.indexOf(missingPage))
+      setEditReturnError('Please update this option before returning to your preview.')
       return
     }
-    if (editReturnTo === 'visualizer') requestCustomerAction('open-visualizer')
+    if (editReturnTo === 'visualizer') showScreen('visualizer')
     else {
       goTo(pages.indexOf('review'))
       setEditReturnTo(null)
+      setEditPageId(null)
       setEditReturnError('')
       setReturningFromVisualizer(false)
     }
@@ -1560,6 +1592,10 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
   const selectDoorLine = (nextDoorLineId: string) => {
     if (!availableDoorLines.some((item) => item.id === nextDoorLineId)) return
+    if (editReturnTo && nextDoorLineId !== doorLineId) {
+      setDoorLineId(nextDoorLineId)
+      return
+    }
     if (nextDoorLineId !== doorLineId) {
       setDoorLineId(nextDoorLineId)
       if (nextDoorLineId === 'brushed-smooth-fiberglass' && sideliteStyleId === 's2sl') {
@@ -1584,11 +1620,15 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       setGlassId('')
       resetGridOptions()
     }
-    if (availableDoorLines.length === 1) goTo(step + 1)
+    if (!editReturnTo && availableDoorLines.length === 1) goTo(step + 1)
   }
 
   const selectGrain = (nextGrain: string) => {
     if (!signatureGrainOptions.some((item) => item.id === nextGrain)) return
+    if (editReturnTo && nextGrain !== grainId) {
+      setGrainId(nextGrain)
+      return
+    }
     if (nextGrain !== grainId) {
       setGrainId(nextGrain)
       setSideliteStyleId('')
@@ -1596,7 +1636,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       setSideliteGlassId('')
       resetSideliteGrid()
     }
-    if (signatureGrainOptions.length === 1) goTo(step + 1)
+    if (!editReturnTo && signatureGrainOptions.length === 1) goTo(step + 1)
   }
 
   const selectSidelites = (nextSidelites: SideliteConfiguration) => {
@@ -1627,6 +1667,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const selectSideliteGlassCategory = (category: SideliteGlassCategory) => { setSideliteGlassCategory(category); setSideliteGlassId(''); setSideliteGlassGroupKey(''); setSideliteGlassVariantConfirmed(false); resetSideliteGrid() }
   const selectSideliteGlass = (id: string) => { setSideliteGlassId(id); resetSideliteGrid() }
   const selectSideliteGlassGroup = (group: { key: string; options: SideliteGlassOption[] }) => {
+    if (editReturnTo && group.key === sideliteGlassGroupKey && group.options.some(option => option.id === sideliteGlassId)) return
     setSideliteGlassGroupKey(group.key)
     setSideliteGlassId(group.options[0]?.id ?? '')
     setSideliteGlassVariantConfirmed(group.options.length === 1)
@@ -1644,7 +1685,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       if (nextFinishType === 'paint') setSelectedPaint(nextFinishId)
       else setSelectedStain(nextFinishId)
     }
-    if (visibleFinishes.length === 1) goTo(step + 1)
+    if (!editReturnTo && visibleFinishes.length === 1) goTo(step + 1)
   }
 
   const selectJambType = (nextType: 'timber' | 'clad') => {
@@ -1667,10 +1708,11 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       setGlassId(nextGlassId)
       resetGridOptions()
     }
-    if (visibleGlass.length === 1) goTo(step + 1)
+    if (!editReturnTo && visibleGlass.length === 1) goTo(step + 1)
   }
 
   const selectGlassGroup = (group: GlassOptionGroup) => {
+    if (editReturnTo && group.key === selectedGlassGroupKey && group.options.some(option => option.id === glassId)) return
     setSelectedGlassGroupKey(group.key)
     setGlassId(group.options[0]?.id ?? '')
     setGlassVariantConfirmed(group.options.length === 1)
@@ -1687,7 +1729,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       setGlassVariantConfirmed(false)
       resetGridOptions()
     }
-    if (availableGlassCategories.length === 1) goTo(step + 1)
+    if (!editReturnTo && availableGlassCategories.length === 1) goTo(step + 1)
   }
 
   const selectGridLocation = (nextLocationId: string) => {
@@ -1709,30 +1751,30 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     setGridPattern(nextPattern)
     setGridColor('')
     setGridWidth('')
-    if (compatibleGridPatterns.length === 1) goTo(step + 1)
+    if (!editReturnTo && compatibleGridPatterns.length === 1) goTo(step + 1)
   }
 
   const selectGridColor = (nextColor: GridColor) => {
     setGridColor(nextColor)
     setGridWidth('')
-    if (compatibleGridColors.length === 1) goTo(step + 1)
+    if (!editReturnTo && compatibleGridColors.length === 1) goTo(step + 1)
   }
 
   const selectGridWidth = (nextWidth: GridWidth) => {
     setGridWidth(nextWidth)
-    if (compatibleGridWidths.length === 1) goTo(step + 1)
+    if (!editReturnTo && compatibleGridWidths.length === 1) goTo(step + 1)
   }
 
   const selectHardware = (nextHardwareId: string) => {
     if (!hardwareOptions.some((item) => item.id === nextHardwareId)) return
     if (nextHardwareId !== hardwareId) setHardwareId(nextHardwareId)
-    if (hardwareStyleGroups.length === 1 && hardwareStyleGroups[0].length === 1) goTo(step + 1)
+    if (!editReturnTo && hardwareStyleGroups.length === 1 && hardwareStyleGroups[0].length === 1) goTo(step + 1)
   }
 
   const selectDoorSwing = (nextDoorSwingId: string) => {
     if (!doorSwingOptions.some((item) => item.id === nextDoorSwingId)) return
     if (nextDoorSwingId !== doorSwingId) setDoorSwingId(nextDoorSwingId)
-    if (doorSwingOptions.length === 1) goTo(step + 1)
+    if (!editReturnTo && doorSwingOptions.length === 1) goTo(step + 1)
   }
 
   const currentDoorConfiguration: DoorConfiguration | null = selectedHardware && selectedDoorSwing ? {
@@ -2132,7 +2174,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <button className="post-submit-visualizer-button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Try the Door Visualizer <ArrowRight size={17} /></button>
           </div>}
 
-              {currentPage !== 'review' && <div className="builder-actions"><button className="back" aria-label="Previous configuration step" disabled={step === 0} onClick={() => goTo(step - 1)}><ArrowLeft size={17} /><span>Previous</span></button><button className="next" aria-label="Next configuration step" disabled={!isBuilderPageComplete(currentPage)} onClick={() => goTo(step + 1)}><span>Next</span><ArrowRight size={17} /></button></div>}
+              {currentPage !== 'review' && <div className="builder-actions"><button className="back" aria-label="Previous configuration step" disabled={currentPageIndex === 0} onClick={() => goTo(currentPageIndex - 1)}><ArrowLeft size={17} /><span>Previous</span></button><button className="next" aria-label="Next configuration step" disabled={!editReturnTo && !isBuilderPageComplete(currentPage)} onClick={() => goTo(currentPageIndex + 1)}><span>Next</span><ArrowRight size={17} /></button></div>}
         </section>
 
         {!submitted && <aside className={currentPage === 'review' ? 'review-preview-panel' : undefined}>

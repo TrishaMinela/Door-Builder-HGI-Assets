@@ -126,12 +126,36 @@ try {
     await page.screenshot({ path: `/tmp/balanced-visualizer-actions-${width}.png`, fullPage: true })
     for (const [area, heading] of [['Color', 'Choose Your Door Finish'], ['Hardware', 'Choose Your Hardware'], ['Glass', 'Choose Main Door Glass Type'], ['Door', 'Choose a Door Style']]) {
       const previousGenerations = generations
+      const beforeEdit = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
       await page.getByRole('button', { name: `Edit ${area}`, exact: true }).click()
       await page.getByRole('heading', { name: heading, exact: true }).waitFor()
       if (area === 'Color') await card(/^Black$/).click()
       if (area === 'Hardware') await page.locator('.hardware-card-main').first().click()
       if (area === 'Glass') { await next(); await card(/Clear Glass with No Grids/).first().click() }
-      if (area === 'Door') await card(/^F1 /).click()
+      if (area === 'Door') {
+        await card(/^S /).click()
+        await page.getByRole('heading', { name: 'Choose a Door Style', exact: true }).waitFor()
+        await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
+        await page.getByRole('heading', { name: 'Choose Main Door Glass', exact: true }).waitFor()
+        await page.locator('.configuration-edit-return:visible').getByText('Please update this option before returning to your preview.', { exact: true }).waitFor()
+        const invalidated = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
+        for (const field of ['doorLineId', 'sidelites', 'selectedPaint', 'hardwareId', 'doorSwingId']) assert.equal(invalidated[field], beforeEdit[field], `Invalid glass does not clear ${field}`)
+        await card(/^Clear Glass$/).click()
+      }
+      if (area === 'Hardware') {
+        await page.getByRole('button', { name: 'Previous configuration step' }).click()
+        await page.getByRole('heading', { name: 'Choose Main Door Glass', exact: true }).waitFor()
+        await page.getByRole('button', { name: 'Previous configuration step' }).click()
+        await page.getByRole('heading', { name: 'Choose Main Door Glass Type', exact: true }).waitFor()
+        await next()
+        await page.getByRole('heading', { name: 'Choose Main Door Glass', exact: true }).waitFor()
+      }
+      if (area === 'Color') {
+        await page.getByRole('button', { name: 'Previous configuration step' }).click()
+        await page.getByRole('heading', { name: 'Choose Your Door Line', exact: true }).waitFor()
+        await next()
+      }
+      assert.equal(await page.getByRole('button', { name: 'Done Editing', exact: true }).count(), 1, 'Edit session survives neighboring steps')
       await page.waitForTimeout(150)
       assert.equal(generations, previousGenerations, 'No paid generation while editing')
       await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
@@ -141,13 +165,36 @@ try {
       assert.equal(payloads.at(-1).configuration.finish.id, saved.selectedPaint)
       assert.equal(payloads.at(-1).configuration.hardware.id, saved.hardwareId)
       assert.equal(payloads.at(-1).configuration.style.id, saved.styleId)
-      if (area === 'Door') assert.equal(saved.glassId, '', 'Changing to a solid style clears incompatible glass')
+      for (const field of ['sidelites', 'doorSwingId']) assert.equal(saved[field], beforeEdit[field])
+      if (area === 'Hardware') {
+        for (const field of ['styleId', 'doorLineId', 'selectedPaint', 'glassId']) assert.equal(saved[field], beforeEdit[field], `Hardware editing preserves ${field}`)
+      }
     }
+    for (const label of [/^F1 /, /^2PHD /]) {
+      const previous = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
+      await page.getByRole('button', { name: 'Edit Door', exact: true }).click()
+      await card(label).click()
+      await page.getByRole('heading', { name: 'Choose a Door Style', exact: true }).waitFor()
+      await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
+      await page.getByText('AI Result', { exact: true }).waitFor({ timeout: 30000 })
+      const edited = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
+      for (const field of ['doorLineId', 'selectedPaint', 'hardwareId', 'sidelites', 'doorSwingId']) assert.equal(edited[field], previous[field], 'Compatible door edit preserves unrelated selections and returns directly')
+    }
+    // Exit a door edit from an earlier, untouched layout step without regenerating.
+    const noChangeGenerations = generations
+    await page.getByRole('button', { name: 'Edit Door', exact: true }).click()
+    await page.getByRole('button', { name: 'Previous configuration step' }).click()
+    await page.getByRole('button', { name: 'Previous configuration step' }).click()
+    await page.getByRole('heading', { name: 'Choose Your Sidelites', exact: true }).waitFor()
+    await next(); await page.getByRole('button', { name: 'Previous configuration step' }).click()
+    await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
+    await page.getByText('AI Result', { exact: true }).waitFor()
+    assert.equal(generations, noChangeGenerations, 'Browsing unchanged steps does not regenerate')
     assert.equal(detections, 1, 'Same photo analysis is retained; compatibility uses new configuration')
     const beforeBack = await page.evaluate(() => localStorage.getItem('hgi-door-builder-draft'))
     const beforeBackGenerations = generations
     await page.getByRole('button', { name: 'Back', exact: true }).click()
-    await page.getByRole('heading', { name: 'Choose a Door Style', exact: true }).waitFor()
+    await page.getByRole('heading', { name: 'Choose Your Sidelites', exact: true }).waitFor()
     assert.equal(await page.evaluate(() => localStorage.getItem('hgi-door-builder-draft')), beforeBack, 'Back preserves the configured door')
     await walkToSummary()
     await page.locator('.visualizer-promo-card:visible').getByRole('button', { name: 'Launch Visualizer' }).click()
@@ -169,8 +216,9 @@ try {
     await summaryEdit('Door').click()
     await card(/^F Full /).click()
     await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
-    await page.getByRole('heading', { name: 'Choose Main Door Glass Type' }).waitFor()
-    await walkToSummary()
+    await page.getByRole('heading', { name: 'Choose Main Door Glass Type', exact: true }).waitFor()
+    await next()
+    await card(/Clear Glass with No Grids/).first().click()
     await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
     await summary()
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
