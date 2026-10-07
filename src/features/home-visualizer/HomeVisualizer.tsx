@@ -315,18 +315,14 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
     <main className="visualizer-page">
       <div className="visualizer-shell">
         <div className="visualizer-heading">
-          <span>AI Visualizer</span>
           <h1>See your entry in context</h1>
           <p>Add a photo of your entrance to prepare the workspace for your configured door.</p>
         </div>
 
-        <section className="visualizer-card" aria-labelledby="visualizer-photo-title">
+        <section className="visualizer-card" aria-labelledby={!photo ? 'visualizer-photo-title' : undefined} aria-label={photo ? 'Home visualization' : undefined}>
           <div className="visualizer-card-heading">
-            <div>
-              <span>{photo ? 'AI Visualizer' : 'Step 1'}</span>
-              <h2 id="visualizer-photo-title">{photo ? showResult ? 'Completed Visualization' : 'Your entrance photo' : 'Add your house photo'}</h2>
-            </div>
-            {photo && <div className="visualizer-photo-heading-actions"><span className="visualizer-photo-ready"><Check size={15} /> Photo ready</span><button type="button" className="visualizer-secondary-button" aria-label="Replace uploaded house photo" onClick={openPicker}><RefreshCw size={17} /> Replace Photo</button></div>}
+            {!photo && <div><h2 id="visualizer-photo-title">Add your house photo</h2></div>}
+            {photo && <div className="visualizer-photo-heading-actions"><button type="button" className="visualizer-secondary-button" aria-label="Replace uploaded house photo" onClick={openPicker}><RefreshCw size={17} /> Replace Photo</button></div>}
           </div>
 
           {!photo ? <>
@@ -372,7 +368,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
               {aiError&&<div className="visualizer-error ai-visualizer-error" role="alert"><div><p>{aiError.userMessage}</p>{aiError.requestId&&<small title={aiError.requestId}>Reference: {aiError.requestId.slice(0,8)}</small>}{import.meta.env.DEV&&<small>Error code: {aiError.errorCode}</small>}</div><button type="button" disabled={aiGenerating} onClick={()=>void runAiVisualization()}>Try Again</button></div>}
 <div className="wizard-navigation"><button type="button" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button></div></>}
             {showResult&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title">
-              <div className="visualizer-final-heading"><span>AI visualization complete</span><h2 id="visualizer-final-title">Your new entrance</h2></div>
+              <div className="visualizer-final-heading"><h2 id="visualizer-final-title">Your new entrance</h2></div>
               {editToolbar}
               {aiResult?<div className="ai-photo-result-area"><CleanupComparisonSlider originalSrc={photo.objectUrl} cleanupSrc={aiResult.image} imageAlt={'AI visualization: ' + photo.file.name} originalLabel="Original" resultLabel="AI Result" ariaLabel="Original photo and AI visualization comparison"/><AiGenerationLoading state={aiLoadingExperience}/></div>:<div className="visualizer-source-loading" role="status"><span>Preparing your best-fit AI visualization.</span></div>}
               {aiError&&<div className="visualizer-error ai-visualizer-error" role="alert"><div><p>{aiError.userMessage}</p>{aiError.requestId&&<small>Reference: {aiError.requestId.slice(0,8)}</small>}</div><button type="button" disabled={aiGenerating} onClick={()=>void runAiVisualization('use-selected-product')}>Try Again</button></div>}

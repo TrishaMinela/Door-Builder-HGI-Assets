@@ -91,7 +91,9 @@ try {
     const originalUrl = await page.locator('.cleanup-comparison-original').getAttribute('src')
     const editToolbar = page.locator('.configuration-edit-actions-visualizer')
     assert.ok(await page.getByRole('heading', { name: 'Your new entrance', exact: true }).isVisible(), 'Result heading stays visible above the pills on desktop and mobile')
-    assert.equal(await editToolbar.locator('h3').count(), 0, 'No Edit label above the pills')
+    assert.equal(await editToolbar.getByRole('heading', { name: 'Edit your design', exact: true }).count(), 1, 'Clear edit section label above pills')
+    for (const label of ['Photo Ready', 'Photo ready', 'AI Visualizer', 'Your entrance photo', 'Edit:']) assert.equal(await page.getByText(label, { exact: true }).count(), 0, `${label} removed`)
+    assert.ok(await page.getByRole('button', { name: 'Replace uploaded house photo' }).isVisible())
     assert.deepEqual(await editToolbar.getByRole('button').allTextContents(), ['Door', 'Sidelites', 'Color', 'Glass', 'Hardware'])
     assert.ok(await editToolbar.evaluate(element => {
       const section = element.closest('.visualizer-final-result')!
@@ -101,10 +103,13 @@ try {
       return toolbar.top >= heading.bottom && toolbar.bottom <= image.top && toolbar.left >= image.left && toolbar.right <= image.right
     }), 'Pills are inside the final result container below the heading and above the comparison, without covering image controls')
     for (const pill of await editToolbar.getByRole('button').all()) {
+      assert.equal(await pill.locator('.configuration-edit-icon svg.lucide-pencil').count(), 1, 'Existing Pencil icon in every pill')
+      assert.equal(await pill.locator('.configuration-edit-icon').getAttribute('aria-hidden'), 'true', 'Decorative icon does not replace text label')
+      assert.equal(await pill.locator('.configuration-edit-icon svg').evaluate(element => getComputedStyle(element).color), 'rgb(17, 17, 17)', 'Pencil is black')
       assert.deepEqual(await pill.evaluate(element => ({ background: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color })), { background: 'rgb(17, 17, 17)', color: 'rgb(255, 255, 255)' })
     }
     await page.waitForTimeout(1200)
-    await page.screenshot({ path: `/tmp/refined-visualizer-edit-${width}.png` })
+    await page.screenshot({ path: `/tmp/clear-visualizer-edit-${width}.png` })
     for (const [area, heading] of [['Color', 'Choose Your Door Finish'], ['Hardware', 'Choose Your Hardware'], ['Glass', 'Choose Main Door Glass Type'], ['Door', 'Choose a Door Style']]) {
       const previousGenerations = generations
       await page.getByRole('button', { name: `Edit ${area}`, exact: true }).click()

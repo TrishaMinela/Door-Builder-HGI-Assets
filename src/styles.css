@@ -3661,7 +3661,11 @@ body:has(.customer-form-app),
 .configuration-edit-return p { color: #444; background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px; max-width: 260px; font-size: 12px; margin: 8px 0 0; box-shadow: 0 2px 8px #00000018; }
 .configuration-edit-actions-visualizer { width: 100%; margin: 0 0 14px; }
 .configuration-edit-actions-visualizer > div { justify-content: center; gap: 7px; }
-.configuration-edit-actions-visualizer button { padding: 7px 13px; min-height: 34px; font-size: 12px; }
+.configuration-edit-actions-visualizer h3 { text-align: center; font-size: 13px; color: #505050; font-weight: 500; margin: 0 0 9px; }
+.configuration-edit-actions-visualizer button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 7px 13px; min-height: 36px; font-size: 12px; }
+.configuration-edit-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 19px; width: 19px; height: 19px; background: #fff; color: #111; border-radius: 50%; }
+.configuration-edit-icon svg { display: block; }
+.visualizer-card-heading:has(.visualizer-photo-heading-actions) { justify-content: flex-end; }
 .visualizer-final-result:has(.configuration-edit-actions-visualizer) .visualizer-final-heading { display: block; }
 @media(max-width:900px) {
   /* Below the existing Reset and Exterior/Interior/Both utility row. */
