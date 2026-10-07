@@ -35,6 +35,11 @@ try {
       while (!condition()) { assert.ok(Date.now() < deadline, 'Mocked request did not start'); await page.waitForTimeout(50) }
     }
     const upload = () => page.locator('input[type=file]').setInputFiles({ name: 'test-home.jpg', mimeType: 'image/jpeg', buffer: photo })
+    const replace = async () => {
+      const picker = page.waitForEvent('filechooser')
+      await page.getByRole('button', { name: 'Replace uploaded house photo' }).click()
+      await (await picker).setFiles({ name: 'replacement-home.jpg', mimeType: 'image/jpeg', buffer: photo })
+    }
     // A fresh customer session must reach the real app without any access flag.
     await page.goto('http://127.0.0.1:5189/')
     await page.locator('.home-app').waitFor()
@@ -49,12 +54,15 @@ try {
     await upload()
     await waitFor(() => Boolean(releaseDetection))
     await page.getByText('Analyzing your existing entrance', { exact: true }).waitFor()
+    assert.equal(await page.locator('.ai-photo-loading-content svg, .ai-photo-loading-icon').count(), 0, 'Analysis loading has no decorative icon')
+    assert.equal(await page.locator('.ai-fit-strategy').count(), 0, 'No redundant inline analysis message below the photo')
     assert.equal(requests, 0)
     assert.equal(await page.locator('.entrance-corner-handle').count(), 0)
     assert.equal(await page.getByRole('button', { name: 'Help AI locate the entrance' }).count(), 0)
     releaseDetection!()
     await waitFor(() => Boolean(releaseGeneration))
     await page.getByText('Creating your AI visualization', { exact: true }).waitFor()
+    assert.equal(await page.locator('.ai-photo-loading-content svg, .ai-photo-loading-icon').count(), 0, 'Generation loading has no decorative icon')
     assert.equal(requests, 1, 'Good fit generates automatically once')
     assert.equal(payload!.corners, undefined, 'Automatic AI request has no manual coordinates')
     assert.equal(payload!.fitStrategy, 'use-selected-product')
@@ -63,6 +71,9 @@ try {
     const reference = await sharp(Buffer.from((payload!.productReference as string).split(',')[1], 'base64')).metadata()
     assert.equal(reference.width, 560); assert.equal(reference.height, 1160)
     assert.equal(await page.getByRole('button', { name: 'Replace uploaded house photo' }).isVisible(), true)
+    assert.equal(await page.getByRole('button', { name: 'Back', exact: true }).count(), 1)
+    assert.equal(await page.getByRole('button', { name: 'Back to Door Builder', exact: true }).count(), 0)
+    assert.equal(await page.getByRole('button', { name: 'Remove Photo', exact: true }).count(), 0)
     assert.equal(await page.getByRole('dialog').count(), 0)
     releaseGeneration!()
     await page.getByText('AI Result', { exact: true }).waitFor()
@@ -73,7 +84,7 @@ try {
     assert.equal(await page.locator('.entrance-corner-handle').count(), 0)
     assert.equal(requests, 1, 'Returning to photo does not regenerate')
     compatible = false; releaseDetection = undefined
-    await upload(); await waitFor(() => Boolean(releaseDetection)); releaseDetection!()
+    await replace(); await waitFor(() => Boolean(releaseDetection)); releaseDetection!()
     await page.getByRole('dialog').waitFor()
     assert.equal(await page.getByRole('dialog').getByRole('button').count(), 2)
     assert.equal(await page.getByRole('button', { name: 'Continue Anyway' }).count(), 0)

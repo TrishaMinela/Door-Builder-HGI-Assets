@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowLeft, Check, Download, FileText, ImagePlus, RefreshCw, Trash2, Upload } from 'lucide-react'
+import { ArrowLeft, Check, Download, FileText, ImagePlus, RefreshCw, Upload } from 'lucide-react'
 import type { DoorPreviewProps } from '../../components/DoorPreview'
 import { ConfigurationEditActions, type ConfigurationEditArea } from '../../components/ConfigurationEditActions'
 import type { DoorConfiguration } from '../../types'
@@ -320,10 +320,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
         </div>
 
         <section className="visualizer-card" aria-labelledby={!photo ? 'visualizer-photo-title' : undefined} aria-label={photo ? 'Home visualization' : undefined}>
-          <div className="visualizer-card-heading">
-            {!photo && <div><h2 id="visualizer-photo-title">Add your house photo</h2></div>}
-            {photo && <div className="visualizer-photo-heading-actions"><button type="button" className="visualizer-secondary-button" aria-label="Replace uploaded house photo" onClick={openPicker}><RefreshCw size={17} /> Replace Photo</button></div>}
-          </div>
+          {!photo && <div className="visualizer-card-heading"><div><h2 id="visualizer-photo-title">Add your house photo</h2></div></div>}
 
           {!photo ? <>
             <div className="photo-guidance">
@@ -359,35 +356,34 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
             </div>
           </> : <>
 {!showResult && <>{editToolbar}<div className="ai-photo-placement-area"><div className="visualizer-editor ai-automatic-photo"><img src={photo.objectUrl} alt={'Uploaded entrance photo: ' + photo.file.name}/></div><EntranceDetectionLoading state={entranceDetectionLoadingExperience}/><AiGenerationLoading state={aiLoadingExperience}/></div>
-              {(entranceDetectionLoading||!entranceCompatibility)&&<section className="ai-fit-strategy" aria-labelledby="ai-fit-strategy-title">
-                <div className="ai-fit-strategy-heading"><div><span>Entrance compatibility</span><h3 id="ai-fit-strategy-title">{entranceDetectionLoading?'Analyzing your existing entrance…':entranceCompatibility?'Configuration comparison':'Help us identify the opening'}</h3></div>{entranceCompatibility&&!entranceDetectionLoading&&<Check size={18}/>}</div>
+              {!entranceDetectionLoading&&!entranceCompatibility&&<section className="ai-fit-strategy" aria-labelledby="ai-fit-strategy-title">
+                <div className="ai-fit-strategy-heading"><div><span>Entrance compatibility</span><h3 id="ai-fit-strategy-title">Help us identify the opening</h3></div></div>
                 {entranceDetection&&!entranceCompatibility&&<p className="ai-detection-summary">We couldn't confidently identify the entrance structure. Please identify it below or retry the analysis.</p>}
                 {entranceDetectionError&&<div className="ai-detection-error" role="alert"><p>{entranceDetectionError.userMessage}</p>{import.meta.env.DEV&&<small>{entranceDetectionError.errorCode}{entranceDetectionError.requestId?` · Reference: ${entranceDetectionError.requestId.slice(0,8)}`:''}</small>}<button type="button" onClick={()=>void runEntranceDetection()}>Retry detection</button></div>}
                 {!entranceDetectionLoading&&!entranceCompatibility&&<label className="ai-manual-entrance"><span>What does the existing entrance have?</span><select value={manualEntranceStructure} onChange={event=>selectManualEntranceStructure(event.target.value as ExistingEntranceStructure)}><option value="unknown">Choose the existing structure</option>{MANUAL_ENTRANCE_OPTIONS.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}
               </section>}
               {aiError&&<div className="visualizer-error ai-visualizer-error" role="alert"><div><p>{aiError.userMessage}</p>{aiError.requestId&&<small title={aiError.requestId}>Reference: {aiError.requestId.slice(0,8)}</small>}{import.meta.env.DEV&&<small>Error code: {aiError.errorCode}</small>}</div><button type="button" disabled={aiGenerating} onClick={()=>void runAiVisualization()}>Try Again</button></div>}
-<div className="wizard-navigation"><button type="button" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17}/><span className="wizard-nav-label">Back</span></button></div></>}
+</>}
             {showResult&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title">
               <div className="visualizer-final-heading"><h2 id="visualizer-final-title">Your new entrance</h2></div>
               {editToolbar}
               {aiResult?<div className="ai-photo-result-area"><CleanupComparisonSlider originalSrc={photo.objectUrl} cleanupSrc={aiResult.image} imageAlt={'AI visualization: ' + photo.file.name} originalLabel="Original" resultLabel="AI Result" ariaLabel="Original photo and AI visualization comparison"/><AiGenerationLoading state={aiLoadingExperience}/></div>:<div className="visualizer-source-loading" role="status"><span>Preparing your best-fit AI visualization.</span></div>}
               {aiError&&<div className="visualizer-error ai-visualizer-error" role="alert"><div><p>{aiError.userMessage}</p>{aiError.requestId&&<small>Reference: {aiError.requestId.slice(0,8)}</small>}</div><button type="button" disabled={aiGenerating} onClick={()=>void runAiVisualization('use-selected-product')}>Try Again</button></div>}
               <div className="visualizer-final-actions"><button type="button" className="visualizer-download-button" aria-label="Download completed home visualization photo" disabled={!aiResult} onClick={downloadAiVisualization}><Download size={18}/>Download Photo</button>{onDownloadPdf&&<button type="button" className="visualizer-download-button" aria-label="Download configured door PDF" disabled={pdfDownloadPreparing} onClick={downloadConfigurationPdf}><FileText size={18}/>{pdfDownloadPreparing?'Preparing PDF…':'Download Configuration PDF'}</button>}<button type="button" className="visualizer-review-button" aria-label="Return to the previous visualizer step" onClick={returnFromFinal}>Return to Previous Step</button></div>
-              <div className="visualizer-final-text-actions"><button type="button" onClick={onReturnToReview??onBack}>Return to Review</button></div><span className="visualizer-download-status" role="status" aria-live="polite">{aiGenerating?'Creating your AI visualization. This may take a moment.':pdfDownloadPreparing?'Preparing your configuration PDF.':''}</span>{downloadError&&<p className="visualizer-error" role="alert">{downloadError}</p>}
+              <span className="visualizer-download-status" role="status" aria-live="polite">{aiGenerating?'Creating your AI visualization. This may take a moment.':pdfDownloadPreparing?'Preparing your configuration PDF.':''}</span>{downloadError&&<p className="visualizer-error" role="alert">{downloadError}</p>}
             </section>}
           </>}
 
           <input ref={inputRef} className="visualizer-file-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.avif,.heic,.heif" onChange={onInputChange} />
           {error && <p className="visualizer-error" role="alert">{error}</p>}
 
-          {photo && !showResult && <div className="visualizer-photo-actions">
-            <button type="button" className="visualizer-remove-button visualizer-desktop-photo-action" onClick={removePhoto}><Trash2 size={17} /> Remove Photo</button>
-            <button type="button" className="visualizer-back-button visualizer-back-button-inline" onClick={leaveVisualizer}><ArrowLeft size={17} /> Back to Door Builder</button>
-          </div>}
+          <div className="visualizer-card-navigation">
+            <button type="button" className="visualizer-card-back" aria-label="Back" onClick={leaveVisualizer}><ArrowLeft size={17} /> Back</button>
+            {photo && <button type="button" className="visualizer-card-replace" aria-label="Replace uploaded house photo" onClick={openPicker}><RefreshCw size={17} /> Replace Photo</button>}
+          </div>
         </section>
 
         <ConfiguredDoorSource configurationKey={configurationKey} previewProps={configuredDoorPreview} onStateChange={updateDoorSource} />
-        {!photo && <button type="button" className="visualizer-back-button" onClick={leaveVisualizer}><ArrowLeft size={17} /> Back to Door Builder</button>}
       </div>
       {showIncompatibilityModal&&createPortal(<div className="ai-incompatibility-backdrop"><div ref={incompatibilityDialogRef} className="ai-incompatibility-modal" role="dialog" aria-modal="true" aria-labelledby="ai-incompatibility-title" aria-describedby="ai-incompatibility-description"><h2 id="ai-incompatibility-title">This door configuration doesn’t match your entrance</h2><div id="ai-incompatibility-description"><p>{entranceCompatibility?.detectedSummary} {entranceCompatibility?.selectedSummary}</p><p>Choose a different photo or review your door configuration to continue.</p><p>If this seems wrong, the photo may be too far away, poorly lit, or unclear for accurate AI detection.</p></div><div className="ai-incompatibility-actions"><button type="button" className="ai-incompatibility-change-photo" onClick={removePhoto}>Change Photo</button><button type="button" className="ai-incompatibility-review" onClick={onReturnToReview??onBack}>Review Configuration</button></div></div></div>,document.body)}
     </main>

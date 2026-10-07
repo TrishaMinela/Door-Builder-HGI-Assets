@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Sparkles } from 'lucide-react'
 
 export const AI_LOADING_MESSAGES = [
   'Analyzing your doorway',
@@ -75,7 +74,6 @@ export function AiGenerationLoading({ state }: { state: ReturnType<typeof useAiG
   const complete = state.phase === 'completing' || state.phase === 'fading'
   return <div className={`ai-photo-loading-overlay ${state.phase === 'fading' ? 'is-fading' : ''}`}>
     <div className="ai-photo-loading-content" role="status" aria-live="polite" aria-atomic="true">
-      <span className="ai-photo-loading-icon" aria-hidden="true">{complete ? <Check size={25}/> : <Sparkles size={25}/>}</span>
       <h3>{complete ? 'Your AI visualization is ready' : 'Creating your AI visualization'}</h3>
       <p className="ai-photo-loading-message">{complete ? 'Ready to see your new entrance.' : state.message}</p>
       <strong className="ai-photo-loading-percentage">{Math.round(state.progress)}%</strong>
@@ -96,7 +94,6 @@ export function EntranceDetectionLoading({ state }: { state: ReturnType<typeof u
   const complete = state.phase === 'completing' || state.phase === 'fading'
   return <div className={`ai-photo-loading-overlay ai-entrance-analysis-overlay ${state.phase === 'fading' ? 'is-fading' : ''}`}>
     <div className="ai-photo-loading-content" role="status" aria-live="polite" aria-atomic="true">
-      <span className="ai-photo-loading-icon" aria-hidden="true">{complete ? <Check size={25}/> : <Sparkles size={25}/>}</span>
       <h3>{complete ? 'Entrance analysis complete' : 'Analyzing your existing entrance'}</h3>
       <p className="ai-photo-loading-message">{complete ? 'We found the details needed to choose the best fit.' : 'We’re identifying the doorway, sidelites, and other entry details.'}</p>
       <strong className="ai-photo-loading-percentage">{Math.round(state.progress)}%</strong>

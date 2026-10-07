@@ -62,13 +62,18 @@ try {
       await summary()
     }
     const card = (label: RegExp) => page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: label }) })
+    const summaryEdit = (area: string) => {
+      const labels: Record<string, string> = { Door: 'Door style', Sidelites: 'Sidelite Configuration', Color: 'Door finish color', Glass: 'Main Door Glass', Hardware: 'Hardware' }
+      return page.locator('.summary-row').filter({ hasText: labels[area] }).getByRole('button', { name: 'Edit', exact: true })
+    }
     await page.goto('http://127.0.0.1:5194/')
     await page.getByRole('button', { name: 'Start Building', exact: true }).click()
     await page.getByRole('button', { name: 'Next configuration step' }).waitFor()
     assert.equal(await page.getByRole('button', { name: 'Done Editing', exact: true }).count(), 0, 'Normal builder has no edit-only action')
     await walkToSummary()
+    assert.equal(await page.locator('.summary-card .configuration-edit-actions').count(), 0, 'Summary has no duplicate edit pills')
     for (const [area, heading] of [['Color', 'Choose Your Door Finish'], ['Hardware', 'Choose Your Hardware'], ['Glass', 'Choose Main Door Glass Type'], ['Sidelites', 'Choose Your Sidelites'], ['Door', 'Choose a Door Style']]) {
-      await page.getByRole('button', { name: `Edit ${area}`, exact: true }).click()
+      await summaryEdit(area).click()
       await page.getByRole('heading', { name: heading, exact: true }).waitFor()
       await page.waitForTimeout(150)
       await assertFloatingControl()
@@ -94,7 +99,15 @@ try {
     assert.equal(await editToolbar.getByRole('heading', { name: 'Edit your design', exact: true }).count(), 1, 'Clear edit section label above pills')
     for (const label of ['Photo Ready', 'Photo ready', 'AI Visualizer', 'Your entrance photo', 'Edit:']) assert.equal(await page.getByText(label, { exact: true }).count(), 0, `${label} removed`)
     assert.ok(await page.getByRole('button', { name: 'Replace uploaded house photo' }).isVisible())
-    assert.ok(await page.getByRole('button', { name: 'Replace uploaded house photo' }).evaluate(element => Math.abs(element.getBoundingClientRect().right - element.closest('.visualizer-card-heading')!.getBoundingClientRect().right) < 2), 'Replace Photo stays aligned to the top-right on desktop/mobile')
+    assert.equal(await page.getByRole('button', { name: 'Back', exact: true }).count(), 1)
+    for (const label of ['Back to Door Builder', 'Remove Photo', 'Return to Review']) assert.equal(await page.getByRole('button', { name: label, exact: true }).count(), 0)
+    assert.equal(await page.locator('.visualizer-card-heading').count(), 0, 'No empty top action header')
+    assert.ok(await page.locator('.visualizer-card-navigation').evaluate(element => {
+      const row = element.getBoundingClientRect(), [back, replace] = Array.from(element.querySelectorAll('button')).map(button => button.getBoundingClientRect())
+      return Math.abs(back.left - row.left) < 2 && Math.abs(replace.right - row.right) < 2
+        && (window.innerWidth < 901 || Math.abs(back.top - replace.top) < 2)
+    }), 'Back and Replace Photo align left/right on the desktop baseline and stay within the mobile card')
+    assert.ok(await page.locator('.visualizer-final-heading').evaluate(element => element.getBoundingClientRect().top - element.closest('.visualizer-card')!.getBoundingClientRect().top < 40), 'Result/edit area starts near the card top without dead header space')
     assert.deepEqual(await editToolbar.getByRole('button').allTextContents(), ['Door', 'Sidelites', 'Color', 'Glass', 'Hardware'])
     assert.ok(await editToolbar.evaluate(element => {
       const section = element.closest('.visualizer-final-result')!
@@ -110,7 +123,7 @@ try {
       assert.deepEqual(await pill.evaluate(element => ({ background: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color })), { background: 'rgb(17, 17, 17)', color: 'rgb(255, 255, 255)' })
     }
     await page.waitForTimeout(1200)
-    await page.screenshot({ path: `/tmp/clear-visualizer-edit-${width}.png` })
+    await page.screenshot({ path: `/tmp/balanced-visualizer-actions-${width}.png`, fullPage: true })
     for (const [area, heading] of [['Color', 'Choose Your Door Finish'], ['Hardware', 'Choose Your Hardware'], ['Glass', 'Choose Main Door Glass Type'], ['Door', 'Choose a Door Style']]) {
       const previousGenerations = generations
       await page.getByRole('button', { name: `Edit ${area}`, exact: true }).click()
@@ -131,6 +144,15 @@ try {
       if (area === 'Door') assert.equal(saved.glassId, '', 'Changing to a solid style clears incompatible glass')
     }
     assert.equal(detections, 1, 'Same photo analysis is retained; compatibility uses new configuration')
+    const beforeBack = await page.evaluate(() => localStorage.getItem('hgi-door-builder-draft'))
+    const beforeBackGenerations = generations
+    await page.getByRole('button', { name: 'Back', exact: true }).click()
+    await page.getByRole('heading', { name: 'Choose a Door Style', exact: true }).waitFor()
+    assert.equal(await page.evaluate(() => localStorage.getItem('hgi-door-builder-draft')), beforeBack, 'Back preserves the configured door')
+    await walkToSummary()
+    await page.locator('.visualizer-promo-card:visible').getByRole('button', { name: 'Launch Visualizer' }).click()
+    await page.getByText('AI Result', { exact: true }).waitFor()
+    assert.equal(generations, beforeBackGenerations, 'Back/reopen preserves the existing result')
     await page.getByRole('button', { name: 'Edit Sidelites', exact: true }).click()
     await card(/^Both Sidelites$/).click()
     await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
@@ -144,7 +166,7 @@ try {
     await page.getByRole('dialog').getByRole('button', { name: 'Review Configuration' }).click()
     await summary()
     // Dependency reconciliation preserves compatible material/finish/hardware.
-    await page.getByRole('button', { name: 'Edit Door', exact: true }).click()
+    await summaryEdit('Door').click()
     await card(/^F Full /).click()
     await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
     await page.getByRole('heading', { name: 'Choose Main Door Glass Type' }).waitFor()
@@ -155,9 +177,9 @@ try {
     assert.equal(saved.doorLineId, '20-gauge-smooth-steel')
     assert.equal(saved.selectedPaint, 'paint-black')
     assert.ok(saved.glassId, 'Newly required glass is completed through normal controls')
-    const chips = page.locator('.configuration-edit-actions button')
-    await chips.first().focus()
-    assert.ok(await chips.first().evaluate(button => button === document.activeElement))
+    assert.equal(await page.locator('.summary-card .configuration-edit-actions').count(), 0)
+    await summaryEdit('Door').focus()
+    assert.ok(await summaryEdit('Door').evaluate(button => button === document.activeElement))
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1))
     await page.screenshot({ path: `/tmp/configuration-edit-summary-${width}.png` })
     await page.reload()

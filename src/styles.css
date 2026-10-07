@@ -3667,6 +3667,16 @@ body:has(.customer-form-app),
 .configuration-edit-icon svg { display: block; }
 .visualizer-card-heading:has(.visualizer-photo-heading-actions) { justify-content: flex-end; }
 .visualizer-card-heading .visualizer-photo-heading-actions { justify-content: flex-end; }
+.visualizer-card .visualizer-final-heading { margin: 0 0 10px; }
+.visualizer-card .visualizer-final-heading h2 { margin: 0; }
+.visualizer-card-navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+.visualizer-card-navigation button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.visualizer-card-back { background: #fff; color: #242424; border: 1px solid #c6c6c6; }
+.visualizer-card-back:hover { background: #f1f1f1; }
+.visualizer-card-replace { margin-left: auto; background: #111; color: #fff; border: 1px solid #111; }
+.visualizer-card-replace:hover { background: #303030; }
+.visualizer-card-navigation button:focus-visible { outline: 2px solid #136668; outline-offset: 3px; }
+.visualizer-card .visualizer-download-status:empty { min-height: 0; margin-top: 0; }
 .visualizer-final-result:has(.configuration-edit-actions-visualizer) .visualizer-final-heading { display: block; }
 @media(max-width:900px) {
   /* Below the existing Reset and Exterior/Interior/Both utility row. */

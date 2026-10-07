@@ -4,7 +4,6 @@ import { DoorPreview, type DoorPreviewProps } from './components/DoorPreview'
 import { DoorStyleThumbnail } from './components/DoorStyleThumbnail'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
 import { OptionCard } from './components/OptionCard'
-import { ConfigurationEditActions } from './components/ConfigurationEditActions'
 import { QuoteForm } from './components/QuoteForm'
 import { BetaFeedback } from './components/BetaFeedback'
 import { DealerContextGate } from './components/DealerContextGate'
@@ -2112,7 +2111,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             </section>
             <div className="summary-card">
               <div className="summary-title"><h2>Configuration Summary</h2></div>
-              <ConfigurationEditActions hasGlass={supportsGlass || usesFslGlassFlow} onEdit={page => editConfiguration(page === 'glass-type' && !supportsGlass ? 'sidelite-glass-type' : page, 'summary')} />
               {configurationSummaryRows.map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span>{target >= 0 && <button onClick={() => editConfiguration(pages[target], 'summary')}>Edit</button>}</div>)}
             </div>
             <p className="availability-notice"><strong>Availability Notice:</strong> Some door styles, finishes, glass, hardware, and other options may not be available with every door configuration. Final availability depends on the selected door style and product specifications.</p>
