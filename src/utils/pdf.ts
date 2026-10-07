@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import type { ContactForm, DoorConfigurationType, DoorStyle, DoorSwing, DoubleDoorLockPrepCode, Finish, GlassOption, GridConfiguration, HardwareOption, ResolvedDoorProduct, SideliteConfiguration, SideliteGlassConfiguration } from '../types'
 import { hardwareDisplayName } from '../data/hardware'
-import { configurationPdfName } from './pdfConfig'
+import { configurationPdfDownloadName, configurationPdfName } from './pdfConfig'
 import { sideliteProductLabel } from '../data/sideliteConfigurations'
 import { doorConfigurationHingeOptionLabel, doorConfigurationLabel, doubleDoorLockPrepOption } from '../data/doorConfigurationRules'
 
@@ -464,7 +464,7 @@ export async function downloadSummary(contact: ContactForm, product: ResolvedDoo
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = configurationPdfName
+  link.download = configurationPdfDownloadName(style, finish)
   document.body.appendChild(link)
   link.click()
   link.remove()

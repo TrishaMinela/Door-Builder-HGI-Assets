@@ -3,6 +3,8 @@ import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
 import sharp from 'sharp'
+import { configurationPdfDownloadName } from '../src/utils/pdfConfig'
+import { doorStyles, finishes } from '../src/data/options'
 
 const output = '/private/tmp/hgi-pdf-renderer-verification'
 await mkdir(output, { recursive: true })
@@ -17,7 +19,7 @@ try {
     setTimeout(() => reject(new Error('Vite test server did not start')), 10_000).unref()
   })
   browser = await chromium.launch({ executablePath: process.env.CHROME_EXECUTABLE || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, timezoneId: 'Asia/Manila' })
   await page.goto('http://127.0.0.1:5190/scripts/pdfRendererHarness.html')
   await page.waitForFunction(() => 'pdfFixtures' in window)
   const names = await page.evaluate(() => (window as unknown as { pdfFixtures: string[] }).pdfFixtures)
@@ -82,10 +84,18 @@ try {
   const pdf = await page.evaluate(() => (window as unknown as { createPdf: () => Promise<string> }).createPdf())
   await writeFile(`${output}/configured-door.pdf`, Buffer.from(pdf.split(',')[1], 'base64'))
   const downloadPromise = page.waitForEvent('download')
+  await page.clock.setFixedTime(new Date('2026-10-07T14:52:00Z'))
   await page.evaluate(() => (window as unknown as { downloadPdf: () => Promise<void> }).downloadPdf())
   const download = await downloadPromise
-  assert.equal(download.suggestedFilename(), 'Home Guard Door Configuration.pdf')
+  const expectedName = (minute: number) => configurationPdfDownloadName(doorStyles.find(style => style.code === 'F'), finishes.find(finish => finish.id === 'stain-nutmeg'), new Date(2026, 9, 7, 22, minute))
+  assert.equal(download.suggestedFilename(), expectedName(52))
   await download.saveAs(`${output}/download-button-configured-door.pdf`)
+  await page.clock.setFixedTime(new Date('2026-10-07T14:54:00Z'))
+  const secondDownloadPromise = page.waitForEvent('download')
+  await page.evaluate(() => (window as unknown as { downloadPdf: () => Promise<void> }).downloadPdf())
+  const secondDownload = await secondDownloadPromise
+  assert.equal(secondDownload.suggestedFilename(), expectedName(54))
+  assert.notEqual(secondDownload.suggestedFilename(), download.suggestedFilename(), 'Timestamp comes from download time, not builder entry time')
   console.log(`PDF tests passed: ${names.length} configurations, repeat determinism, mobile independence, opaque dark surfaces, placement, missing/pending assets. Black slab RGBA ${slab}; sidelite ${side}. PDF: ${output}/configured-door.pdf`)
 } finally {
   await browser?.close()

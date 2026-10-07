@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict'
+import { configurationPdfDownloadName, configurationPdfName, sanitizePdfFilenameValue } from '../src/utils/pdfConfig'
+
+const at = (minute: number) => new Date(2026, 9, 7, 22, minute)
+assert.equal(configurationPdfDownloadName({ name: '2PNHD' }, { name: 'White' }, at(52)), 'HGI-Door-2PNHD-White-20261007-2252.pdf')
+assert.equal(configurationPdfDownloadName({ name: 'Craftsman' }, { name: 'Black' }, at(54)), 'HGI-Door-Craftsman-Black-20261007-2254.pdf')
+assert.equal(configurationPdfDownloadName({ name: 'Modern' }, { name: 'Oak' }, at(57)), 'HGI-Door-Modern-Oak-20261007-2257.pdf')
+assert.equal(configurationPdfDownloadName({ name: ' 2 Panel Craftsman ' }, { name: ' Snow White ' }, at(52)), 'HGI-Door-2-Panel-Craftsman-Snow-White-20261007-2252.pdf')
+assert.equal(sanitizePdfFilenameValue(' /2 Panel:*?"<>| Craftsman\\ -- '), '2-Panel-Craftsman')
+assert.equal(sanitizePdfFilenameValue('A\u0000\nB\tC'), 'A-B-C')
+assert.equal(sanitizePdfFilenameValue('Ébène Noir'), 'Ébène-Noir')
+assert.equal(configurationPdfDownloadName({ name: '', code: '2PNHD' }, { name: 'Black' }, at(52)), 'HGI-Door-2PNHD-Black-20261007-2252.pdf')
+assert.equal(configurationPdfDownloadName(null, { name: 'White' }, at(52)), 'HGI-Door-Configuration-White-20261007-2252.pdf')
+assert.equal(configurationPdfDownloadName({ name: '2PNHD' }, undefined, at(52)), 'HGI-Door-2PNHD-Configuration-20261007-2252.pdf')
+assert.equal(configurationPdfDownloadName({ name: {} }, { name: null, id: 'paint-black' }, at(52)), 'HGI-Door-Configuration-paint-black-20261007-2252.pdf')
+for (const value of [undefined, null, {}, 'undefined', 'null', '[object Object]', '***']) assert.equal(sanitizePdfFilenameValue(value), '')
+const long = configurationPdfDownloadName({ name: '工'.repeat(500) }, { name: '白'.repeat(500) }, at(52))
+assert.ok(new TextEncoder().encode(long).length < 255, 'Long Unicode labels remain filesystem-safe')
+assert.notEqual(configurationPdfDownloadName({ name: 'Modern' }, { name: 'Oak' }, at(52)), configurationPdfDownloadName({ name: 'Modern' }, { name: 'Oak' }, at(54)))
+assert.equal(configurationPdfName, 'Home Guard Door Configuration.pdf', 'Submission attachments and displayed document title stay unchanged')
+console.log('PDF filename examples, style/color changes, local minute timestamp, whitespace, punctuation, Unicode, missing/malformed values and safe fallbacks passed.')

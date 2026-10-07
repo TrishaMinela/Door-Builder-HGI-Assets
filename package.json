@@ -16,6 +16,7 @@
     "test:configuration-edit": "node --import tsx scripts/verifyConfigurationEditFlow.ts",
     "test:stale-chunks": "node --import tsx scripts/verifyStaleChunkRecovery.ts",
     "test:pdf-renderer": "node --import tsx scripts/verifyPdfRenderer.ts",
+    "test:pdf-filename": "node --import tsx scripts/verifyPdfFilename.ts",
     "audit:assets": "node --import tsx scripts/auditProductionAssets.ts",
     "optimize:assets": "node --import tsx scripts/optimizeProductionAssets.ts",
     "test:configuration-integrity": "node --import tsx scripts/verifyConfigurationIntegrity.ts",
