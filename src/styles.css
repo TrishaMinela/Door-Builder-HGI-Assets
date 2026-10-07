@@ -3666,6 +3666,7 @@ body:has(.customer-form-app),
 .configuration-edit-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 19px; width: 19px; height: 19px; background: #fff; color: #111; border-radius: 50%; }
 .configuration-edit-icon svg { display: block; }
 .visualizer-card-heading:has(.visualizer-photo-heading-actions) { justify-content: flex-end; }
+.visualizer-card-heading .visualizer-photo-heading-actions { justify-content: flex-end; }
 .visualizer-final-result:has(.configuration-edit-actions-visualizer) .visualizer-final-heading { display: block; }
 @media(max-width:900px) {
   /* Below the existing Reset and Exterior/Interior/Both utility row. */

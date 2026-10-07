@@ -94,6 +94,7 @@ try {
     assert.equal(await editToolbar.getByRole('heading', { name: 'Edit your design', exact: true }).count(), 1, 'Clear edit section label above pills')
     for (const label of ['Photo Ready', 'Photo ready', 'AI Visualizer', 'Your entrance photo', 'Edit:']) assert.equal(await page.getByText(label, { exact: true }).count(), 0, `${label} removed`)
     assert.ok(await page.getByRole('button', { name: 'Replace uploaded house photo' }).isVisible())
+    assert.ok(await page.getByRole('button', { name: 'Replace uploaded house photo' }).evaluate(element => Math.abs(element.getBoundingClientRect().right - element.closest('.visualizer-card-heading')!.getBoundingClientRect().right) < 2), 'Replace Photo stays aligned to the top-right on desktop/mobile')
     assert.deepEqual(await editToolbar.getByRole('button').allTextContents(), ['Door', 'Sidelites', 'Color', 'Glass', 'Hardware'])
     assert.ok(await editToolbar.evaluate(element => {
       const section = element.closest('.visualizer-final-result')!
