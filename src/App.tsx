@@ -8,6 +8,7 @@ import { QuoteForm } from './components/QuoteForm'
 import { BetaFeedback } from './components/BetaFeedback'
 import { DealerContextGate } from './components/DealerContextGate'
 import { sortByDisplayLabel } from './utils/sortByDisplayLabel'
+import { safeDynamicImport } from './utils/staleChunkRecovery'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
 import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
@@ -1534,7 +1535,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     try {
       const renderConfigurationKey = pdfProductKey
       if (!currentDoorConfiguration) throw new Error('Complete the door configuration before PDF export.')
-      const { renderPdfProduct } = await import('./utils/pdfProductRenderer')
+      const { renderPdfProduct } = await safeDynamicImport(() => import('./utils/pdfProductRenderer'))
       const { dataUrl } = await renderPdfProduct(currentDoorConfiguration, configuredDoorPreview)
       if (pdfProductKeyRef.current !== renderConfigurationKey) throw new Error('The door configuration changed while the PDF product image was being prepared. Please try again.')
       setPdfProductRender({ configurationKey: renderConfigurationKey, dataUrl })
@@ -1820,7 +1821,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (!selectedHardware || !selectedDoorSwing) return
     setPdfError('')
     try {
-      const { downloadSummary } = await import('./utils/pdf')
+      const { downloadSummary } = await safeDynamicImport(() => import('./utils/pdf'))
       const exactPreview = pdfProductRender?.configurationKey === pdfProductKey
         ? pdfProductRender.dataUrl
         : await renderConfiguredPdfProduct()
