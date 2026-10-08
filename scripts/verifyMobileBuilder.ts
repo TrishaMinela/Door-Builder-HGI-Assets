@@ -14,8 +14,10 @@ let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
 try {
   await new Promise<void>((resolve, reject) => { server.stdout.on('data', chunk => { if (String(chunk).includes('127.0.0.1:5197')) resolve() }); server.once('error', reject); setTimeout(() => reject(new Error('Vite startup timeout')), 10000).unref() })
   browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
-  for (const width of baseline ? [1280,390] : [320,375,390,430,768,1280]) {
+  const requestedWidth=process.argv.find(argument=>argument.startsWith('--width='))?.split('=')[1]
+  for (const width of requestedWidth ? [Number(requestedWidth)] : baseline ? [1280,390] : [320,375,390,430,768,1280]) {
     const page = await browser.newPage({ viewport: { width, height: 900 } })
+    page.setDefaultTimeout(10000)
     await page.addInitScript(value => { localStorage.setItem('hgi-door-builder-draft', JSON.stringify(value)); (window as unknown as { __name: (fn: unknown) => unknown }).__name = fn => fn }, draft)
     await page.goto('http://127.0.0.1:5197/')
     await page.getByRole('button', { name: 'Start Building', exact: true }).click()
@@ -23,6 +25,7 @@ try {
     await next.waitFor()
     for (let step=0; step<20; step++) {
       const heading = await page.locator('.step-heading h1').innerText()
+      if(requestedWidth)console.log(`${width}px: ${heading}`)
       if (!baseline && width<=900) {
         await page.evaluate(() => window.scrollTo(0,document.documentElement.scrollHeight))
         const nav=await page.locator('.builder-actions').evaluate(el=>{ const r=el.getBoundingClientRect(); const f=document.querySelector('.site-footer')!.getBoundingClientRect(); return {position:getComputedStyle(el).position,top:r.top,bottom:r.bottom,footerTop:f.top,footerBottom:f.bottom,height:innerHeight} })
@@ -37,13 +40,13 @@ try {
       await page.waitForTimeout(100)
     }
     await page.locator('.hardware-option-card').first().waitFor()
-    await page.evaluate(async()=>{await document.fonts.ready; await Promise.all([...document.images].filter(i=>i.classList.contains('hardware-card-image')).map(i=>i.decode().catch(()=>{})))})
+    await page.evaluate(async()=>{await document.fonts.ready; await Promise.all([...document.images].filter(i=>i.classList.contains('hardware-card-image')).map(i=>{i.loading='eager';return i.decode().catch(()=>{})}))})
     const metrics=await page.locator('.hardware-option-card').evaluateAll(cards=>cards.map(el=>{const r=el.getBoundingClientRect(),main=el.querySelector('.hardware-card-main')!,image=el.querySelector('img')!,swatch=el.querySelector('.hardware-finish-color')!,s=getComputedStyle(swatch); return {width:r.width,height:r.height,mainDisplay:getComputedStyle(main).display,imageFit:getComputedStyle(image).objectFit,swatchDisplay:s.display,swatchWidth:swatch.getBoundingClientRect().width} }))
     if(baseline) {
       console.log(`${width}px baseline:`,JSON.stringify(metrics))
       if(width===1280) { await writeFile(baselinePath,JSON.stringify(metrics)); await page.screenshot({path:desktopImage}) }
     } else if(width===1280) {
-      const savedBaseline=await readFile(baselinePath,'utf8').catch(()=>null)
+      const savedBaseline=process.argv.includes('--compare-baseline') ? await readFile(baselinePath,'utf8').catch(()=>null) : null
       if(savedBaseline) {
         assert.deepEqual(metrics,JSON.parse(savedBaseline),'Desktop card geometry and swatches remain identical')
         assert.deepEqual(await page.screenshot(),await readFile(desktopImage),'Desktop screenshot remains pixel-identical')

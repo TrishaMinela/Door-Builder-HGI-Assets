@@ -3741,3 +3741,49 @@ body:has(.customer-form-app),
 @media(max-width:359px){
   .configuration-step .builder-options-scroll>.options-grid:has(>.hardware-option-card){grid-template-columns:minmax(0,1fr)}
 }
+
+/* Shared product-card regions. Text/control heights are measured per grid so
+   full labels remain readable, including after filtering or viewport changes. */
+.configuration-step .builder-options-scroll [data-equal-product-grid]{
+  --product-image-height:112px;
+  grid-auto-rows:1fr;align-items:stretch;
+}
+.configuration-step .builder-options-scroll [data-equal-product-grid].door-style-catalog-grid,
+.configuration-step .builder-options-scroll [data-equal-product-grid].sidelite-catalog-grid{--product-image-height:190px}
+.configuration-step .builder-options-scroll [data-equal-product-grid] > :is(.option-card,.glass-choice-card,.hardware-option-card){
+  display:flex;flex-direction:column;align-self:stretch;box-sizing:border-box;
+  height:100%;min-height:0;min-width:0;
+  border-width:1px;
+}
+.configuration-step .builder-options-scroll [data-equal-product-grid] > :is(.option-card,.glass-choice-card,.hardware-option-card).selected{
+  border-width:1px;outline:2px solid var(--peacock);outline-offset:-2px;
+}
+.configuration-step .builder-options-scroll [data-equal-product-grid] > :is(.glass-choice-card,.hardware-option-card) > :is(.glass-card-main,.hardware-card-main){
+  display:flex;flex-direction:column;flex:1 0 auto;min-height:0;width:100%;
+}
+.configuration-step .builder-options-scroll [data-equal-product-grid] :is(.option-card,.glass-choice-card,.hardware-option-card) .option-visual{
+  height:var(--product-image-height);min-height:var(--product-image-height);max-height:var(--product-image-height);
+  flex:0 0 var(--product-image-height);width:100%;padding:6px;grid-row:auto;
+}
+.configuration-step .builder-options-scroll [data-equal-product-grid] :is(.option-card,.glass-choice-card,.hardware-option-card) .option-visual img{
+  object-fit:contain;object-position:center;max-width:100%;max-height:100%;
+}
+.configuration-step .builder-options-scroll [data-equal-product-grid] :is(.option-card,.glass-choice-card,.hardware-option-card) .option-copy{
+  display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;
+  flex:1 0 auto;width:100%;height:auto;min-height:0;padding:10px;gap:4px;overflow:visible;
+}
+.configuration-step .builder-options-scroll [data-equal-product-grid] :is(.option-card,.glass-choice-card,.hardware-option-card) .option-copy > :is(small,strong,span){
+  display:block;flex:none;overflow:visible;-webkit-line-clamp:unset;
+  margin:0;overflow-wrap:anywhere;white-space:normal;
+}
+.configuration-step .builder-options-scroll [data-equal-product-grid] .option-copy > small{min-height:var(--product-eyebrow-height)}
+.configuration-step .builder-options-scroll [data-equal-product-grid] .option-copy > strong{min-height:var(--product-title-height)}
+.configuration-step .builder-options-scroll [data-equal-product-grid] .option-copy > span{min-height:var(--product-description-height);order:3}
+.configuration-step .builder-options-scroll [data-equal-product-grid] :is(.hardware-finish-options,.glass-caming-options){
+  box-sizing:border-box;flex:0 0 auto;margin-top:auto;min-height:var(--product-controls-height);
+  align-content:flex-start;
+}
+@media(max-width:767px){
+  .configuration-step .builder-options-scroll [data-equal-product-grid]{--product-image-height:118px}
+  .configuration-step .builder-options-scroll [data-equal-product-grid]:has(>.hardware-option-card){--product-image-height:136px;grid-auto-rows:1fr;align-items:stretch}
+}

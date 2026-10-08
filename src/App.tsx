@@ -8,6 +8,7 @@ import { QuoteForm } from './components/QuoteForm'
 import { BetaFeedback } from './components/BetaFeedback'
 import { DealerContextGate } from './components/DealerContextGate'
 import { sortByDisplayLabel } from './utils/sortByDisplayLabel'
+import { useProductCardLayout } from './utils/useProductCardLayout'
 import { safeDynamicImport } from './utils/staleChunkRecovery'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
@@ -475,6 +476,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [pdfError, setPdfError] = useState('')
   const pdfProductKeyRef = useRef('')
   const builderPanelRef = useRef<HTMLElement | null>(null)
+  useProductCardLayout(builderPanelRef, screen === 'builder')
   const builderOptionsRef = useRef<HTMLDivElement | null>(null)
   const entrywayDialogRef = useRef<HTMLDivElement | null>(null)
   const entrywayStartButtonRef = useRef<HTMLButtonElement | null>(null)
