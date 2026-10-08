@@ -3599,8 +3599,7 @@ body:has(.customer-form-app),
   .visualizer-step-editor-shell > .wizard-navigation .ai-generate-button svg { width: 17px; height: 17px; flex: none; }
 }
 
-/* Builder pages scroll naturally on smaller screens: heading, controls, cards,
-   then Previous/Next. Nothing is pinned over the configuration content. */
+/* Builder content scrolls naturally; mobile navigation is anchored below. */
 @media(max-width:900px){
   .configuration-step .step-heading h1,
   .configuration-step .step-heading-copy>p{display:block}
@@ -3681,4 +3680,64 @@ body:has(.customer-form-app),
 @media(max-width:900px) {
   /* Below the existing Reset and Exterior/Interior/Both utility row. */
   .mobile-live-preview > .configuration-edit-return { top: 50px; }
+}
+
+/* Customer builder only: reuse navigation and swatches, leaving desktop and
+   the Visualizer untouched. The preview remains in normal document flow. */
+@media(max-width:900px){
+  .app:has(.configuration-step)>main{
+    padding-top:calc(var(--mobile-header-height) + var(--mobile-progress-height));
+    padding-bottom:calc(166px + env(safe-area-inset-bottom));
+  }
+  .app:has(.configuration-step)>.site-footer{
+    position:fixed;left:0;right:0;bottom:0;z-index:1050;
+    height:calc(70px + env(safe-area-inset-bottom));
+    min-height:calc(70px + env(safe-area-inset-bottom))!important;
+  }
+  .app:has(.configuration-step) .mobile-live-preview{
+    position:relative;inset:auto;z-index:auto;margin:0;box-shadow:none;
+  }
+  .app:has(.configuration-step) .builder-panel.configuration-step{padding-top:18px}
+  .configuration-step .builder-options-scroll{padding-bottom:12px}
+  .configuration-step .builder-options-scroll>.options-grid .hardware-finish-options button{min-width:44px;min-height:44px;height:44px}
+  .configuration-step .builder-actions{
+    position:fixed;left:0;right:0;bottom:calc(70px + env(safe-area-inset-bottom));
+    z-index:1060;width:100%;max-width:none;height:72px;
+    margin:0;padding:12px 16px;gap:12px;
+    background:var(--white);border-top:1px solid var(--border);
+    box-shadow:0 -4px 12px #05040b0d;pointer-events:auto;
+  }
+}
+@media(max-width:767px){
+  .configuration-step .builder-options-scroll>.options-grid:has(>.hardware-option-card){
+    grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:auto;align-items:start;gap:12px;
+  }
+  .configuration-step .builder-options-scroll>.options-grid>.hardware-option-card{
+    height:auto;min-height:0;align-self:start;display:flex;flex-direction:column;
+  }
+  .configuration-step .builder-options-scroll>.options-grid .hardware-card-main{
+    display:flex;flex:0 0 auto;flex-direction:column;min-height:0;
+  }
+  .configuration-step .builder-options-scroll>.options-grid .hardware-card-main .option-visual{
+    height:136px;min-height:136px;flex:0 0 136px;grid-row:auto;padding:6px;
+  }
+  .configuration-step .hardware-card-image{width:100%;height:100%;object-fit:contain;object-position:center}
+  .configuration-step .builder-options-scroll>.options-grid .hardware-card-main .option-copy{
+    flex:0 0 auto;min-height:0;height:auto;padding:9px 10px;overflow:visible;
+  }
+  .configuration-step .builder-options-scroll>.options-grid .hardware-card-main .option-copy small{font-size:8px}
+  .configuration-step .builder-options-scroll>.options-grid .hardware-card-main .option-copy strong{
+    display:block;overflow:visible;-webkit-line-clamp:unset;font-size:12px;line-height:1.35;overflow-wrap:break-word;
+  }
+  .configuration-step .builder-options-scroll>.options-grid .hardware-finish-options{
+    flex:0 0 auto;align-content:start;gap:4px;margin:0;padding:6px;display:flex;flex-wrap:wrap;
+  }
+  .configuration-step .builder-options-scroll>.options-grid .hardware-finish-options button{
+    width:44px;height:44px;min-width:44px;min-height:44px;flex:0 0 44px;padding:0;
+  }
+  /* The old phone rule hides every span, including the actual color chip. */
+  .configuration-step .hardware-finish-options .hardware-finish-color{display:block}
+}
+@media(max-width:359px){
+  .configuration-step .builder-options-scroll>.options-grid:has(>.hardware-option-card){grid-template-columns:minmax(0,1fr)}
 }
