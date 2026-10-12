@@ -533,23 +533,26 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
     : fittedOrSourceSideliteGlass
   const [internalPreviewView, setInternalPreviewView] = useState<HardwareView>('Exterior')
   const previewView = view ?? internalPreviewView
+  // Savannah changes viewpoint by mirroring the complete exterior composition.
+  // Do not also swap individual artwork, frame profiles or sidelite positions.
+  const renderView = doorConfigurationType === 'savannah' ? 'Exterior' : previewView
   const setPreviewView = onViewChange ?? setInternalPreviewView
   const hardwareSideExterior = doorHandingSides(doorSwing?.id ?? 'LHI').lockSide
   const hardwareSideInterior = doorHandingSides(doorSwing?.id ?? 'LHI', 'Interior').lockSide
-  const hardwareSide = previewView === 'Exterior' ? hardwareSideExterior : hardwareSideInterior
-  const hardwareSourceSide = sourceHardwareSideByView[previewView]
+  const hardwareSide = renderView === 'Exterior' ? hardwareSideExterior : hardwareSideInterior
+  const hardwareSourceSide = sourceHardwareSideByView[renderView]
   const keepHardwareReadable = preservesReadableHardware(hardware)
   const hardwareImagePlacementClassForSide = (targetSide: HardwareSide) => targetSide !== hardwareSourceSide
     ? keepHardwareReadable
       ? `hardware-image-shift-${targetSide}`
       : 'hardware-image-mirrored'
     : ''
-  const selectedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView, doorSwing)
-  const configuredSidelitePlacement = resolveSidelitePosition({ relationship: sidelites, handing: doorSwing?.id, view: previewView, configurationType: doorConfigurationType })
+  const selectedHardwareImage = hardwarePreviewAssetUrl(hardware, renderView, doorSwing)
+  const configuredSidelitePlacement = resolveSidelitePosition({ relationship: sidelites, handing: doorSwing?.id, view: renderView, configurationType: doorConfigurationType })
   const frameSidelites = compact ? 'none' : configuredSidelitePlacement ?? 'none'
-  const defaultHardware = hardwareOptions.find((option) => Boolean(hardwarePreviewAssetUrl(option, previewView, doorSwing)))
+  const defaultHardware = hardwareOptions.find((option) => Boolean(hardwarePreviewAssetUrl(option, renderView, doorSwing)))
   const previewHardware: PreviewHardware = selectedHardwareImage ? hardware : defaultHardware ?? hardware
-  const requestedHardwareImage = selectedHardwareImage || hardwarePreviewAssetUrl(previewHardware, previewView, doorSwing)
+  const requestedHardwareImage = selectedHardwareImage || hardwarePreviewAssetUrl(previewHardware, renderView, doorSwing)
   const [hardwareImage, setHardwareImage] = useState(requestedHardwareImage)
 
   const usesAuthoredSideliteArtsAndCrafts = sideliteGlassSrc?.includes('/F48SL%20SSL%20Arts%20Crafts%20White.webp')
@@ -1028,7 +1031,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   return (
     <div ref={previewSceneRef} className={`preview-scene ${compact ? 'compact' : ''}`} data-render-configuration-key={renderConfigurationKey} data-render-semantically-ready={semanticLayersReady ? 'true' : 'false'} aria-busy={previewAssetsLoading} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
-      <DoorFrame doorConfigurationType={doorConfigurationType} view={previewView} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={renderedSideliteGlass} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGlassIsGrid={sideliteGlassIsGrid} sideliteGridIsPrairie={sideliteGridIsPrairie} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteGridFinishColor={applyFinish ? finishColor : '#d9d9d9'} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteGlassOpeningStyle={sideliteGlassOpeningStyle} sideliteGlassFrameMaskStyle={sideliteGlassFrameMaskStyle} sideliteGlassFrameTintStyle={sideliteGlassFrameTintStyle} sideliteGlassFrameDetailStyle={sideliteGlassFrameDetailStyle}>
+      <DoorFrame doorConfigurationType={doorConfigurationType} view={renderView} className={doorConfigurationType === 'savannah' && previewView === 'Interior' ? 'savannah-interior-mirrored' : ''} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={renderedSideliteGlass} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGlassIsGrid={sideliteGlassIsGrid} sideliteGridIsPrairie={sideliteGridIsPrairie} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteGridFinishColor={applyFinish ? finishColor : '#d9d9d9'} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteGlassOpeningStyle={sideliteGlassOpeningStyle} sideliteGlassFrameMaskStyle={sideliteGlassFrameMaskStyle} sideliteGlassFrameTintStyle={sideliteGlassFrameTintStyle} sideliteGlassFrameDetailStyle={sideliteGlassFrameDetailStyle}>
         {Array.from({ length: doorConfigurationLeafCount(doorConfigurationType) }).map((_, leafIndex) => {
           // Resolve leaf-local hardware placement through the same mapping as
           // the PDF renderer; Savannah stays on its fixed outer-left edge.

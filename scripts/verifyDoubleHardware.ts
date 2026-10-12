@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
 import { writeFile } from 'node:fs/promises'
+import sharp from 'sharp'
 import { doorHardwarePlacements } from '../src/data/doorConfigurationRules'
 
 const modes = ['DDLLBO', 'DDLLAC', 'DDLLKP'] as const
@@ -76,6 +77,33 @@ try {
       await page.locator('.preview-scene').screenshot({ path: `/tmp/savannah-${width}-${handing}-live.png` })
     }
     assert.equal(new Set(savannahPdfs).size, 1, 'Savannah PDF orientation remains fixed across handing changes')
+    await page.getByRole('button', { name: 'Left Active', exact: true }).click()
+    await page.getByRole('button', { name: 'Add Sidelite', exact: true }).click()
+    await page.waitForFunction(() => document.querySelector('.preview-scene')?.getAttribute('data-render-semantically-ready') === 'true' && document.querySelector('.door-frame')?.getAttribute('data-sidelites') === 'right')
+    const frame = page.locator('.door-frame')
+    const exterior = await frame.screenshot()
+    const exteriorLeaf = await page.locator('.door-leaf-left').boundingBox()
+    const exteriorSidelite = await page.locator('.door-frame-sidelite-slot-right').boundingBox()
+    assert.ok(exteriorLeaf && exteriorSidelite && exteriorLeaf.x < exteriorSidelite.x)
+    const hardwareSource = await page.locator('.hardware img').getAttribute('src')
+    await page.getByRole('button', { name: 'Interior', exact: true }).click()
+    await page.waitForTimeout(200)
+    assert.equal(await frame.evaluate(element => getComputedStyle(element).scale), '-1 1')
+    assert.equal(await page.locator('.hardware img').getAttribute('src'), hardwareSource, 'Savannah does not swap artwork separately from the unit flip')
+    const interiorLeaf = await page.locator('.door-leaf-left').boundingBox()
+    const interiorSidelite = await page.locator('.door-frame-sidelite-slot-right').boundingBox()
+    assert.ok(interiorLeaf && interiorSidelite && interiorLeaf.x > interiorSidelite.x, 'Both the operating leaf and sidelite reverse visually as one unit')
+    const interior = await frame.screenshot()
+    const mirrored = await sharp(exterior).flop().ensureAlpha().raw().toBuffer()
+    const actual = await sharp(interior).ensureAlpha().raw().toBuffer()
+    assert.equal(actual.length, mirrored.length)
+    const meanDifference = actual.reduce((total, channel, index) => total + Math.abs(channel - mirrored[index]), 0) / actual.length
+    assert.ok(meanDifference < 2, `Full entrance pixel mirror includes hardware, glass, finish, jamb, mullions and threshold (${meanDifference})`)
+    await writeFile(`/tmp/savannah-${width}-exterior-unit.png`, exterior)
+    await writeFile(`/tmp/savannah-${width}-interior-unit.png`, interior)
+    await page.getByRole('button', { name: 'Exterior', exact: true }).click()
+    assert.equal(await frame.evaluate(element => getComputedStyle(element).scale), 'none')
+    assert.deepEqual(await frame.screenshot(), exterior, 'Returning to Exterior restores the original complete entrance')
     await page.getByRole('button', { name: 'Single', exact: true }).click()
     for (const [label, side] of [['Left Active', 'right'], ['Right Active', 'left']]) {
       await page.getByRole('button', { name: label, exact: true }).click()
