@@ -86,6 +86,9 @@ export function doorHardwarePlacements(
   doubleDoorLockPrep?: DoubleDoorLockPrepCode | null,
 ): { leafIndex: number; side: DoorHardwareSide; mode: DoorHardwareRenderMode }[] {
   const rule = doorConfigurationRule(value)
+  // Savannah has a fixed left operating panel with its lock at the outer jamb,
+  // not the meeting-stile placement used by French lock preparation.
+  if (rule.type === 'savannah') return [{ leafIndex: 0, side: 'left', mode: 'full' }]
   if (rule.type === 'french' && !doubleDoorLockPrep) doubleDoorLockPrep = DEFAULT_FRENCH_LOCK_PREP
   if (rule.leafCount === 2 && doubleDoorLockPrep) {
     const activeLeafIndex = operatingLeafSide === 'right' ? 0 : 1
@@ -99,8 +102,5 @@ export function doorHardwarePlacements(
     return [{ leafIndex: 0, side: 'right', mode: 'full' }, { leafIndex: 1, side: 'left', mode: 'full' }]
   }
   if (rule.hardwareMode === 'both') return [{ leafIndex: 0, side: 'right', mode: 'full' }, { leafIndex: 1, side: 'left', mode: 'full' }]
-  if (rule.hardwareMode === 'operating-leaf') {
-    return [{ leafIndex: operatingLeafSide === 'right' ? 0 : 1, side: displayedHardwareSide, mode: 'full' }]
-  }
   return [{ leafIndex: 0, side: displayedHardwareSide, mode: 'full' }]
 }

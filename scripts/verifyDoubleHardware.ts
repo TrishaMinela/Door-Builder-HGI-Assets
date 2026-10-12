@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
+import { writeFile } from 'node:fs/promises'
 import { doorHardwarePlacements } from '../src/data/doorConfigurationRules'
 
 const modes = ['DDLLBO', 'DDLLAC', 'DDLLKP'] as const
 for (const side of ['left', 'right'] as const) {
   for (const mode of modes) {
+    assert.deepEqual(doorHardwarePlacements('savannah', side, side, mode), [{ leafIndex: 0, side: 'left', mode: 'full' }], 'Savannah stays outer-left regardless of handing or stale French prep')
     const placements = doorHardwarePlacements('french', side, side, mode)
     assert.equal(placements.filter(item => item.mode === 'full').length, mode === 'DDLLBO' ? 2 : 1)
     assert.equal(placements.filter(item => item.mode === 'knob-only').length, mode === 'DDLLKP' ? 1 : 0)
@@ -60,6 +62,25 @@ try {
     }
     assert.equal(new Set(activeCaptures).size, 2, 'Left/right active selection changes Visualizer reference capture')
     assert.equal(new Set(activePdfs).size, 2, 'Left/right active selection changes PDF image')
+    await page.getByRole('button', { name: 'Savannah', exact: true }).click()
+    const savannahPdfs: string[] = []
+    for (const [label, handing] of [['Left Active', 'LHI'], ['Right Active', 'RHI']]) {
+      await page.getByRole('button', { name: label, exact: true }).click()
+      await page.waitForFunction(key => document.querySelector('.preview-scene')?.getAttribute('data-render-configuration-key') === key && document.querySelector('.preview-scene')?.getAttribute('data-render-semantically-ready') === 'true', `savannah:DDLLAC:${handing}`)
+      assert.equal(await page.locator('.door-leaf-left .hardware[data-hardware-side="left"]').count(), 1)
+      assert.equal(await page.locator('.door-leaf-right .hardware').count(), 0)
+      assert.match(await page.locator('.hardware img').getAttribute('class') ?? '', /mirrored|shift-left/)
+      const pdf = await page.evaluate(() => (window as unknown as { renderHardwarePdf: () => Promise<{ dataUrl: string }> }).renderHardwarePdf())
+      savannahPdfs.push(pdf.dataUrl)
+      await writeFile(`/tmp/savannah-${width}-${handing}-pdf.png`, Buffer.from(pdf.dataUrl.split(',')[1], 'base64'))
+      await page.locator('.preview-scene').screenshot({ path: `/tmp/savannah-${width}-${handing}-live.png` })
+    }
+    assert.equal(new Set(savannahPdfs).size, 1, 'Savannah PDF orientation remains fixed across handing changes')
+    await page.getByRole('button', { name: 'Single', exact: true }).click()
+    for (const [label, side] of [['Left Active', 'right'], ['Right Active', 'left']]) {
+      await page.getByRole('button', { name: label, exact: true }).click()
+      assert.equal(await page.locator(`.hardware[data-hardware-side="${side}"]`).count(), 1, 'Single handing still controls its existing hardware side')
+    }
     console.log(`${width}px: live mode switching, leaf counts, knob-only clipping, capture and PDF mode differences passed.`)
     await page.close()
   }
