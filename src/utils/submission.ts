@@ -1,4 +1,5 @@
-import { doorConfigurationHingeOptionLabel, doorConfigurationLabel, doubleDoorLockPrepOption } from '../data/doorConfigurationRules'
+import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationHingeOptionLabel, doorConfigurationLabel, doubleDoorLockPrepOption } from '../data/doorConfigurationRules'
+import { doorSwingDisplayName } from '../data/doorHanding'
 import { hardwareDisplayName } from '../data/hardware'
 import { sidelitePlacement } from '../data/sideliteConfigurations'
 import type { ContactForm, DoorConfiguration, GridConfiguration, SideliteGlassConfiguration } from '../types'
@@ -97,7 +98,7 @@ export function buildDoorBuilderSubmissionPayload({ contact, configuration, subm
   const hasSidelites = (configuration.sidelitePlacement ?? configuration.sidelites) !== 'none'
   const lockSetup = configurationType === 'single'
     ? NOT_APPLICABLE
-    : doubleDoorLockPrepOption(configuration.doubleDoorLockPrep)?.name ?? NOT_APPLICABLE
+    : doubleDoorLockPrepOption(configuration.doubleDoorLockPrep || (configurationType === 'french' ? DEFAULT_FRENCH_LOCK_PREP : null))?.name ?? NOT_APPLICABLE
 
   return {
     submitted_at: submittedAt ?? new Date().toISOString(),
@@ -122,7 +123,7 @@ export function buildDoorBuilderSubmissionPayload({ contact, configuration, subm
     jamb_finish_color: configuration.jambFinishColor?.trim() || NOT_APPLICABLE,
     hardware: hardwareDisplayName(configuration.hardware),
     lock_setup: lockSetup,
-    door_swing: configuration.doorSwing.name,
+    door_swing: doorSwingDisplayName(configurationType, configuration.doorSwing),
     hinge_option: doorConfigurationHingeOptionLabel(configurationType) ?? NOT_APPLICABLE,
   }
 }

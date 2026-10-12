@@ -41,6 +41,12 @@ const sat = fixture('SAT', 'paint-black', 'none', 'single', 'sat-clear-nonstock'
 sat.appearance.glassFrameFinish = finishes.find(item => item.id === 'paint-brown')!
 const hrt = fixture('HRT', 'paint-brown', 'none', 'single', 'hrt-clear-s11rt')
 hrt.appearance.glassFrameFinish = finishes.find(item => item.id === 'paint-black')!
+function activeFrenchFixture(right: boolean) {
+  const item = fixture('2PHD', 'paint-white', 'none', 'french')
+  item.configuration.doubleDoorLockPrep = 'DDLLAC'
+  item.configuration.doorSwing = { id: right ? 'RHI' : 'LHI', name: right ? 'Right Hand Inswing' : 'Left Hand Inswing', image: '' }
+  return item
+}
 function halfSideliteFixture(lineId: string) {
   const item = fixture('N1', 'paint-clay', 'lock-side', 'single', undefined, lineId)
   const family = sideliteAssetFamilyForSlab({ doorLineId: lineId })
@@ -79,6 +85,8 @@ const fixtures = [
   { name: 'N1-stain', ...fixture('N1', 'stain-nutmeg', 'lock-side') },
   { name: 'smooth-steel-ssl', ...halfSideliteFixture('20-gauge-smooth-steel') },
   { name: 'textured-fiberglass-ssl', ...halfSideliteFixture('textured-fiberglass') },
+  { name: 'french-left-active', ...activeFrenchFixture(false) },
+  { name: 'french-right-active', ...activeFrenchFixture(true) },
 ]
 let liveRoot: Root | undefined
 Object.assign(window, {

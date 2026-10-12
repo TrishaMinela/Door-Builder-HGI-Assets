@@ -30,7 +30,7 @@ try {
     const captures: string[] = [], pdfs: string[] = []
     for (const mode of modes) {
       await page.getByRole('button', { name: mode }).click()
-      await page.waitForFunction(key => document.querySelector('.preview-scene')?.getAttribute('data-render-configuration-key') === key && document.querySelector('.preview-scene')?.getAttribute('data-render-semantically-ready') === 'true', mode)
+      await page.waitForFunction(key => document.querySelector('.preview-scene')?.getAttribute('data-render-configuration-key') === key && document.querySelector('.preview-scene')?.getAttribute('data-render-semantically-ready') === 'true', `${mode}:LHI`)
       const layers = await page.locator('.hardware').evaluateAll(elements => elements.map(element => ({ mode: element.getAttribute('data-hardware-mode'), side: element.getAttribute('data-hardware-side'), clip: (element.querySelector('img') as HTMLImageElement).style.clipPath })))
       assert.equal(layers.filter(item => item.mode === 'full').length, mode === 'DDLLBO' ? 2 : 1)
       assert.equal(layers.filter(item => item.mode === 'knob-only').length, mode === 'DDLLKP' ? 1 : 0)
@@ -45,6 +45,21 @@ try {
     }
     assert.equal(new Set(captures).size, 3, 'Each selected mode changes the configured entrance capture')
     assert.equal(new Set(pdfs).size, 3, 'Each selected mode changes the deterministic PDF image')
+    await page.getByRole('button', { name: 'DDLLAC', exact: true }).click()
+    const activeCaptures: string[] = [], activePdfs: string[] = []
+    for (const [label, handing, leaf] of [['Left Active', 'LHI', 'left'], ['Right Active', 'RHI', 'right']]) {
+      await page.getByRole('button', { name: label, exact: true }).click()
+      await page.waitForFunction(key => document.querySelector('.preview-scene')?.getAttribute('data-render-configuration-key') === key && document.querySelector('.preview-scene')?.getAttribute('data-render-semantically-ready') === 'true', `DDLLAC:${handing}`)
+      assert.equal(await page.locator(`.door-leaf-${leaf} .hardware`).count(), 1)
+      assert.equal(await page.locator(`.door-leaf-${leaf === 'left' ? 'right' : 'left'} .hardware`).count(), 0)
+      const images = await page.evaluate(async () => {
+        const api = window as unknown as { captureHardware: () => Promise<{ dataUrl: string }>; renderHardwarePdf: () => Promise<{ dataUrl: string }> }
+        return { capture: (await api.captureHardware()).dataUrl, pdf: (await api.renderHardwarePdf()).dataUrl }
+      })
+      activeCaptures.push(images.capture); activePdfs.push(images.pdf)
+    }
+    assert.equal(new Set(activeCaptures).size, 2, 'Left/right active selection changes Visualizer reference capture')
+    assert.equal(new Set(activePdfs).size, 2, 'Left/right active selection changes PDF image')
     console.log(`${width}px: live mode switching, leaf counts, knob-only clipping, capture and PDF mode differences passed.`)
     await page.close()
   }

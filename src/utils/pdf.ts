@@ -3,7 +3,8 @@ import type { ContactForm, DoorConfigurationType, DoorStyle, DoorSwing, DoubleDo
 import { hardwareDisplayName } from '../data/hardware'
 import { configurationPdfDownloadName, configurationPdfName } from './pdfConfig'
 import { sideliteProductLabel } from '../data/sideliteConfigurations'
-import { doorConfigurationHingeOptionLabel, doorConfigurationLabel, doubleDoorLockPrepOption } from '../data/doorConfigurationRules'
+import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationHingeOptionLabel, doorConfigurationLabel, doubleDoorLockPrepOption } from '../data/doorConfigurationRules'
+import { doorSwingDisplayName } from '../data/doorHanding'
 
 const COLORS = {
   dark: [5, 4, 11] as const,
@@ -267,7 +268,7 @@ async function generateLegacySummaryPdf(
       ...(grid.gridWidth ? [{ label: 'GRID WIDTH', value: grid.gridWidth }] : []),
     ] : []),
     { label: 'HARDWARE', value: hardwareDisplayName(hardware), icon: summaryIcons[5] },
-    { label: 'DOOR SWING', value: doorSwing.name, icon: summaryIcons[6] },
+    { label: doorConfigurationType === 'french' ? 'ACTIVE DOOR' : 'DOOR SWING', value: doorSwingDisplayName(doorConfigurationType, doorSwing), icon: summaryIcons[6] },
   ]
   let rowY = 221
   const summaryRowHeight = rows.length > 11 ? 26 : rows.length > 8 ? 28 : 44
@@ -422,8 +423,8 @@ export async function generateSummaryPdf(
   const pageTwoValues = [
     jamb?.jambFinishColor || 'Not selected',
     [glass?.name ?? 'No glass', gridDetails].filter(Boolean).join(' - '),
-    [hardwareDisplayName(hardware), doorConfigurationType === 'french' ? `Lock Setup: ${doubleDoorLockPrepOption(doubleDoorLockPrep)?.name ?? 'Locks on Both Doors'}` : null].filter(Boolean).join(' — '),
-    doorSwing.name,
+    [hardwareDisplayName(hardware), doorConfigurationType === 'french' ? `Lock Setup: ${doubleDoorLockPrepOption(doubleDoorLockPrep || DEFAULT_FRENCH_LOCK_PREP)?.name}` : null].filter(Boolean).join(' — '),
+    doorSwingDisplayName(doorConfigurationType, doorSwing),
   ]
   const drawTemplateValues = (values: string[], baselines: number[]) => values.forEach((value, index) => {
     const availableWidth = 268

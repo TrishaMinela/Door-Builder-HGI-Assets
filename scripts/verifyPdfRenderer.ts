@@ -70,6 +70,10 @@ try {
     await page.locator('#live-preview').screenshot({ path: `${output}/${name}-live.png` })
   }
   assert.notEqual(results[names.indexOf('smooth-steel-ssl')].dataUrl, results[names.indexOf('textured-fiberglass-ssl')].dataUrl, 'Smooth/textured material results remain distinct')
+  for (const name of ['french-left-active', 'french-right-active']) {
+    const pdf = await page.evaluate(index => (window as unknown as { createFinishPdf: (i: number) => Promise<string> }).createFinishPdf(index), names.indexOf(name))
+    await writeFile(`${output}/${name}.pdf`, Buffer.from(pdf.split(',')[1], 'base64'))
+  }
   await page.setViewportSize({ width: 390, height: 844 })
   for (const i of [1, 4, 11]) {
     const mobile = await page.evaluate(index => (window as unknown as { renderFixture: (i: number) => Promise<RenderResult> }).renderFixture(index), i)

@@ -15,6 +15,7 @@ export const doubleDoorLockPrepOptions: DoubleDoorLockPrepOption[] = [
   { code: 'DDLLAC', label: 'DDLLAC — Double Door — Lock on the Active Panel', name: 'Lock on Main Door Only', description: 'Lock hardware only on the Main Door.', thumbnail: '/assets/hardware/lock-setup/lock-on-main-door-only.webp' },
   { code: 'DDLLKP', label: 'DDLLKP — Double Door Knob Prep Only', name: 'Knob Prep Only', description: 'Prepare the doors for knob hardware without a full lockset.', thumbnail: '/assets/hardware/lock-setup/knob-prep-only.webp' },
 ]
+export const DEFAULT_FRENCH_LOCK_PREP: DoubleDoorLockPrepCode = 'DDLLAC'
 
 export function doubleDoorLockPrepOption(code?: string | null) {
   return doubleDoorLockPrepOptions.find((option) => option.code === code)
@@ -85,6 +86,7 @@ export function doorHardwarePlacements(
   doubleDoorLockPrep?: DoubleDoorLockPrepCode | null,
 ): { leafIndex: number; side: DoorHardwareSide; mode: DoorHardwareRenderMode }[] {
   const rule = doorConfigurationRule(value)
+  if (rule.type === 'french' && !doubleDoorLockPrep) doubleDoorLockPrep = DEFAULT_FRENCH_LOCK_PREP
   if (rule.leafCount === 2 && doubleDoorLockPrep) {
     const activeLeafIndex = operatingLeafSide === 'right' ? 0 : 1
     const inactiveLeafIndex = activeLeafIndex === 0 ? 1 : 0
