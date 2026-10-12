@@ -8,12 +8,12 @@ type SideliteFamilySelection = {
 }
 
 const SIDELITE_SLABS: Record<SideliteAssetFamily, Partial<Record<SideliteStyleId, string>>> = {
-  // Smooth Steel supports the existing shared SSL product regardless of the
-  // gauge labels on its source artwork. Keep fiberglass's family unchanged.
+  // Smooth Steel has dedicated smooth SSL artwork; do not borrow the Oak
+  // textured surface used by the other material families.
   'smooth-steel': {
     fsl: '/assets/hgi-assets/Sidelites/20 Gauge/FSL.webp',
     f48sl: '/assets/hgi-assets/Sidelites/20 Gauge/F48SL.webp',
-    ssl: '/assets/hgi-assets/Sidelites/Signature/Oak/SSL.webp',
+    ssl: '/assets/hgi-assets/Sidelites/20 Gauge/SSL.webp',
     s2sl: '/assets/hgi-assets/Sidelites/20 Gauge/S2SL.webp',
   },
   '20-gauge': {

@@ -60,6 +60,16 @@ try {
   }
   const clayPdf = await page.evaluate(index => (window as unknown as { createFinishPdf: (i: number) => Promise<string> }).createFinishPdf(index), names.indexOf('N1-clay'))
   await writeFile(`${output}/N1-clay.pdf`, Buffer.from(clayPdf.split(',')[1], 'base64'))
+  for (const name of ['smooth-steel-ssl', 'textured-fiberglass-ssl']) {
+    const index = names.indexOf(name)
+    const result = results[index]
+    const expectedSlab = name === 'smooth-steel-ssl' ? '/assets/hgi-assets/Sidelites/20 Gauge/SSL.webp' : '/assets/hgi-assets/Sidelites/Signature/Oak/SSL.webp'
+    assert.ok(result.assets.some(asset => decodeURI(asset).endsWith(expectedSlab)), `${name}: PDF uses correct material slab`)
+    await page.evaluate(index => (window as unknown as { mountLiveFixture: (i: number) => Promise<unknown> }).mountLiveFixture(index), index)
+    assert.ok(await page.locator('#live-preview img').evaluateAll((images, path) => images.some(image => decodeURI((image as HTMLImageElement).src).endsWith(path)), expectedSlab), `${name}: live preview uses identical material slab`)
+    await page.locator('#live-preview').screenshot({ path: `${output}/${name}-live.png` })
+  }
+  assert.notEqual(results[names.indexOf('smooth-steel-ssl')].dataUrl, results[names.indexOf('textured-fiberglass-ssl')].dataUrl, 'Smooth/textured material results remain distinct')
   await page.setViewportSize({ width: 390, height: 844 })
   for (const i of [1, 4, 11]) {
     const mobile = await page.evaluate(index => (window as unknown as { renderFixture: (i: number) => Promise<RenderResult> }).renderFixture(index), i)

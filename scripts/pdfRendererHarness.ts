@@ -2,6 +2,7 @@ import { doorStyles, finishes, hardwareOptions, glassOptions } from '../src/data
 import { resolveDoorProduct } from '../src/data/productCatalog'
 import { sideliteAssetFamilyForSlab, sideliteSlabAsset, sideliteGlassMask } from '../src/data/sideliteAssets'
 import { fslGlassOptions, fslGridAsset } from '../src/data/fslGlass'
+import { sslGlassOptions } from '../src/data/sslGlass'
 import { renderPdfProduct, type PdfProductAppearance } from '../src/utils/pdfProductRenderer'
 import { downloadSummary, generateSummaryPdf } from '../src/utils/pdf'
 import type { DoorConfiguration } from '../src/types'
@@ -40,6 +41,15 @@ const sat = fixture('SAT', 'paint-black', 'none', 'single', 'sat-clear-nonstock'
 sat.appearance.glassFrameFinish = finishes.find(item => item.id === 'paint-brown')!
 const hrt = fixture('HRT', 'paint-brown', 'none', 'single', 'hrt-clear-s11rt')
 hrt.appearance.glassFrameFinish = finishes.find(item => item.id === 'paint-black')!
+function halfSideliteFixture(lineId: string) {
+  const item = fixture('N1', 'paint-clay', 'lock-side', 'single', undefined, lineId)
+  const family = sideliteAssetFamilyForSlab({ doorLineId: lineId })
+  const glass = sslGlassOptions.find(option => option.asset)!
+  item.configuration.sideliteSlab = 'ssl'
+  item.configuration.sideliteGlass = { glass: glass.name, glassCategory: 'Decorative Glass', glassAsset: glass.asset }
+  Object.assign(item.appearance, { sideliteAssetSrc: sideliteSlabAsset(family, 'ssl'), sideliteMaskSrc: sideliteGlassMask(family, 'ssl'), sideliteGlassSrc: glass.asset })
+  return item
+}
 const fixtures = [
   { name: 'single-paint', ...fixture('2PHD', 'paint-white') },
   { name: 'black', ...fixture('F1', 'paint-black') },
@@ -67,6 +77,8 @@ const fixtures = [
   }),
   ...['white', 'clay', 'black'].map(id => ({ name: `N1-${id}`, ...fixture('N1', `paint-${id}`, 'lock-side', 'single', undefined, '20-gauge-smooth-steel') })),
   { name: 'N1-stain', ...fixture('N1', 'stain-nutmeg', 'lock-side') },
+  { name: 'smooth-steel-ssl', ...halfSideliteFixture('20-gauge-smooth-steel') },
+  { name: 'textured-fiberglass-ssl', ...halfSideliteFixture('textured-fiberglass') },
 ]
 let liveRoot: Root | undefined
 Object.assign(window, {
