@@ -36,6 +36,30 @@ try {
     results.push(result)
     console.log(`PDF renderer: ${names[i]} passed (${result.assets.length} resolved source assets).`)
   }
+  for (const [name, finishId] of [['N1-white', 'paint-white'], ['N1-clay', 'paint-clay'], ['N1-black', 'paint-black'], ['N1-stain', 'stain-nutmeg']]) {
+    const result = results[names.indexOf(name)]
+    const g = result.geometry
+    const scale = Math.min((result.width - 32) / g.totalWidth, (result.height - 32) / g.totalHeight)
+    const x = Math.round((result.width - g.totalWidth * scale) / 2 + (g.doorLeft + 121) * scale)
+    const y = Math.round((result.height - g.totalHeight * scale) / 2 + (g.contentTop + 400) * scale)
+    const pixels = await sharp(Buffer.from(result.dataUrl.split(',')[1], 'base64')).ensureAlpha().raw().toBuffer()
+    const rgba = Array.from(pixels.subarray((y * result.width + x) * 4, (y * result.width + x) * 4 + 4))
+    const finish = finishes.find(item => item.id === finishId)!
+    const rgb = [1, 3, 5].map(offset => parseInt(finish.color.slice(offset, offset + 2), 16))
+    assert.equal(rgba[3], 255, `${name}: solid slab paint must be opaque, not masked by artwork alpha (${rgba})`)
+    rgb.forEach((channel, i) => assert.ok(rgba[i] >= channel * .7 - 3 && rgba[i] <= channel + 3, `${name}: selected finish hex is retained with relief shading (${rgba}, ${finish.color})`))
+    const live = await page.evaluate(index => (window as unknown as { mountLiveFixture: (i: number) => Promise<{ finishId: string; finishHex: string }> }).mountLiveFixture(index), names.indexOf(name))
+    assert.equal(live.finishId, finishId); assert.equal(live.finishHex, finish.color)
+    const bounds = await page.locator('#live-preview .door-leaf').first().boundingBox()
+    assert.ok(bounds)
+    const sample = await page.screenshot({ clip: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height * 400 / 549, width: 1, height: 1 } })
+    const livePixel = await sharp(sample).ensureAlpha().raw().toBuffer()
+    rgba.slice(0, 3).forEach((channel, i) => assert.ok(Math.abs(channel - livePixel[i]) <= 12, `${name}: PDF and live finish match (${rgba} vs ${[...livePixel]})`))
+    await page.locator('#live-preview').screenshot({ path: `${output}/${name}-live.png` })
+    console.log(`${name}: selected ${finish.color}; PDF slab RGBA ${rgba}`)
+  }
+  const clayPdf = await page.evaluate(index => (window as unknown as { createFinishPdf: (i: number) => Promise<string> }).createFinishPdf(index), names.indexOf('N1-clay'))
+  await writeFile(`${output}/N1-clay.pdf`, Buffer.from(clayPdf.split(',')[1], 'base64'))
   await page.setViewportSize({ width: 390, height: 844 })
   for (const i of [1, 4, 11]) {
     const mobile = await page.evaluate(index => (window as unknown as { renderFixture: (i: number) => Promise<RenderResult> }).renderFixture(index), i)

@@ -74,9 +74,13 @@ async function prepareSurface(slab: HTMLImageElement, mask: HTMLImageElement | u
   paint.drawImage(slab, 0, 0)
   paint.globalAlpha = 1
   paint.filter = 'none'
-  paint.globalCompositeOperation = 'destination-in'
-  if (finishMask) paint.drawImage(finishMask, 0, 0)
-  else paint.drawImage(slab, 0, 0)
+  // Solid slab artwork can be translucent relief, not a material silhouette.
+  // Match the live preview's opaque solid-slab mask; only a real glass-opening
+  // mask may remove finish pixels. Using slab alpha here washed paint out on PDF white.
+  if (finishMask) {
+    paint.globalCompositeOperation = 'destination-in'
+    paint.drawImage(finishMask, 0, 0)
+  }
   paint.globalCompositeOperation = 'source-over'
   ctx.drawImage(painted, 0, 0, slab.naturalWidth, slab.naturalHeight)
   return { image: result, masks, glass: masks?.glassUrl ? await loadPdfImage(masks.glassUrl) : undefined, frame: masks?.glassFrameUrl ? await loadPdfImage(masks.glassFrameUrl) : undefined }

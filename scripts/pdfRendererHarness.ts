@@ -5,14 +5,18 @@ import { fslGlassOptions, fslGridAsset } from '../src/data/fslGlass'
 import { renderPdfProduct, type PdfProductAppearance } from '../src/utils/pdfProductRenderer'
 import { downloadSummary, generateSummaryPdf } from '../src/utils/pdf'
 import type { DoorConfiguration } from '../src/types'
+import { createElement } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
+import { DoorPreview } from '../src/components/DoorPreview'
+import '../src/styles.css'
 
-function fixture(code: string, finishId: string, sidelites: DoorConfiguration['sidelites'] = 'none', double: DoorConfiguration['doorConfigurationType'] = 'single', glassId?: string) {
+function fixture(code: string, finishId: string, sidelites: DoorConfiguration['sidelites'] = 'none', double: DoorConfiguration['doorConfigurationType'] = 'single', glassId?: string, lineId = '22-gauge-steel') {
   const style = doorStyles.find(item => item.code === code)!
   const finish = finishes.find(item => item.id === finishId)!
-  const product = resolveDoorProduct(style, finish, finish.finishType === 'stain' ? 'Oak' : undefined, '22-gauge-steel')
+  const product = resolveDoorProduct(style, finish, finish.finishType === 'stain' ? 'Oak' : undefined, lineId)
   const glass = glassOptions.find(item => item.id === glassId) ?? null
   const configuration: DoorConfiguration = { style, finish, product, grain: finish.finishType === 'stain' ? 'Oak' : null, glass, grid: null, hardware: hardwareOptions[0], doorSwing: { id: 'LHI', name: 'Left Hand Inswing', image: '' }, sidelites, doorConfigurationType: double, doubleDoorLockPrep: double === 'french' ? 'DDLLBO' : undefined, sideliteSlab: 'fsl' }
-  const family = sideliteAssetFamilyForSlab({ doorLineId: '22-gauge-steel', doorStyleCode: code, grain: configuration.grain })
+  const family = sideliteAssetFamilyForSlab({ doorLineId: lineId, doorStyleCode: code, grain: configuration.grain })
   const sideGlass = fslGlassOptions.find(item => item.asset)!
   if (sidelites !== 'none') configuration.sideliteGlass = { glass: sideGlass.name, glassCategory: 'Decorative Glass', glassAsset: sideGlass.asset }
   const appearance: PdfProductAppearance = { glass, jambFinish: finish, sideliteAssetSrc: sideliteSlabAsset(family, 'fsl'), sideliteMaskSrc: sideliteGlassMask(family, 'fsl'), sideliteGlassSrc: sideGlass.asset, sideliteClearGlassBase: true }
@@ -61,12 +65,36 @@ const fixtures = [
     item.configuration.doubleDoorLockPrep = prep
     return { name: prep, ...item }
   }),
+  ...['white', 'clay', 'black'].map(id => ({ name: `N1-${id}`, ...fixture('N1', `paint-${id}`, 'lock-side', 'single', undefined, '20-gauge-smooth-steel') })),
+  { name: 'N1-stain', ...fixture('N1', 'stain-nutmeg', 'lock-side') },
 ]
+let liveRoot: Root | undefined
 Object.assign(window, {
+  async mountLiveFixture(index: number) {
+    liveRoot?.unmount()
+    const container = document.getElementById('live-preview') ?? document.body.appendChild(Object.assign(document.createElement('div'), { id: 'live-preview' }))
+    container.style.width = '450px'
+    liveRoot = createRoot(container)
+    const { configuration: c, appearance } = fixtures[index]
+    await new Promise<void>(resolve => liveRoot!.render(createElement(DoorPreview, {
+      ...appearance, style: c.style, finish: c.finish, product: c.product, grain: c.grain,
+      hardware: c.hardware, doorSwing: c.doorSwing, sidelites: c.sidelites,
+      applyFinish: true, showViewToggle: false, view: 'Exterior',
+      renderConfigurationKey: `pdf-live-fixture-${index}`,
+      onRenderReadinessChange: state => { if (state.ready) resolve() },
+    })))
+    return { finishId: c.finish.id, finishHex: c.finish.color, finishName: c.finish.name }
+  },
   pdfFixtures: fixtures.map(item => item.name),
   async renderFixture(index: number) {
     const { configuration, appearance } = fixtures[index]
     return renderPdfProduct(configuration, appearance)
+  },
+  async createFinishPdf(index: number) {
+    const { configuration: c, appearance } = fixtures[index]
+    const result = await renderPdfProduct(c, appearance)
+    const pdf = await generateSummaryPdf({ fullName: 'Finish Regression', email: 'test@example.com', phone: '5551234567', zip: '12345', notes: '' }, c.product, c.style, c.grain, c.finish, c.glass, c.grid, c.hardware, c.doorSwing, c.sidelites, 'FSL', c.sideliteGlass, { jambType: 'timber', jambFinishType: c.finish.finishType, jambFinishColor: c.finish.name, jambFinishOverridden: false }, c.doorConfigurationType, result.dataUrl, c.doubleDoorLockPrep)
+    return pdf.output('datauristring')
   },
   async renderMissingAsset() {
     return renderPdfProduct(complex.configuration, { ...complex.appearance, sideliteGlassSrc: '/assets/missing-pdf-glass.png' })
