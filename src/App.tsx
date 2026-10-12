@@ -412,6 +412,7 @@ function EmptyDoorPreview() {
 }
 
 function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
+  const freshDoorStyleId = doorStyles.find(item => item.code === 'F')?.id ?? ''
   const [initialDraft] = useState(loadDoorBuilderDraft)
   const restoredDoorFinishId = initialDraft?.selectedFinishType === 'stain' ? initialDraft.selectedStain : initialDraft?.selectedFinishType === 'paint' ? initialDraft.selectedPaint : ''
   const lastJambDoorFinishId = useRef(restoredDoorFinishId)
@@ -426,7 +427,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [selectedDoorConfigurationType, setSelectedDoorConfigurationType] = useState<DoorConfigurationType | ''>(initialDraft?.selectedDoorConfigurationType ?? '')
   const [showEntrywayGuidance, setShowEntrywayGuidance] = useState(false)
   const [hasShownEntrywayGuidance, setHasShownEntrywayGuidance] = useState(false)
-  const [styleId, setStyleId] = useState(initialDraft?.styleId ?? doorStyles.find(item => item.code === 'F')?.id ?? '')
+  const [styleId, setStyleId] = useState(initialDraft?.styleId || freshDoorStyleId)
   const [doorLineId, setDoorLineId] = useState(initialDraft?.doorLineId ?? '')
   const [grainId, setGrainId] = useState(initialDraft?.grainId ?? '')
   const [sidelites, setSidelites] = useState<SideliteConfiguration | ''>(initialDraft?.sidelites ?? '')
@@ -1389,8 +1390,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (configurationType === selectedDoorConfigurationType) return
     setSelectedDoorConfigurationType(configurationType)
     setDoubleDoorLockPrep(configurationType === 'french' ? DEFAULT_FRENCH_LOCK_PREP : '')
-    // Give the customer an immediate configured preview. Door Style remains
-    // the next editable step, with the first catalog option selected there.
+    // Preserve the initialized Full Lite or manual slab selection. Use catalog
+    // order only when a later selection is genuinely invalid or unavailable.
     setStyleId(validOptionId(styleId, availableDoorStyles))
   }
 
@@ -1435,7 +1436,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     setEditReturnError('')
     setVisualizerSessionStarted(false)
     setBuilderPreviewView('Exterior')
-    setStyleId('')
+    setStyleId(freshDoorStyleId)
     setSelectedDoorConfigurationType('')
     setDoorLineId('')
     setGrainId('')

@@ -23,13 +23,20 @@ try {
     setTimeout(() => reject(new Error('Vite startup timeout')), 10000).unref()
   })
   browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
-  for (const width of [1280, 390]) for (const restoredCherry of [false, true]) {
+  for (const width of [1280, 390]) for (const draftMode of ['fresh', 'saved', 'empty'] as const) {
+    const restoredCherry = draftMode === 'saved'
     const page = await browser.newPage({ viewport: { width, height: 1000 } })
-    if (restoredCherry) await page.addInitScript(value => {
+    if (draftMode !== 'fresh') await page.addInitScript(value => {
       localStorage.setItem('hgi-door-builder-draft', JSON.stringify({ version: 1, configuration: value }))
-    }, { selectedDoorConfigurationType: 'single', styleId: doorStyles.find(item => item.code === 'CANGSS')!.id,
+    }, { selectedDoorConfigurationType: 'single', styleId: restoredCherry ? doorStyles.find(item => item.code === 'CANGSS')!.id : '',
       doorLineId: 'signature-series', grainId: 'Cherry', sidelites: 'none', doorSwingId: 'LHI' })
     await page.goto('http://127.0.0.1:5197/')
+    const savedStyle = () => page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration.styleId)
+    await page.waitForFunction(() => Boolean(localStorage.getItem('hgi-door-builder-draft')))
+    const expectedStartingStyle = doorStyles.find(item => item.code === (restoredCherry ? 'CANGSS' : 'F'))!.id
+    assert.equal(await savedStyle(), expectedStartingStyle, `${draftMode}: style is initialized before entering the builder`)
+    await page.waitForTimeout(200)
+    assert.equal(await savedStyle(), expectedStartingStyle, 'Mount effects do not replace the initialized style')
     await page.getByRole('button', { name: 'Start Building', exact: true }).click()
     for (let i = 0; i < 10 && await page.locator('.step-heading h1').innerText() !== 'Choose a Door Style'; i++) {
       if (await page.locator('.step-heading h1').innerText() === 'Choose Your Door Configuration') {
@@ -39,7 +46,6 @@ try {
     }
     assert.equal(await page.locator('.step-heading h1').innerText(), 'Choose a Door Style')
     assert.equal(await page.locator('.builder-options-scroll .door-catalog-card').count(), 42, `${width}px ${restoredCherry ? 'saved Signature/Cherry' : 'fresh session'}: full initial browsing`)
-    const savedStyle = () => page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration.styleId)
     assert.equal(await savedStyle(), doorStyles.find(item => item.code === (restoredCherry ? 'CANGSS' : 'F'))!.id, 'Fresh configurations start Full Lite; existing draft styles remain unchanged')
     if (!restoredCherry) {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
@@ -49,6 +55,17 @@ try {
       assert.equal(await page.locator('.step-heading h1').innerText(), 'Choose a Door Style')
       assert.equal(await savedStyle(), doorStyles.find(item => item.code === 'N1')!.id, 'Returning to Door Style preserves the manual choice, not Full Lite')
       assert.equal(await page.locator('.builder-options-scroll .door-catalog-card').count(), 42)
+      page.once('dialog', dialog => dialog.accept())
+      await page.locator('.preview-reset-design:visible').first().click()
+      assert.equal(await savedStyle(), doorStyles.find(item => item.code === 'F')!.id, 'Reset starts a new configuration with Full Lite immediately')
+      await page.waitForTimeout(200)
+      assert.equal(await savedStyle(), doorStyles.find(item => item.code === 'F')!.id, 'Reset reconciliation does not replace Full Lite')
+      for (let i = 0; i < 10 && await page.locator('.step-heading h1').innerText() !== 'Choose a Door Style'; i++) {
+        if (await page.locator('.step-heading h1').innerText() === 'Choose Your Door Configuration') await page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: /^Single Door$/ }) }).click()
+        await page.getByRole('button', { name: 'Next configuration step' }).click()
+      }
+      assert.equal(await savedStyle(), doorStyles.find(item => item.code === 'F')!.id)
+      assert.equal(await page.locator('.builder-options-scroll .door-catalog-card').count(), 42, 'All styles remain visible after reset')
     }
     await page.close()
   }
