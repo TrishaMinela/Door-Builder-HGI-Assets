@@ -14,7 +14,7 @@ import { useProductCardLayout } from './utils/useProductCardLayout'
 import { safeDynamicImport } from './utils/staleChunkRecovery'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
-import { autoGrainForDoorLine, doorLineChoices, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
+import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
 import { approvedPrivacyGlassIds } from './data/privacyGlass'
 import { builderUx } from './config/builderUx'
 import { matchingJambFinish } from './utils/matchingFrameFinish'
@@ -511,18 +511,14 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     requestAnimationFrame(() => builderOptionsRef.current?.querySelector<HTMLButtonElement>('.option-card')?.focus())
   }
 
-  const requestedDoorLine = doorLineChoices.find(item => item.id === doorLineId)
-  const availableDoorStyles = sortByDisplayLabel(requestedDoorLine
-    ? doorStyles.filter(item => item.variants.some(variant => requestedDoorLine.lineIds.includes(variant.lineId)
-      && (requestedDoorLine.id !== signatureSeriesId || !grainId || variant.grains.includes(grainId))))
-    : doorStyles, item => doorCatalogModelName(item.name))
+  // Styles are the first product choice. Material/grain constrain later
+  // questions, never the catalog the customer can browse here.
+  const availableDoorStyles = sortByDisplayLabel(doorStyles, item => doorCatalogModelName(item.name))
   const availableDoorStyleIds = availableDoorStyles.map(item => item.id).join('|')
   const resolvedStyleId = validOptionId(styleId, availableDoorStyles)
   const selectedStyle = availableDoorStyles.find((item) => item.id === styleId)
   const style = selectedStyle ?? doorStyles[0]
-  // Material is the parent now: its slab defaults must not be constrained by
-  // the previous material's slab when the customer changes categories.
-  const availableDoorLines = doorLineChoices
+  const availableDoorLines = selectedStyle ? doorLineChoicesForStyle(selectedStyle) : []
   const availableDoorLineIds = availableDoorLines.map((item) => item.id).join('|')
   const selectedDoorLine = availableDoorLines.find((item) => item.id === doorLineId)
   const compatibilitySupportsGlass = selectedStyle && selectedDoorLine
@@ -531,10 +527,10 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const isSignatureDoorLine = selectedDoorLine?.id === signatureSeriesId
   const selectedDoorLineLineIds = selectedDoorLine?.lineIds ?? []
   const selectedDoorLineLineIdsKey = selectedDoorLineLineIds.join('|')
-  const signatureGrainOptions = isSignatureDoorLine
-    ? signatureGrainChoices.filter((item) => doorStyles.some(slab => slab.variants.some((variant) =>
+  const signatureGrainOptions = selectedStyle && isSignatureDoorLine
+    ? signatureGrainChoices.filter((item) => selectedStyle.variants.some((variant) =>
       selectedDoorLineLineIds.includes(variant.lineId) && variant.grains.includes(item.id),
-    )))
+    ))
     : []
   const needsGrainStep = signatureGrainOptions.length > 0
   const selectedGrain = selectedDoorLine
@@ -1074,14 +1070,16 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       setStyleId(resolvedStyleId)
       return // Reconcile downstream values only after the slab fallback settles.
     }
-    if (!resolvedStyleId) return // No compatible slabs: don't discard the requested series/grain.
+    if (!resolvedStyleId) return // An empty slab catalog has no downstream choices to resolve.
     if (doorLineId && !availableDoorLines.some((item) => item.id === doorLineId)) {
-      setDoorLineId('')
-      setGrainId('')
+      if (availableDoorLines[0]) selectDoorLine(availableDoorLines[0].id)
+      else { setDoorLineId(''); setGrainId('') }
+      return
     }
     if (grainId && !isSignatureDoorLine) setGrainId('')
     if (grainId && needsGrainStep && !signatureGrainOptions.some((item) => item.id === grainId)) {
-      setGrainId('')
+      selectGrain(signatureGrainOptions[0]?.id ?? '')
+      return
     }
     if (effectiveFinishTypes.length && !effectiveFinishTypes.includes(selectedFinishType as 'paint' | 'stain')) {
       setSelectedFinishType(effectiveFinishTypes[0])
@@ -1392,7 +1390,16 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const selectDoorStyle = (nextStyleId: string) => {
     const nextStyle = availableDoorStyles.find((item) => item.id === nextStyleId)
     if (!nextStyle) return
-    if (nextStyleId !== styleId) defaultSideliteForParent(doorLineId, selectedGrain)
+    if (nextStyleId !== styleId) {
+      const lines = doorLineChoicesForStyle(nextStyle)
+      // A new style is the parent change: start its material choices at index 0.
+      const line = lines[0]
+      const grains = signatureGrainChoices.filter(item => nextStyle.variants.some(variant => line?.lineIds.includes(variant.lineId) && variant.grains.includes(item.id)))
+      const nextGrain = line?.id === signatureSeriesId ? grains[0]?.id ?? '' : ''
+      setDoorLineId(line?.id ?? '')
+      setGrainId(nextGrain)
+      defaultSideliteForParent(line?.id ?? '', nextGrain || line?.autoGrain || null)
+    }
     if (editReturnTo && nextStyleId !== styleId) {
       // Existing catalog reconciliation effects clear incompatible choices.
       // Do not discard still-valid material/finish/glass during a summary edit.
@@ -1626,13 +1633,10 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (!availableDoorLines.some((item) => item.id === nextDoorLineId)) return
     if (nextDoorLineId !== doorLineId) {
       const line = availableDoorLines.find(item => item.id === nextDoorLineId)!
-      const grains = signatureGrainChoices.filter(item => doorStyles.some(slab => slab.variants.some(variant => line.lineIds.includes(variant.lineId) && variant.grains.includes(item.id))))
+      const grains = signatureGrainChoices.filter(item => selectedStyle?.variants.some(variant => line.lineIds.includes(variant.lineId) && variant.grains.includes(item.id)))
       const nextGrain = nextDoorLineId === signatureSeriesId ? grains[0]?.id ?? '' : ''
-      const slabs = sortByDisplayLabel(doorStyles.filter(item => item.variants.some(variant => line.lineIds.includes(variant.lineId)
-        && (!nextGrain || variant.grains.includes(nextGrain)))), item => doorCatalogModelName(item.name))
       setDoorLineId(nextDoorLineId)
       setGrainId(nextGrain)
-      setStyleId(slabs[0]?.id ?? '')
       defaultSideliteForParent(nextDoorLineId, nextGrain || line.autoGrain || null)
       setSelectedGlassCategory('')
       setGlassId('')
@@ -1647,8 +1651,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (!signatureGrainOptions.some((item) => item.id === nextGrain)) return
     if (nextGrain !== grainId) {
       setGrainId(nextGrain)
-      const slabs = sortByDisplayLabel(doorStyles.filter(item => item.variants.some(variant => selectedDoorLineLineIds.includes(variant.lineId) && variant.grains.includes(nextGrain))), item => doorCatalogModelName(item.name))
-      setStyleId(slabs[0]?.id ?? '')
       defaultSideliteForParent(doorLineId, nextGrain)
     }
     if (!editReturnTo && signatureGrainOptions.length === 1) goTo(step + 1)

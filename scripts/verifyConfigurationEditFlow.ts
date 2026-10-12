@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process'
 import { chromium } from 'playwright-core'
 import sharp from 'sharp'
 import { doorStyles, hardwareOptions } from '../src/data/options'
+import { doorLineChoicesForStyle } from '../src/data/productCatalog'
 import type { DoorConfiguration } from '../src/types'
 
 const draft = { version: 1, configuration: { selectedDoorConfigurationType: 'single', styleId: doorStyles.find(item => item.code === 'F')!.id, doorLineId: '20-gauge-smooth-steel', sidelites: 'none', selectedFinishType: 'paint', selectedPaint: 'paint-black', jambType: 'timber', jambFinishType: 'paint', jambFinishColor: 'paint-black', hardwareId: hardwareOptions[0].id, doorSwingId: 'LHI' } }
@@ -139,7 +140,8 @@ try {
         await page.getByRole('heading', { name: 'Choose Main Door Glass', exact: true }).waitFor()
         await page.locator('.configuration-edit-return:visible').getByText('Please update this option before returning to your preview.', { exact: true }).waitFor()
         const invalidated = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
-        for (const field of ['doorLineId', 'sidelites', 'selectedPaint', 'hardwareId', 'doorSwingId']) assert.equal(invalidated[field], beforeEdit[field], `Invalid glass does not clear ${field}`)
+        for (const field of ['sidelites', 'selectedPaint', 'hardwareId', 'doorSwingId']) assert.equal(invalidated[field], beforeEdit[field], `Invalid glass does not clear ${field}`)
+        assert.equal(invalidated.doorLineId, doorLineChoicesForStyle(doorStyles.find(item => item.id === invalidated.styleId)!)[0].id, 'Edited style defaults to its first compatible material')
         await card(/^Clear Glass$/).click()
       }
       if (area === 'Hardware') {
@@ -178,7 +180,8 @@ try {
       await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
       await page.getByText('AI Result', { exact: true }).waitFor({ timeout: 30000 })
       const edited = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
-      for (const field of ['doorLineId', 'selectedPaint', 'hardwareId', 'sidelites', 'doorSwingId']) assert.equal(edited[field], previous[field], 'Compatible door edit preserves unrelated selections and returns directly')
+      for (const field of ['selectedPaint', 'hardwareId', 'sidelites', 'doorSwingId']) assert.equal(edited[field], previous[field], 'Compatible door edit preserves unrelated selections and returns directly')
+      assert.equal(edited.doorLineId, doorLineChoicesForStyle(doorStyles.find(item => item.id === edited.styleId)!)[0].id, 'New slab resets only its dependent material to the first compatible choice')
     }
     // Exit a door edit from an earlier, untouched layout step without regenerating.
     const noChangeGenerations = generations
@@ -213,7 +216,7 @@ try {
     assert.equal(await page.getByRole('dialog').getByRole('button').count(), 2)
     await page.getByRole('dialog').getByRole('button', { name: 'Review Configuration' }).click()
     await summary()
-    // Dependency reconciliation preserves compatible material/finish/hardware.
+    // A new style defaults its compatible material, preserving finish/hardware.
     await summaryEdit('Door').click()
     await card(/^F Full /).click()
     await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
@@ -223,7 +226,7 @@ try {
     await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
     await summary()
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
-    assert.equal(saved.doorLineId, '20-gauge-smooth-steel')
+    assert.equal(saved.doorLineId, doorLineChoicesForStyle(doorStyles.find(item => item.id === saved.styleId)!)[0].id)
     assert.equal(saved.selectedPaint, 'paint-black')
     assert.ok(saved.glassId, 'Newly required glass is completed through normal controls')
     assert.equal(await page.locator('.summary-card .configuration-edit-actions').count(), 0)
