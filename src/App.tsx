@@ -20,7 +20,7 @@ import { builderUx } from './config/builderUx'
 import { matchingJambFinish } from './utils/matchingFrameFinish'
 import { isCustomerSelectableGlass } from './data/customerGlassAvailability'
 import type { ContactForm, DoorConfiguration, DoorConfigurationType, DoorSwing, DoubleDoorLockPrepCode, GlassCoating, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, HardwareView, PreviewHardware, SideliteConfiguration, SideliteGlassConfiguration } from './types'
-import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationLabel, doubleDoorLockPrepOption, doubleDoorLockPrepOptions, requiredDoorConfigurationProductOption } from './data/doorConfigurationRules'
+import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationLabel, lockSetupOptionsForHardware, requiredDoorConfigurationProductOption } from './data/doorConfigurationRules'
 import { doorSwingDisplayName, frenchActiveDoorSide } from './data/doorHanding'
 import { configurationPdfName } from './utils/pdfConfig'
 import { buildDoorBuilderSubmissionPayload, submitQuote } from './utils/submission'
@@ -563,9 +563,15 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const jambFinish = finishes.find((item) => item.id === jambFinishColor) ?? null
   const glass = glassOptions.find((item) => item.id === glassId) ?? null
   const selectedHardware = hardwareOptions.find((item) => item.id === hardwareId)
-  const selectedDoubleDoorLockPrep = doubleDoorLockPrepOption(doubleDoorLockPrep)
+  const availableLockSetupOptions = lockSetupOptionsForHardware(selectedHardware)
+  const selectedDoubleDoorLockPrep = availableLockSetupOptions.find(option => option.code === doubleDoorLockPrep)
   const hardware = selectedHardware ?? temporaryPreviewHardware ?? emptyPreviewHardware
   const isFrenchDoor = selectedDoorConfigurationType === 'french'
+  useEffect(() => {
+    if (!isFrenchDoor || !selectedHardware) return
+    const options = lockSetupOptionsForHardware(selectedHardware)
+    if (!options.some(option => option.code === doubleDoorLockPrep)) setDoubleDoorLockPrep(options[0]?.code ?? '')
+  }, [isFrenchDoor, selectedHardware, doubleDoorLockPrep])
   const swingSelectionOptions = isFrenchDoor
     ? doorSwingOptions.filter(item => item.id === 'LHI' || item.id === 'RHI').map(item => ({ ...item, name: doorSwingDisplayName('french', item) }))
     : doorSwingOptions
@@ -819,8 +825,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       ] : []),
     ] : []),
     ...(supportsGlassFrameColor && builderUx.showGlassFrameColorSelection ? ['glass-frame-color' as const] : []),
-    ...(selectedDoorConfigurationType === 'french' ? ['lock-setup' as const] : []),
     'hardware',
+    ...(selectedDoorConfigurationType === 'french' ? ['lock-setup' as const] : []),
     'review',
   ]
   const isBuilderPageComplete = (page: BuilderPage) => {
@@ -2173,7 +2179,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 {currentPage === 'sidelite-grid-pattern' && fslPatterns.map((item) => <OptionCard key={item} title={item} selected={sideliteGridPattern === item} onClick={() => selectSideliteGridPattern(item)} visual={<img className="grid-pattern-thumbnail" src="/assets/grid-options/All Lites.webp" alt="" />} />)}
                 {currentPage === 'sidelite-grid-color' && sortByDisplayLabel(fslColors, item => item).map((color) => <OptionCard key={color} title={color} eyebrow="Grid color" selected={sideliteGridColor === color} onClick={() => selectSideliteGridColor(color)} visual={<span className="finish-tile-wrap grid-color-tile" style={{ '--fallback-finish': gridColorValues[color] ?? '#efeee8' } as CSSProperties} />} />)}
                 {currentPage === 'sidelite-grid-width' && fslWidths.map((width) => <OptionCard key={width} className="bar-size-option-card" title={width} eyebrow="Bar size" selected={sideliteGridWidth === width} onClick={() => setSideliteGridWidth(width)} />)}
-                {currentPage === 'lock-setup' && <div className="double-door-lock-prep-options" role="group" aria-label="Lock Setup">{doubleDoorLockPrepOptions.map((option) => <OptionCard key={option.code} className="door-catalog-card double-door-lock-prep-card" title={option.name} eyebrow={option.description} selected={doubleDoorLockPrep === option.code} onClick={() => setDoubleDoorLockPrep(option.code)} visual={<span className="door-style-thumbnail double-door-lock-prep-visual"><img className="double-door-lock-prep-thumbnail" src={option.thumbnail} alt="" loading="eager" decoding="async" /></span>} />)}</div>}
+                {currentPage === 'lock-setup' && <div className="double-door-lock-prep-options" role="group" aria-label="Lock Setup">{availableLockSetupOptions.map((option) => <OptionCard key={option.code} className="door-catalog-card double-door-lock-prep-card" title={option.name} eyebrow={option.description} selected={doubleDoorLockPrep === option.code} onClick={() => setDoubleDoorLockPrep(option.code)} visual={<span className="door-style-thumbnail double-door-lock-prep-visual"><img className="double-door-lock-prep-thumbnail" src={option.thumbnail} alt="" loading="eager" decoding="async" /></span>} />)}</div>}
                 {currentPage === 'hardware' && sortByDisplayLabel(hardwareStyleGroups, options => options[0].style).map((options) => <HardwareOptionCard key={`${options[0].manufacturer}-${options[0].style}`} options={options} selectedId={hardwareId} onSelect={(option) => selectHardware(option.id)} />)}
                 {currentPage === 'door-swing' && swingSelectionOptions.map((item) => <OptionCard key={item.id} title={isFrenchDoor ? item.name : `${item.id} – ${item.name}`} eyebrow={isFrenchDoor ? 'Active door (OSLI)' : 'Door swing'} selected={isFrenchDoor ? Boolean(selectedDoorSwing && frenchActiveDoorSide(selectedDoorSwing.id) === frenchActiveDoorSide(item.id)) : doorSwingId === item.id} onClick={() => selectDoorSwing(item.id)} visual={isFrenchDoor ? <span className="active-door-preview" aria-hidden="true">{(['left', 'right'] as const).map(side => <span key={side} className={`active-door-leaf ${frenchActiveDoorSide(item.id) === side ? 'is-active' : ''}`}>{frenchActiveDoorSide(item.id) === side ? 'Active' : 'Passive'}</span>)}</span> : <img className="door-swing-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
               </div>

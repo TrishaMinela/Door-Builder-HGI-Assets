@@ -20,6 +20,17 @@ export const allHardwareAssets: HardwareAsset[] = [...baldwinAssets, ...schlageA
 
 const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
+/** One-piece exterior handlesets cannot supply a separate inactive control. */
+export const hardwareCapabilities: Partial<Record<HardwareStyleName, { inactiveKnobPrep: boolean }>> = {
+  Longview: { inactiveKnobPrep: false },
+  'Santa Cruz': { inactiveKnobPrep: false },
+  Seattle: { inactiveKnobPrep: false },
+}
+
+export function supportsInactiveKnobPrep(hardware: Pick<PreviewHardware, 'style'>) {
+  return hardware.style ? hardwareCapabilities[hardware.style]?.inactiveKnobPrep !== false : false
+}
+
 export function resolveHardwareOption(manufacturer: HardwareManufacturer, style: HardwareStyleName, finish: HardwareFinishName, handing?: HardwareHanding): HardwareOption | undefined {
   const preferredHanding = handing ?? (manufacturer === 'Baldwin' ? 'Right' : 'Left')
   const asset = allHardwareAssets.find((item) =>
@@ -28,13 +39,10 @@ export function resolveHardwareOption(manufacturer: HardwareManufacturer, style:
   if (!asset) return undefined
   const schlageOption = manufacturer === 'Schlage' ? resolveSchlageHardware(style, finish) : undefined
   const hardwareType = style.includes('Knob') ? 'round' : style.includes('Lever') ? 'lever' : 'long'
-  const knobOnlyCrop = hardwareType === 'long'
-    // Handlesets use a tall lower pull. Start below the integrated upper lock
-    // and stop at the bottom of the handle artwork.
-    ? { top: 52, right: 0, bottom: 27, left: 0 }
-    // Knob/lever assets place the deadbolt above a compact control. Use a
-    // tight middle band so no antialiased edge of the deadbolt remains.
-    : { top: 50, right: 0, bottom: 42, left: 0 }
+  // All supported two-piece overlays have a clear gap at the halfway line.
+  // Keep the complete lower control in either view, not a type-based band:
+  // a keyless trim's exterior pull is taller than its interior knob/lever.
+  const knobOnlyCrop = { top: 50, right: 0, bottom: 0, left: 0 }
   return {
     ...asset,
     cardImage: schlageOption?.cardImage,

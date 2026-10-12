@@ -1,4 +1,6 @@
 import type { DoorConfigurationType, DoubleDoorLockPrepCode } from '../types.js'
+import type { PreviewHardware } from '../types.js'
+import { supportsInactiveKnobPrep } from './hardware.js'
 
 export type DoorHardwareSide = 'left' | 'right'
 export type DoorHardwareRenderMode = 'full' | 'knob-only'
@@ -16,6 +18,11 @@ export const doubleDoorLockPrepOptions: DoubleDoorLockPrepOption[] = [
   { code: 'DDLLKP', label: 'DDLLKP — Double Door Knob Prep Only', name: 'Knob Prep Only', description: 'Prepare the doors for knob hardware without a full lockset.', thumbnail: '/assets/hardware/lock-setup/knob-prep-only.webp' },
 ]
 export const DEFAULT_FRENCH_LOCK_PREP: DoubleDoorLockPrepCode = 'DDLLAC'
+
+export function lockSetupOptionsForHardware(hardware?: PreviewHardware | null) {
+  if (!hardware?.style) return []
+  return doubleDoorLockPrepOptions.filter(option => option.code !== 'DDLLKP' || supportsInactiveKnobPrep(hardware))
+}
 
 export function doubleDoorLockPrepOption(code?: string | null) {
   return doubleDoorLockPrepOptions.find((option) => option.code === code)
