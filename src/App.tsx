@@ -8,6 +8,7 @@ import { QuoteForm } from './components/QuoteForm'
 import { BetaFeedback } from './components/BetaFeedback'
 import { DealerContextGate } from './components/DealerContextGate'
 import { sortByDisplayLabel } from './utils/sortByDisplayLabel'
+import { useInventoryShadow } from './inventory-shadow/useInventoryShadow'
 import { useProductCardLayout } from './utils/useProductCardLayout'
 import { safeDynamicImport } from './utils/staleChunkRecovery'
 import { doorStyles, finishes, glassOptions } from './data/options'
@@ -1928,6 +1929,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     doorSwing: selectedDoorSwing?.name ?? 'Not selected',
   }
   const feedbackStep = screen === 'builder' ? `${currentStep}: ${currentPage}` : screen
+  useInventoryShadow({styleId,lineId:doorLineId,grain:selectedGrain,finishType:selectedFinishType,glassId,sideliteStyle:sideliteStyleId,hardwareId},screen==='builder')
 
   const heroGenerationParam = new URLSearchParams(window.location.search).get('generateHeroDoor')
   if (heroGenerationParam !== null) {
