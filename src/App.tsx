@@ -426,7 +426,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [selectedDoorConfigurationType, setSelectedDoorConfigurationType] = useState<DoorConfigurationType | ''>(initialDraft?.selectedDoorConfigurationType ?? '')
   const [showEntrywayGuidance, setShowEntrywayGuidance] = useState(false)
   const [hasShownEntrywayGuidance, setHasShownEntrywayGuidance] = useState(false)
-  const [styleId, setStyleId] = useState(initialDraft?.styleId ?? '')
+  const [styleId, setStyleId] = useState(initialDraft?.styleId ?? doorStyles.find(item => item.code === 'F')?.id ?? '')
   const [doorLineId, setDoorLineId] = useState(initialDraft?.doorLineId ?? '')
   const [grainId, setGrainId] = useState(initialDraft?.grainId ?? '')
   const [sidelites, setSidelites] = useState<SideliteConfiguration | ''>(initialDraft?.sidelites ?? '')

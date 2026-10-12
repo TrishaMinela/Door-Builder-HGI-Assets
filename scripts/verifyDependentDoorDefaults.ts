@@ -39,6 +39,17 @@ try {
     }
     assert.equal(await page.locator('.step-heading h1').innerText(), 'Choose a Door Style')
     assert.equal(await page.locator('.builder-options-scroll .door-catalog-card').count(), 42, `${width}px ${restoredCherry ? 'saved Signature/Cherry' : 'fresh session'}: full initial browsing`)
+    const savedStyle = () => page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration.styleId)
+    assert.equal(await savedStyle(), doorStyles.find(item => item.code === (restoredCherry ? 'CANGSS' : 'F'))!.id, 'Fresh configurations start Full Lite; existing draft styles remain unchanged')
+    if (!restoredCherry) {
+      if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
+      await page.locator('.builder-options-scroll .door-catalog-card').filter({ has: page.locator('strong').filter({ hasText: /^N1 / }) }).click()
+      await page.getByRole('button', { name: 'Next configuration step' }).click()
+      await page.getByRole('button', { name: 'Previous configuration step' }).click()
+      assert.equal(await page.locator('.step-heading h1').innerText(), 'Choose a Door Style')
+      assert.equal(await savedStyle(), doorStyles.find(item => item.code === 'N1')!.id, 'Returning to Door Style preserves the manual choice, not Full Lite')
+      assert.equal(await page.locator('.builder-options-scroll .door-catalog-card').count(), 42)
+    }
     await page.close()
   }
   for (const width of [1280, 390]) for (const relationship of ['hinge-side', 'lock-side', 'both-sides']) {
