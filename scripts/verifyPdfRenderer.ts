@@ -71,6 +71,9 @@ try {
   }
   assert.notEqual(results[names.indexOf('smooth-steel-ssl')].dataUrl, results[names.indexOf('textured-fiberglass-ssl')].dataUrl, 'Smooth/textured material results remain distinct')
   for (const name of ['french-left-active', 'french-right-active']) {
+    const result = results[names.indexOf(name)]
+    assert.equal(result.geometry.hasLeft, false, `${name}: no left sidelite`)
+    assert.equal(result.geometry.hasRight, true, `${name}: right sidelite remains fixed`)
     const pdf = await page.evaluate(index => (window as unknown as { createFinishPdf: (i: number) => Promise<string> }).createFinishPdf(index), names.indexOf(name))
     await writeFile(`${output}/${name}.pdf`, Buffer.from(pdf.split(',')[1], 'base64'))
   }

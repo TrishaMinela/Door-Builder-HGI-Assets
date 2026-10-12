@@ -7,6 +7,10 @@ import { doorHandingSides, doorSwingDisplayName, frenchActiveDoorSide } from '..
 import { resolveDoorProduct } from '../src/data/productCatalog'
 import { finishes } from '../src/data/options'
 import { buildDoorBuilderSubmissionPayload } from '../src/utils/submission'
+import { resolveSidelitePosition, sideliteProductCode } from '../src/data/sideliteConfigurations'
+import { aiTestConfiguration } from './aiVisualizerFixture'
+import { aiStructuralInstructionBlock, resolveAiProduct } from '../server/aiDoorVisualization'
+import { loadDoorBuilderDraft } from '../src/utils/doorBuilderDraft'
 
 assert.equal(DEFAULT_FRENCH_LOCK_PREP, 'DDLLAC')
 for (const [id, leaf, label] of [['LHI', 0, 'Left Active'], ['RHI', 1, 'Right Active'], ['LHO', 1, 'Right Active'], ['RHO', 0, 'Left Active']] as const) {
@@ -23,6 +27,17 @@ for (const [id, leaf, label] of [['LHI', 0, 'Left Active'], ['RHI', 1, 'Right Ac
   } })
   assert.equal(payload.door_swing, label)
   assert.equal(payload.lock_setup, 'Lock on Main Door Only')
+  for (const [relationship, position] of [['hinge-side', 'left'], ['lock-side', 'right'], ['both-sides', 'both']] as const) {
+    assert.equal(resolveSidelitePosition({ relationship, handing: id, configurationType: 'french' }), position)
+    assert.equal(resolveSidelitePosition({ relationship, handing: id, configurationType: 'french', view: 'Interior' }), position === 'both' ? 'both' : position === 'left' ? 'right' : 'left')
+    assert.equal(sideliteProductCode(relationship, id, 'french'), position === 'left' ? 'LEFTSIDE' : position === 'right' ? 'RIGHTSIDE' : 'BOTHSIDES')
+    const configuration = { ...aiTestConfiguration, doorConfigurationType: 'french' as const, sidelites: relationship, sideliteSlab: 'ssl' as const, doorSwing: { ...aiTestConfiguration.doorSwing, id } }
+    const submission = buildDoorBuilderSubmissionPayload({ contact: { fullName: 'Test', email: '', phone: '', zip: '', notes: '' }, configuration })
+    assert.equal(submission.sidelite_placement, position === 'both' ? 'Sidelites on Both Sides' : `Sidelite on ${position === 'left' ? 'Left' : 'Right'}`)
+    assert.ok(aiStructuralInstructionBlock(resolveAiProduct(configuration).snapshot).includes(`sidelite_structure: ${position}`))
+    const draft = loadDoorBuilderDraft({ getItem: () => JSON.stringify({ version: 1, configuration: { selectedDoorConfigurationType: 'french', sidelites: position === 'left' ? 'LEFTSIDE' : position === 'right' ? 'RIGHTSIDE' : 'BOTHSIDES', doorSwingId: id } }), setItem() {}, removeItem() {} })!
+    assert.equal(draft.sidelites, relationship, 'French physical sidelite aliases survive draft reload independently of active leaf')
+  }
 }
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5207', '--strictPort'], { stdio: 'pipe' })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
@@ -37,7 +52,7 @@ try {
     await page.addInitScript(value => {
       localStorage.setItem('hgi-door-builder-draft', JSON.stringify({ version: 1, configuration: value }))
     }, { selectedDoorConfigurationType: 'single', styleId: doorStyles.find(item => item.code === 'F1')!.id,
-      doorLineId: '20-gauge-smooth-steel', sidelites: 'none', selectedFinishType: 'paint', selectedPaint: 'paint-white',
+      doorLineId: '20-gauge-smooth-steel', sidelites: 'lock-side', sideliteStyleId: 'ssl', selectedFinishType: 'paint', selectedPaint: 'paint-white',
       hardwareId: hardwareOptions[0].id, doorSwingId: 'LHI' })
     const card = (label: RegExp) => page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: label }) }).click()
     const next = () => page.getByRole('button', { name: 'Next configuration step' }).click()
@@ -54,11 +69,15 @@ try {
       return { box: { left: box.left, right: box.right, top: box.top, bottom: box.bottom }, visual: { left: visual.left, right: visual.right, top: visual.top, bottom: visual.bottom } }
     }))
     assert.ok(diagrams.every(({ box, visual }) => box.left >= visual.left - 1 && box.right <= visual.right + 1 && box.top >= visual.top - 1 && box.bottom <= visual.bottom + 1), `Active-leaf diagrams fit inside desktop/mobile cards: ${JSON.stringify(diagrams)}`)
-    for (const [label, leaf, id] of [['Left Active', 'left', 'LHI'], ['Right Active', 'right', 'RHI']] as const) {
+    const beforeActiveChange = await saved()
+    for (const [label, leaf, id] of [['Left Active', 'left', 'LHI'], ['Right Active', 'right', 'RHI'], ['Left Active', 'left', 'LHI'], ['Right Active', 'right', 'RHI']] as const) {
       await card(new RegExp(`^${label}$`))
       await page.waitForTimeout(200)
       assert.equal((await saved()).doorSwingId, id)
       const preview = page.locator(width === 1280 ? 'aside .preview-scene' : '.mobile-live-preview .preview-scene').first()
+      assert.equal(await preview.locator('.door-frame').getAttribute('data-sidelites'), 'right', 'French sidelite stays on the right regardless of active leaf')
+      const afterActiveChange = await saved()
+      for (const key of ['sidelites', 'sideliteStyleId', 'sideliteGlassId', 'sideliteGridStyle']) assert.equal(afterActiveChange[key], beforeActiveChange[key], `${key} is independent of active leaf`)
       assert.equal(await preview.locator(`.door-leaf-${leaf} .hardware`).count(), 1)
       assert.equal(await preview.locator(`.door-leaf-${leaf === 'left' ? 'right' : 'left'} .hardware`).count(), 0)
     }

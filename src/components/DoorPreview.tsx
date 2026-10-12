@@ -545,7 +545,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
       : 'hardware-image-mirrored'
     : ''
   const selectedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView, doorSwing)
-  const configuredSidelitePlacement = resolveSidelitePosition({ relationship: sidelites, handing: doorSwing?.id, view: previewView })
+  const configuredSidelitePlacement = resolveSidelitePosition({ relationship: sidelites, handing: doorSwing?.id, view: previewView, configurationType: doorConfigurationType })
   const frameSidelites = compact ? 'none' : configuredSidelitePlacement ?? 'none'
   const defaultHardware = hardwareOptions.find((option) => Boolean(hardwarePreviewAssetUrl(option, previewView, doorSwing)))
   const previewHardware: PreviewHardware = selectedHardwareImage ? hardware : defaultHardware ?? hardware

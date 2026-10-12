@@ -160,7 +160,7 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
   const clearUrl = gridClear ? glassOptions.find(item => item.id === (code === 'S' ? 's-clear-no-grids' : ['F48', 'F482'].includes(code) ? 'f48-clear-no-grids' : 'f-clear-no-grids'))?.overlaysByDoorStyle[code] : undefined
   const hardwareUrl = hardwarePreviewAssetUrl(config.hardware, 'Exterior', config.doorSwing)
   if (!hardwareUrl) throw new Error(`No PDF hardware asset is mapped for ${config.hardware.manufacturer} / ${config.hardware.style} / ${config.hardware.finish}.`)
-  const placement = sidelitePlacement(config.sidelites, config.doorSwing.id)
+  const placement = sidelitePlacement(config.sidelites, config.doorSwing.id, config.doorConfigurationType)
   if (placement !== 'none' && (!assets.sideliteAssetSrc || !assets.sideliteMaskSrc)) throw new Error('PDF sidelite slab/mask assets are missing.')
   if (placement !== 'none' && config.sideliteGlass && !assets.sideliteGlassSrc && !assets.sideliteClearGlassBase) throw new Error(`PDF sidelite glass asset is missing: ${config.sideliteGlass.glass}`)
   const urls = [maskUrl, code === 'HRT' ? '/assets/masks/HRT.png' : undefined, glassUrl, clearUrl, hardwareUrl, ...(placement !== 'none' ? [assets.sideliteAssetSrc, assets.sideliteMaskSrc, assets.sideliteGlassSrc] : []), assets.glassFrameFinish?.finishType === 'stain' ? assets.glassFrameFinish.image : undefined].filter((url): url is string => Boolean(url))

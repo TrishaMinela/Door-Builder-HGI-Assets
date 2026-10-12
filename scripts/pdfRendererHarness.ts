@@ -42,7 +42,7 @@ sat.appearance.glassFrameFinish = finishes.find(item => item.id === 'paint-brown
 const hrt = fixture('HRT', 'paint-brown', 'none', 'single', 'hrt-clear-s11rt')
 hrt.appearance.glassFrameFinish = finishes.find(item => item.id === 'paint-black')!
 function activeFrenchFixture(right: boolean) {
-  const item = fixture('2PHD', 'paint-white', 'none', 'french')
+  const item = fixture('2PHD', 'paint-white', 'lock-side', 'french')
   item.configuration.doubleDoorLockPrep = 'DDLLAC'
   item.configuration.doorSwing = { id: right ? 'RHI' : 'LHI', name: right ? 'Right Hand Inswing' : 'Left Hand Inswing', image: '' }
   return item

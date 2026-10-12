@@ -259,7 +259,7 @@ function structuralValue(value: unknown) {
 
 export function aiStructuralInstructionBlock(snapshot: ReturnType<typeof resolveAiProduct>['snapshot']) {
   const doorStructure = snapshot.configurationType === 'single' ? 'single' : 'double'
-  const sideliteStructure = sidelitePlacement(snapshot.sidelites.placement, snapshot.doorSwing as DoorConfiguration['doorSwing']['id'])
+  const sideliteStructure = sidelitePlacement(snapshot.sidelites.placement, snapshot.doorSwing as DoorConfiguration['doorSwing']['id'], snapshot.configurationType as DoorConfiguration['doorConfigurationType'])
   const selectedHardware = `${snapshot.hardware.manufacturer}; ${snapshot.hardware.style}; ${snapshot.hardware.finish}; ${snapshot.hardware.handing}; exact visible hardware count: ${snapshot.hardware.count}`
   const selectedJambFrame = `${snapshot.jamb.type}; ${snapshot.jamb.finish} ${snapshot.jamb.hex}; glass frame: ${structuralValue(snapshot.glassFrame)}`
   const activeLeaf = snapshot.configurationType === 'single'
@@ -347,7 +347,7 @@ export function aiDoNotInventInstructionBlock(snapshot: ReturnType<typeof resolv
   const plainGlass = /\b(clear|plain)\b/i.test(snapshot.glass) && !/decorative/i.test(snapshot.glass)
   const sideliteRule = snapshot.sidelites.count === 0
     ? '- No sidelites are selected. Do not add, retain, imply, or fabricate sidelites; reconstruct former sidelite space as matching surrounding architecture under the structural-conversion rules.'
-    : `- Preserve exactly ${snapshot.sidelites.count} selected sidelite${snapshot.sidelites.count === 1 ? '' : 's'} in the configured ${sidelitePlacement(snapshot.sidelites.placement, snapshot.doorSwing as DoorConfiguration['doorSwing']['id'])} arrangement. Do not add another sidelite, a fake sidelite, or a nearby window that reads as a sidelite.`
+    : `- Preserve exactly ${snapshot.sidelites.count} selected sidelite${snapshot.sidelites.count === 1 ? '' : 's'} in the configured ${sidelitePlacement(snapshot.sidelites.placement, snapshot.doorSwing as DoorConfiguration['doorSwing']['id'], snapshot.configurationType as DoorConfiguration['doorConfigurationType'])} arrangement. Do not add another sidelite, a fake sidelite, or a nearby window that reads as a sidelite.`
   const glassRule = noGlass
     ? '- No door glass is selected. Do not create glass panes, lites, glazing, divided-light patterns, grille bars, or reflections that imply glass.'
     : plainGlass

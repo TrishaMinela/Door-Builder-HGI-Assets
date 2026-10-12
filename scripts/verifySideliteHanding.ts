@@ -58,8 +58,20 @@ try {
     previousCapture = (await page.locator('img[data-capture]').getAttribute('src'))!
     const result = await page.evaluate(() => (window as unknown as { renderHandingPdf: () => Promise<{ geometry: { hasLeft: boolean; hasRight: boolean } }> }).renderHandingPdf())
     const side = resolveSidelitePosition({ relationship, handing })
-    assert.equal(result.geometry.hasLeft, side === 'left' || side === 'both')
-    assert.equal(result.geometry.hasRight, side === 'right' || side === 'both')
+    assert.equal(result.geometry.hasLeft, side === 'left' || side === 'both', `${handing}/${relationship}: PDF left`)
+    assert.equal(result.geometry.hasRight, side === 'right' || side === 'both', `${handing}/${relationship}: PDF right`)
   }
-  console.log('32 relationship/handing/view mappings, changing handing/relationship, Both views, capture, PDF, AI values, submissions and legacy drafts passed.')
+  await page.getByRole('button', { name: 'French', exact: true }).click()
+  for (const relationship of ['hinge-side', 'lock-side', 'both-sides'] as const) for (const handing of ['LHI', 'RHI', 'LHI'] as const) {
+    await page.getByRole('button', { name: relationship, exact: true }).click()
+    await page.getByRole('button', { name: handing, exact: true }).click()
+    for (const view of ['Exterior', 'Interior'] as const) {
+      assert.equal(await page.locator(`[data-test-view="${view}"] .door-frame`).getAttribute('data-sidelites'), resolveSidelitePosition({ relationship, handing, view, configurationType: 'french' }))
+    }
+    await page.locator(`img[data-capture="french:${relationship}:${handing}"]`).waitFor()
+    const result = await page.evaluate(() => (window as unknown as { renderHandingPdf: () => Promise<{ geometry: { hasLeft: boolean; hasRight: boolean } }> }).renderHandingPdf())
+    assert.equal(result.geometry.hasLeft, relationship !== 'lock-side')
+    assert.equal(result.geometry.hasRight, relationship !== 'hinge-side')
+  }
+  console.log('Single-door handing mappings and French left/right/both independence passed for both views, reference captures and PDF.')
 } finally { await browser?.close(); server.kill('SIGTERM') }

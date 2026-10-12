@@ -85,7 +85,7 @@ function readableSideliteGlass(glass?: SideliteGlassConfiguration | null) {
 }
 
 function readableSidelitePlacement(configuration: DoorConfiguration) {
-  const placement = sidelitePlacement(configuration.sidelitePlacement ?? configuration.sidelites, configuration.doorSwing.id)
+  const placement = sidelitePlacement(configuration.sidelitePlacement ?? configuration.sidelites, configuration.doorSwing.id, configuration.doorConfigurationType)
   if (placement === 'both') return 'Sidelites on Both Sides'
   if (placement === 'left') return 'Sidelite on Left'
   if (placement === 'right') return 'Sidelite on Right'
