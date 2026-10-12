@@ -7,8 +7,11 @@ import { productCatalog, catalogDoorStyles, doorLineChoices } from '../src/data/
 import { hardwareOptions } from '../src/data/hardware'
 import { glassOptions } from '../src/data/glassOptions'
 import { sideliteAssetFamilyForSlab,sideliteStylesForFamily } from '../src/data/sideliteAssets'
+import { normalizeCleanupTables } from './inventory/normalizeCleanup'
 
-const catalog=await readDevShadowCatalog(30000)
+const liveCatalog=await readDevShadowCatalog(30000)
+const planned=process.argv.includes('--planned-cleanup')
+const catalog=planned?{...liveCatalog,tables:normalizeCleanupTables(liveCatalog.tables,liveCatalog.revision.id)}:liveCatalog
 let failedReads=0
 await assert.rejects(()=>readDevShadowCatalog(1000,async(_input,init)=>{failedReads++;assert.equal(init?.method,'GET');return new Response('',{status:503})}),/read failed/)
 assert.equal(failedReads,1,'Outage is isolated; no writes or alternate catalog request')
@@ -24,5 +27,5 @@ const baseline=hardcodedSnapshot(contexts[2]),same=compareSnapshots(baseline,bas
 const reordered=Object.fromEntries(Object.entries(baseline).map(([key,area])=>[key,{...area,choices:[...area.choices].reverse()}]));assert.ok(compareSnapshots(baseline,reordered,contexts[2]).every(r=>r.matches),'Harmless order does not mismatch')
 const mutated=structuredClone(baseline);mutated.hardwareProducts.choices[0].metadata.finish='Injected mismatch';assert.ok(compareSnapshots(baseline,mutated,{}).some(r=>!r.matches),'Metadata drift detected')
 assert.deepEqual(safeContext({styleId:'x',email:'private@example.test',photo:'data:image/...',serviceKey:'secret'}),{styleId:'x'})
-console.log(JSON.stringify({contexts:contexts.length,comparisons,matches,mismatches:failures.length,failures:failures.slice(0,12),orderingTest:true,metadataDriftTest:true,piiExcluded:true,readOnlyOutageTest:true,pinnedRevisionTests:true,timeoutTest:true},null,2))
+console.log(JSON.stringify({dataSource:planned?'READ-ONLY PLANNED CLEANUP; NOT APPLIED TO DEV':'LIVE DEV',contexts:contexts.length,comparisons,matches,mismatches:failures.length,failures:failures.slice(0,12),orderingTest:true,metadataDriftTest:true,piiExcluded:true,readOnlyOutageTest:true,pinnedRevisionTests:true,timeoutTest:true},null,2))
 if(failures.length)process.exitCode=1

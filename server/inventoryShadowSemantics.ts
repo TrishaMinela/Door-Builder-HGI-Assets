@@ -62,7 +62,7 @@ export function hardcodedSnapshot(c:ShadowContext):Snapshot {
   }
   if(relevantSide){addAsset('sidelite:slab_render','',0,sideliteSlabAsset(family,relevantSide as never));addAsset('sidelite:mask','',0,sideliteGlassMask(family,relevantSide as never))}
   const hardware=hardwareOptions.find(h=>h.id===c.hardwareId)
-  for(const finish of visibleFinishes)addAsset(`finish:${finish.id}:finish_swatch`,'',0,finish.image)
+  for(const finish of visibleFinishes)if(finish.image)addAsset(`finish:${finish.id}:finish_swatch`,'',0,finish.image)
   if(hardware){addAsset('hardware:hardware_card','',0,hardwareCardAssetUrl(hardware));for(const authored of allHardwareAssets.filter(h=>h.manufacturer===hardware.manufacturer&&h.style===hardware.style&&h.finish===hardware.finish))addAsset(`hardware:${authored.view==='Exterior'?'exterior_hardware':'interior_hardware'}`,`authored:${authored.view}:${authored.handing}`,0,hardwareAssetUrl(authored.asset));for(const swing of a.doorSwingOptions)for(const view of ['Exterior','Interior'] as const)addAsset(`hardware:${view==='Exterior'?'exterior_hardware':'interior_hardware'}`,`preview:${view}:${swing.id}`,0,hardwarePreviewAssetUrl(hardware,view,swing))}
   results.assetBindings.choices=unique(assets)
   results.gridCombinations.choices=nativeGrids(codes,relevantSide)
@@ -119,12 +119,30 @@ export function databaseSnapshot(catalog:DevCatalog,c:ShadowContext):Snapshot {
   const relevantGlass=new Set([...main.map(g=>g.id),...t('glass_options').filter(g=>sideGlassIds.has(g.id)).map(g=>g.id)])
   for(const row of t('allowed_grid_combinations').filter(r=>relevantGlass.has(r.glass_option_id as string)&&r.customer_selectable)){
     const glass=byId.get(row.glass_option_id as string)!
-    for(const context of notes(row).contexts){const pattern=legacy(row.grid_pattern_id)==='__no_pattern_selection__'?null:legacy(row.grid_pattern_id);const scope=glass.scope==='door'?glass.opening_code:c.sideliteStyle;const tuple={scope,glass:glass.legacy_id,location:context.location,profile:legacy(row.grid_profile_id),pattern,color:legacy(row.grid_color_id),width:row.width_selection_mode==='none'?null:legacy(row.grid_width_id),coating:legacy(row.glass_coating_id),path:context.path};snapshot.gridCombinations.choices.push(choice(gridKey(tuple),tuple));snapshot.gridAssets.choices.push(choice(gridKey(tuple),{paths:t('grid_combination_assets').filter(binding=>binding.grid_combination_id===row.id&&binding.view_key===context.location).map(binding=>byId.get(binding.asset_id as string)?.current_path).sort()}))}
+    const typed = Boolean(catalog.tables.grid_combination_locations)
+    const contexts = typed ? t('grid_combination_locations').filter(context=>context.grid_combination_id===row.id).map(context=>({location:legacy(context.grid_location_id),id:context.grid_location_id})) : notes(row).contexts
+    for(const context of contexts){
+      const bindings = t('grid_combination_assets').filter(binding=>binding.grid_combination_id===row.id&&(typed?binding.grid_location_id===context.id:binding.view_key===context.location))
+      const paths = bindings.map(binding=>byId.get(binding.asset_id as string)?.current_path).sort()
+      const members = typed ? t('grid_combination_coatings').filter(binding=>binding.grid_combination_id===row.id).map(binding=>legacy(binding.glass_coating_id)) : []
+      const coating = typed ? coatingLabel(members) : legacy(row.glass_coating_id)
+      const pattern=typed?(row.pattern_selection_mode==='none'?null:legacy(row.grid_pattern_id)):legacy(row.grid_pattern_id)==='__no_pattern_selection__'?null:legacy(row.grid_pattern_id)
+      const scope=glass.scope==='door'?glass.opening_code:c.sideliteStyle
+      const tuple={scope,glass:glass.legacy_id,location:context.location,profile:legacy(row.grid_profile_id),pattern,color:legacy(row.grid_color_id),width:row.width_selection_mode==='none'?null:legacy(row.grid_width_id),coating,path:typed?(paths[0]??null):context.path}
+      snapshot.gridCombinations.choices.push(choice(gridKey(tuple),tuple));snapshot.gridAssets.choices.push(choice(gridKey(tuple),{paths}))
+    }
   }
   snapshot.gridCombinations.choices=unique(snapshot.gridCombinations.choices)
   return snapshot
 }
 function order(a:CatalogRow,b:CatalogRow){return (a.display_order||0)-(b.display_order||0)}
+function coatingLabel(members:string[]) {
+  const key=[...members].sort().join('|')
+  const labels:Record<string,string>={'Low-E|Standard / No Low-E':'Standard / No Low-E or Low-E','Low-E|Low-E Plus':'Low-E or Low-E Plus','Low-E|Low-E Plus|Standard / No Low-E':'Standard / No Low-E, Low-E or Low-E Plus'}
+  if(members.length===1)return members[0]
+  if(!labels[key])throw new Error('Invalid atomic coating eligibility')
+  return labels[key]
+}
 function gridKey(tuple:Record<string,unknown>){return JSON.stringify(Object.entries(tuple).filter(([key])=>key!=='path'))}
 
 /** Independently enumerate the current UI's scoped rule dictionaries, not exporter rows. */

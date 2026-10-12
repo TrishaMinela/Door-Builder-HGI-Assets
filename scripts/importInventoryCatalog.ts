@@ -37,6 +37,13 @@ export function validateManifest(catalog:Catalog) {
   }
   for(const table of TABLES)for(const row of catalog.tables[table])for(const [key,value] of Object.entries(row))if(key.endsWith('_id')&&value!==null&&key!=='legacy_id'&&key!=='changed_by'&&key!=='published_by'&&!all.has(value))throw new Error(`Dangling ${table}.${key}`)
   for(const row of catalog.tables.allowed_grid_combinations)if((row.width_selection_mode==='none')!==(row.grid_width_id===null))throw new Error('Invalid grid width semantics')
+  for(const row of catalog.tables.allowed_grid_combinations) {
+    if((row.pattern_selection_mode==='none')!==(row.grid_pattern_id===null))throw new Error('Invalid grid pattern semantics')
+    if(!catalog.tables.grid_combination_locations.some(location=>location.grid_combination_id===row.id))throw new Error('Missing explicit grid location')
+    if(!catalog.tables.grid_combination_coatings.some(coating=>coating.grid_combination_id===row.id))throw new Error('Missing explicit coating eligibility')
+  }
+  for(const binding of catalog.tables.finish_assets)if(catalog.tables.finishes.find(f=>f.id===binding.finish_id)?.finish_type!=='stain')throw new Error('Paint must not require an image binding')
+  for(const binding of catalog.tables.grid_combination_assets)if(!catalog.tables.grid_combination_locations.some(location=>location.grid_combination_id===binding.grid_combination_id&&location.grid_location_id===binding.grid_location_id))throw new Error('Artwork must match an eligible location')
   for(const row of catalog.tables.glass_options)if(/\blinen\b/i.test(row.display_name)&&(row.customer_selectable||!row.renderable))throw new Error('Linen lifecycle mismatch')
   if(catalog.tables.hardware_variants.length!==catalog.sourceCounts.hardwareProducts)throw new Error('Artwork views became sellable hardware')
   if(catalog.tables.catalog_revisions.length!==1||catalog.tables.catalog_revisions[0].status!=='draft'||catalog.tables.catalog_revisions[0].published_at!==null)throw new Error('Only one unpublished draft is permitted')

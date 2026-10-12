@@ -21,22 +21,25 @@ import { hardwareOptions, allHardwareAssets, hardwareCardAssetUrl, hardwareAsset
 import { doorConfigurationRules, doubleDoorLockPrepOptions } from '../src/data/doorConfigurationRules'
 import { sideliteProductOptions, sideliteBuilderOptions } from '../src/data/sideliteConfigurations'
 import { builderUx } from '../src/config/builderUx'
+import { normalizeCleanupTables } from './inventory/normalizeCleanup'
 import type { DoorStyle, GridColor, GridPattern } from '../src/types'
 
-export const FORMAT = 'hgi-inventory-phase3b-v1'
-export const TABLES = ['catalog_revisions','materials','series','grains','door_line_groups','door_lines','door_line_group_members','door_styles','door_variants','finishes','door_variant_finishes','frame_materials','frame_material_finishes','door_variant_frame_materials','glass_families','glass_designs','glass_options','door_variant_glass_options','sidelite_styles','sidelite_variants','door_variant_sidelites','sidelite_variant_glass_options','hardware_brands','hardware_styles','hardware_finishes','hardware_variants','grid_profiles','grid_patterns','grid_colors','grid_widths','glass_coatings','allowed_grid_combinations','assets','door_variant_assets','glass_option_assets','sidelite_variant_assets','hardware_variant_assets','finish_assets','grid_combination_assets','catalog_change_log'] as const
+export const FORMAT = 'hgi-inventory-prephase5-v2'
+export const TABLES = ['catalog_revisions','materials','series','grains','door_line_groups','door_lines','door_line_group_members','door_styles','door_variants','finishes','door_variant_finishes','frame_materials','frame_material_finishes','door_variant_frame_materials','glass_families','glass_designs','glass_options','door_variant_glass_options','sidelite_styles','sidelite_variants','door_variant_sidelites','sidelite_variant_glass_options','hardware_brands','hardware_styles','hardware_finishes','hardware_variants','grid_profiles','grid_patterns','grid_colors','grid_widths','glass_coatings','grid_locations','allowed_grid_combinations','grid_combination_locations','grid_combination_coatings','assets','door_variant_assets','glass_option_assets','sidelite_variant_assets','hardware_variant_assets','finish_assets','grid_combination_assets','catalog_change_log'] as const
 export type Row = Record<string, any>
 export type Catalog = Awaited<ReturnType<typeof exportInventoryCatalog>>
 export const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex')
 export function canonical(value: any): string { return JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item) ? Object.fromEntries(Object.entries(item).sort(([a],[b]) => a.localeCompare(b,'en'))) : item) }
 export function uuid(key: string) { const h = hash(key); return `${h.slice(0,8)}-${h.slice(8,12)}-5${h.slice(13,16)}-a${h.slice(17,20)}-${h.slice(20,32)}` }
 
-export async function exportInventoryCatalog(commit = 'HEAD') {
+export async function exportInventoryCatalog(commit = 'HEAD', { workingTree = false } = {}) {
   const sourceCommit = execFileSync('git',['rev-parse',`${commit}^{commit}`],{encoding:'utf8'}).trim()
-  if (execFileSync('git',['status','--porcelain','--','src','public/assets'],{encoding:'utf8'}).trim()) throw new Error('Runtime source/assets are dirty; export must use the current committed catalog')
+  if (!workingTree && execFileSync('git',['status','--porcelain','--','src','public/assets'],{encoding:'utf8'}).trim()) throw new Error('Runtime source/assets are dirty; export must use the current committed catalog')
   const sources = ['src/App.tsx','src/types.ts','src/config/builderUx.ts',...readdirSync('src/data').filter(n=>n.endsWith('.ts')).map(n=>`src/data/${n}`)].sort()
-  for(const path of sources)if(execFileSync('git',['show',`${sourceCommit}:${path}`],{encoding:'utf8'})!==readFileSync(path,'utf8'))throw new Error(`Source commit does not match catalog file ${path}`)
-  execFileSync('git',['diff','--exit-code',sourceCommit,'--','public/assets'],{stdio:'pipe'})
+  if (!workingTree) {
+    for(const path of sources)if(execFileSync('git',['show',`${sourceCommit}:${path}`],{encoding:'utf8'})!==readFileSync(path,'utf8'))throw new Error(`Source commit does not match catalog file ${path}`)
+    execFileSync('git',['diff','--exit-code',sourceCommit,'--','public/assets'],{stdio:'pipe'})
+  }
   const sourceChecksum = hash(sources.map(p=>`${p}\n${readFileSync(p,'utf8')}`).join('\n'))
   const revisionId = uuid(`${FORMAT}:${sourceCommit}:${sourceChecksum}`)
   const tables = Object.fromEntries(TABLES.map(name=>[name,[] as Row[]])) as Record<typeof TABLES[number],Row[]>
@@ -84,7 +87,7 @@ export async function exportInventoryCatalog(commit = 'HEAD') {
   }
   for(const finish of finishes) {
     const id=fact('finishes',finish.id,finish.name,{finish_type:finish.finishType,hex_color:finish.color,description:finish.description,notes:note({source:finish})})
-    binding('finish_assets','finish_id',id,finish.image,'finish_swatch')
+    if(finish.finishType==='stain')binding('finish_assets','finish_id',id,finish.image,'finish_swatch')
   }
   for(const kind of ['timber','clad']) {
     const frame=fact('frame_materials',kind,kind==='timber'?'Timber':'Clad',{frame_kind:kind,customer_selectable:builderUx.showJambMaterialSelection,notes:note({hiddenSelector:!builderUx.showJambMaterialSelection})})
@@ -219,16 +222,17 @@ export async function exportInventoryCatalog(commit = 'HEAD') {
     const metadata=await sharp(bytes).metadata()
     Object.assign(row,{mime_type:metadata.format==='svg'?'image/svg+xml':`image/${metadata.format}`,width:metadata.width??null,height:metadata.height??null,byte_size:bytes.length,checksum:hash(bytes),has_transparency:metadata.hasAlpha??false})
   }
-  issues.push('Grid location is preserved in notes.contexts because Phase 2 allowed_grid_combinations has no location column; future shadow adapter must compare those contexts, not only profile/width.')
-  issues.push('Main-door Prairie has no numeric pattern selection. An internal non-selectable grid-pattern sentinel satisfies the Phase 2 non-null FK; it is not a new customer option.')
+  issues.push('Grid eligibility locations, atomic coatings and artwork locations use typed relationships; notes retain provenance only.')
+  issues.push('Main-door Prairie has NULL pattern with mode none; sidelite Prairie has an implicit numeric pattern. Retained legacy sentinel is not referenced by combinations or selectable.')
   issues.push('No physical stock, manufacturing size or new hardware restrictions invented; catalog mirrors current application eligibility, not supplier stock.')
+  Object.assign(tables,normalizeCleanupTables(tables,revisionId))
   const catalogChecksum=hash(canonical({tables,sourceFacts}))
-  tables.catalog_revisions=[{id:revisionId,status:'draft',source_commit:sourceCommit,published_at:null,published_by:null,notes:note({format:FORMAT,sourceChecksum,catalogChecksum,sourceFacts,issues:[...new Set(issues)].sort()})}]
+  tables.catalog_revisions=[{id:revisionId,status:'draft',source_commit:sourceCommit,published_at:null,published_by:null,notes:note({format:FORMAT,workingTree,sourceChecksum,catalogChecksum,sourceFacts,issues:[...new Set(issues)].sort()})}]
   tables.catalog_change_log=[{id:uuid(`${revisionId}:import-log`),catalog_revision_id:revisionId,entity_table:'catalog_revisions',entity_id:revisionId,action:'import',change_summary:`${FORMAT}: deterministic DEV import; unpublished`,after_data:{catalogChecksum,sourceCommit}}]
   for(const rows of Object.values(tables))rows.sort((a,b)=>a.id.localeCompare(b.id,'en'))
   return {format:FORMAT,sourceCommit,sourceChecksum,catalogChecksum,revisionId,tables,counts:Object.fromEntries(TABLES.map(t=>[t,tables[t].length])),sourceCounts:{doorLines:productCatalog.length,doorStyles:catalogDoorStyles.length,doorVariants:catalogDoorStyles.flatMap(s=>s.variants).length,finishes:finishes.length,mainGlassRows:glassOptions.length,mainGlassUnique:uniqueGlass.size,reachableMainGlassIds:reachable.size,sideliteGlassRows:Object.values<any>(sideCatalogs).reduce((n,c)=>n+c.options.length,0),hardwareProducts:hardwareOptions.length,hardwareArtworkRows:allHardwareAssets.length},issues:[...new Set(issues)].sort()}
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
-  exportInventoryCatalog(process.argv.find(arg=>arg.startsWith('--source-commit='))?.split('=')[1]).then(catalog=>console.log(JSON.stringify(process.argv.includes('--full')?catalog:{...catalog,tables:undefined},null,2))).catch(error=>{console.error(error.message);process.exitCode=1})
+  exportInventoryCatalog(process.argv.find(arg=>arg.startsWith('--source-commit='))?.split('=')[1],{workingTree:process.argv.includes('--working-tree')}).then(catalog=>console.log(JSON.stringify(process.argv.includes('--full')?catalog:{...catalog,tables:undefined},null,2))).catch(error=>{console.error(error.message);process.exitCode=1})
 }

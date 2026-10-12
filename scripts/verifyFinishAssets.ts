@@ -1,0 +1,50 @@
+import assert from 'node:assert/strict'
+import { spawn } from 'node:child_process'
+import { statSync, readdirSync } from 'node:fs'
+import { chromium } from 'playwright-core'
+import { finishes } from '../src/data/options'
+import { paintColors, stainColors } from '../src/data/finishes'
+
+assert.equal(finishes.length,47)
+for(const color of paintColors){const f=finishes.find(f=>f.id===`paint-${color.id}`)!;assert.equal(f.name,color.name);assert.equal(f.color,color.hex);assert.equal(f.image,'')}
+for(const color of stainColors){const f=finishes.find(f=>f.id===`stain-${color.id}`)!;assert.equal(f.color,color.hex);assert.equal(f.image,`/assets/finishes/stain/${color.id}.webp`);assert.ok(statSync(`public${f.image}`).size>0)}
+assert.equal(readdirSync('public/assets/finishes/stain').filter(f=>f.endsWith('.webp')).length,21)
+const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port','5197','--strictPort'],{stdio:'pipe',env:{...process.env,VITE_INVENTORY_SHADOW:'false'}})
+let browser:Awaited<ReturnType<typeof chromium.launch>>|undefined
+try{
+ await new Promise<void>((resolve,reject)=>{server.stdout.on('data',c=>{if(String(c).includes('127.0.0.1:5197'))resolve()});server.once('error',reject);server.once('exit',c=>reject(new Error(`Vite exited ${c}`)));setTimeout(()=>reject(new Error('Vite start timeout')),10000).unref()})
+ browser=await chromium.launch({executablePath:process.env.CHROME_EXECUTABLE||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true})
+ const page=await browser.newPage({viewport:{width:1280,height:1000}}),paintRequests:string[]=[]
+ page.on('request',r=>{if(r.url().includes('/assets/finishes/paint/'))paintRequests.push(r.url())})
+ await page.addInitScript('globalThis.__name = (target) => target')
+ await page.goto('http://127.0.0.1:5197/scripts/pdfRendererHarness.html');await page.waitForFunction(()=> 'pdfFixtures' in window)
+ const pdf=await page.evaluate(async()=>{
+  const load=(path:string)=>import(path)
+  const {finishes,doorStyles,glassOptions,hardwareOptions}=await load('/src/data/options.ts'),{resolveDoorProduct}=await load('/src/data/productCatalog.ts'),{renderPdfProduct}=await load('/src/utils/pdfProductRenderer.ts')
+  const style=doorStyles.find(s=>s.code==='F')!,glass=glassOptions.find(g=>g.id==='f-clear-no-grids')!
+  const render=async(finish:any)=>renderPdfProduct({style,finish,product:resolveDoorProduct(style,finish,finish.finishType==='stain'?'Oak':undefined,'22-gauge-steel'),grain:finish.finishType==='stain'?'Oak':null,glass,hardware:hardwareOptions[0],doorSwing:{id:'LHI',name:'Left Hand Inswing',image:''},sidelites:'none',doorConfigurationType:'single'} as any,{glass,jambFinish:finish,glassFrameFinish:finish})
+  let paints=0,stains=0
+  for(const f of finishes){const actual=await render(f);if(f.finishType==='paint'){const legacy=await render({...f,image:`/assets/finishes/paint/${f.id.slice(6)}.webp`});if(actual.dataUrl!==legacy.dataUrl||actual.assets.some(p=>p.includes('/finishes/paint/')))throw new Error(`Paint changed: ${f.id}`);paints++}else{if(!actual.assets.includes(f.image))throw new Error(`Stain texture missing: ${f.id}`);stains++}}
+  let rejected=false;try{await render({...finishes.find(f=>f.id==='stain-nutmeg')!,image:'/assets/finish-regression-missing.webp'})}catch(e){rejected=/PDF asset could not be loaded/.test((e as Error).message)}
+  return {paints,stains,missingStainRejected:rejected}
+ })
+ assert.deepEqual(pdf,{paints:26,stains:21,missingStainRejected:true})
+ const capture=await page.evaluate(async()=>{
+  const load=(path:string)=>import(path)
+  const rm=await load('/node_modules/.vite/deps/react.js'),React=rm.default??rm,dm=await load('/node_modules/.vite/deps/react-dom_client.js'),createRoot=dm.createRoot??dm.default.createRoot
+  const {DoorPreview}=await load('/src/components/DoorPreview.tsx'),{captureFinalDoorPreview}=await load('/src/features/home-visualizer/captureDoorPreview.ts'),{finishes,doorStyles,glassOptions,hardwareOptions}=await load('/src/data/options.ts'),{resolveDoorProduct}=await load('/src/data/productCatalog.ts')
+  const css=document.createElement('link');css.rel='stylesheet';css.href='/src/styles.css';document.head.appendChild(css);await new Promise(r=>css.onload=r)
+  const style=doorStyles.find(s=>s.code==='F')!,glass=glassOptions.find(g=>g.id==='f-clear-no-grids')!,result:any[]=[]
+  for(const id of ['paint-black','paint-white','paint-wineberry','stain-nutmeg'])for(const variant of ['current','legacy']){
+   const original=finishes.find(f=>f.id===id)!,finish={...original,image:variant==='legacy'&&original.finishType==='paint'?`/assets/finishes/paint/${id.slice(6)}.webp`:original.image},key=id+variant
+   const host=document.createElement('div');host.style.cssText='width:700px;height:900px';document.body.appendChild(host);const root=createRoot(host);let ready=false
+   root.render(React.createElement(DoorPreview,{style,glass,finish,hardware:hardwareOptions[0],product:resolveDoorProduct(style,finish,finish.finishType==='stain'?'Oak':undefined,'22-gauge-steel'),grain:finish.finishType==='stain'?'Oak':null,jambFinish:finish,glassFrameFinish:finish,applyFinish:true,view:'Exterior',showViewToggle:false,renderConfigurationKey:key,onRenderReadinessChange:(s:any)=>{ready=s.ready}}))
+   for(let i=0;i<100&&!ready;i++)await new Promise(r=>setTimeout(r,100))
+   const cap=await captureFinalDoorPreview(host,{frameMode:'visible',preserveCanonicalFrameBounds:true,expectedConfigurationKey:key}),hash=await crypto.subtle.digest('SHA-256',await cap.blob.arrayBuffer())
+   result.push({id,variant,hash:Array.from(new Uint8Array(hash)).map(n=>n.toString(16).padStart(2,'0')).join('')});root.unmount();host.remove()
+  }return result
+ })
+ for(let i=0;i<capture.length;i+=2)assert.equal(capture[i].hash,capture[i+1].hash,`Reference pixels changed: ${capture[i].id}`)
+ assert.equal(paintRequests.length,0)
+ console.log(JSON.stringify({pdf,capturePairs:capture.length/2,paintRequests:paintRequests.length,stainFiles:21,paidAiRequests:0,passed:true},null,2))
+}finally{await browser?.close();server.kill('SIGTERM')}
