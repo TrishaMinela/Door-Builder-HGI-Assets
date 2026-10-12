@@ -163,7 +163,7 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
   const placement = sidelitePlacement(config.sidelites, config.doorSwing.id, config.doorConfigurationType)
   if (placement !== 'none' && (!assets.sideliteAssetSrc || !assets.sideliteMaskSrc)) throw new Error('PDF sidelite slab/mask assets are missing.')
   if (placement !== 'none' && config.sideliteGlass && !assets.sideliteGlassSrc && !assets.sideliteClearGlassBase) throw new Error(`PDF sidelite glass asset is missing: ${config.sideliteGlass.glass}`)
-  const urls = [maskUrl, code === 'HRT' ? '/assets/masks/HRT.png' : undefined, glassUrl, clearUrl, hardwareUrl, ...(placement !== 'none' ? [assets.sideliteAssetSrc, assets.sideliteMaskSrc, assets.sideliteGlassSrc] : []), assets.glassFrameFinish?.finishType === 'stain' ? assets.glassFrameFinish.image : undefined].filter((url): url is string => Boolean(url))
+  const urls = [maskUrl, code === 'HRT' ? '/assets/masks/HRT.png' : undefined, glassUrl, clearUrl, hardwareUrl, ...(placement !== 'none' ? [assets.sideliteAssetSrc, assets.sideliteMaskSrc, assets.sideliteGlassSrc] : [])].filter((url): url is string => Boolean(url))
   const loaded = new Map(await Promise.all([...new Set(urls)].map(async url => [url, await loadPdfImage(url)] as const)))
   const get = (url?: string | null) => url ? loaded.get(url) : undefined
   const main = await prepareSurface(slab, get(maskUrl), config.finish, code, get(code === 'HRT' ? '/assets/masks/HRT.png' : undefined))
@@ -200,15 +200,6 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
     if (!finish || !frame) return
     const width = surface.image.width / PIXEL_SCALE, height = surface.image.height / PIXEL_SCALE
     const tint = clippedLayer(frame, undefined, width, height, finish.color)
-    if (finish.finishType === 'stain') {
-      const texture = get(finish.image)!
-      const tinted = context(tint)
-      tinted.globalCompositeOperation = 'multiply'
-      tinted.globalAlpha = FINISH_RENDERING.stainDetailOpacity
-      tinted.drawImage(clippedLayer(texture, frame, width, height), 0, 0)
-      tinted.globalAlpha = 1
-      tinted.globalCompositeOperation = 'source-over'
-    }
     ctx.drawImage(tint, 0, 0, ENTRANCE_GEOMETRY.slabWidth, geometry.openingHeight)
   }
   function drawSide(x: number) {
@@ -242,7 +233,7 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
       ctx.save()
       if (code === 'SAT') { ctx.translate(121, 284.5); ctx.scale(1.1, 1.1); ctx.translate(-121, -274.5) }
       ctx.drawImage(clippedLayer(glass, code === 'SAT' || (code === 'HRT' && selectedGlass?.id !== 'hrt-clear-s11rt') ? undefined : main.glass, slab.naturalWidth, slab.naturalHeight, assets.gridMatchesFinish ? config.finish.color : undefined), 0, 0, 242, 549)
-      if (hrtTrim && assets.glassFrameFinish) { ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(clippedLayer(hrtTrim, main.glass, slab.naturalWidth, slab.naturalHeight, assets.glassFrameFinish.color), 0, 0, 242, 549); ctx.globalCompositeOperation = 'source-over' }
+      if (hrtTrim && assets.glassFrameFinish) { ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(clippedLayer(hrtTrim, main.glass, slab.naturalWidth, slab.naturalHeight, assets.glassFrameFinish.color), 0, 0, 242, 549); ctx.globalCompositeOperation = 'source-over' }
       ctx.restore()
     }
     if (code === 'SAT') { ctx.save(); ctx.translate(121, 274.5 + 10); ctx.scale(1.1, 1.1); ctx.translate(-121, -274.5); drawGlassFrame(main, satFrame); ctx.restore() }

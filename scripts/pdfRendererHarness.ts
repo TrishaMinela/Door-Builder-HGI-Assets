@@ -87,6 +87,15 @@ const fixtures = [
   { name: 'textured-fiberglass-ssl', ...halfSideliteFixture('textured-fiberglass') },
   { name: 'french-left-active', ...activeFrenchFixture(false) },
   { name: 'french-right-active', ...activeFrenchFixture(true) },
+  ...[
+    ['F', 'paint-white', 'f-clear-no-grids'], ['F', 'paint-black', 'f-clear-no-grids'],
+    ['F', 'stain-nutmeg', 'f-clear-no-grids'], ['S', 'stain-black-cherry', 's-clear-no-grids'],
+    ['HRT', 'stain-nutmeg', 'hrt-clear-s11rt'], ['SAT', 'stain-nutmeg', 'sat-clear-nonstock'],
+  ].map(([code, finishId, glassId]) => {
+    const item = fixture(code, finishId, 'none', 'single', glassId)
+    item.appearance.glassFrameFinish = item.configuration.finish
+    return { name: `plain-frame-${code}-${finishId}`, ...item }
+  }),
 ]
 let liveRoot: Root | undefined
 Object.assign(window, {

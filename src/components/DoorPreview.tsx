@@ -894,14 +894,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const glassFrameTintStyle = glassFrameFinish && glassFrameMaskStyle ? {
     ...glassFrameMaskStyle,
     backgroundColor: glassFrameFinish.color,
-    ...(glassFrameFinish.finishType === 'stain' ? { backgroundImage: `url("${glassFrameFinish.image}")`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
-    opacity: glassFrameFinish.finishType === 'paint' ? FINISH_RENDERING.paintColorOpacity : FINISH_RENDERING.stainColorOpacity,
-  } as React.CSSProperties : undefined
-  const glassFrameDetailStyle = glassFrameFinish && glassFrameMaskStyle ? {
-    ...glassFrameMaskStyle,
-    mixBlendMode: glassFrameFinish.finishType === 'paint' ? FINISH_RENDERING.paintDetailBlendMode : FINISH_RENDERING.stainDetailBlendMode,
-    opacity: glassFrameFinish.finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity,
-    filter: `grayscale(1) contrast(${glassFrameFinish.finishType === 'paint' ? 1.12 : FINISH_RENDERING.stainContrast})`,
+    opacity: 1,
   } as React.CSSProperties : undefined
   const sideliteGlassFrameMaskStyle = glassFrameFinish && sideliteFinishMask?.glassFrameUrl ? {
     WebkitMaskImage: `url("${sideliteFinishMask.glassFrameUrl}")`,
@@ -914,14 +907,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const sideliteGlassFrameTintStyle = glassFrameFinish && sideliteGlassFrameMaskStyle ? {
     ...sideliteGlassFrameMaskStyle,
     backgroundColor: glassFrameFinish.color,
-    ...(glassFrameFinish.finishType === 'stain' ? { backgroundImage: `url("${glassFrameFinish.image}")`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
-    opacity: glassFrameFinish.finishType === 'paint' ? FINISH_RENDERING.paintColorOpacity : FINISH_RENDERING.stainColorOpacity,
-  } as React.CSSProperties : undefined
-  const sideliteGlassFrameDetailStyle = glassFrameFinish && sideliteGlassFrameMaskStyle ? {
-    ...sideliteGlassFrameMaskStyle,
-    mixBlendMode: glassFrameFinish.finishType === 'paint' ? FINISH_RENDERING.paintDetailBlendMode : FINISH_RENDERING.stainDetailBlendMode,
-    opacity: glassFrameFinish.finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity,
-    filter: `grayscale(1) contrast(${glassFrameFinish.finishType === 'paint' ? 1.12 : FINISH_RENDERING.stainContrast})`,
+    opacity: 1,
   } as React.CSSProperties : undefined
   const detailLayerStyle = finishMask ? canonicalSurfaceDetailStyle(finishMask, finish.finishType) : undefined
   const activeSideliteFinishMask = sideliteFinishMask && sideliteFinishMask.slab === sideliteAssetSrc && sideliteFinishMask.mask === sideliteMaskSrc ? sideliteFinishMask.url : undefined
@@ -1031,7 +1017,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   return (
     <div ref={previewSceneRef} className={`preview-scene ${compact ? 'compact' : ''}`} data-render-configuration-key={renderConfigurationKey} data-render-semantically-ready={semanticLayersReady ? 'true' : 'false'} aria-busy={previewAssetsLoading} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
       <div className="preview-glow" />
-      <DoorFrame doorConfigurationType={doorConfigurationType} view={renderView} className={doorConfigurationType === 'savannah' && previewView === 'Interior' ? 'savannah-interior-mirrored' : ''} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={renderedSideliteGlass} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGlassIsGrid={sideliteGlassIsGrid} sideliteGridIsPrairie={sideliteGridIsPrairie} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteGridFinishColor={applyFinish ? finishColor : '#d9d9d9'} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteGlassOpeningStyle={sideliteGlassOpeningStyle} sideliteGlassFrameMaskStyle={sideliteGlassFrameMaskStyle} sideliteGlassFrameTintStyle={sideliteGlassFrameTintStyle} sideliteGlassFrameDetailStyle={sideliteGlassFrameDetailStyle}>
+      <DoorFrame doorConfigurationType={doorConfigurationType} view={renderView} className={doorConfigurationType === 'savannah' && previewView === 'Interior' ? 'savannah-interior-mirrored' : ''} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={renderedSideliteGlass} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGlassIsGrid={sideliteGlassIsGrid} sideliteGridIsPrairie={sideliteGridIsPrairie} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteGridFinishColor={applyFinish ? finishColor : '#d9d9d9'} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteGlassOpeningStyle={sideliteGlassOpeningStyle} sideliteGlassFrameMaskStyle={sideliteGlassFrameMaskStyle} sideliteGlassFrameTintStyle={sideliteGlassFrameTintStyle}>
         {Array.from({ length: doorConfigurationLeafCount(doorConfigurationType) }).map((_, leafIndex) => {
           // Resolve leaf-local hardware placement through the same mapping as
           // the PDF renderer; Savannah stays on its fixed outer-left edge.
@@ -1049,9 +1035,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
           {finishLayerStyle && <div className={`door-finish-layer door-finish-layer-${finish.finishType}`} style={finishLayerStyle} />}
           {previewImage && finishLayerStyle && showDetailImage && <img className="door-detail-image" src={previewImage} alt="" decoding="async" style={detailLayerStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           <div className="door-glass-assembly">
-          {previewImage && glassFrameMaskStyle && <img className="door-glass-frame-material" src={previewImage} alt="" decoding="async" style={glassFrameMaskStyle} />}
           {glassFrameTintStyle && <div className="door-glass-frame-tint" style={glassFrameTintStyle} />}
-          {previewImage && glassFrameDetailStyle && <img className="door-glass-frame-detail" src={previewImage} alt="" decoding="async" style={glassFrameDetailStyle} />}
           {clearNoGridOverlay && <img className="door-glass-overlay door-clear-glass-base" src={fittedClearBase?.source === clearNoGridOverlay && fittedClearBase.maskSource === previewImage ? fittedClearBase.url : clearNoGridOverlay} alt="" decoding="async" style={glassOverlayStyle} onLoad={(event) => { event.currentTarget.style.display = '' }} onError={(event) => { event.currentTarget.style.display = 'none' }} />}
           {isHrtDoor
             ? glassOverlay && <>

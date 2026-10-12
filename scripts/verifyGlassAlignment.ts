@@ -12,16 +12,19 @@ try {
     setTimeout(() => reject(new Error('Vite startup timeout')), 10000).unref()
   })
   browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
-  for (const width of [1280, 768, 390]) {
+  for (const width of [1280, 768, 390]) for (const finish of ['paint-white', 'stain-nutmeg', 'stain-black-cherry']) {
     const page = await browser.newPage({ viewport: { width, height: 900 } })
     await page.addInitScript('window.__name = (fn) => fn')
-    await page.goto('http://127.0.0.1:5191/scripts/glassAlignmentHarness.html')
+    await page.goto(`http://127.0.0.1:5191/scripts/glassAlignmentHarness.html?finish=${finish}`)
     await page.waitForFunction(() => [...document.querySelectorAll('.preview-scene')].length === 5 && [...document.querySelectorAll('.preview-scene')].every(scene => scene.getAttribute('data-render-semantically-ready') === 'true'), { timeout: 60000 })
     const result = await page.evaluate(() => [...document.querySelectorAll('.door-glass-assembly,.door-frame-sidelite-glass-assembly')].map(wrapper => {
       const main = wrapper.classList.contains('door-glass-assembly')
-      const frame = wrapper.querySelector<HTMLElement>(main ? '.door-glass-frame-material' : '.door-frame-sidelite-glass-frame-material')!
+      const frame = wrapper.querySelector<HTMLElement>(main ? '.door-glass-frame-tint' : '.door-frame-sidelite-glass-frame-tint')!
       const glass = wrapper.querySelector<HTMLElement>(main ? '.door-glass-overlay' : '.door-frame-sidelite-glass')!
       const mask = main ? glass : wrapper.querySelector<HTMLElement>('.door-frame-sidelite-glass-clip')!
+      const treatment = getComputedStyle(frame)
+      if (treatment.opacity !== '1' || treatment.backgroundImage !== 'none' || treatment.mixBlendMode !== 'normal' || treatment.filter !== 'none') throw new Error('Glass frame must use a plain opaque color without gloss/texture/detail blending')
+      if (wrapper.querySelector('.door-glass-frame-material,.door-glass-frame-detail,.door-frame-sidelite-glass-frame-material,.door-frame-sidelite-glass-frame-detail')) throw new Error('Glossy authored material/detail layers must not be reintroduced')
       const rect = (element: Element) => { const r = element.getBoundingClientRect(); return [r.x, r.y, r.width, r.height] }
       return { code: wrapper.closest('[data-fixture]')!.getAttribute('data-fixture'), main, frame: rect(frame), glass: rect(glass), frameFit: getComputedStyle(frame).objectFit, glassFit: getComputedStyle(glass).objectFit, frameMask: getComputedStyle(frame).maskSize, glassMask: getComputedStyle(mask).maskSize, frameTransform: getComputedStyle(frame).transform, glassTransform: getComputedStyle(glass).transform }
     }))
@@ -34,7 +37,7 @@ try {
       item.frame.forEach((value, index) => assert.ok(Math.abs(value - item.glass[index]) < 1, JSON.stringify(item)))
       assert.equal(item.frameTransform, item.glassTransform, JSON.stringify(item))
     }
-    await page.locator('[data-fixture="F"]').screenshot({ path: `/tmp/glass-alignment-${width}.png` })
+    await page.locator('[data-fixture="F"]').screenshot({ path: `/tmp/glass-alignment-${width}-${finish}.png` })
     console.log(`${width}px: five door styles and two sidelites have matching frame/glass bounds and fill scaling.`)
     await page.close()
   }

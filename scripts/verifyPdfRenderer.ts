@@ -58,6 +58,40 @@ try {
     await page.locator('#live-preview').screenshot({ path: `${output}/${name}-live.png` })
     console.log(`${name}: selected ${finish.color}; PDF slab RGBA ${rgba}`)
   }
+  for (const name of names.filter(name => name.startsWith('plain-frame-'))) {
+    const index = names.indexOf(name), result = results[index]
+    const finishId = name.replace(/^plain-frame-[^-]+-/, '')
+    const finish = finishes.find(item => item.id === finishId)!
+    await page.evaluate(index => (window as unknown as { mountLiveFixture: (i: number) => Promise<unknown> }).mountLiveFixture(index), index)
+    const frame = page.locator('#live-preview .door-glass-frame-tint')
+    assert.equal(await frame.evaluate(element => getComputedStyle(element).opacity), '1')
+    assert.equal(await frame.evaluate(element => getComputedStyle(element).backgroundImage), 'none')
+    assert.equal(await page.locator('#live-preview .door-glass-frame-detail,#live-preview .door-glass-frame-material').count(), 0)
+    if (/^plain-frame-(F|S)-/.test(name)) {
+      const point = await frame.evaluate(async element => {
+        const mask = getComputedStyle(element).maskImage.match(/url\(["']?(.*?)["']?\)/)![1]
+        const image = new Image(); image.src = mask; await image.decode()
+        const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height
+        const ctx = canvas.getContext('2d')!; ctx.drawImage(image, 0, 0)
+        const pixels = ctx.getImageData(0, 0, image.width, image.height).data
+        for (let y = 3; y < image.height - 3; y++) for (let x = 3; x < image.width - 3; x++) {
+          if ([-2, 0, 2].every(dy => [-2, 0, 2].every(dx => pixels[((y + dy) * image.width + x + dx) * 4 + 3] === 255))) return { x: (x + .5) / image.width, y: (y + .5) / image.height }
+        }
+        throw new Error('No opaque glass frame sample found')
+      })
+      const g = result.geometry, scale = Math.min((result.width - 32) / g.totalWidth, (result.height - 32) / g.totalHeight)
+      const x = Math.round((result.width - g.totalWidth * scale) / 2 + (g.doorLeft + point.x * 242) * scale)
+      const y = Math.round((result.height - g.totalHeight * scale) / 2 + (g.contentTop + point.y * 549) * scale)
+      const pixels = await sharp(Buffer.from(result.dataUrl.split(',')[1], 'base64')).ensureAlpha().raw().toBuffer()
+      const rgb = [1, 3, 5].map(offset => parseInt(finish.color.slice(offset, offset + 2), 16))
+      rgb.forEach((channel, i) => assert.ok(Math.abs(pixels[(y * result.width + x) * 4 + i] - channel) <= 3, `${name}: PDF border retains exact finish without shaded/texture overlays`))
+      const bounds = await frame.boundingBox(); assert.ok(bounds)
+      const sample = await page.screenshot({ clip: { x: bounds.x + point.x * bounds.width, y: bounds.y + point.y * bounds.height, width: 1, height: 1 } })
+      const live = await sharp(sample).ensureAlpha().raw().toBuffer()
+      rgb.forEach((channel, i) => assert.ok(Math.abs(live[i] - channel) <= 3, `${name}: live border matches flat PDF border`))
+    }
+    await page.locator('#live-preview').screenshot({ path: `${output}/${name}-live.png` })
+  }
   const clayPdf = await page.evaluate(index => (window as unknown as { createFinishPdf: (i: number) => Promise<string> }).createFinishPdf(index), names.indexOf('N1-clay'))
   await writeFile(`${output}/N1-clay.pdf`, Buffer.from(clayPdf.split(',')[1], 'base64'))
   for (const name of ['smooth-steel-ssl', 'textured-fiberglass-ssl']) {
