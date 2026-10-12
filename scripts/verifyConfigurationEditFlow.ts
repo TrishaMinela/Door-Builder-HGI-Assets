@@ -203,8 +203,9 @@ try {
     await page.getByRole('button', { name: 'Edit Sidelites', exact: true }).click()
     await card(/^Both Sidelites$/).click()
     await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
-    // New sidelites require their own product choices, not a broken final render.
-    await page.getByRole('heading', { name: 'Choose Your Sidelite Slab' }).waitFor()
+    // The first compatible sidelite slab is now selected automatically;
+    // new sidelites still need glass choices before returning to the render.
+    await page.getByRole('heading', { name: 'Choose Sidelite Glass Type' }).waitFor()
     await walkToSummary()
     await page.getByRole('button', { name: 'Done Editing', exact: true }).click()
     await page.getByRole('dialog').waitFor()

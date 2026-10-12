@@ -12,6 +12,7 @@
     "test:entrance-compatibility": "node --import tsx scripts/verifyEntranceCompatibility.ts",
     "test:submission": "node --import tsx scripts/verifySubmissionPayload.ts",
     "test:door-builder-draft": "node --import tsx scripts/verifyDoorBuilderDraft.ts",
+    "test:dependent-door-defaults": "node --import tsx scripts/verifyDependentDoorDefaults.ts",
     "test:option-order": "node --import tsx scripts/verifyAlphabeticalOptions.ts",
     "test:configuration-edit": "node --import tsx scripts/verifyConfigurationEditFlow.ts",
     "test:stale-chunks": "node --import tsx scripts/verifyStaleChunkRecovery.ts",
