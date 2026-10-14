@@ -51,7 +51,8 @@ export const savannahRequiredProductOption: DoorConfigurationProductOption = {
 export const doorConfigurationRules: Record<DoorConfigurationType, DoorConfigurationRule> = {
   single: { type: 'single', label: 'Single Door', leafCount: 1, hasCenterMeetingStile: false, hardwareMode: 'single' },
   french: { type: 'french', label: 'French Door', leafCount: 2, hasCenterMeetingStile: true, hardwareMode: 'both' },
-  savannah: { type: 'savannah', label: 'Savannah Door', leafCount: 2, hasCenterMeetingStile: true, hardwareMode: 'operating-leaf', requiredProductOption: savannahRequiredProductOption },
+  // HINGEOJ is retained as historical data, not exported for a center hinge.
+  savannah: { type: 'savannah', label: 'Savannah Door', leafCount: 2, hasCenterMeetingStile: true, hardwareMode: 'operating-leaf' },
 }
 
 export function normalizeDoorConfigurationType(value?: string | null): DoorConfigurationType {
@@ -93,9 +94,9 @@ export function doorHardwarePlacements(
   doubleDoorLockPrep?: DoubleDoorLockPrepCode | null,
 ): { leafIndex: number; side: DoorHardwareSide; mode: DoorHardwareRenderMode }[] {
   const rule = doorConfigurationRule(value)
-  // Savannah has a fixed left operating panel with its lock at the outer jamb,
-  // not the meeting-stile placement used by French lock preparation.
-  if (rule.type === 'savannah') return [{ leafIndex: 0, side: 'left', mode: 'full' }]
+  // Canonical exterior Savannah render: outer lock edge, center-facing hinge.
+  // Its full-unit interior mirror reverses this physical relationship together.
+  if (rule.type === 'savannah') return [{ leafIndex: operatingLeafSide === 'left' ? 0 : 1, side: operatingLeafSide, mode: 'full' }]
   if (rule.type === 'french' && !doubleDoorLockPrep) doubleDoorLockPrep = DEFAULT_FRENCH_LOCK_PREP
   if (rule.leafCount === 2 && doubleDoorLockPrep) {
     const activeLeafIndex = operatingLeafSide === 'right' ? 0 : 1

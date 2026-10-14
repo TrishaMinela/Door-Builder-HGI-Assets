@@ -141,10 +141,21 @@ try {
     assert.ok(requestedAssets.has(details.mainAsset), `${name}: exact configured artwork was loaded`)
     assert.ok(await page.locator('#live-preview .door-glass-overlay').evaluateAll(images => images.some(image => (image as HTMLImageElement).naturalWidth > 0)), `${name}: fitted live glass is rendered`)
   }
-  for (const name of ['restored-F-courtyard', 'restored-F48-briselle', 'restored-FSL-ber', 'explicit-terratone', ...names.filter(name => name.startsWith('six-panel-'))]) {
+  for (const name of ['restored-F-courtyard', 'restored-F48-briselle', 'restored-FSL-ber', 'explicit-terratone', ...names.filter(name => name.startsWith('six-panel-') || name.startsWith('savannah-inswing-'))]) {
     const pdf = await page.evaluate(index => (window as unknown as { createFinishPdf: (i: number) => Promise<string> }).createFinishPdf(index), names.indexOf(name))
     await writeFile(`${output}/${name}.pdf`, Buffer.from(pdf.split(',')[1], 'base64'))
   }
+  for (const id of ['LHI', 'RHI']) {
+    const index = names.indexOf(`savannah-inswing-${id}`)
+    const exterior = results[index]
+    await page.evaluate(i => (window as unknown as { mountLiveFixture: (i: number, view: string) => Promise<unknown> }).mountLiveFixture(i, 'Interior'), index)
+    const frame = page.locator('#live-preview .door-frame')
+    assert.ok(await frame.evaluate(element => element.classList.contains('savannah-interior-mirrored')))
+    assert.equal(await frame.locator(`.door-leaf-${id === 'LHI' ? 'right' : 'left'} .hardware`).count(), 1)
+    const pdfWhileInterior = await page.evaluate(i => (window as unknown as { renderFixture: (i: number) => Promise<RenderResult> }).renderFixture(i), index)
+    assert.equal(pdfWhileInterior.dataUrl, exterior.dataUrl, 'Savannah PDF stays Exterior and leaves the UI Interior unchanged')
+  }
+  assert.notEqual(results[names.indexOf('savannah-inswing-LHI')].dataUrl, results[names.indexOf('savannah-inswing-RHI')].dataUrl)
   const retina = await retinaContext.newPage()
   await retina.goto('http://127.0.0.1:5190/scripts/pdfRendererHarness.html')
   await retina.waitForFunction(() => 'pdfFixtures' in window)

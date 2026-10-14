@@ -1,4 +1,4 @@
-import type { DoorConfigurationType, DoorSwing, HardwareView } from '../types.js'
+import type { DoorConfiguration, DoorConfigurationType, DoorSwing, HardwareView } from '../types.js'
 
 export type DoorSide = 'left' | 'right'
 // Existing DoorPreview convention, viewed from outside. Do not reinterpret
@@ -16,5 +16,16 @@ export function frenchActiveDoorSide(handing: DoorSwing['id']): DoorSide {
   return oppositeDoorSide(doorHandingSides(handing).lockSide)
 }
 export function doorSwingDisplayName(type: DoorConfigurationType | '' | undefined, swing: DoorSwing): string {
-  return type === 'french' ? frenchActiveDoorSide(swing.id) === 'left' ? 'Left Active' : 'Right Active' : swing.name
+  if (type === 'french') return 'Both slabs operable'
+  if (type === 'savannah') {
+    const opening = savannahOpening(swing.id)
+    return `${opening.swing} - ${opening.swing === 'LHI' ? 'Left' : 'Right'} Hand Inswing; active slab ${opening.activeSlab.Interior} inside / ${opening.activeSlab.Exterior} outside`
+  }
+  return swing.name
+}
+
+export function savannahOpening(handing: DoorSwing['id']): NonNullable<DoorConfiguration['savannahOpening']> {
+  const exterior = doorHandingSides(handing, 'Exterior').lockSide
+  const interior = oppositeDoorSide(exterior)
+  return { swing: exterior === 'right' ? 'LHI' : 'RHI', referenceView: 'Interior', activeSlab: { Interior: interior, Exterior: exterior }, hardwareSide: { Interior: interior, Exterior: exterior }, hingeSide: { Interior: exterior, Exterior: interior }, hingeArrangement: 'beside-stationary-slab' }
 }

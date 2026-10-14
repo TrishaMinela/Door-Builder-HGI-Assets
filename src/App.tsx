@@ -22,7 +22,7 @@ import { isCustomerSelectableGlass, isHiddenDecorativeGlass } from './data/custo
 import { isGlassFamilyCompatible } from './data/glassFamilyCompatibility'
 import type { ContactForm, DoorConfiguration, DoorConfigurationType, DoorSwing, DoubleDoorLockPrepCode, GlassCoating, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, HardwareView, PreviewHardware, SideliteConfiguration, SideliteGlassConfiguration } from './types'
 import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationLabel, lockSetupOptionsForHardware, requiredDoorConfigurationProductOption } from './data/doorConfigurationRules'
-import { doorSwingDisplayName, frenchActiveDoorSide } from './data/doorHanding'
+import { doorSwingDisplayName, savannahOpening } from './data/doorHanding'
 import { configurationPdfName } from './utils/pdfConfig'
 import { buildDoorBuilderSubmissionPayload, submitQuote } from './utils/submission'
 import { fslArtsAndCraftsGridAsset, fslGlassCategories, fslGlassOptions, fslGridAsset, fslLowEStyleRules, fslPrairieGridAsset, fslSdlPatterns, fslStandardStyleRules, type FslGridLocationId, type SideliteGlassCategory, type SideliteGlassOption } from './data/fslGlass'
@@ -569,14 +569,20 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const selectedDoubleDoorLockPrep = availableLockSetupOptions.find(option => option.code === doubleDoorLockPrep)
   const hardware = selectedHardware ?? temporaryPreviewHardware ?? emptyPreviewHardware
   const isFrenchDoor = selectedDoorConfigurationType === 'french'
+  const isSavannahDoor = selectedDoorConfigurationType === 'savannah'
+  useEffect(() => {
+    if (isFrenchDoor && !doorSwingId) setDoorSwingId(doorSwingOptions[0].id)
+    if (isSavannahDoor) {
+      if (!doorSwingId || (doorSwingId !== 'LHI' && doorSwingId !== 'RHI')) setDoorSwingId(savannahOpening((doorSwingId || 'LHI') as DoorSwing['id']).swing)
+      if (doubleDoorLockPrep !== DEFAULT_FRENCH_LOCK_PREP) setDoubleDoorLockPrep(DEFAULT_FRENCH_LOCK_PREP)
+    }
+  }, [isFrenchDoor, isSavannahDoor, doorSwingId, doubleDoorLockPrep])
   useEffect(() => {
     if (!isFrenchDoor || !selectedHardware) return
     const options = lockSetupOptionsForHardware(selectedHardware)
     if (!options.some(option => option.code === doubleDoorLockPrep)) setDoubleDoorLockPrep(options[0]?.code ?? '')
   }, [isFrenchDoor, selectedHardware, doubleDoorLockPrep])
-  const swingSelectionOptions = isFrenchDoor
-    ? doorSwingOptions.filter(item => item.id === 'LHI' || item.id === 'RHI').map(item => ({ ...item, name: doorSwingDisplayName('french', item) }))
-    : doorSwingOptions
+  const swingSelectionOptions = isFrenchDoor ? [] : isSavannahDoor ? doorSwingOptions.filter(item => item.id === 'LHI' || item.id === 'RHI') : doorSwingOptions
   const storedDoorSwing = doorSwingOptions.find((item) => item.id === doorSwingId)
   const selectedDoorSwing = storedDoorSwing ? { ...storedDoorSwing, name: doorSwingDisplayName(selectedDoorConfigurationType, storedDoorSwing) } : undefined
   const sideliteOptions = sideliteBuilderOptions(selectedDoorConfigurationType)
@@ -607,7 +613,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const hasSideliteGlass = supportsSideliteLine && Boolean(sidelites && sidelites !== 'none' && sideliteStyleId)
   const hasMainDoorGlassFrame = supportsGlass && Boolean(glass) && selectedStyleCodes.some((code) => glassDoorCodes.has(code))
   const supportsGlassFrameColor = hasMainDoorGlassFrame || hasSideliteGlass
-  const steps = supportsGlass || hasSideliteGlass ? glassSteps : noGlassSteps
+  const steps = (supportsGlass || hasSideliteGlass ? glassSteps : noGlassSteps).filter(step => !isFrenchDoor || step !== 'Door Swing')
   const selectedGlass = supportsGlass ? glass : null
   const clearOnlyGlass = !supportsGlass && compatibilitySupportsGlass
     ? availableGlass.find((option) => option.id === 'clear') ?? null
@@ -797,7 +803,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const pages: BuilderPage[] = [
     'door-configuration',
     'sidelites',
-    'door-swing',
+    ...(!isFrenchDoor ? ['door-swing' as const] : []),
     'door-style',
     'door-line',
     ...(needsGrainStep ? ['door-grain' as const] : []),
@@ -919,7 +925,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const previewModes = ['Exterior', 'Interior', 'Both'] as const
   const configuredDoorPreview: DoorPreviewProps = {
     doorConfigurationType: selectedDoorConfigurationType || 'single',
-    doubleDoorLockPrep: selectedDoorConfigurationType === 'french' ? doubleDoorLockPrep || DEFAULT_FRENCH_LOCK_PREP : null,
+    doubleDoorLockPrep: isSavannahDoor ? DEFAULT_FRENCH_LOCK_PREP : isFrenchDoor ? doubleDoorLockPrep || DEFAULT_FRENCH_LOCK_PREP : null,
     style,
     finish: previewConfig.finish,
     glass: previewConfig.glass,
@@ -1428,7 +1434,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       const physical = sidelitePlacement(sidelites, selectedDoorSwing?.id, selectedDoorConfigurationType || 'single')
       setSidelites(normalizeLegacySidelite(physical, configurationType === 'french' ? undefined : selectedDoorSwing?.id, configurationType === 'single' ? 'single' : undefined))
     }
-    setDoubleDoorLockPrep(configurationType === 'french' ? DEFAULT_FRENCH_LOCK_PREP : '')
+    setDoubleDoorLockPrep(configurationType !== 'single' ? DEFAULT_FRENCH_LOCK_PREP : '')
     // Preserve the initialized Full Lite or manual slab selection. Use catalog
     // order only when a later selection is genuinely invalid or unavailable.
     setStyleId(validOptionId(styleId, availableDoorStyles))
@@ -1863,12 +1869,13 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   }
 
   const selectDoorSwing = (nextDoorSwingId: string) => {
-    if (!doorSwingOptions.some((item) => item.id === nextDoorSwingId)) return
+    if (!swingSelectionOptions.some((item) => item.id === nextDoorSwingId)) return
     if (nextDoorSwingId !== doorSwingId) setDoorSwingId(nextDoorSwingId)
     if (!editReturnTo && doorSwingOptions.length === 1) goTo(step + 1)
   }
 
   const currentDoorConfiguration: DoorConfiguration | null = selectedHardware && selectedDoorSwing && selectedFinish ? {
+    ...(isSavannahDoor ? { savannahOpening: savannahOpening(selectedDoorSwing.id) } : {}),
     doorConfigurationType: selectedDoorConfigurationType || 'single',
     ...(doorConfigurationProductOption ? { doorConfigurationProductOption } : {}),
     ...(selectedDoorConfigurationType !== 'single' && doubleDoorLockPrep ? { doubleDoorLockPrep } : {}),
@@ -1960,7 +1967,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       const exactPreview = pdfProductRender?.configurationKey === pdfProductKey
         ? pdfProductRender.dataUrl
         : await renderConfiguredPdfProduct()
-      await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }, selectedDoorConfigurationType || 'single', exactPreview, selectedDoorConfigurationType === 'french' ? doubleDoorLockPrep || DEFAULT_FRENCH_LOCK_PREP : null)
+      await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }, selectedDoorConfigurationType || 'single', exactPreview, isSavannahDoor ? DEFAULT_FRENCH_LOCK_PREP : isFrenchDoor ? doubleDoorLockPrep || DEFAULT_FRENCH_LOCK_PREP : null)
     } catch (error) {
       setPdfError(error instanceof Error ? error.message : 'The configuration PDF could not be downloaded. Please retry.')
       throw error
@@ -1969,7 +1976,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
   const configurationSummaryRows: [string, string, number][] = [
     ['Door Configuration', doorConfigurationLabel(selectedDoorConfigurationType), pages.indexOf('door-configuration')],
-    ...(selectedDoorConfigurationType === 'french' && selectedDoubleDoorLockPrep ? [['Lock Setup', selectedDoubleDoorLockPrep.name, pages.indexOf('lock-setup')] as [string, string, number]] : []),
+    ...(isSavannahDoor ? [['Lock Setup', 'Lock on Main Door Only', pages.indexOf('hardware')] as [string, string, number]] : isFrenchDoor && selectedDoubleDoorLockPrep ? [['Lock Setup', selectedDoubleDoorLockPrep.name, pages.indexOf('lock-setup')] as [string, string, number]] : []),
     ['Door style', resolvedDoorStyleLabel(style, product), pages.indexOf('door-style')],
     ['Door Line', selectedDoorLine?.name ?? product.doorType, pages.indexOf('door-line')],
     ['Sidelite Configuration', sideliteRelationshipLabel(sidelites || 'none', selectedDoorConfigurationType || 'single'), pages.indexOf('sidelites')],
@@ -2002,7 +2009,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       ...(gridConfiguration.gridWidth ? [['Grid Width', gridConfiguration.gridWidth, pages.indexOf('grid-width')] as [string, string, number]] : []),
     ] as [string, string, number][] : []),
     ['Hardware', selectedHardware ? hardwareDisplayName(selectedHardware) : 'Not selected', pages.indexOf('hardware')],
-    [isFrenchDoor ? 'Active door' : 'Door swing', selectedDoorSwing?.name ?? 'Not selected', pages.indexOf('door-swing')],
+    ...(isFrenchDoor ? [['Opening', 'Both slabs operable', pages.indexOf('door-configuration')] as [string, string, number]] : [['Door swing', selectedDoorSwing?.name ?? 'Not selected', pages.indexOf('door-swing')] as [string, string, number]]),
   ]
   const feedbackConfiguration = {
     doorStyle: selectedStyle?.name ?? 'Not selected',
@@ -2136,7 +2143,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           {steps.map((label, index) => {
             const isReachable = canVisitStep(index)
             const targetPage = pages.findIndex((page) => label === 'Entry Type' ? page === 'door-configuration' : label === 'Sidelites' ? page === 'sidelites' : label === 'Door Swing' ? page === 'door-swing' : label === 'Door' ? page === 'door-style' : label === 'Finish' ? page === 'door-finish' : label === 'Glass' ? page === 'glass-type' : label === 'Hardware' ? page === 'hardware' : page === 'review')
-            return <button key={label} className={`${index === activeMainStepIndex ? 'active' : ''} ${index < activeMainStepIndex ? 'done' : ''}`} disabled={!isReachable} aria-current={index === activeMainStepIndex ? 'step' : undefined} onClick={() => isReachable && goTo(targetPage)}><span>{index + 1}</span><em>{label === 'Door Swing' && isFrenchDoor ? 'Active Door' : label}</em></button>
+            return <button key={label} className={`${index === activeMainStepIndex ? 'active' : ''} ${index < activeMainStepIndex ? 'done' : ''}`} disabled={!isReachable} aria-current={index === activeMainStepIndex ? 'step' : undefined} onClick={() => isReachable && goTo(targetPage)}><span>{index + 1}</span><em>{label}</em></button>
           })}
         </nav>
         {!(currentPage === 'review' && submitted) && <div className="preview-toolbar">
@@ -2167,9 +2174,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                   <span>Step {activeMainStepIndex + 1} of {steps.length}</span>
                 </div>
                 <div className="step-title-row">
-                  <h1>{currentPage === 'door-configuration' ? 'Choose Your Door Configuration' : currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'sidelites' ? 'Choose Your Sidelites' : currentPage === 'sidelite-style' ? 'Choose Your Sidelite Slab' : currentPage === 'door-finish' ? 'Choose Your Door Finish' : currentPage === 'jamb-type' ? 'Choose Your Jamb Type' : currentPage === 'jamb-finish' ? 'Choose Your Jamb Finish' : currentPage === 'glass-type' ? 'Choose Main Door Glass Type' : currentPage === 'glass' ? 'Choose Main Door Glass' : currentPage === 'glass-variant' ? `Choose ${selectedGlassGroup?.title ?? 'Glass'} Finish` : currentPage === 'glass-frame-color' ? 'Choose Glass Frame Color' : currentPage === 'grid-location' ? 'Choose Main Door Grid Location' : currentPage === 'grid-style' ? 'Choose Main Door Grid Style' : currentPage === 'grid-pattern' ? 'Choose Main Door Grid Pattern' : currentPage === 'grid-color' ? 'Choose Main Door Grid Color' : currentPage === 'grid-width' ? 'Choose Main Door Grid Width' : currentPage === 'sidelite-glass-type' ? 'Choose Sidelite Glass Type' : currentPage === 'sidelite-glass' ? 'Choose Sidelite Glass' : currentPage === 'sidelite-glass-variant' ? `Choose ${selectedSideliteGlassGroup?.title ?? 'Sidelite Glass'} Finish` : currentPage === 'sidelite-grid-location' ? 'Choose Sidelite Grid Location' : currentPage === 'sidelite-grid-style' ? 'Choose Sidelite Grid Style' : currentPage === 'sidelite-grid-pattern' ? 'Choose Sidelite Grid Pattern' : currentPage === 'sidelite-grid-color' ? 'Choose Sidelite Grid Color' : currentPage === 'sidelite-grid-width' ? 'Choose Sidelite Grid Width' : currentPage === 'lock-setup' ? 'Lock Setup' : currentPage === 'hardware' ? 'Choose Your Hardware' : isFrenchDoor ? 'Which door is active?' : 'Choose Your Door Swing'}</h1>
+                  <h1>{currentPage === 'door-configuration' ? 'Choose Your Door Configuration' : currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'sidelites' ? 'Choose Your Sidelites' : currentPage === 'sidelite-style' ? 'Choose Your Sidelite Slab' : currentPage === 'door-finish' ? 'Choose Your Door Finish' : currentPage === 'jamb-type' ? 'Choose Your Jamb Type' : currentPage === 'jamb-finish' ? 'Choose Your Jamb Finish' : currentPage === 'glass-type' ? 'Choose Main Door Glass Type' : currentPage === 'glass' ? 'Choose Main Door Glass' : currentPage === 'glass-variant' ? `Choose ${selectedGlassGroup?.title ?? 'Glass'} Finish` : currentPage === 'glass-frame-color' ? 'Choose Glass Frame Color' : currentPage === 'grid-location' ? 'Choose Main Door Grid Location' : currentPage === 'grid-style' ? 'Choose Main Door Grid Style' : currentPage === 'grid-pattern' ? 'Choose Main Door Grid Pattern' : currentPage === 'grid-color' ? 'Choose Main Door Grid Color' : currentPage === 'grid-width' ? 'Choose Main Door Grid Width' : currentPage === 'sidelite-glass-type' ? 'Choose Sidelite Glass Type' : currentPage === 'sidelite-glass' ? 'Choose Sidelite Glass' : currentPage === 'sidelite-glass-variant' ? `Choose ${selectedSideliteGlassGroup?.title ?? 'Sidelite Glass'} Finish` : currentPage === 'sidelite-grid-location' ? 'Choose Sidelite Grid Location' : currentPage === 'sidelite-grid-style' ? 'Choose Sidelite Grid Style' : currentPage === 'sidelite-grid-pattern' ? 'Choose Sidelite Grid Pattern' : currentPage === 'sidelite-grid-color' ? 'Choose Sidelite Grid Color' : currentPage === 'sidelite-grid-width' ? 'Choose Sidelite Grid Width' : currentPage === 'lock-setup' ? 'Lock Setup' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>
                 </div>
-                <p>{currentPage === 'door-configuration' ? 'Start by choosing the type of entry door you want to build.' : currentPage === 'door-style' ? 'Select a door style to begin your configuration.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'sidelites' ? 'Choose whether sidelites appear beside your selected door.' : currentPage === 'sidelite-style' ? `Select the sidelite slab for your ${selectedDoorLine?.name ?? 'steel'} entry unit.` : currentPage === 'door-finish' ? 'Choose the paint or stain applied to the door slab and sidelites.' : currentPage === 'jamb-type' ? 'Choose timber or clad for the frame, jambs, casing, brickmould, and mullions.' : currentPage === 'jamb-finish' ? 'Choose the finish applied only to the jamb and frame system.' : currentPage === 'glass-type' ? 'Choose the kind of glass you want to explore for the main door.' : currentPage === 'glass' ? 'Choose glass for the main door before selecting sidelite glass.' : currentPage === 'glass-variant' ? 'Choose the available finish for this glass design.' : currentPage === 'glass-frame-color' ? 'Match the insert trim to your door or choose a separate compatible paint color.' : currentPage.startsWith('sidelite-') ? `Choose the compatible ${selectedSideliteStyle?.name ?? ''} sidelite option.` : currentPage === 'grid-location' ? 'Choose where the grids are installed.' : currentPage === 'grid-style' ? 'Choose the profile of your internal grids.' : currentPage === 'grid-pattern' ? 'Choose a pattern compatible with your selected grid style.' : currentPage === 'grid-color' ? 'Choose the confirmed color for this grid pattern.' : currentPage === 'grid-width' ? 'Choose the confirmed grid width.' : currentPage === 'lock-setup' ? 'Choose how you want your double doors prepared for hardware.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : isFrenchDoor ? 'Choose the active door as viewed from outside looking in (OSLI).' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
+                <p>{currentPage === 'door-configuration' ? 'Start by choosing the type of entry door you want to build.' : currentPage === 'door-style' ? 'Select a door style to begin your configuration.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'sidelites' ? 'Choose whether sidelites appear beside your selected door.' : currentPage === 'sidelite-style' ? `Select the sidelite slab for your ${selectedDoorLine?.name ?? 'steel'} entry unit.` : currentPage === 'door-finish' ? 'Choose the paint or stain applied to the door slab and sidelites.' : currentPage === 'jamb-type' ? 'Choose timber or clad for the frame, jambs, casing, brickmould, and mullions.' : currentPage === 'jamb-finish' ? 'Choose the finish applied only to the jamb and frame system.' : currentPage === 'glass-type' ? 'Choose the kind of glass you want to explore for the main door.' : currentPage === 'glass' ? 'Choose glass for the main door before selecting sidelite glass.' : currentPage === 'glass-variant' ? 'Choose the available finish for this glass design.' : currentPage === 'glass-frame-color' ? 'Match the insert trim to your door or choose a separate compatible paint color.' : currentPage.startsWith('sidelite-') ? `Choose the compatible ${selectedSideliteStyle?.name ?? ''} sidelite option.` : currentPage === 'grid-location' ? 'Choose where the grids are installed.' : currentPage === 'grid-style' ? 'Choose the profile of your internal grids.' : currentPage === 'grid-pattern' ? 'Choose a pattern compatible with your selected grid style.' : currentPage === 'grid-color' ? 'Choose the confirmed color for this grid pattern.' : currentPage === 'grid-width' ? 'Choose the confirmed grid width.' : currentPage === 'lock-setup' ? 'Choose how you want your double doors prepared for hardware.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
               </div>
               </div>
             </div>
@@ -2232,7 +2239,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 {currentPage === 'sidelite-grid-width' && fslWidths.map((width) => <OptionCard key={width} className="bar-size-option-card" title={width} eyebrow="Bar size" selected={sideliteGridWidth === width} onClick={() => setSideliteGridWidth(width)} />)}
                 {currentPage === 'lock-setup' && <div className="double-door-lock-prep-options" role="group" aria-label="Lock Setup">{availableLockSetupOptions.map((option) => <OptionCard key={option.code} className="door-catalog-card double-door-lock-prep-card" title={option.name} eyebrow={option.description} selected={doubleDoorLockPrep === option.code} onClick={() => setDoubleDoorLockPrep(option.code)} visual={<span className="door-style-thumbnail double-door-lock-prep-visual"><img className="double-door-lock-prep-thumbnail" src={option.thumbnail} alt="" loading="eager" decoding="async" /></span>} />)}</div>}
                 {currentPage === 'hardware' && sortByDisplayLabel(hardwareStyleGroups, options => options[0].style).map((options) => <HardwareOptionCard key={`${options[0].manufacturer}-${options[0].style}`} options={options} selectedId={hardwareId} onSelect={(option) => selectHardware(option.id)} />)}
-                {currentPage === 'door-swing' && swingSelectionOptions.map((item) => <OptionCard key={item.id} title={isFrenchDoor ? item.name : `${item.id} – ${item.name}`} eyebrow={isFrenchDoor ? 'Active door (OSLI)' : 'Door swing'} selected={isFrenchDoor ? Boolean(selectedDoorSwing && frenchActiveDoorSide(selectedDoorSwing.id) === frenchActiveDoorSide(item.id)) : doorSwingId === item.id} onClick={() => selectDoorSwing(item.id)} visual={isFrenchDoor ? <span className="active-door-preview" aria-hidden="true">{(['left', 'right'] as const).map(side => <span key={side} className={`active-door-leaf ${frenchActiveDoorSide(item.id) === side ? 'is-active' : ''}`}>{frenchActiveDoorSide(item.id) === side ? 'Active' : 'Passive'}</span>)}</span> : <img className="door-swing-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
+                {currentPage === 'door-swing' && swingSelectionOptions.map((item) => <OptionCard key={item.id} title={`${item.id} – ${item.name}`} eyebrow="Door swing" selected={doorSwingId === item.id} onClick={() => selectDoorSwing(item.id)} visual={<img className="door-swing-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
               </div>
             </div>
           </>}
@@ -2288,7 +2295,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <span><b>Sidelites</b><strong>{sideliteRelationshipLabel(sidelites || 'none', selectedDoorConfigurationType || 'single')}</strong></span>
             {selectedDoorConfigurationType === 'french' && <span><b>Lock Setup</b><strong>{selectedDoubleDoorLockPrep?.name ?? 'Not selected'}</strong></span>}
             <span><b>Hardware</b><strong>{selectedHardware ? hardwareDisplayName(selectedHardware) : 'Not selected'}</strong></span>
-            <span><b>{isFrenchDoor ? 'Active Door' : 'Door Swing'}</b><strong>{selectedDoorSwing ? isFrenchDoor ? selectedDoorSwing.name : `${selectedDoorSwing.id} — ${selectedDoorSwing.name}` : 'Not selected'}</strong></span>
+            <span><b>{isFrenchDoor ? 'Opening' : 'Door Swing'}</b><strong>{isFrenchDoor ? 'Both slabs operable' : selectedDoorSwing?.name ?? 'Not selected'}</strong></span>
           </div>}
         </aside>}
       </main>

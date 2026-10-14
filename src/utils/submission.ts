@@ -106,7 +106,7 @@ export function buildDoorBuilderSubmissionPayload({ contact, configuration, subm
   const hasSidelites = (configuration.sidelitePlacement ?? configuration.sidelites) !== 'none'
   const lockSetup = configurationType === 'single'
     ? NOT_APPLICABLE
-    : doubleDoorLockPrepOption(configuration.doubleDoorLockPrep || (configurationType === 'french' ? DEFAULT_FRENCH_LOCK_PREP : null))?.name ?? NOT_APPLICABLE
+    : doubleDoorLockPrepOption(configurationType === 'savannah' ? DEFAULT_FRENCH_LOCK_PREP : configuration.doubleDoorLockPrep || (configurationType === 'french' ? DEFAULT_FRENCH_LOCK_PREP : null))?.name ?? NOT_APPLICABLE
 
   return {
     submitted_at: submittedAt ?? new Date().toISOString(),

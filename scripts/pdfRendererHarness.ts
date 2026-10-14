@@ -112,6 +112,12 @@ const fixtures = [
   }),
   ...['signature-series', '20-gauge-smooth-steel', 'brushed-smooth-fiberglass'].map(line => ({ name: `six-panel-${line}`, ...fixture('S1NGSS', 'paint-white', 'none', 'single', undefined, line) })),
   { name: 'explicit-terratone', ...fixture('F1', 'paint-terratone', 'none', 'single', undefined, '20-gauge-smooth-steel') },
+  ...(['LHI', 'RHI'] as const).map(id => {
+    const item = fixture('F', 'paint-clay', 'both-sides', 'savannah', 'f-clear-no-grids')
+    item.configuration.doorSwing = { id, name: id === 'LHI' ? 'Left Hand Inswing' : 'Right Hand Inswing', image: '' }
+    item.configuration.doubleDoorLockPrep = 'DDLLAC'
+    return { name: `savannah-inswing-${id}`, ...item }
+  }),
 ]
 let liveRoot: Root | undefined
 Object.assign(window, {
@@ -124,6 +130,7 @@ Object.assign(window, {
     await new Promise<void>(resolve => liveRoot!.render(createElement(DoorPreview, {
       ...appearance, style: c.style, finish: c.finish, product: c.product, grain: c.grain,
       hardware: c.hardware, doorSwing: c.doorSwing, sidelites: c.sidelites,
+      doorConfigurationType: c.doorConfigurationType, doubleDoorLockPrep: c.doubleDoorLockPrep,
       applyFinish: true, showViewToggle: false, view,
       renderConfigurationKey: `pdf-live-fixture-${index}`,
       onRenderReadinessChange: state => { if (state.ready) resolve() },

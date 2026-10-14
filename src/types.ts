@@ -118,6 +118,14 @@ export type ResolvedDoorProduct = {
 }
 
 export type DoorConfiguration = {
+  savannahOpening?: {
+    swing: 'LHI' | 'RHI'
+    referenceView: 'Interior'
+    activeSlab: { Interior: 'left' | 'right'; Exterior: 'left' | 'right' }
+    hardwareSide: { Interior: 'left' | 'right'; Exterior: 'left' | 'right' }
+    hingeSide: { Interior: 'left' | 'right'; Exterior: 'left' | 'right' }
+    hingeArrangement: 'beside-stationary-slab'
+  }
   doorConfigurationType?: DoorConfigurationType
   doubleDoorLockPrep?: DoubleDoorLockPrepCode
   doorConfigurationProductOption?: {

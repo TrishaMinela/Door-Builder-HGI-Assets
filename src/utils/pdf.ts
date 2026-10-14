@@ -427,7 +427,7 @@ export async function generateSummaryPdf(
   const pageTwoValues = [
     jamb?.jambFinishColor || 'Not selected',
     [glass?.name ?? 'No glass', gridDetails].filter(Boolean).join(' - '),
-    [hardwareDisplayName(hardware), doorConfigurationType === 'french' ? `Lock Setup: ${doubleDoorLockPrepOption(doubleDoorLockPrep || DEFAULT_FRENCH_LOCK_PREP)?.name}` : null].filter(Boolean).join(' — '),
+    [hardwareDisplayName(hardware), doorConfigurationType !== 'single' ? `Lock Setup: ${doubleDoorLockPrepOption(doorConfigurationType === 'savannah' ? DEFAULT_FRENCH_LOCK_PREP : doubleDoorLockPrep || DEFAULT_FRENCH_LOCK_PREP)?.name}` : null].filter(Boolean).join(' — '),
     doorSwingDisplayName(doorConfigurationType, doorSwing),
   ]
   const drawTemplateValues = (values: string[], baselines: number[]) => values.forEach((value, index) => {
