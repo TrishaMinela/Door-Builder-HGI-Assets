@@ -1179,9 +1179,16 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         break
       case 'sidelite-style':
         break
-      case 'door-finish':
-        // A preview or tab default is not a customer's finish choice.
+      case 'door-finish': {
+        // Choose only on entering this step, in the same order as the cards.
+        const firstFinish = sortByDisplayLabel(visibleFinishes, item => item.name)[0]
+        if (!visibleSelectedFinish && firstFinish) {
+          setSelectedFinishType(firstFinish.finishType)
+          if (firstFinish.finishType === 'paint') setSelectedPaint(firstFinish.id)
+          else setSelectedStain(firstFinish.id)
+        }
         break
+      }
       case 'jamb-type':
         if (!jambType) setJambType('timber')
         break
