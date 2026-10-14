@@ -502,6 +502,10 @@ body:has(.visualizer-app){
 .door-frame[data-frame=visible] .door-style-image,.door-frame[data-frame=opening-only] .door-style-image{filter:grayscale(1) contrast(1.08)}
 .sidelite-option-image{display:block;width:auto;height:auto;max-width:64%;max-height:64%;object-fit:contain;transform:scaleX(-1)}
 .sidelite-option-image-unflipped{transform:none}
+.sidelite-layout-thumbnail{width:100%;min-width:0;pointer-events:none}
+.sidelite-layout-thumbnail .preview-scene{width:100%;height:120px;min-height:0;transform:none}
+.sidelite-layout-thumbnail .preview-caption{display:none}
+@media(max-width:767px){.sidelite-layout-thumbnail .preview-scene{height:94px}}
 .option-visual:has(.sidelite-style-image){display:flex;align-items:center;justify-content:center}
 .sidelite-style-image{display:block;width:auto;height:auto;max-width:70%;max-height:78%;margin:auto;object-fit:contain;object-position:center}
 
