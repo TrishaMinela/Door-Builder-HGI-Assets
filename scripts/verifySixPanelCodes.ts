@@ -21,7 +21,7 @@ for (const line of cases) {
 }
 assert.equal(JSON.stringify(style), original, 'Catalog ID and artwork are unchanged')
 const pdfSource = readFileSync('src/utils/pdf.ts', 'utf8')
-assert.equal(pdfSource.match(/resolvedDoorStyleLabel\(style, product\)/g)?.length, 2, 'Both PDF summary paths share the material-aware formatter')
+assert.equal(pdfSource.match(/doorStyleDisplayName\(style\)/g)?.length, 2, 'Both PDF summary paths share the readable description formatter; submissions retain material codes')
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5215', '--strictPort'], { stdio: 'pipe' })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
 try {
@@ -45,7 +45,7 @@ try {
     for (let i = 0; i < 25 && !(await page.getByRole('heading', { name: 'Configuration Summary', exact: true }).isVisible()); i++) await next()
     await page.getByRole('heading', { name: 'Configuration Summary', exact: true }).waitFor()
     const code = line === 'signature-series' ? 'S1NGSS' : 'S1'
-    assert.match(await page.locator('.summary-row').filter({ hasText: 'Door style' }).innerText(), new RegExp(`${code} - SIX PANEL NO GLASS`))
+    assert.match(await page.locator('.summary-row').filter({ hasText: 'Door style' }).innerText(), /Six Panel No Glass/)
     const state = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
     assert.equal(state.styleId, style.id, 'Material switching preserves six-panel selection')
     console.log(`${name}: ${code}, material switch, preserved slab and summary passed`)

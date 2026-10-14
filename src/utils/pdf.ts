@@ -2,10 +2,9 @@ import jsPDF from 'jspdf'
 import type { ContactForm, DoorConfigurationType, DoorStyle, DoorSwing, DoubleDoorLockPrepCode, Finish, GlassOption, GridConfiguration, HardwareOption, ResolvedDoorProduct, SideliteConfiguration, SideliteGlassConfiguration } from '../types'
 import { hardwareDisplayName } from '../data/hardware'
 import { configurationPdfDownloadName, configurationPdfName } from './pdfConfig'
-import { sideliteProductLabel } from '../data/sideliteConfigurations'
 import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationHingeOptionLabel, doorConfigurationLabel, doubleDoorLockPrepOption } from '../data/doorConfigurationRules'
 import { doorSwingDisplayName } from '../data/doorHanding'
-import { resolvedDoorStyleLabel } from '../data/productCatalog'
+import { doorStyleDisplayName, sideliteStyleDisplayName, glassDisplayName, sideliteConfigurationDisplayName } from '../data/productDisplayNames'
 import { assertCustomerFinish } from './customerFinish'
 
 const COLORS = {
@@ -241,11 +240,11 @@ async function generateLegacySummaryPdf(
     { label: 'DOOR CONFIGURATION', value: doorConfigurationLabel(doorConfigurationType) },
     ...(doorConfigurationHingeOptionLabel(doorConfigurationType) ? [{ label: 'HINGE OPTION', value: doorConfigurationHingeOptionLabel(doorConfigurationType)! }] : []),
     { label: 'DOOR LINE', value: grain ? `${material} - ${grain}` : material, icon: summaryIcons[0] },
-    { label: 'DOOR STYLE', value: resolvedDoorStyleLabel(style, product), icon: summaryIcons[1] },
-    { label: 'SIDELITE CONFIGURATION', value: sideliteProductLabel(sidelites, doorSwing.id, doorConfigurationType) },
-    ...(sideliteStyle ? [{ label: 'SIDELITE SLAB', value: sideliteStyle }] : []),
+    { label: 'DOOR STYLE', value: doorStyleDisplayName(style), icon: summaryIcons[1] },
+    { label: 'SIDELITE CONFIGURATION', value: sideliteConfigurationDisplayName(sidelites, doorSwing.id, doorConfigurationType) },
+    ...(sideliteStyle ? [{ label: 'SIDELITE SLAB', value: sideliteStyleDisplayName(sideliteStyle) }] : []),
     ...(sideliteGlass ? [
-      { label: 'SIDELITE GLASS', value: sideliteGlass.glass },
+      { label: 'SIDELITE GLASS', value: glassDisplayName(sideliteGlass.glass) },
       ...(sideliteGlass.glassCoating ? [{ label: 'SIDELITE GLASS COATING', value: sideliteGlass.glassCoating }] : []),
       ...(sideliteGlass.gridLocation ? [{ label: 'SIDELITE GRID LOCATION', value: sideliteGlass.gridLocation }] : []),
       ...(sideliteGlass.gridStyle ? [{ label: 'SIDELITE GRID STYLE', value: sideliteGlass.gridStyle }] : []),
@@ -261,7 +260,7 @@ async function generateLegacySummaryPdf(
       { label: 'JAMB FINISH COLOR', value: jamb.jambFinishColor },
       ...(jamb.glassFrameFinishColor ? [{ label: 'GLASS FRAME COLOR', value: jamb.glassFrameFinishColor }] : []),
     ] : []),
-    { label: 'MAIN DOOR GLASS', value: glass?.name ?? 'No glass', icon: summaryIcons[4] },
+    { label: 'MAIN DOOR GLASS', value: glassDisplayName(glass?.name ?? 'No glass'), icon: summaryIcons[4] },
     ...(grid ? [
       ...(grid.glassCoating !== 'Standard / No Low-E' ? [{ label: 'GLASS COATING', value: grid.glassCoating }] : []),
       ...(grid.gridLocation ? [{ label: 'GRID LOCATION', value: grid.gridLocation }] : []),
@@ -409,16 +408,16 @@ export async function generateSummaryPdf(
   // column. Keep the right side exclusively for the configured-door image.
 
   const material = product.doorTypes.map((doorType) => grain ? doorType.replace(` - ${grain}`, '') : doorType).join(' / ')
-  const placement = sideliteProductLabel(sidelites, doorSwing.id, doorConfigurationType)
+  const placement = sideliteConfigurationDisplayName(sidelites, doorSwing.id, doorConfigurationType)
   const gridDetails = grid ? [grid.glassCoating !== 'Standard / No Low-E' ? grid.glassCoating : '', grid.gridLocation, grid.gridStyle, grid.gridPattern, grid.gridColor, grid.gridWidth].filter(Boolean).join(' / ') : ''
   const sideliteGridDetails = sideliteGlass ? [sideliteGlass.glassCoating, sideliteGlass.gridLocation, sideliteGlass.gridStyle, sideliteGlass.gridPattern, sideliteGlass.gridColor, sideliteGlass.gridWidth].filter(Boolean).join(' / ') : ''
   const pageOneValues = [
     doorConfigurationLabel(doorConfigurationType),
     grain ? `${material} - ${grain}` : material,
     placement,
-    resolvedDoorStyleLabel(style, product),
-    sidelites === 'none' ? 'Not applicable' : sideliteStyle ?? 'Not selected',
-    sidelites === 'none' ? 'Not applicable' : [sideliteGlass?.glass ?? 'Not selected', sideliteGridDetails].filter(Boolean).join(' - '),
+    doorStyleDisplayName(style),
+    sidelites === 'none' ? 'Not applicable' : sideliteStyleDisplayName(sideliteStyle),
+    sidelites === 'none' ? 'Not applicable' : [glassDisplayName(sideliteGlass?.glass), sideliteGridDetails].filter(Boolean).join(' - '),
     finish.finishType === 'paint' ? 'Paint' : 'Stain',
     finish.name,
     jamb?.jambType === 'clad' ? 'Clad' : 'Timber',
@@ -426,7 +425,7 @@ export async function generateSummaryPdf(
   ]
   const pageTwoValues = [
     jamb?.jambFinishColor || 'Not selected',
-    [glass?.name ?? 'No glass', gridDetails].filter(Boolean).join(' - '),
+    [glassDisplayName(glass?.name ?? 'No glass'), gridDetails].filter(Boolean).join(' - '),
     [hardwareDisplayName(hardware), doorConfigurationType !== 'single' ? `Lock Setup: ${doubleDoorLockPrepOption(doorConfigurationType === 'savannah' ? DEFAULT_FRENCH_LOCK_PREP : doubleDoorLockPrep || DEFAULT_FRENCH_LOCK_PREP)?.name}` : null].filter(Boolean).join(' — '),
     doorSwingDisplayName(doorConfigurationType, doorSwing),
   ]

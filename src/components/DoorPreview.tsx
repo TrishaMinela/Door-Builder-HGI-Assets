@@ -10,6 +10,7 @@ import { glassFrameMaskForOpening, type GlassFrameMaskDefinition, type GlassFram
 import { DoorFrame } from './preview/DoorFrame'
 import { resolveSidelitePosition } from '../data/sideliteConfigurations'
 import { doorHandingSides } from '../data/doorHanding'
+import { doorStyleDisplayName, glassDisplayName } from '../data/productDisplayNames'
 
 const hexToRgb = (hex: string) => {
   const normalized = hex.replace('#', '')
@@ -1015,7 +1016,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   }, [previewHardware.manufacturer, previewHardware.style, previewHardware.finish, previewView, requestedHardwareImage, doorSwing?.id])
 
   return (
-    <div ref={previewSceneRef} className={`preview-scene ${compact ? 'compact' : ''}`} data-render-configuration-key={renderConfigurationKey} data-render-semantically-ready={semanticLayersReady ? 'true' : 'false'} aria-busy={previewAssetsLoading} aria-label={`Preview of ${finish.name} ${style.name} door${style.hasGlass && glass ? ` with ${glass.name} glass` : ''}`}>
+    <div ref={previewSceneRef} className={`preview-scene ${compact ? 'compact' : ''}`} data-render-configuration-key={renderConfigurationKey} data-render-semantically-ready={semanticLayersReady ? 'true' : 'false'} aria-busy={previewAssetsLoading} aria-label={`Preview of ${finish.name} ${doorStyleDisplayName(style)} door${style.hasGlass && glass ? ` with ${glassDisplayName(glass.name)} glass` : ''}`}>
       <div className="preview-glow" />
       <DoorFrame doorConfigurationType={doorConfigurationType} view={renderView} className={doorConfigurationType === 'savannah' && previewView === 'Interior' ? 'savannah-interior-mirrored' : ''} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={renderedSideliteGlass} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGlassIsGrid={sideliteGlassIsGrid} sideliteGridIsPrairie={sideliteGridIsPrairie} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteGridFinishColor={applyFinish ? finishColor : '#d9d9d9'} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteGlassOpeningStyle={sideliteGlassOpeningStyle} sideliteGlassFrameMaskStyle={sideliteGlassFrameMaskStyle} sideliteGlassFrameTintStyle={sideliteGlassFrameTintStyle}>
         {Array.from({ length: doorConfigurationLeafCount(doorConfigurationType) }).map((_, leafIndex) => {

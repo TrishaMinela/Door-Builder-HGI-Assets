@@ -7,9 +7,10 @@ import { sideliteAssetFamilyForSlab, sideliteStylesForFamily } from '../src/data
 import { normalizeLegacySidelite } from '../src/data/sideliteConfigurations'
 import { sortByDisplayLabel } from '../src/utils/sortByDisplayLabel'
 import { validOptionId } from '../src/utils/optionSelection'
+import { sideliteStyleDisplayName } from '../src/data/productDisplayNames'
 
 const firstSide = (lineId: string, grain: string | null) => sortByDisplayLabel(
-  sideliteStylesForFamily(sideliteAssetFamilyForSlab({ doorLineId: lineId, grain })).map(id => ({ id })), item => item.id,
+  sideliteStylesForFamily(sideliteAssetFamilyForSlab({ doorLineId: lineId, grain })).map(id => ({ id })), item => sideliteStyleDisplayName(item.id),
 )[0]?.id ?? ''
 assert.equal(validOptionId('missing', []), '', 'Empty lists clear safely')
 assert.equal(validOptionId('manual', [{ id: 'first' }, { id: 'manual' }]), 'manual', 'Normal reconciliation preserves a valid manual choice')
@@ -50,7 +51,7 @@ try {
     assert.equal(await savedStyle(), doorStyles.find(item => item.code === (restoredCherry ? 'CANGSS' : 'F'))!.id, 'Fresh configurations start Full Lite; existing draft styles remain unchanged')
     if (!restoredCherry) {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
-      await page.locator('.builder-options-scroll .door-catalog-card').filter({ has: page.locator('strong').filter({ hasText: /^N1 / }) }).click()
+      await page.locator('.builder-options-scroll .door-catalog-card').filter({ has: page.locator('strong').filter({ hasText: /^Nine Panel No Glass$/ }) }).click()
       await page.getByRole('button', { name: 'Next configuration step' }).click()
       await page.getByRole('button', { name: 'Previous configuration step' }).click()
       assert.equal(await page.locator('.step-heading h1').innerText(), 'Choose a Door Style')
@@ -118,12 +119,12 @@ try {
     await back() // Line
     await back() // Style
     assert.equal(await page.locator('.builder-options-scroll .door-catalog-card').count(), 42, 'Signature/Mahogany does not restrict earlier browsing')
-    await card(/^F Full /)
+    await card(/^Full Lite$/)
     await page.waitForTimeout(200)
     assert.equal((await saved()).styleId, doorStyles.find(item => item.code === 'F')!.id, 'Manual slab remains')
     assert.equal((await saved()).grainId, 'Mahogany')
     await next(); await next(); await next() // line, grain, sidelite slab
-    await card(/^SSL$/)
+    await card(/^Half Sidelite$/)
     await page.waitForTimeout(250)
     assert.equal((await saved()).sideliteStyleId, 'ssl', 'Manual sidelite remains')
     await back(); await back() // line
@@ -136,7 +137,7 @@ try {
     await defaults('22-gauge-steel')
     await back()
     assert.equal(await page.locator('.builder-options-scroll .door-catalog-card').count(), 42)
-    await card(/^CR14 Craftsman /)
+    await card(/^Craftsman 1\/4 Rectangle$/)
     await page.waitForTimeout(150)
     assert.equal((await saved()).styleId, doorStyles.find(item => item.code === 'CR14')!.id)
     assert.equal((await saved()).grainId, 'Fir', 'CR14 defaults to Fir, never incompatible Cherry')
@@ -149,7 +150,7 @@ try {
     assert.deepEqual(await page.locator('.builder-options-scroll .option-card strong').allTextContents(), ['Fir'], 'Signature grains follow the selected CR14 style')
     await back(); await back()
     assert.equal(await page.locator('.builder-options-scroll .door-catalog-card').count(), 42)
-    await card(/^N1 Nine Panel /)
+    await card(/^Nine Panel No Glass$/)
     await page.waitForTimeout(150)
     assert.equal((await saved()).doorLineId, doorLineChoicesForStyle(doorStyles.find(item => item.code === 'N1')!)[0].id, 'Incompatible Signature is replaced by the first valid material')
     assert.equal((await saved()).grainId, '')

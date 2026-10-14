@@ -14,7 +14,7 @@ import { useProductCardLayout } from './utils/useProductCardLayout'
 import { safeDynamicImport } from './utils/staleChunkRecovery'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
-import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct, resolvedDoorStyleCode, resolvedDoorStyleLabel } from './data/productCatalog'
+import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
 import { approvedPrivacyGlassIds } from './data/privacyGlass'
 import { builderUx } from './config/builderUx'
 import { matchingJambFinish } from './utils/matchingFrameFinish'
@@ -35,10 +35,11 @@ import { cladColors } from './data/finishes'
 import { HomeVisualizer } from './features/home-visualizer/HomeVisualizer'
 import { HERO_PRESETS, heroDoorFilename, type HeroPreset } from './data/heroPresets'
 import { HeroDoorGenerator } from './features/hero/HeroDoorGenerator'
-import { normalizeLegacySidelite, sideliteBuilderOptions, sidelitePlacement, sideliteProductCode, sideliteProductLabel, sideliteRelationshipLabel } from './data/sideliteConfigurations'
+import { normalizeLegacySidelite, sideliteBuilderOptions, sidelitePlacement, sideliteProductCode, sideliteRelationshipLabel } from './data/sideliteConfigurations'
 import { sideliteAssetFamilyForSlab, sideliteGlassMask, sideliteSlabAsset, sideliteStylesForFamily, type SideliteStyleId } from './data/sideliteAssets'
 import { clearDoorBuilderDraft, loadDoorBuilderDraft, saveDoorBuilderDraft, type DoorBuilderDraftConfiguration } from './utils/doorBuilderDraft'
 import { UNSELECTED_FINISH } from './utils/customerFinish'
+import { doorStyleDisplayName, sideliteStyleDisplayName, glassDisplayName, sideliteConfigurationDisplayName } from './data/productDisplayNames'
 
 const glassSteps = ['Entry Type', 'Sidelites', 'Door Swing', 'Door', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
 const noGlassSteps = ['Entry Type', 'Sidelites', 'Door Swing', 'Door', 'Finish', 'Hardware', 'Review & Quote']
@@ -61,9 +62,7 @@ const doorConfigurationOptions: { id: DoorConfigurationType; name: string; descr
 ]
 
 function doorCatalogModelName(name: string) {
-  const [code, ...descriptionParts] = name.split(' - ')
-  const description = descriptionParts.join(' - ').toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
-  return description ? `${code} ${description}` : code
+  return doorStyleDisplayName({ name })
 }
 
 function FinishInfoTooltip({ title, body, ariaLabel, tooltipId }: { title: string; body: string; ariaLabel: string; tooltipId: string }) {
@@ -627,7 +626,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const availableGridLocations = gridLocations.filter((item) => !usesF48GridFlow || item.id !== 'external')
   const usesMappedSidelites = supportsSideliteLine && Boolean(sidelites && sidelites !== 'none')
   const availableSideliteStyleIds = sideliteStylesForFamily(sideliteAssetFamily)
-  const visibleSideliteStyleOptions = sortByDisplayLabel(sideliteStyleOptions.filter((option) => availableSideliteStyleIds.includes(option.id)), item => item.name)
+  const visibleSideliteStyleOptions = sortByDisplayLabel(sideliteStyleOptions.filter((option) => availableSideliteStyleIds.includes(option.id)), item => sideliteStyleDisplayName(item.id))
   const selectedSideliteStyle = visibleSideliteStyleOptions.find((option) => option.id === sideliteStyleId)
   const selectedSidelitePreview = sideliteSlabAsset(sideliteAssetFamily, selectedSideliteStyle?.id ?? null)
   const selectedSideliteMask = sideliteGlassMask(sideliteAssetFamily, selectedSideliteStyle?.id ?? null)
@@ -1729,7 +1728,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (!sidelites || sidelites === 'none') return
     const family = sideliteAssetFamilyForSlab({ doorLineId: lineId, grain })
     const ids = sideliteStylesForFamily(family)
-    const nextId = sortByDisplayLabel(sideliteStyleOptions.filter(item => ids.includes(item.id)), item => item.name)[0]?.id ?? ''
+    const nextId = sortByDisplayLabel(sideliteStyleOptions.filter(item => ids.includes(item.id)), item => sideliteStyleDisplayName(item.id))[0]?.id ?? ''
     if (nextId === sideliteStyleId) return
     setSideliteStyleId(nextId)
     const previousGlass = selectedSideliteCatalog?.options.find(option => option.id === sideliteGlassId)
@@ -1901,7 +1900,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     sidelites: sidelites || 'none',
     sidelitePlacement: sidelites || 'none',
     sideliteConfigurationCode: sideliteProductCode(sidelites || 'none', selectedDoorSwing.id, selectedDoorConfigurationType || 'single'),
-    sideliteConfigurationLabel: sideliteProductLabel(sidelites || 'none', selectedDoorSwing.id, selectedDoorConfigurationType || 'single'),
+    sideliteConfigurationLabel: sideliteConfigurationDisplayName(sidelites || 'none', selectedDoorSwing.id, selectedDoorConfigurationType || 'single'),
     ...((sidelites || 'none') !== 'none' && selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}),
     ...((sidelites || 'none') !== 'none' && sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}),
   } : null
@@ -1977,12 +1976,12 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const configurationSummaryRows: [string, string, number][] = [
     ['Door Configuration', doorConfigurationLabel(selectedDoorConfigurationType), pages.indexOf('door-configuration')],
     ...(isSavannahDoor ? [['Lock Setup', 'Lock on Main Door Only', pages.indexOf('hardware')] as [string, string, number]] : isFrenchDoor && selectedDoubleDoorLockPrep ? [['Lock Setup', selectedDoubleDoorLockPrep.name, pages.indexOf('lock-setup')] as [string, string, number]] : []),
-    ['Door style', resolvedDoorStyleLabel(style, product), pages.indexOf('door-style')],
+    ['Door style', doorStyleDisplayName(style), pages.indexOf('door-style')],
     ['Door Line', selectedDoorLine?.name ?? product.doorType, pages.indexOf('door-line')],
     ['Sidelite Configuration', sideliteRelationshipLabel(sidelites || 'none', selectedDoorConfigurationType || 'single'), pages.indexOf('sidelites')],
-    ...(selectedSideliteStyle ? [['Sidelite Slab', selectedSideliteStyle.name, pages.indexOf('sidelite-style')] as [string, string, number]] : []),
+    ...(selectedSideliteStyle ? [['Sidelite Slab', sideliteStyleDisplayName(selectedSideliteStyle.id), pages.indexOf('sidelite-style')] as [string, string, number]] : []),
     ...(selectedFslGlass ? [
-      ['Sidelite Glass', selectedFslGlass.name, pages.indexOf('sidelite-glass')] as [string, string, number],
+      ['Sidelite Glass', glassDisplayName(selectedFslGlass.name), pages.indexOf('sidelite-glass')] as [string, string, number],
       ...(usesFslGridFlow ? [
         ...(!usesExactFslRules ? [['Sidelite glass coating', fslCoating, pages.indexOf('sidelite-grid-location')] as [string, string, number]] : []),
         ['Sidelite grid location', sideliteGridLocation === 'sdl' ? 'SDL' : sideliteGridLocation === 'external' ? 'External' : 'Internal', pages.indexOf('sidelite-grid-location')] as [string, string, number],
@@ -1998,7 +1997,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     ['Jamb type', jambType === 'clad' ? 'Clad' : 'Timber', pages.indexOf('jamb-type')],
     ['Jamb finish type', jambType === 'clad' ? 'Clad' : jambFinishType === 'stain' ? 'Stain' : 'Paint', pages.indexOf('jamb-finish')],
     ['Jamb finish color', jambFinish?.name ?? 'Not selected', pages.indexOf('jamb-finish')],
-    ...(compatibilitySupportsGlass ? [['Main Door Glass', configuredGlass?.name ?? 'Clear', pages.indexOf('glass-type')] as [string, string, number]] : []),
+    ...(compatibilitySupportsGlass ? [['Main Door Glass', glassDisplayName(configuredGlass?.name ?? 'Clear'), pages.indexOf('glass-type')] as [string, string, number]] : []),
     ...(supportsGlassFrameColor && appliedGlassFrameFinish ? [['Glass Frame Color', glassFrameColorMode === 'match-door' ? `Match Door (${appliedGlassFrameFinish.name})` : appliedGlassFrameFinish.name, pages.indexOf('glass-frame-color')] as [string, string, number]] : []),
     ...(gridConfiguration ? [
       ...(gridConfiguration.glassCoating !== 'Standard / No Low-E' ? [['Glass Coating', gridConfiguration.glassCoating, pages.indexOf('grid-location')] as [string, string, number]] : []),
@@ -2087,7 +2086,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                       <img
                         className="hero-static-door-image"
                         src={`/assets/generated/hero-doors/${heroDoorFilename(HERO_PRESETS[homeDemoIndex % HERO_PRESETS.length], homeDemoIndex % HERO_PRESETS.length)}`}
-                        alt={`${activeHomeDemo.style.name} in ${activeHomeDemo.finish.name}${activeHomeDemo.glass ? ` with ${activeHomeDemo.glass.name} glass` : ''}`}
+                        alt={`${doorStyleDisplayName(activeHomeDemo.style)} in ${activeHomeDemo.finish.name}${activeHomeDemo.glass ? ` with ${activeHomeDemo.glass.name} glass` : ''}`}
                         width="484"
                         height="1100"
                         loading={homeDemoIndex === 0 ? 'eager' : 'lazy'}
@@ -2106,7 +2105,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
               </div>
               <div className="home-preview-label">
                 <span>Preview as you build</span>
-                <small>{activeHomeDemo.style.name} · {activeHomeDemo.finish.name} · {activeHomeDemo.glass?.name ?? 'No glass'} · {hardwareDisplayName(activeHomeDemo.hardware)}</small>
+                <small>{doorStyleDisplayName(activeHomeDemo.style)} · {activeHomeDemo.finish.name} · {activeHomeDemo.glass?.name ?? 'No glass'} · {hardwareDisplayName(activeHomeDemo.hardware)}</small>
               </div>
             </div>
           </div>
@@ -2176,14 +2175,14 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 <div className="step-title-row">
                   <h1>{currentPage === 'door-configuration' ? 'Choose Your Door Configuration' : currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'sidelites' ? 'Choose Your Sidelites' : currentPage === 'sidelite-style' ? 'Choose Your Sidelite Slab' : currentPage === 'door-finish' ? 'Choose Your Door Finish' : currentPage === 'jamb-type' ? 'Choose Your Jamb Type' : currentPage === 'jamb-finish' ? 'Choose Your Jamb Finish' : currentPage === 'glass-type' ? 'Choose Main Door Glass Type' : currentPage === 'glass' ? 'Choose Main Door Glass' : currentPage === 'glass-variant' ? `Choose ${selectedGlassGroup?.title ?? 'Glass'} Finish` : currentPage === 'glass-frame-color' ? 'Choose Glass Frame Color' : currentPage === 'grid-location' ? 'Choose Main Door Grid Location' : currentPage === 'grid-style' ? 'Choose Main Door Grid Style' : currentPage === 'grid-pattern' ? 'Choose Main Door Grid Pattern' : currentPage === 'grid-color' ? 'Choose Main Door Grid Color' : currentPage === 'grid-width' ? 'Choose Main Door Grid Width' : currentPage === 'sidelite-glass-type' ? 'Choose Sidelite Glass Type' : currentPage === 'sidelite-glass' ? 'Choose Sidelite Glass' : currentPage === 'sidelite-glass-variant' ? `Choose ${selectedSideliteGlassGroup?.title ?? 'Sidelite Glass'} Finish` : currentPage === 'sidelite-grid-location' ? 'Choose Sidelite Grid Location' : currentPage === 'sidelite-grid-style' ? 'Choose Sidelite Grid Style' : currentPage === 'sidelite-grid-pattern' ? 'Choose Sidelite Grid Pattern' : currentPage === 'sidelite-grid-color' ? 'Choose Sidelite Grid Color' : currentPage === 'sidelite-grid-width' ? 'Choose Sidelite Grid Width' : currentPage === 'lock-setup' ? 'Lock Setup' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>
                 </div>
-                <p>{currentPage === 'door-configuration' ? 'Start by choosing the type of entry door you want to build.' : currentPage === 'door-style' ? 'Select a door style to begin your configuration.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'sidelites' ? 'Choose whether sidelites appear beside your selected door.' : currentPage === 'sidelite-style' ? `Select the sidelite slab for your ${selectedDoorLine?.name ?? 'steel'} entry unit.` : currentPage === 'door-finish' ? 'Choose the paint or stain applied to the door slab and sidelites.' : currentPage === 'jamb-type' ? 'Choose timber or clad for the frame, jambs, casing, brickmould, and mullions.' : currentPage === 'jamb-finish' ? 'Choose the finish applied only to the jamb and frame system.' : currentPage === 'glass-type' ? 'Choose the kind of glass you want to explore for the main door.' : currentPage === 'glass' ? 'Choose glass for the main door before selecting sidelite glass.' : currentPage === 'glass-variant' ? 'Choose the available finish for this glass design.' : currentPage === 'glass-frame-color' ? 'Match the insert trim to your door or choose a separate compatible paint color.' : currentPage.startsWith('sidelite-') ? `Choose the compatible ${selectedSideliteStyle?.name ?? ''} sidelite option.` : currentPage === 'grid-location' ? 'Choose where the grids are installed.' : currentPage === 'grid-style' ? 'Choose the profile of your internal grids.' : currentPage === 'grid-pattern' ? 'Choose a pattern compatible with your selected grid style.' : currentPage === 'grid-color' ? 'Choose the confirmed color for this grid pattern.' : currentPage === 'grid-width' ? 'Choose the confirmed grid width.' : currentPage === 'lock-setup' ? 'Choose how you want your double doors prepared for hardware.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
+                <p>{currentPage === 'door-configuration' ? 'Start by choosing the type of entry door you want to build.' : currentPage === 'door-style' ? 'Select a door style to begin your configuration.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'sidelites' ? 'Choose whether sidelites appear beside your selected door.' : currentPage === 'sidelite-style' ? `Select the sidelite slab for your ${selectedDoorLine?.name ?? 'steel'} entry unit.` : currentPage === 'door-finish' ? 'Choose the paint or stain applied to the door slab and sidelites.' : currentPage === 'jamb-type' ? 'Choose timber or clad for the frame, jambs, casing, brickmould, and mullions.' : currentPage === 'jamb-finish' ? 'Choose the finish applied only to the jamb and frame system.' : currentPage === 'glass-type' ? 'Choose the kind of glass you want to explore for the main door.' : currentPage === 'glass' ? 'Choose glass for the main door before selecting sidelite glass.' : currentPage === 'glass-variant' ? 'Choose the available finish for this glass design.' : currentPage === 'glass-frame-color' ? 'Match the insert trim to your door or choose a separate compatible paint color.' : currentPage.startsWith('sidelite-') ? `Choose the compatible ${sideliteStyleDisplayName(selectedSideliteStyle?.id)} sidelite option.` : currentPage === 'grid-location' ? 'Choose where the grids are installed.' : currentPage === 'grid-style' ? 'Choose the profile of your internal grids.' : currentPage === 'grid-pattern' ? 'Choose a pattern compatible with your selected grid style.' : currentPage === 'grid-color' ? 'Choose the confirmed color for this grid pattern.' : currentPage === 'grid-width' ? 'Choose the confirmed grid width.' : currentPage === 'lock-setup' ? 'Choose how you want your double doors prepared for hardware.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
               </div>
               </div>
             </div>
             <div ref={builderOptionsRef} className="builder-options-scroll">
               {glassSelectionTarget && <div className={`glass-target-banner glass-target-${glassSelectionTarget}`} role="status" aria-live="polite">
                 <span className="glass-target-icon" aria-hidden="true">{glassSelectionTarget === 'main-door' ? 'D' : 'SL'}</span>
-                <span><small>You are choosing glass for</small><strong>{glassSelectionTarget === 'main-door' ? 'Main Door' : 'Sidelite'}</strong>{glassSelectionTarget === 'sidelite' && <em>{selectedSideliteStyle?.name}{sidelites && sidelites !== 'none' ? ` · ${sideliteRelationshipLabel(sidelites, selectedDoorConfigurationType || 'single')}` : ''}</em>}</span>
+                <span><small>You are choosing glass for</small><strong>{glassSelectionTarget === 'main-door' ? 'Main Door' : 'Sidelite'}</strong>{glassSelectionTarget === 'sidelite' && <em>{sideliteStyleDisplayName(selectedSideliteStyle?.id)}{sidelites && sidelites !== 'none' ? ` · ${sideliteRelationshipLabel(sidelites, selectedDoorConfigurationType || 'single')}` : ''}</em>}</span>
               </div>}
               {(currentPage === 'door-finish' || currentPage === 'jamb-finish') && selectedDoorLine && <div className="finish-toolbar">
                 {(currentPage === 'door-finish' || jambType === 'timber') && <div className="finish-tabs" role="tablist" aria-label="Finish type">{effectiveFinishTypes.map((type) => <button type="button" role="tab" aria-selected={(currentPage === 'door-finish' ? activeFinishType : jambFinishType) === type} className={(currentPage === 'door-finish' ? activeFinishType : jambFinishType) === type ? 'active' : ''} key={type} onClick={() => currentPage === 'door-finish' ? selectFinishTab(type) : (setJambFinishType(type), setJambFinishColor(''), setJambFinishOverridden(true))}>{type === 'paint' ? 'Paint' : 'Stain'}</button>)}</div>}
@@ -2205,7 +2204,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 {currentPage === 'door-line' && sortByDisplayLabel(availableDoorLines, item => item.name).map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Door Line" selected={doorLineId === item.id} onClick={() => selectDoorLine(item.id)} visual={<span className="door-line-card-image"><img src={item.image} alt="" loading="lazy" decoding="async" /></span>} />)}
                 {currentPage === 'door-grain' && sortByDisplayLabel(signatureGrainOptions, item => item.name).map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Signature grain" selected={selectedGrain === item.id} onClick={() => selectGrain(item.id)} visual={<img className="grain-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'sidelites' && sideliteOptions.map((item) => <OptionCard key={item.id} className="sidelite-catalog-card" title={item.name} eyebrow="Entry layout" selected={sidelites === item.id} onClick={() => selectSidelites(item.id)} visual={<img className="sidelite-option-image sidelite-option-image-unflipped" src={item.image} alt="" loading="eager" decoding="async" />} />)}
-                {currentPage === 'sidelite-style' && sortByDisplayLabel(visibleSideliteStyleOptions, item => item.name).map((item) => <OptionCard key={item.id} className="sidelite-catalog-card" title={item.name} eyebrow={`${selectedDoorLine?.name ?? 'Door'} sidelite`} selected={sideliteStyleId === item.id} onClick={() => selectSideliteStyle(item.id)} visual={<img className="sidelite-style-image" src={sideliteSlabAsset(sideliteAssetFamily, item.id as SideliteStyleId)} alt="" loading="eager" decoding="async" />} />)}
+                {currentPage === 'sidelite-style' && sortByDisplayLabel(visibleSideliteStyleOptions, item => sideliteStyleDisplayName(item.id)).map((item) => <OptionCard key={item.id} className="sidelite-catalog-card" title={sideliteStyleDisplayName(item.id)} eyebrow={`${selectedDoorLine?.name ?? 'Door'} sidelite`} selected={sideliteStyleId === item.id} onClick={() => selectSideliteStyle(item.id)} visual={<img className="sidelite-style-image" src={sideliteSlabAsset(sideliteAssetFamily, item.id as SideliteStyleId)} alt="" loading="eager" decoding="async" />} />)}
                 {currentPage === 'door-finish' && sortByDisplayLabel(visibleFinishes, item => item.name).map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow={item.finishType} selected={finishId === item.id} onClick={() => selectFinish(item.id, item.finishType)} visual={<span className={`finish-tile-wrap${item.finishType === 'paint' ? ' finish-tile-flat' : ' finish-tile-stain'}`} style={{ '--fallback-finish': item.color } as CSSProperties}>{item.proMatch && <img src="/assets/branding/pro-match-logo.webp" className="pro-match-swatch-logo" alt="" loading="eager" decoding="async" />}{item.finishType === 'stain' && <img className="finish-tile-image" src={item.image} alt="" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none' }} />}</span>} />)}
                 {currentPage === 'jamb-type' && <>
                   <OptionCard title="Clad" description="Choose from available Home Guard clad colors. Stain finishes are not available for clad jambs." eyebrow="Jamb type" selected={jambType === 'clad'} onClick={() => selectJambType('clad')} visual={<span className="jamb-type-card-image jamb-type-card-image-clad"><img src="/assets/jamb/clad-wrap-card.webp" alt="Clad-wrapped entry door" loading="lazy" decoding="async" /></span>} />
@@ -2225,11 +2224,11 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 {currentPage === 'grid-pattern' && compatibleGridPatterns.map((item) => <OptionCard key={item.id} title={item.id} selected={gridPattern === item.id} onClick={() => selectGridPattern(item.id)} visual={<img className="grid-pattern-thumbnail" src="/assets/grid-options/All Lites.webp" alt="" loading="eager" decoding="async" />} />)}
                 {currentPage === 'grid-color' && sortByDisplayLabel(compatibleGridColors, item => item).map((color) => <OptionCard key={color} title={color} eyebrow="Grid color" selected={gridColor === color} onClick={() => selectGridColor(color)} visual={<span className="finish-tile-wrap grid-color-tile" style={{ '--fallback-finish': gridColorValues[color] ?? '#efeee8' } as CSSProperties} />} />)}
                 {currentPage === 'grid-width' && gridColor && compatibleGridWidths.map((width) => <OptionCard key={width} className="bar-size-option-card" title={width} eyebrow="Bar size" selected={gridWidth === width} onClick={() => selectGridWidth(width)} />)}
-                {currentPage === 'sidelite-glass-type' && sortByDisplayLabel(selectedSideliteCatalog?.categories ?? [], item => item.name).map((item) => <OptionCard key={item.id} title={item.name} eyebrow={`${selectedSideliteStyle?.name} glass`} selected={sideliteGlassCategory === item.id} onClick={() => selectSideliteGlassCategory(item.id)} visual={<img className={`glass-option-thumbnail${item.id === 'clic' ? ' clic-glass-thumbnail' : ''}`} src={glassCategoryChoices.find((category) => category.id === item.id)?.image ?? item.image} alt="" loading="lazy" decoding="async" />} />)}
+                {currentPage === 'sidelite-glass-type' && sortByDisplayLabel(selectedSideliteCatalog?.categories ?? [], item => item.name).map((item) => <OptionCard key={item.id} title={item.name} eyebrow={`${sideliteStyleDisplayName(selectedSideliteStyle?.id)} glass`} selected={sideliteGlassCategory === item.id} onClick={() => selectSideliteGlassCategory(item.id)} visual={<img className={`glass-option-thumbnail${item.id === 'clic' ? ' clic-glass-thumbnail' : ''}`} src={glassCategoryChoices.find((category) => category.id === item.id)?.image ?? item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'sidelite-glass' && sortByDisplayLabel(sideliteGlassOptionGroups, group => group.title).map((group) => {
                   const displayOption = group.options.find((item) => item.id === sideliteGlassId) ?? group.options[0]
                   const thumbnail = glassSelectionThumbnail(displayOption.name) ?? displayOption.asset ?? (displayOption.id === 'clear-grids' ? '/assets/grid-options/Internal Grids.webp' : '/assets/glass/thumbnails/Clear-option.webp')
-                  return <OptionCard key={group.key} title={group.title} eyebrow={`${selectedSideliteStyle?.name ?? ''} Glass`} selected={sideliteGlassGroupKey === group.key} onClick={() => selectSideliteGlassGroup(group)} visual={<img className={`glass-option-thumbnail${group.title.toLowerCase().startsWith('clic') ? ' clic-glass-thumbnail' : ''}`} src={thumbnail} alt="" loading="lazy" decoding="async" />} />
+                  return <OptionCard key={group.key} title={group.title} eyebrow={`${sideliteStyleDisplayName(selectedSideliteStyle?.id)} Glass`} selected={sideliteGlassGroupKey === group.key} onClick={() => selectSideliteGlassGroup(group)} visual={<img className={`glass-option-thumbnail${group.title.toLowerCase().startsWith('clic') ? ' clic-glass-thumbnail' : ''}`} src={thumbnail} alt="" loading="lazy" decoding="async" />} />
                 })}
                 {currentPage === 'sidelite-glass-variant' && sortByDisplayLabel(selectedSideliteGlassGroup?.options ?? [], item => glassVariantLabel(item.name)).map((item) => <OptionCard key={item.id} title={glassVariantLabel(item.name)} eyebrow={selectedSideliteGlassGroup?.title} selected={sideliteGlassVariantConfirmed && sideliteGlassId === item.id} onClick={() => selectSideliteGlassVariant(item.id)} visual={item.asset ? <img className={`glass-option-thumbnail${sideliteGlassCategory === 'decorative' ? ' caming-finish-thumbnail' : ''}`} src={item.asset} alt="" loading="lazy" decoding="async" /> : undefined} />)}
                 {currentPage === 'sidelite-grid-location' && sortByDisplayLabel(availableSideliteGridLocations, item => item.name).map((item) => <OptionCard key={item.id} title={item.name} selected={sideliteGridLocation === item.id} onClick={() => selectSideliteGridLocation(item.id)} visual={<img className="grid-option-thumbnail" src={item.image} alt="" />} />)}
@@ -2289,9 +2288,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow">Home Visualizer</span><h2 id="desktop-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => requestCustomerAction('open-visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
           </section>}
           {currentPage !== 'review' && <div className="mini-summary">
-            <span><b>Door Style</b><strong>{selectedStyle ? resolvedDoorStyleCode(selectedStyle, product) : 'Not selected'}</strong></span>
+            <span><b>Door Style</b><strong>{selectedStyle ? doorStyleDisplayName(selectedStyle) : 'Not selected'}</strong></span>
             <span><b>Finish</b><strong>{selectedFinish?.name ?? 'Not selected'}</strong></span>
-            <span><b>Glass</b><strong>{compatibilitySupportsGlass ? (configuredGlass?.name ?? 'Clear') : 'Not applicable'}</strong></span>
+            <span><b>Glass</b><strong>{compatibilitySupportsGlass ? (glassDisplayName(configuredGlass?.name ?? 'Clear')) : 'Not applicable'}</strong></span>
             <span><b>Sidelites</b><strong>{sideliteRelationshipLabel(sidelites || 'none', selectedDoorConfigurationType || 'single')}</strong></span>
             {selectedDoorConfigurationType === 'french' && <span><b>Lock Setup</b><strong>{selectedDoubleDoorLockPrep?.name ?? 'Not selected'}</strong></span>}
             <span><b>Hardware</b><strong>{selectedHardware ? hardwareDisplayName(selectedHardware) : 'Not selected'}</strong></span>
