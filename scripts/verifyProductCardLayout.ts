@@ -13,12 +13,15 @@ async function check(page: Page, label: string) {
       const r=card.getBoundingClientRect(), visual=card.querySelector('.option-visual'),v=visual?.getBoundingClientRect()
       const copy=card.querySelector('.option-copy')!
       const controls=card.querySelector('.hardware-finish-options,.glass-caming-options')?.getBoundingClientRect()
+      const css=getComputedStyle(card)
+      const intrinsicHeight=(v?.height ?? 0)+copy.getBoundingClientRect().height+(controls?.height ?? 0)+parseFloat(css.paddingTop)+parseFloat(css.paddingBottom)+parseFloat(css.borderTopWidth)+parseFloat(css.borderBottomWidth)
       const text=[...copy.children].map(el=>({text:el.textContent,height:el.getBoundingClientRect().height,top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,scroll:(el as HTMLElement).scrollHeight,client:el.clientHeight,display:getComputedStyle(el).display}))
-      return {height:r.height,top:r.top,bottom:r.bottom,imageHeight:v?.height,imageOffset:v ? v.top-r.top : null,controlsBottom:controls ? r.bottom-controls.bottom : null,text,images:[...card.querySelectorAll('.option-visual img')].map(image=>getComputedStyle(image).objectFit)}
+      return {height:r.height,intrinsicHeight,minHeight:css.minHeight,sharedHeight:css.getPropertyValue('--product-card-height'),top:r.top,bottom:r.bottom,imageHeight:v?.height,imageOffset:v ? v.top-r.top : null,copyTop:copy.getBoundingClientRect().top,imageBottom:v?.bottom,controlsBottom:controls ? r.bottom-controls.bottom : null,text,images:[...card.querySelectorAll('.option-visual img')].map(image=>getComputedStyle(image).objectFit)}
     })
   }))
   for(const cards of groups) {
-    assert.ok(Math.max(...cards.map(c=>c.height))-Math.min(...cards.map(c=>c.height))<1,`${label}: same height throughout grid`)
+    assert.ok(Math.max(...cards.map(c=>c.height))-Math.min(...cards.map(c=>c.height))<1,`${label}: same height throughout grid ${JSON.stringify(cards)}`)
+    assert.ok(Math.max(...cards.map(c=>c.height))<=Math.ceil(Math.max(...cards.map(c=>c.intrinsicHeight)))+1,`${label}: no space beyond tallest natural content`)
     const images=cards.filter(c=>c.imageHeight!==undefined)
     const controls=cards.filter(c=>c.controlsBottom!==null)
     if(controls.length)assert.ok(Math.max(...controls.map(c=>c.controlsBottom!))-Math.min(...controls.map(c=>c.controlsBottom!))<1,`${label}: controls aligned at card bottoms`)
@@ -27,6 +30,7 @@ async function check(page: Page, label: string) {
       assert.ok(Math.max(...images.map(c=>c.imageOffset!))-Math.min(...images.map(c=>c.imageOffset!))<1,`${label}: image offsets ${JSON.stringify(images)}`)
     }
     for(const card of cards) {
+      if(card.imageBottom!==undefined)assert.ok(Math.abs(card.copyTop-card.imageBottom)<1,`${label}: text immediately below thumbnail`)
       assert.ok(card.images.every(fit=>fit==='contain'),`${label}: preserve aspect ratio`)
       assert.ok(card.text.every(text=>text.display!=='none' && text.scroll<=text.client+1),`${label}: complete unclipped text ${JSON.stringify(card.text)}`)
       const visualTextOrder=[...card.text].sort((a,b)=>a.top-b.top)
@@ -39,7 +43,8 @@ async function check(page: Page, label: string) {
 try {
   await new Promise<void>((resolve,reject)=>{server.stdout.on('data',chunk=>{if(String(chunk).includes('127.0.0.1:5196'))resolve()});server.once('error',reject);setTimeout(()=>reject(new Error('Vite timeout')),10000).unref()})
   browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true})
-  for(const width of [320,375,390,430,768,1024,1280]) {
+  const widths=process.argv.includes('--representative-widths')?[390,768,1280]:[320,375,390,430,768,1024,1280]
+  for(const width of widths) {
     const page=await browser.newPage({viewport:{width,height:1000}})
     const draft={version:1,configuration:{selectedDoorConfigurationType:'french',doubleDoorLockPrep:'DDLLBO',styleId:doorStyles.find(s=>s.code==='F')!.id,doorLineId:'20-gauge-smooth-steel',sidelites:'both-sides',sideliteStyleId:'ssl',selectedFinishType:'paint',selectedPaint:'paint-black',jambType:'timber',jambFinishType:'paint',jambFinishColor:'paint-black',selectedGlassCategory:'clear',glassId:'f-clear-grids',selectedGlassGroupKey:'clear-glass-with-grids',glassVariantConfirmed:true,gridPathId:'internal',gridStyle:'Flat',gridPattern:'4 Lite',gridColor:'White',gridWidth:'5/8"',hardwareId:hardwareOptions[0].id,doorSwingId:'LHI'}}
     await page.addInitScript(value=>{localStorage.setItem('hgi-door-builder-draft',JSON.stringify(value));(window as unknown as {__name:(fn:unknown)=>unknown}).__name=fn=>fn},draft)
