@@ -9,6 +9,9 @@ import type { DoorConfiguration } from '../src/types'
 import { createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { DoorPreview } from '../src/components/DoorPreview'
+import { renderSslRelief } from '../src/utils/sideliteRelief'
+import { loadPdfImage } from '../src/utils/pdfProductRenderer'
+import { captureFinalDoorPreview } from '../src/features/home-visualizer/captureDoorPreview'
 import '../src/styles.css'
 import { restoredFullLiteDecorativeGlassIds, isApprovedDecorativeGlassName } from '../src/data/decorativeGlass'
 import { buildDoorBuilderSubmissionPayload } from '../src/utils/submission'
@@ -49,8 +52,8 @@ function activeFrenchFixture(right: boolean) {
   item.configuration.doorSwing = { id: right ? 'RHI' : 'LHI', name: right ? 'Right Hand Inswing' : 'Left Hand Inswing', image: '' }
   return item
 }
-function halfSideliteFixture(lineId: string) {
-  const item = fixture('N1', 'paint-clay', 'lock-side', 'single', undefined, lineId)
+function halfSideliteFixture(lineId: string, finishId = 'paint-clay') {
+  const item = fixture('N1', finishId, 'lock-side', 'single', undefined, lineId)
   const family = sideliteAssetFamilyForSlab({ doorLineId: lineId })
   const glass = sslGlassOptions.find(option => option.asset)!
   item.configuration.sideliteSlab = 'ssl'
@@ -87,6 +90,12 @@ const fixtures = [
   { name: 'N1-stain', ...fixture('N1', 'stain-nutmeg', 'lock-side') },
   { name: 'smooth-steel-ssl', ...halfSideliteFixture('20-gauge-smooth-steel') },
   { name: 'textured-fiberglass-ssl', ...halfSideliteFixture('textured-fiberglass') },
+  ...['20-gauge-smooth-steel', 'textured-fiberglass'].flatMap(line => ['wineberry', 'terratone', 'black', 'white'].map(color => {
+    const item = halfSideliteFixture(line, `paint-${color}`)
+    item.appearance.glassFrameFinish = item.configuration.finish
+    return { name: `ssl-relief-${line}-${color}`, ...item }
+  })),
+  { name: 'ssl-relief-dark-stain', ...halfSideliteFixture('textured-fiberglass', 'stain-black-cherry') },
   { name: 'french-left-active', ...activeFrenchFixture(false) },
   { name: 'french-right-active', ...activeFrenchFixture(true) },
   ...[
@@ -138,6 +147,20 @@ Object.assign(window, {
     return { finishId: c.finish.id, finishHex: c.finish.color, finishName: c.finish.name }
   },
   pdfFixtures: fixtures.map(item => item.name),
+  async sslReliefSurface(index: number) {
+    const { configuration: c, appearance: a } = fixtures[index]
+    const slab = await loadPdfImage(a.sideliteAssetSrc!), mask = await loadPdfImage(a.sideliteMaskSrc!)
+    return renderSslRelief(slab, mask, c.finish.color).toDataURL('image/png')
+  },
+  async captureSslReference() {
+    const result = await captureFinalDoorPreview(document.querySelector<HTMLElement>('#live-preview')!, { frameMode: 'visible', preserveCanonicalFrameBounds: true })
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = reject
+      reader.readAsDataURL(result.blob)
+    })
+  },
   restoredFixtureDetails(index: number) {
     const { configuration: c } = fixtures[index]
     let payload = null

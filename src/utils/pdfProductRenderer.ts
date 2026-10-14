@@ -10,6 +10,7 @@ import { doorHardwarePlacements } from '../data/doorConfigurationRules'
 import { sidelitePlacement } from '../data/sideliteConfigurations'
 import { doorHandingSides } from '../data/doorHanding'
 import { createCanonicalEntranceGeometry, ENTRANCE_GEOMETRY } from '../features/home-visualizer/entranceGeometry'
+import { renderSslRelief } from './sideliteRelief'
 
 // Resolved asset selection is shared with the builder, not re-guessed from
 // human-readable grid labels. This is immutable data, never a DOM reference.
@@ -50,7 +51,7 @@ export function loadPdfImage(url: string): Promise<HTMLImageElement> {
 }
 
 type Masks = NonNullable<ReturnType<typeof buildPreviewMasks>>
-type PreparedSurface = { image: HTMLCanvasElement; masks: Masks | null; glass?: HTMLImageElement; frame?: HTMLImageElement }
+type PreparedSurface = { image: HTMLCanvasElement; masks: Masks | null; glass?: HTMLImageElement; frame?: HTMLImageElement; reliefSource?: { slab: HTMLImageElement; mask: HTMLImageElement } }
 
 async function prepareSurface(slab: HTMLImageElement, mask: HTMLImageElement | undefined, finish: Finish, code: string, opening?: HTMLImageElement, sidelite = false): Promise<PreparedSurface> {
   const masks = mask ? buildPreviewMasks(mask, slab, !sidelite, glassFrameMaskForOpening(sidelite ? null : code), opening) : null
@@ -72,6 +73,13 @@ async function prepareSurface(slab: HTMLImageElement, mask: HTMLImageElement | u
   paint.globalAlpha = finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity
   paint.filter = `grayscale(1) contrast(${finish.finishType === 'paint' ? 1.12 : FINISH_RENDERING.stainContrast})`
   paint.drawImage(slab, 0, 0)
+  const reliefSource = sidelite && code.toLowerCase() === 'ssl' && mask ? { slab, mask } : undefined
+  if (reliefSource) {
+    paint.globalCompositeOperation = 'source-over'
+    paint.globalAlpha = 1
+    paint.filter = 'none'
+    paint.drawImage(renderSslRelief(slab, mask!, finish.color), 0, 0)
+  }
   paint.globalAlpha = 1
   paint.filter = 'none'
   // Solid slab artwork can be translucent relief, not a material silhouette.
@@ -83,7 +91,7 @@ async function prepareSurface(slab: HTMLImageElement, mask: HTMLImageElement | u
   }
   paint.globalCompositeOperation = 'source-over'
   ctx.drawImage(painted, 0, 0, slab.naturalWidth, slab.naturalHeight)
-  return { image: result, masks, glass: masks?.glassUrl ? await loadPdfImage(masks.glassUrl) : undefined, frame: masks?.glassFrameUrl ? await loadPdfImage(masks.glassFrameUrl) : undefined }
+  return { image: result, masks, glass: masks?.glassUrl ? await loadPdfImage(masks.glassUrl) : undefined, frame: masks?.glassFrameUrl ? await loadPdfImage(masks.glassFrameUrl) : undefined, reliefSource }
 }
 
 async function fittedGlass(overlay: HTMLImageElement, surface: PreparedSurface, code: string, id?: string, sidelite = false, grid = false, prairie = false) {
@@ -201,7 +209,9 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
     const finish = assets.glassFrameFinish
     if (!finish || !frame) return
     const width = surface.image.width / PIXEL_SCALE, height = surface.image.height / PIXEL_SCALE
-    const tint = clippedLayer(frame, undefined, width, height, finish.color)
+    const tint = surface.reliefSource
+      ? clippedLayer(renderSslRelief(surface.reliefSource.slab, surface.reliefSource.mask, finish.color), frame, width, height)
+      : clippedLayer(frame, undefined, width, height, finish.color)
     ctx.drawImage(tint, 0, 0, ENTRANCE_GEOMETRY.slabWidth, geometry.openingHeight)
   }
   function drawSide(x: number) {

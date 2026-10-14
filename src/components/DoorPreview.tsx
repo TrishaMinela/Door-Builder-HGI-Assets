@@ -11,6 +11,7 @@ import { DoorFrame } from './preview/DoorFrame'
 import { resolveSidelitePosition } from '../data/sideliteConfigurations'
 import { doorHandingSides } from '../data/doorHanding'
 import { doorStyleDisplayName, glassDisplayName } from '../data/productDisplayNames'
+import { renderSslRelief } from '../utils/sideliteRelief'
 
 const hexToRgb = (hex: string) => {
   const normalized = hex.replace('#', '')
@@ -506,7 +507,11 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const hasMappedPreview = Boolean(previewCandidates.length)
   const finishColor = tintColor ?? finish.color
   const [processedMask, setProcessedMask] = useState<{ source: string; finishUrl: string; glassUrl?: string; glassFrameUrl?: string; glassBounds?: PixelBounds | null; glassRegions?: PixelBounds[]; maskWidth?: number; maskHeight?: number } | null>(null)
-  const [sideliteFinishMask, setSideliteFinishMask] = useState<{ slab: string; mask: string; url: string; glassUrl?: string; glassFrameUrl?: string; glassBounds?: PixelBounds | null; glassRegions?: PixelBounds[]; maskWidth?: number; maskHeight?: number } | null>(null)
+  const [sideliteFinishMask, setSideliteFinishMask] = useState<{ slab: string; mask: string; url: string; reliefUrl?: string; reliefColor?: string; frameReliefUrl?: string; frameReliefColor?: string; glassUrl?: string; glassFrameUrl?: string; glassBounds?: PixelBounds | null; glassRegions?: PixelBounds[]; maskWidth?: number; maskHeight?: number } | null>(null)
+  const usesSslRelief = sideliteMaskSrc?.endsWith('/SSL.png') ?? false
+  const sslReliefColor = usesSslRelief ? finishColor : undefined
+  const sslFrameReliefColor = usesSslRelief ? glassFrameFinish?.color : undefined
+  const sslReliefReady = !usesSslRelief || !applyFinish || Boolean(sideliteFinishMask?.reliefColor === finishColor && sideliteFinishMask?.frameReliefColor === (glassFrameFinish?.color ?? finishColor))
   const finishMask = previewImage && processedMask?.source === previewImage ? processedMask.finishUrl : undefined
   const glassMask = previewImage && processedMask?.source === previewImage ? processedMask.glassUrl : undefined
   const glassFrameMask = previewImage && processedMask?.source === previewImage ? processedMask.glassFrameUrl : undefined
@@ -564,7 +569,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const mainGlassReady = !glassOverlay || isHrtDoor || isSatDoor
     || Boolean(fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage)
   const clearBaseReady = !clearNoGridOverlay || Boolean(fittedClearBase?.source === clearNoGridOverlay && fittedClearBase.maskSource === previewImage)
-  const sideliteMaskReady = frameSidelites === 'none' || Boolean(sideliteFinishMask && sideliteFinishMask.slab === sideliteAssetSrc && sideliteFinishMask.mask === sideliteMaskSrc && sideliteFinishMask.url)
+  const sideliteMaskReady = frameSidelites === 'none' || Boolean(sslReliefReady && sideliteFinishMask && sideliteFinishMask.slab === sideliteAssetSrc && sideliteFinishMask.mask === sideliteMaskSrc && sideliteFinishMask.url)
   const sideliteGlassReady = frameSidelites === 'none' || !sideliteGlassSrc || !sideliteGlassNeedsFitting || Boolean(fittedSideliteGlass && fittedSideliteGlass.source === sideliteGlassSrc && fittedSideliteGlass.slab === sideliteAssetSrc && fittedSideliteGlass.mask === sideliteMaskSrc)
   const prairieGridReady = frameSidelites === 'none' || !sideliteGridIsPrairie || !sideliteGridColor || usesAuthoredSidelitePrairieColor || Boolean(tintedPrairieGrid && tintedPrairieGrid.source === fittedOrSourceSideliteGlass && tintedPrairieGrid.color === sideliteGridColor)
   const specialFrameReady = (!isHrtClearGlass || !glassFrameFinish || hrtClearTrimMask?.source === glassOverlay)
@@ -727,7 +732,10 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
             sideliteMaskSrc,
           })
         }
-        setSideliteFinishMask(processed ? { slab: sideliteAssetSrc, mask: sideliteMaskSrc, url: processed.finishUrl, glassUrl: processed.glassUrl, glassFrameUrl: processed.glassFrameUrl, glassBounds: processed.glassBounds, glassRegions: processed.glassRegions, maskWidth: processed.maskWidth, maskHeight: processed.maskHeight } : null)
+        const reliefUrl = processed && usesSslRelief ? renderSslRelief(slab, mask, finishColor).toDataURL('image/png') : undefined
+        const frameReliefColor = glassFrameFinish?.color ?? finishColor
+        const frameReliefUrl = reliefUrl && frameReliefColor !== finishColor ? renderSslRelief(slab, mask, frameReliefColor).toDataURL('image/png') : reliefUrl
+        setSideliteFinishMask(processed ? { slab: sideliteAssetSrc, mask: sideliteMaskSrc, url: processed.finishUrl, reliefUrl, reliefColor: finishColor, frameReliefUrl, frameReliefColor, glassUrl: processed.glassUrl, glassFrameUrl: processed.glassFrameUrl, glassBounds: processed.glassBounds, glassRegions: processed.glassRegions, maskWidth: processed.maskWidth, maskHeight: processed.maskHeight } : null)
       }
       mask.onerror = () => { if (!cancelled) setSideliteFinishMask(null) }
       mask.src = sideliteMaskSrc
@@ -735,7 +743,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
     slab.onerror = () => { if (!cancelled) setSideliteFinishMask(null) }
     slab.src = sideliteAssetSrc
     return () => { cancelled = true }
-  }, [sideliteAssetSrc, sideliteMaskSrc])
+  }, [sideliteAssetSrc, sideliteMaskSrc, usesSslRelief, sslReliefColor, sslFrameReliefColor])
 
   useEffect(() => {
     let cancelled = false
@@ -909,13 +917,14 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
     ...sideliteGlassFrameMaskStyle,
     backgroundColor: glassFrameFinish.color,
     opacity: 1,
+    ...(usesSslRelief && sslReliefReady && sideliteFinishMask?.frameReliefUrl ? { backgroundImage: `url("${sideliteFinishMask.frameReliefUrl}")`, backgroundSize: '100% 100%' } : {}),
   } as React.CSSProperties : undefined
   const detailLayerStyle = finishMask ? canonicalSurfaceDetailStyle(finishMask, finish.finishType) : undefined
   const activeSideliteFinishMask = sideliteFinishMask && sideliteFinishMask.slab === sideliteAssetSrc && sideliteFinishMask.mask === sideliteMaskSrc ? sideliteFinishMask.url : undefined
   const sideliteFinishStyle = applyFinish && activeSideliteFinishMask
-    ? canonicalSurfaceFinishStyle(activeSideliteFinishMask, finish.finishType, finishColor)
+    ? { ...canonicalSurfaceFinishStyle(activeSideliteFinishMask, finish.finishType, finishColor), ...(usesSslRelief && sslReliefReady && sideliteFinishMask?.reliefUrl ? { backgroundImage: `url("${sideliteFinishMask.reliefUrl}")`, backgroundSize: '100% 100%', filter: 'none' } : {}) }
     : undefined
-  const sideliteDetailStyle = applyFinish && activeSideliteFinishMask
+  const sideliteDetailStyle = applyFinish && activeSideliteFinishMask && !usesSslRelief
     ? canonicalSurfaceDetailStyle(activeSideliteFinishMask, finish.finishType)
     : undefined
   // Clip every glass layer to the authored opening. This is especially
