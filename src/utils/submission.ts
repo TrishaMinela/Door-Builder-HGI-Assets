@@ -2,6 +2,7 @@ import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationHingeOptionLabel, doorConfig
 import { doorSwingDisplayName } from '../data/doorHanding'
 import { hardwareDisplayName } from '../data/hardware'
 import { sidelitePlacement, sideliteProductLabel } from '../data/sideliteConfigurations'
+import { isHiddenDecorativeGlass } from '../data/customerGlassAvailability'
 import type { ContactForm, DoorConfiguration, GridConfiguration, SideliteGlassConfiguration } from '../types'
 
 export type DoorBuilderSubmissionPayload = {
@@ -94,6 +95,9 @@ function readableSidelitePlacement(configuration: DoorConfiguration) {
 }
 
 export function buildDoorBuilderSubmissionPayload({ contact, configuration, submittedAt }: SubmissionSource): DoorBuilderSubmissionPayload {
+  if ([configuration.glass, configuration.mainDoorGlass].some(glass => glass && isHiddenDecorativeGlass(glass)) || isHiddenDecorativeGlass({ name: configuration.sideliteGlass?.glass })) {
+    throw new Error('Please choose an available glass option before submitting.')
+  }
   const { firstName, lastName } = splitName(contact.fullName)
   const configurationType = configuration.doorConfigurationType ?? 'single'
   const hasSidelites = (configuration.sidelitePlacement ?? configuration.sidelites) !== 'none'

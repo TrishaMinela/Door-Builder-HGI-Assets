@@ -10,6 +10,7 @@ import type {
 import type { FslGridLocationId, SideliteGlassCategory } from '../data/fslGlass'
 import { normalizeLegacySidelite, type SideliteInput } from '../data/sideliteConfigurations'
 import type { DoorSwing } from '../types'
+import { isHiddenDecorativeGlass } from '../data/customerGlassAvailability'
 
 export const DOOR_BUILDER_DRAFT_KEY = 'hgi-door-builder-draft'
 export const DOOR_BUILDER_DRAFT_VERSION = 1
@@ -85,7 +86,16 @@ export function sanitizeDoorBuilderDraft(value: unknown): DoorBuilderDraftConfig
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const envelope = value as Record<string, unknown>
   if (envelope.version !== DOOR_BUILDER_DRAFT_VERSION || !envelope.configuration || typeof envelope.configuration !== 'object' || Array.isArray(envelope.configuration)) return null
-  const input = envelope.configuration as Record<string, unknown>
+  const input = { ...envelope.configuration as Record<string, unknown> }
+  // Clear hidden product IDs and their dependent selection state before mount.
+  if (isHiddenDecorativeGlass({ id: text(input.glassId) }) || isHiddenDecorativeGlass({ id: text(input.selectedGlassGroupKey) })) {
+    for (const key of ['glassId', 'selectedGlassGroupKey', 'gridPathId', 'gridStyle', 'gridPattern', 'gridColor', 'gridWidth']) input[key] = ''
+    input.glassVariantConfirmed = false
+  }
+  if (isHiddenDecorativeGlass({ id: text(input.sideliteGlassId) }) || isHiddenDecorativeGlass({ id: text(input.sideliteGlassGroupKey) })) {
+    for (const key of ['sideliteGlassId', 'sideliteGlassGroupKey', 'sideliteGridLocation', 'sideliteGridStyle', 'sideliteGridPattern', 'sideliteGridColor', 'sideliteGridWidth']) input[key] = ''
+    input.sideliteGlassVariantConfirmed = false
+  }
   return {
     ...blankDraft,
     selectedDoorConfigurationType: allowed(input.selectedDoorConfigurationType, ['', 'single', 'french', 'savannah'], ''),

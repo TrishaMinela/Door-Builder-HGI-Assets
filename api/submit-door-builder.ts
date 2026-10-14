@@ -1,4 +1,5 @@
 import { DealerResolutionError, resolveDealerId } from '../server/dealerResolution'
+import { isHiddenDecorativeGlass } from '../src/data/customerGlassAvailability'
 
 type ApiRequest = { method?: string; body?: unknown }
 declare const process: { env: Record<string, string | undefined> }
@@ -97,6 +98,13 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   const doorConfiguration = configurationSnapshot(source.doorConfiguration)
   if (!doorConfiguration) { response.status(400).json({ error: 'Door configuration is invalid.' }); return }
   if (byteLength(doorConfiguration) > MAX_CONFIGURATION_BYTES) { response.status(413).json({ error: 'Door configuration is too large.' }); return }
+  const configuration = configurationSnapshot(doorConfiguration.configuration) ?? doorConfiguration
+  const mainGlass = configurationSnapshot(configuration.mainDoorGlass)
+  const glass = configurationSnapshot(configuration.glass)
+  const sideliteGlass = configurationSnapshot(configuration.sideliteGlass)
+  const hidden = [mainGlass, glass].some(option => option && isHiddenDecorativeGlass({ id: typeof option.id === 'string' ? option.id : '', name: typeof option.name === 'string' ? option.name : '' }))
+    || [payload.main_door_glass, payload.sidelite_glass, typeof sideliteGlass?.glass === 'string' ? sideliteGlass.glass : ''].some(name => isHiddenDecorativeGlass({ name }))
+  if (hidden) { response.status(400).json({ error: 'Please choose an available glass option before submitting.' }); return }
 
   logDevelopmentSubmission(payload)
 

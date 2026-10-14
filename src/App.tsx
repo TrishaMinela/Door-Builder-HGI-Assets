@@ -18,7 +18,7 @@ import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, 
 import { approvedPrivacyGlassIds } from './data/privacyGlass'
 import { builderUx } from './config/builderUx'
 import { matchingJambFinish } from './utils/matchingFrameFinish'
-import { isCustomerSelectableGlass } from './data/customerGlassAvailability'
+import { isCustomerSelectableGlass, isHiddenDecorativeGlass } from './data/customerGlassAvailability'
 import { isGlassFamilyCompatible } from './data/glassFamilyCompatibility'
 import type { ContactForm, DoorConfiguration, DoorConfigurationType, DoorSwing, DoubleDoorLockPrepCode, GlassCoating, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, HardwareView, PreviewHardware, SideliteConfiguration, SideliteGlassConfiguration } from './types'
 import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationLabel, lockSetupOptionsForHardware, requiredDoorConfigurationProductOption } from './data/doorConfigurationRules'
@@ -585,7 +585,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       : styleCodesForGlass(selectedStyle)
     : []
   const availableGlass = selectedStyle && compatibilitySupportsGlass
-    ? glassOptions.filter((option) => isGlassFamilyCompatible(option, selectedDoorLine?.id) && selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])) && !(selectedStyleCodes.includes('F') && legacyFullLiteGlassIds.has(option.id)) && !(selectedStyleCodes.includes('S') && legacySHalfLiteClearGlassIds.has(option.id)) && !((selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && legacyF48ClearGlassIds.has(option.id)) && (!(selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) || f48GlassOptionIds.has(option.id)) && !(selectedStyleCodes.includes('SAT') && glassCategory(option) === 'privacy'))
+    ? glassOptions.filter((option) => !isHiddenDecorativeGlass(option) && isGlassFamilyCompatible(option, selectedDoorLine?.id) && selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])) && !(selectedStyleCodes.includes('F') && legacyFullLiteGlassIds.has(option.id)) && !(selectedStyleCodes.includes('S') && legacySHalfLiteClearGlassIds.has(option.id)) && !((selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && legacyF48ClearGlassIds.has(option.id)) && (!(selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) || f48GlassOptionIds.has(option.id)) && !(selectedStyleCodes.includes('SAT') && glassCategory(option) === 'privacy'))
     : []
   const supportsGlass = Boolean(compatibilitySupportsGlass && availableGlass.length > 0)
   const supportsGlassFrameStain = availableFinishes.some((item) => item.finishType === 'stain')
@@ -630,7 +630,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const visibleFslGlass = sideliteGlassCategory ? selectedSideliteCatalog?.options.filter((option) => option.category === sideliteGlassCategory && isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, selectedDoorLine?.id)) ?? [] : []
   const sideliteGlassOptionGroups = groupSideliteGlassOptions(visibleFslGlass)
   const selectedSideliteGlassGroup = sideliteGlassOptionGroups.find((group) => group.key === sideliteGlassGroupKey)
-  const selectedFslGlass = selectedSideliteCatalog?.options.find((option) => option.id === sideliteGlassId && isGlassFamilyCompatible(option, selectedDoorLine?.id))
+  const selectedFslGlass = selectedSideliteCatalog?.options.find((option) => option.id === sideliteGlassId && !isHiddenDecorativeGlass(option) && isGlassFamilyCompatible(option, selectedDoorLine?.id))
   const usesFslGridFlow = usesFslGlassFlow && sideliteGlassId === 'clear-grids'
   const usesExactFslRules = selectedSideliteStyle?.id === 'fsl'
   const fslGridStyles = (['Arts & Crafts', 'Contoured', 'Flat', 'Prairie'] as GridStyle[]).filter((styleName) => selectedSideliteCatalog?.standardRules[styleName] || selectedSideliteCatalog?.lowERules[styleName])
@@ -1104,7 +1104,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       if (selectedFinishType === 'paint') setSelectedPaint('')
       if (selectedFinishType === 'stain') setSelectedStain('')
     }
-    if (selectedDoorLine && glass && !isGlassFamilyCompatible(glass, selectedDoorLine.id)) {
+    if (selectedDoorLine && glass && (isHiddenDecorativeGlass(glass) || !isGlassFamilyCompatible(glass, selectedDoorLine.id))) {
       const choices = availableGlass.filter(isCustomerSelectableGlass)
       const categoryChoices = choices.filter(option => glassCategory(option) === selectedGlassCategory)
       const fallback = sortByDisplayLabel(categoryChoices.length ? categoryChoices : choices, glassGroupTitle)[0]
@@ -1149,7 +1149,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
   useEffect(() => {
     const current = selectedSideliteCatalog?.options.find(option => option.id === sideliteGlassId)
-    if (!selectedDoorLine || !current || isGlassFamilyCompatible(current, selectedDoorLine.id)) return
+    if (!selectedDoorLine || !current || (!isHiddenDecorativeGlass(current) && isGlassFamilyCompatible(current, selectedDoorLine.id))) return
     const valid = selectedSideliteCatalog!.options.filter(option => isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, selectedDoorLine.id))
     const sameCategory = valid.filter(option => option.category === sideliteGlassCategory)
     const group = sortByDisplayLabel(groupSideliteGlassOptions(sameCategory.length ? sameCategory : valid), group => group.title)[0]

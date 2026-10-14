@@ -131,9 +131,11 @@ Object.assign(window, {
   pdfFixtures: fixtures.map(item => item.name),
   restoredFixtureDetails(index: number) {
     const { configuration: c } = fixtures[index]
+    let payload = null
+    try { payload = buildDoorBuilderSubmissionPayload({ contact: { fullName: 'Glass Test', email: '', phone: '', zip: '', notes: '' }, configuration: c }) } catch { /* Historical fixtures must no longer be submittable. */ }
     return { glassId: c.glass?.id, mainAsset: c.glass?.overlaysByDoorStyle[c.style.code], sideAsset: c.sideliteGlass?.glassAsset,
       mainName: c.glass?.name, sideName: c.sideliteGlass?.glass,
-      payload: buildDoorBuilderSubmissionPayload({ contact: { fullName: 'Glass Test', email: '', phone: '', zip: '', notes: '' }, configuration: c }) }
+      payload }
   },
   async renderFixture(index: number) {
     const { configuration, appearance } = fixtures[index]

@@ -6,6 +6,11 @@ import { doorStyles, glassOptions, hardwareOptions } from '../src/data/options'
 import { fslGlassOptions } from '../src/data/fslGlass'
 import { restoredFullLiteDecorativeGlassIds } from '../src/data/decorativeGlass'
 import { isGlassFamilyCompatible } from '../src/data/glassFamilyCompatibility'
+import { isCustomerSelectableGlass, isHiddenDecorativeGlass } from '../src/data/customerGlassAvailability'
+import { sanitizeDoorBuilderDraft } from '../src/utils/doorBuilderDraft'
+import { buildDoorBuilderSubmissionPayload } from '../src/utils/submission'
+import { aiTestConfiguration } from './aiVisualizerFixture'
+import submitHandler from '../api/submit-door-builder'
 
 const main = glassOptions.filter(option => restoredFullLiteDecorativeGlassIds.has(option.id))
 assert.equal(main.length, 10)
@@ -23,6 +28,24 @@ assert.equal(main.filter(option => option.overlaysByDoorStyle.F48).length, 10)
 assert.equal(glassOptions.find(option => option.id === 'briselle')!.overlaysByDoorStyle.F, undefined)
 assert.equal(glassOptions.find(option => option.id === 'berkley')!.overlaysByDoorStyle.F, undefined)
 assert.ok(!fslGlassOptions.some(option => /briselle/i.test(option.name)), 'Never relabel Bristol BRI as Briselle')
+for (const option of [...main, ...fslGlassOptions.filter(isHiddenDecorativeGlass)]) {
+  assert.ok(!isCustomerSelectableGlass(option))
+  const draft = sanitizeDoorBuilderDraft({ version: 1, configuration: { glassId: option.id, sideliteGlassId: option.id, selectedGlassGroupKey: option.name.toLowerCase(), sideliteGlassGroupKey: option.name.toLowerCase(), gridStyle: 'Flat', sideliteGridStyle: 'Flat' } })!
+  assert.equal(draft.glassId, ''); assert.equal(draft.sideliteGlassId, '')
+  assert.equal(draft.gridStyle, ''); assert.equal(draft.sideliteGridStyle, '')
+  assert.throws(() => buildDoorBuilderSubmissionPayload({ contact: { fullName: 'Test', email: '', phone: '', zip: '', notes: '' }, configuration: { ...aiTestConfiguration, glass: { ...main[0], id: option.id, name: option.name } } }), /available glass/)
+  assert.throws(() => buildDoorBuilderSubmissionPayload({ contact: { fullName: 'Test', email: '', phone: '', zip: '', notes: '' }, configuration: { ...aiTestConfiguration, sideliteGlass: { glass: option.name, glassCategory: 'Decorative Glass' } } }), /available glass/)
+  let status = 0
+  const response = { status(code: number) { status = code; return this }, json() {}, setHeader() {} }
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async () => { throw new Error('Hidden submissions must not access external services') }
+  try {
+    await submitHandler({ method: 'POST', body: { full_name: 'Test', email: 'test@example.com', phone: '5551234', postal_code: '12345', submissionId: 'c1950cf7-6273-4a5c-a0c8-4a531831d906', main_door_glass: option.name, doorConfiguration: { schemaVersion: 1, configuration: { glass: option } } } }, response)
+    assert.equal(status, 400)
+  } finally { globalThis.fetch = originalFetch }
+}
+assert.ok(isCustomerSelectableGlass({ id: 'bri', name: 'Bristol' }))
+assert.equal(sanitizeDoorBuilderDraft({ version: 1, configuration: { sideliteGlassId: 'bri', sideliteGlassGroupKey: 'bristol' } })!.sideliteGlassId, 'bri')
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5214', '--strictPort'], { stdio: 'pipe' })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
@@ -31,8 +54,6 @@ try {
   browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
   for (const width of [1280, 390]) for (const scope of ['F', 'F48', 'FSL']) {
     const page = await browser.newPage({ viewport: { width, height: 1000 } })
-    const requestedAssets = new Set<string>()
-    page.on('request', request => requestedAssets.add(decodeURIComponent(new URL(request.url()).pathname)))
     await page.addInitScript(value => localStorage.setItem('hgi-door-builder-draft', JSON.stringify({ version: 1, configuration: value })), {
       selectedDoorConfigurationType: 'single', styleId: doorStyles.find(style => style.code === (scope === 'F48' ? 'F48' : 'F'))!.id,
       doorLineId: '20-gauge-smooth-steel', sidelites: scope === 'FSL' ? 'right' : 'none', sideliteStyleId: 'fsl', doorSwingId: 'LHI',
@@ -51,27 +72,17 @@ try {
     const labels = await page.locator('.builder-options-scroll .option-card strong').allTextContents()
     assert.deepEqual(labels, [...labels].sort((a,b) => a.trim().localeCompare(b.trim(), undefined, { sensitivity: 'base' })))
     assert.equal(new Set(labels).size, labels.length)
-    const required = ['Ashbury', 'Calandra', 'Courtyard', 'Elegant', 'Monterey', ...(scope !== 'F' ? ['Berkley'] : []), ...(scope === 'F48' ? ['Briselle'] : [])]
-    for (const label of required) {
-      assert.ok(labels.includes(label), `${scope}: ${label} visible`)
-      await page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: new RegExp(`^${label}$`) }) }).click()
-      const state = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
-      const selected = scope === 'FSL' ? fslGlassOptions.find(option => option.id === state.sideliteGlassId)! : glassOptions.find(option => option.id === state.glassId)!
-      assert.ok(selected.name.startsWith(label), 'Selected product identity survives')
-      const asset = scope === 'FSL' ? (selected as typeof fslGlassOptions[number]).asset : (selected as typeof glassOptions[number]).overlaysByDoorStyle[scope]
-      assert.ok(asset && existsSync(`public${asset}`))
-      const preview = page.locator(width === 1280 ? 'aside .preview-scene' : '.mobile-live-preview .preview-scene').first()
-      await page.waitForTimeout(250)
-      assert.ok(requestedAssets.has(asset!), `${scope}: exact selected artwork requested`)
-      assert.ok(await preview.locator(scope === 'FSL' ? '.door-frame-sidelite-glass' : '.door-glass-overlay').evaluateAll(images => images.some(image => (image as HTMLImageElement).naturalWidth > 0)))
-    }
-    // End on a single-variant family to exercise the real summary flow.
-    await page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: /^Calandra$/ }) }).click()
+    for (const label of ['Ashbury', 'Calandra', 'Courtyard', 'Elegant', 'Monterey', 'Berkley', 'Briselle']) assert.ok(!labels.includes(label), `${scope}: ${label} hidden`)
+    const state = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
+    assert.ok(!isHiddenDecorativeGlass({ id: state.glassId }))
+    assert.ok(!isHiddenDecorativeGlass({ id: state.sideliteGlassId }))
+    await page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: /^Cadence$/ }) }).click()
     for (let i = 0; i < 30 && !(await page.getByRole('heading', { name: 'Configuration Summary', exact: true }).isVisible()); i++) await next()
     await page.getByRole('heading', { name: 'Configuration Summary', exact: true }).waitFor()
-    assert.match(await page.locator('.summary-card').innerText(), /Calandra/)
+    assert.match(await page.locator('.summary-card').innerText(), /Cadence/)
+    assert.doesNotMatch(await page.locator('.summary-card').innerText(), /Courtyard|Briselle|Berkley|Ashbury|Elegant|Monterey|Calandra/)
     await page.screenshot({ path: `/tmp/restored-glass-${scope}-${width}.png` })
-    console.log(`${scope} ${width}px: alphabetized unique families, selections, artwork and summary passed`)
+    console.log(`${scope} ${width}px: hidden families absent, restored drafts sanitized, alphabetized lists and valid summary passed`)
     await page.close()
   }
 } finally { await browser?.close(); server.kill('SIGTERM') }
