@@ -45,7 +45,10 @@ const doubleDoorBuilderOptions: readonly SideliteBuilderOption[] = sideliteProdu
 }))
 
 export function sideliteBuilderOptions(configurationType: DoorConfigurationType | '' | null | undefined): readonly SideliteBuilderOption[] {
-  if (!configurationType || configurationType === 'single') return singleDoorBuilderOptions.map(option => option.id === 'hinge-side' ? { ...option, id: 'left', name: 'Left', image: '/assets/hgi-assets/Sidelites/options/Left Side OSLI.webp' } : option.id === 'lock-side' ? { ...option, id: 'right', name: 'Right', image: '/assets/hgi-assets/Sidelites/options/Right Side OSLI.webp' } : option)
+  // These legacy filenames describe the pictured swing, not fixed OSLI sides:
+  // Lock-Side shows one slab with glass on the left; Hinge-Side on the right.
+  // The assets named Left/Right Side OSLI instead depict two slabs.
+  if (!configurationType || configurationType === 'single') return singleDoorBuilderOptions.map(option => option.id === 'hinge-side' ? { ...option, id: 'left', name: 'Left', image: '/assets/hgi-assets/Sidelites/options/Lock-Side Sidelite.webp' } : option.id === 'lock-side' ? { ...option, id: 'right', name: 'Right', image: '/assets/hgi-assets/Sidelites/options/Hinge-Side Sidelite.webp' } : option)
   if (configurationType === 'french') return doubleDoorBuilderOptions.map(option => ({ ...option, name: option.id === 'hinge-side' ? 'Left Sidelite' : option.id === 'lock-side' ? 'Right Sidelite' : option.name }))
   return configurationType === 'savannah' ? doubleDoorBuilderOptions : singleDoorBuilderOptions
 }

@@ -2,6 +2,12 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright-core'
 import { doorStyles } from '../src/data/options'
+import { existsSync } from 'node:fs'
+
+const expectedAssets = {
+  single: { 'No Sidelite': 'No Sidelites.webp', 'Both Sidelites': 'Both-Sides Sidelites.webp', Left: 'Lock-Side Sidelite.webp', Right: 'Hinge-Side Sidelite.webp' },
+  french: { 'No Sidelite': 'Double Door No Side.webp', 'Both Sidelites': 'Double Door Both Sides.webp', 'Left Sidelite': 'Double Door Left Side.webp', 'Right Sidelite': 'Double Door Right Side.webp' },
+}
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5213', '--strictPort'], { stdio: 'pipe' })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
@@ -28,19 +34,26 @@ try {
       await next()
       const cards = page.locator('.builder-options-scroll .sidelite-catalog-card')
       assert.equal(await cards.count(), 4)
-      await page.waitForFunction(() => [...document.querySelectorAll('.sidelite-layout-thumbnail .preview-scene')].every(element => element.getAttribute('aria-busy') === 'false'))
+      assert.equal(await cards.locator('.preview-scene').count(), 0, 'Options must be static images, not live door renders')
       const positions: string[] = []
       for (let i = 0; i < 4; i++) {
-        const thumbnail = cards.nth(i).locator('.sidelite-layout-thumbnail')
-        const frame = thumbnail.locator('.door-frame')
-        assert.equal(await frame.getAttribute('data-door-configuration'), type)
-        assert.equal(await frame.getAttribute('data-view'), 'Exterior')
-        assert.equal(await frame.locator('.door-frame-door-slot > .door').count(), leaves)
-        const position = (await frame.getAttribute('data-sidelites'))!
+        const thumbnail = cards.nth(i).locator('.sidelite-option-image')
+        const title = await cards.nth(i).locator('strong').innerText()
+        const filename = expectedAssets[type][title as keyof typeof expectedAssets[typeof type]]
+        assert.ok(filename, `Known ${type} layout: ${title}`)
+        const asset = `/assets/hgi-assets/Sidelites/options/${filename}`
+        assert.equal(await thumbnail.getAttribute('src'), asset)
+        assert.ok(existsSync(`public${asset}`), `Existing asset: ${asset}`)
+        await thumbnail.evaluate(image => new Promise<void>((resolve, reject) => {
+          const img = image as HTMLImageElement
+          if (img.complete) return img.naturalWidth > 0 ? resolve() : reject(new Error('Missing thumbnail'))
+          img.onload = () => resolve(); img.onerror = () => reject(new Error('Missing thumbnail'))
+        }))
+        assert.equal(await thumbnail.evaluate(image => getComputedStyle(image).transform), 'none', 'Static assets retain exterior left/right orientation')
+        const position = title === 'No Sidelite' ? 'none' : title === 'Both Sidelites' ? 'both' : title.startsWith('Left') ? 'left' : 'right'
         positions.push(position)
-        assert.equal(await frame.locator('.door-frame-sidelite').count(), position === 'both' ? 2 : position === 'none' ? 0 : 1)
         await page.waitForTimeout(100)
-        const fits = await frame.evaluate(element => {
+        const fits = await thumbnail.evaluate(element => {
           const box = element.getBoundingClientRect(), area = element.closest('.option-visual')!.getBoundingClientRect()
           return box.left >= area.left - 1 && box.right <= area.right + 1 && box.top >= area.top - 1 && box.bottom <= area.bottom + 1
         })
