@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import sharp from 'sharp'
 import { configurationPdfDownloadName } from '../src/utils/pdfConfig'
 import { doorStyles, finishes } from '../src/data/options'
 
 const output = '/private/tmp/hgi-pdf-renderer-verification'
+// Approved replacement artwork, including the corrected first-row label.
+for (const [path, checksum] of [
+  ['home-guard-door-configuration-source.pdf', '28393582bc3b41743bb96d86ab3db681503d2bdb6826de18ba85c1b50f51b1b0'],
+  ['home-guard-door-configuration-template.png', '73206499fae62668d197b3e8fcd418a3fafd89e24a2ebee585eecbff9484c623'],
+  ['home-guard-door-configuration-template-page-2.png', 'cfa047d084fa2d4cac3080985086adfb3ac73990bf53ba17a2a837c4d006cc72'],
+]) assert.equal(createHash('sha256').update(await readFile(`public/assets/pdf/${path}`)).digest('hex'), checksum, `Approved quote template: ${path}`)
 await mkdir(output, { recursive: true })
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5190', '--strictPort'], { stdio: 'pipe' })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
@@ -197,6 +204,8 @@ try {
   assert.equal((await delayed).dataUrl, results[11].dataUrl, 'One frozen snapshot is used despite a later finish mutation')
   const pdf = await page.evaluate(() => (window as unknown as { createPdf: () => Promise<string> }).createPdf())
   await writeFile(`${output}/configured-door.pdf`, Buffer.from(pdf.split(',')[1], 'base64'))
+  assert.ok(requestedAssets.has('/assets/pdf/home-guard-door-configuration-template.png'), 'Export uses approved page 1 artwork')
+  assert.ok(requestedAssets.has('/assets/pdf/home-guard-door-configuration-template-page-2.png'), 'Export uses approved page 2 artwork')
   const downloadPromise = page.waitForEvent('download')
   await page.clock.setFixedTime(new Date('2026-10-07T14:52:00Z'))
   await page.evaluate(() => (window as unknown as { downloadPdf: () => Promise<void> }).downloadPdf())
