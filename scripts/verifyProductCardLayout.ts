@@ -13,7 +13,7 @@ async function check(page: Page, label: string) {
       const r=card.getBoundingClientRect(), visual=card.querySelector('.option-visual'),v=visual?.getBoundingClientRect()
       const copy=card.querySelector('.option-copy')!
       const controls=card.querySelector('.hardware-finish-options,.glass-caming-options')?.getBoundingClientRect()
-      const text=[...copy.children].map(el=>({text:el.textContent,height:el.getBoundingClientRect().height,scroll:(el as HTMLElement).scrollHeight,client:el.clientHeight,display:getComputedStyle(el).display}))
+      const text=[...copy.children].map(el=>({text:el.textContent,height:el.getBoundingClientRect().height,top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,scroll:(el as HTMLElement).scrollHeight,client:el.clientHeight,display:getComputedStyle(el).display}))
       return {height:r.height,top:r.top,bottom:r.bottom,imageHeight:v?.height,imageOffset:v ? v.top-r.top : null,controlsBottom:controls ? r.bottom-controls.bottom : null,text,images:[...card.querySelectorAll('.option-visual img')].map(image=>getComputedStyle(image).objectFit)}
     })
   }))
@@ -29,6 +29,8 @@ async function check(page: Page, label: string) {
     for(const card of cards) {
       assert.ok(card.images.every(fit=>fit==='contain'),`${label}: preserve aspect ratio`)
       assert.ok(card.text.every(text=>text.display!=='none' && text.scroll<=text.client+1),`${label}: complete unclipped text ${JSON.stringify(card.text)}`)
+      const visualTextOrder=[...card.text].sort((a,b)=>a.top-b.top)
+      for (let i=1;i<visualTextOrder.length;i++) assert.ok(Math.abs(visualTextOrder[i].top-visualTextOrder[i-1].bottom-4)<1,`${label}: consistent compact text spacing ${JSON.stringify(card.text)}`)
       for(const sibling of cards.filter(c=>Math.abs(c.top-card.top)<1)) assert.ok(Math.abs(sibling.bottom-card.bottom)<1)
     }
   }
@@ -69,6 +71,7 @@ try {
         await page.locator('#frame-layout-fixture').evaluate(el=>el.remove())
       }
       await check(page,`${width}px ${heading}`)
+      if (/Door Style|Sidelite Slab|Door Line/.test(heading)) await page.screenshot({path:`/private/tmp/hgi-card-spacing-${width}-${heading.replace(/[^a-z0-9]+/gi,'-')}.png`})
       // Long text must grow the entire grid, not one card or a clipped label.
       const title=page.locator('[data-equal-product-grid] .option-copy strong').first()
       const original=await title.innerText()

@@ -3742,7 +3742,7 @@ body:has(.customer-form-app),
   .configuration-step .builder-options-scroll>.options-grid:has(>.hardware-option-card){grid-template-columns:minmax(0,1fr)}
 }
 
-/* Shared product-card regions. Text/control heights are measured per grid so
+/* Shared product-card regions. Complete copy/control heights are measured per grid so
    full labels remain readable, including after filtering or viewport changes. */
 .configuration-step .builder-options-scroll [data-equal-product-grid]{
   --product-image-height:112px;
@@ -3770,15 +3770,13 @@ body:has(.customer-form-app),
 }
 .configuration-step .builder-options-scroll [data-equal-product-grid] :is(.option-card,.glass-choice-card,.hardware-option-card) .option-copy{
   display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;
-  flex:1 0 auto;width:100%;height:auto;min-height:0;padding:10px;gap:4px;overflow:visible;
+  flex:1 0 auto;width:100%;height:auto;min-height:var(--product-copy-height,0px);padding:10px;gap:4px;overflow:visible;
 }
 .configuration-step .builder-options-scroll [data-equal-product-grid] :is(.option-card,.glass-choice-card,.hardware-option-card) .option-copy > :is(small,strong,span){
   display:block;flex:none;overflow:visible;-webkit-line-clamp:unset;
-  margin:0;overflow-wrap:anywhere;white-space:normal;
+  margin:0;min-height:0;overflow-wrap:anywhere;white-space:normal;
 }
-.configuration-step .builder-options-scroll [data-equal-product-grid] .option-copy > small{min-height:var(--product-eyebrow-height)}
-.configuration-step .builder-options-scroll [data-equal-product-grid] .option-copy > strong{min-height:var(--product-title-height)}
-.configuration-step .builder-options-scroll [data-equal-product-grid] .option-copy > span{min-height:var(--product-description-height);order:3}
+.configuration-step .builder-options-scroll [data-equal-product-grid] .option-copy > span{order:3}
 .configuration-step .builder-options-scroll [data-equal-product-grid] :is(.hardware-finish-options,.glass-caming-options){
   box-sizing:border-box;flex:0 0 auto;margin-top:auto;min-height:var(--product-controls-height);
   align-content:flex-start;

@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from 'react'
 
-/** Presentation only: size text/control regions to the tallest content in each
+/** Presentation only: size the complete copy/control regions to the tallest content in each
  * visible grid, without truncating labels or assigning an arbitrary card height. */
 export function useProductCardLayout(root: RefObject<HTMLElement | null>, active: boolean) {
   useEffect(() => {
@@ -22,16 +22,19 @@ export function useProductCardLayout(root: RefObject<HTMLElement | null>, active
         if (!cards.length) continue
         current.add(grid)
         grid.dataset.equalProductGrid = ''
-        const regions = { eyebrow: 0, title: 0, description: 0, controls: 0 }
+        const regions = { copy: 0, controls: 0 }
         for (const card of cards) {
           const copy = card.querySelector('.option-copy')
-          for (const [key, selector] of [['eyebrow', ':scope > small'], ['title', ':scope > strong'], ['description', ':scope > span']] as const) {
-            const el = copy?.querySelector<HTMLElement>(selector)
-            if (!el?.textContent?.trim()) continue
-            const range = document.createRange()
-            range.selectNodeContents(el)
-            const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.4
-            regions[key] = Math.max(regions[key], Math.ceil(range.getBoundingClientRect().height / lineHeight) * lineHeight)
+          if (copy) {
+            // Equalize the whole copy block, not each text line independently.
+            // Short titles keep their descriptions nearby instead of inheriting
+            // empty title/eyebrow space from the longest label in the catalog.
+            const css = getComputedStyle(copy)
+            const children = [...copy.children].filter(el => getComputedStyle(el).display !== 'none')
+            const contentHeight = children.reduce((height, el) => height + el.getBoundingClientRect().height, 0)
+            const padding = parseFloat(css.paddingTop) + parseFloat(css.paddingBottom)
+            const gap = (parseFloat(css.rowGap) || 0) * Math.max(0, children.length - 1)
+            regions.copy = Math.max(regions.copy, contentHeight + padding + gap)
           }
           const controls = card.querySelector<HTMLElement>('.hardware-finish-options, .glass-caming-options')
           if (controls) {
