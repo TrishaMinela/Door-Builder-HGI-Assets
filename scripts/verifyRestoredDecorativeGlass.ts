@@ -40,7 +40,7 @@ for (const option of [...main, ...fslGlassOptions.filter(isHiddenDecorativeGlass
   const originalFetch = globalThis.fetch
   globalThis.fetch = async () => { throw new Error('Hidden submissions must not access external services') }
   try {
-    await submitHandler({ method: 'POST', body: { full_name: 'Test', email: 'test@example.com', phone: '5551234', postal_code: '12345', submissionId: 'c1950cf7-6273-4a5c-a0c8-4a531831d906', main_door_glass: option.name, doorConfiguration: { schemaVersion: 1, configuration: { glass: option } } } }, response)
+    await submitHandler({ method: 'POST', body: { full_name: 'Test', email: 'test@example.com', phone: '5551234', postal_code: '12345', submissionId: 'c1950cf7-6273-4a5c-a0c8-4a531831d906', main_door_glass: option.name, doorConfiguration: { schemaVersion: 1, configuration: { ...aiTestConfiguration, glass: option } } } }, response)
     assert.equal(status, 400)
   } finally { globalThis.fetch = originalFetch }
 }

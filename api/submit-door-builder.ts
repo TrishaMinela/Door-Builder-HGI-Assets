@@ -1,5 +1,7 @@
 import { DealerResolutionError, resolveDealerId } from '../server/dealerResolution'
 import { isHiddenDecorativeGlass } from '../src/data/customerGlassAvailability'
+import { assertCustomerFinish } from '../src/utils/customerFinish'
+import type { Finish } from '../src/types'
 
 type ApiRequest = { method?: string; body?: unknown }
 declare const process: { env: Record<string, string | undefined> }
@@ -99,6 +101,8 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   if (!doorConfiguration) { response.status(400).json({ error: 'Door configuration is invalid.' }); return }
   if (byteLength(doorConfiguration) > MAX_CONFIGURATION_BYTES) { response.status(413).json({ error: 'Door configuration is too large.' }); return }
   const configuration = configurationSnapshot(doorConfiguration.configuration) ?? doorConfiguration
+  try { assertCustomerFinish(configuration.finish as Finish | undefined) }
+  catch { response.status(400).json({ error: 'Please select a door finish before submitting.' }); return }
   const mainGlass = configurationSnapshot(configuration.mainDoorGlass)
   const glass = configurationSnapshot(configuration.glass)
   const sideliteGlass = configurationSnapshot(configuration.sideliteGlass)

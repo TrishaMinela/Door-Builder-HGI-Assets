@@ -6,6 +6,7 @@ import { sideliteProductLabel } from '../data/sideliteConfigurations'
 import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationHingeOptionLabel, doorConfigurationLabel, doubleDoorLockPrepOption } from '../data/doorConfigurationRules'
 import { doorSwingDisplayName } from '../data/doorHanding'
 import { resolvedDoorStyleLabel } from '../data/productCatalog'
+import { assertCustomerFinish } from './customerFinish'
 
 const COLORS = {
   dark: [5, 4, 11] as const,
@@ -171,6 +172,7 @@ async function generateLegacySummaryPdf(
   jamb?: FinishSummary,
   doorConfigurationType: DoorConfigurationType = 'single',
 ) {
+  assertCustomerFinish(finish)
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   let font = 'helvetica'
   try {
@@ -376,6 +378,7 @@ export async function generateSummaryPdf(
   previewDataUrl?: string,
   doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null,
 ) {
+  assertCustomerFinish(finish)
   if (!previewDataUrl) throw new Error('The completed configured-door preview is required for PDF export.')
   // Match the supplied Canva template pages exactly instead of relying on
   // jsPDF's slightly different built-in A4 dimensions.

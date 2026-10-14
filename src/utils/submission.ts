@@ -4,6 +4,7 @@ import { hardwareDisplayName } from '../data/hardware'
 import { sidelitePlacement, sideliteProductLabel } from '../data/sideliteConfigurations'
 import { isHiddenDecorativeGlass } from '../data/customerGlassAvailability'
 import { resolvedDoorStyleCode, resolvedDoorStyleLabel } from '../data/productCatalog'
+import { assertCustomerFinish } from './customerFinish'
 import type { ContactForm, DoorConfiguration, GridConfiguration, SideliteGlassConfiguration } from '../types'
 
 export type DoorBuilderSubmissionPayload = {
@@ -96,6 +97,7 @@ function readableSidelitePlacement(configuration: DoorConfiguration) {
 }
 
 export function buildDoorBuilderSubmissionPayload({ contact, configuration, submittedAt }: SubmissionSource): DoorBuilderSubmissionPayload {
+  assertCustomerFinish(configuration.finish)
   if ([configuration.glass, configuration.mainDoorGlass].some(glass => glass && isHiddenDecorativeGlass(glass)) || isHiddenDecorativeGlass({ name: configuration.sideliteGlass?.glass })) {
     throw new Error('Please choose an available glass option before submitting.')
   }

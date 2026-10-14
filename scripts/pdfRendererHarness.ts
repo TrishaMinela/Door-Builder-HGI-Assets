@@ -111,6 +111,7 @@ const fixtures = [
     return { name: `restored-FSL-${glass.id}`, ...item }
   }),
   ...['signature-series', '20-gauge-smooth-steel', 'brushed-smooth-fiberglass'].map(line => ({ name: `six-panel-${line}`, ...fixture('S1NGSS', 'paint-white', 'none', 'single', undefined, line) })),
+  { name: 'explicit-terratone', ...fixture('F1', 'paint-terratone', 'none', 'single', undefined, '20-gauge-smooth-steel') },
 ]
 let liveRoot: Root | undefined
 Object.assign(window, {

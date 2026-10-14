@@ -38,6 +38,7 @@ import { HeroDoorGenerator } from './features/hero/HeroDoorGenerator'
 import { normalizeLegacySidelite, sideliteBuilderOptions, sidelitePlacement, sideliteProductCode, sideliteProductLabel, sideliteRelationshipLabel } from './data/sideliteConfigurations'
 import { sideliteAssetFamilyForSlab, sideliteGlassMask, sideliteSlabAsset, sideliteStylesForFamily, type SideliteStyleId } from './data/sideliteAssets'
 import { clearDoorBuilderDraft, loadDoorBuilderDraft, saveDoorBuilderDraft, type DoorBuilderDraftConfiguration } from './utils/doorBuilderDraft'
+import { UNSELECTED_FINISH } from './utils/customerFinish'
 
 const glassSteps = ['Entry Type', 'Sidelites', 'Door Swing', 'Door', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
 const noGlassSteps = ['Entry Type', 'Sidelites', 'Door Swing', 'Door', 'Finish', 'Hardware', 'Review & Quote']
@@ -552,11 +553,11 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const activeFinishType = selectedFinishType || effectiveFinishTypes[0] || 'paint'
   const finishId = selectedFinishType === 'paint' ? selectedPaint : selectedFinishType === 'stain' ? selectedStain : ''
   const visibleFinishes = availableFinishes.filter((item) => item.finishType === activeFinishType)
-  const selectedFinish = finishes.find((item) => item.id === finishId)
+  const selectedFinish = availableFinishes.find((item) => item.id === finishId && item.finishType === selectedFinishType)
   const visibleSelectedFinish = visibleFinishes.find((item) => item.id === finishId)
   const availableFinishIds = availableFinishes.map((item) => item.id).join('|')
   const previewFinish = selectedFinish && (!selectedDoorLine || (materialFinishTypes.includes(selectedFinish.finishType) && (!availableFinishes.length || availableFinishes.some((item) => item.id === selectedFinish.id)))) ? selectedFinish : null
-  const finish = selectedFinish ?? visibleFinishes[0] ?? availableFinishes[0] ?? finishes[0]
+  const finish = selectedFinish ?? UNSELECTED_FINISH
   const cladFinishes = finishes.filter((item) => item.finishType === 'paint' && cladColors.some((color) => `paint-${color.id}` === item.id))
   const jambFinishOptions = jambType === 'clad'
     ? cladFinishes
@@ -1100,9 +1101,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       setSelectedPaint('')
       setSelectedStain('')
     }
-    if (finishId && selectedDoorLine && availableFinishes.length && !availableFinishes.some((item) => item.id === finishId)) {
-      if (selectedFinishType === 'paint') setSelectedPaint('')
-      if (selectedFinishType === 'stain') setSelectedStain('')
+    if (finishId && selectedDoorLine && (!needsGrainStep || selectedGrain) && !availableFinishes.some((item) => item.id === finishId)) {
+      setSelectedPaint('')
+      setSelectedStain('')
     }
     if (selectedDoorLine && glass && (isHiddenDecorativeGlass(glass) || !isGlassFamilyCompatible(glass, selectedDoorLine.id))) {
       const choices = availableGlass.filter(isCustomerSelectableGlass)
@@ -1178,14 +1179,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         break
       case 'sidelite-style':
         break
-      case 'door-finish': {
-        const firstFinish = visibleFinishes[0]
-        if (!visibleSelectedFinish && firstFinish) {
-          if (firstFinish.finishType === 'paint') setSelectedPaint(firstFinish.id)
-          else setSelectedStain(firstFinish.id)
-        }
+      case 'door-finish':
+        // A preview or tab default is not a customer's finish choice.
         break
-      }
       case 'jamb-type':
         if (!jambType) setJambType('timber')
         break
@@ -1768,6 +1764,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
   const selectFinish = (nextFinishId: string, nextFinishType: 'paint' | 'stain') => {
     if (!visibleFinishes.some((item) => item.id === nextFinishId)) return
+    setSelectedFinishType(nextFinishType)
     if (nextFinishId !== finishId) {
       if (nextFinishType === 'paint') setSelectedPaint(nextFinishId)
       else setSelectedStain(nextFinishId)
@@ -1864,7 +1861,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (!editReturnTo && doorSwingOptions.length === 1) goTo(step + 1)
   }
 
-  const currentDoorConfiguration: DoorConfiguration | null = selectedHardware && selectedDoorSwing ? {
+  const currentDoorConfiguration: DoorConfiguration | null = selectedHardware && selectedDoorSwing && selectedFinish ? {
     doorConfigurationType: selectedDoorConfigurationType || 'single',
     ...(doorConfigurationProductOption ? { doorConfigurationProductOption } : {}),
     ...(selectedDoorConfigurationType !== 'single' && doubleDoorLockPrep ? { doubleDoorLockPrep } : {}),
@@ -1912,6 +1909,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     try {
       if (!selectedHardware) throw new Error('Please select hardware before sending your configuration.')
       if (!selectedDoorSwing) throw new Error('Please select a door swing before sending your configuration.')
+      if (!selectedFinish) throw new Error('Please select a door finish before sending your configuration.')
       if (!currentDoorConfiguration) throw new Error('Please complete your door configuration before sending it.')
       const configuration = currentDoorConfiguration
       const flattenedSubmission = buildDoorBuilderSubmissionPayload({ configuration, contact })
@@ -1950,6 +1948,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (!selectedHardware || !selectedDoorSwing) return
     setPdfError('')
     try {
+      if (!selectedFinish) throw new Error('Please select a door finish before downloading the PDF.')
       const { downloadSummary } = await safeDynamicImport(() => import('./utils/pdf'))
       const exactPreview = pdfProductRender?.configurationKey === pdfProductKey
         ? pdfProductRender.dataUrl
@@ -1980,8 +1979,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       ] : []),
     ] : []),
     ...(selectedGrain ? [['Grain', selectedGrain, pages.indexOf('door-grain')] as [string, string, number]] : []),
-    ['Door finish type', selectedFinishType === 'stain' ? 'Stain' : 'Paint', pages.indexOf('door-finish')],
-    ['Door finish color', finish.name, pages.indexOf('door-finish')],
+    ['Door finish type', selectedFinish ? selectedFinish.finishType === 'stain' ? 'Stain' : 'Paint' : 'Not selected', pages.indexOf('door-finish')],
+    ['Door finish color', selectedFinish?.name ?? 'Not selected', pages.indexOf('door-finish')],
     ['Jamb type', jambType === 'clad' ? 'Clad' : 'Timber', pages.indexOf('jamb-type')],
     ['Jamb finish type', jambType === 'clad' ? 'Clad' : jambFinishType === 'stain' ? 'Stain' : 'Paint', pages.indexOf('jamb-finish')],
     ['Jamb finish color', jambFinish?.name ?? 'Not selected', pages.indexOf('jamb-finish')],

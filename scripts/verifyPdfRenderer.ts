@@ -141,7 +141,7 @@ try {
     assert.ok(requestedAssets.has(details.mainAsset), `${name}: exact configured artwork was loaded`)
     assert.ok(await page.locator('#live-preview .door-glass-overlay').evaluateAll(images => images.some(image => (image as HTMLImageElement).naturalWidth > 0)), `${name}: fitted live glass is rendered`)
   }
-  for (const name of ['restored-F-courtyard', 'restored-F48-briselle', 'restored-FSL-ber', ...names.filter(name => name.startsWith('six-panel-'))]) {
+  for (const name of ['restored-F-courtyard', 'restored-F48-briselle', 'restored-FSL-ber', 'explicit-terratone', ...names.filter(name => name.startsWith('six-panel-'))]) {
     const pdf = await page.evaluate(index => (window as unknown as { createFinishPdf: (i: number) => Promise<string> }).createFinishPdf(index), names.indexOf(name))
     await writeFile(`${output}/${name}.pdf`, Buffer.from(pdf.split(',')[1], 'base64'))
   }
