@@ -110,6 +110,7 @@ const fixtures = [
     item.appearance.sideliteGlassSrc = glass.asset
     return { name: `restored-FSL-${glass.id}`, ...item }
   }),
+  ...['signature-series', '20-gauge-smooth-steel', 'brushed-smooth-fiberglass'].map(line => ({ name: `six-panel-${line}`, ...fixture('S1NGSS', 'paint-white', 'none', 'single', undefined, line) })),
 ]
 let liveRoot: Root | undefined
 Object.assign(window, {

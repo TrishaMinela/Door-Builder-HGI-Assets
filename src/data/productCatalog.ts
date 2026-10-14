@@ -219,3 +219,18 @@ export function resolveDoorProduct(style: DoorStyle, finish: Finish, grain?: str
     grain,
   }
 }
+
+/** The merged six-panel browsing style retains its original ID/artwork.
+ * Export its selected material variant, not the first catalog variant. */
+export function resolvedDoorStyleCode(style: DoorStyle, product?: ResolvedDoorProduct): string {
+  if (style.variants.some(variant => variant.code === 'S1NGSS' || variant.code === 'S1')) {
+    const code = product?.styleCodes.find(code => code === 'S1NGSS' || code === 'S1')
+    if (code) return code
+  }
+  return style.code
+}
+
+export function resolvedDoorStyleLabel(style: DoorStyle, product?: ResolvedDoorProduct): string {
+  const code = resolvedDoorStyleCode(style, product)
+  return code === 'S1' || code === 'S1NGSS' ? `${code} - SIX PANEL NO GLASS` : style.name
+}

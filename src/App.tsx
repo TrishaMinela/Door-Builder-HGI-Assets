@@ -14,7 +14,7 @@ import { useProductCardLayout } from './utils/useProductCardLayout'
 import { safeDynamicImport } from './utils/staleChunkRecovery'
 import { doorStyles, finishes, glassOptions } from './data/options'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
-import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
+import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct, resolvedDoorStyleCode, resolvedDoorStyleLabel } from './data/productCatalog'
 import { approvedPrivacyGlassIds } from './data/privacyGlass'
 import { builderUx } from './config/builderUx'
 import { matchingJambFinish } from './utils/matchingFrameFinish'
@@ -1964,7 +1964,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const configurationSummaryRows: [string, string, number][] = [
     ['Door Configuration', doorConfigurationLabel(selectedDoorConfigurationType), pages.indexOf('door-configuration')],
     ...(selectedDoorConfigurationType === 'french' && selectedDoubleDoorLockPrep ? [['Lock Setup', selectedDoubleDoorLockPrep.name, pages.indexOf('lock-setup')] as [string, string, number]] : []),
-    ['Door style', style.name, pages.indexOf('door-style')],
+    ['Door style', resolvedDoorStyleLabel(style, product), pages.indexOf('door-style')],
     ['Door Line', selectedDoorLine?.name ?? product.doorType, pages.indexOf('door-line')],
     ['Sidelite Configuration', sideliteRelationshipLabel(sidelites || 'none', selectedDoorConfigurationType || 'single'), pages.indexOf('sidelites')],
     ...(selectedSideliteStyle ? [['Sidelite Slab', selectedSideliteStyle.name, pages.indexOf('sidelite-style')] as [string, string, number]] : []),
@@ -2276,7 +2276,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow">Home Visualizer</span><h2 id="desktop-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => requestCustomerAction('open-visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
           </section>}
           {currentPage !== 'review' && <div className="mini-summary">
-            <span><b>Door Style</b><strong>{selectedStyle?.code ?? 'Not selected'}</strong></span>
+            <span><b>Door Style</b><strong>{selectedStyle ? resolvedDoorStyleCode(selectedStyle, product) : 'Not selected'}</strong></span>
             <span><b>Finish</b><strong>{selectedFinish?.name ?? 'Not selected'}</strong></span>
             <span><b>Glass</b><strong>{compatibilitySupportsGlass ? (configuredGlass?.name ?? 'Clear') : 'Not applicable'}</strong></span>
             <span><b>Sidelites</b><strong>{sideliteRelationshipLabel(sidelites || 'none', selectedDoorConfigurationType || 'single')}</strong></span>

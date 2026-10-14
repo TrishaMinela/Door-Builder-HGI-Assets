@@ -3,6 +3,7 @@ import { doorSwingDisplayName } from '../data/doorHanding'
 import { hardwareDisplayName } from '../data/hardware'
 import { sidelitePlacement, sideliteProductLabel } from '../data/sideliteConfigurations'
 import { isHiddenDecorativeGlass } from '../data/customerGlassAvailability'
+import { resolvedDoorStyleCode, resolvedDoorStyleLabel } from '../data/productCatalog'
 import type { ContactForm, DoorConfiguration, GridConfiguration, SideliteGlassConfiguration } from '../types'
 
 export type DoorBuilderSubmissionPayload = {
@@ -61,8 +62,8 @@ function splitName(fullName: string) {
 }
 
 function readableDoorStyle(configuration: DoorConfiguration) {
-  const code = configuration.style.code.trim()
-  const name = configuration.style.name.trim()
+  const code = resolvedDoorStyleCode(configuration.style, configuration.product).trim()
+  const name = resolvedDoorStyleLabel(configuration.style, configuration.product).trim()
   if (!name || name.toLowerCase().startsWith(code.toLowerCase())) return name || code
   return `${code} - ${name}`
 }

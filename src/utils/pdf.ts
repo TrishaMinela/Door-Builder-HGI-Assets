@@ -5,6 +5,7 @@ import { configurationPdfDownloadName, configurationPdfName } from './pdfConfig'
 import { sideliteProductLabel } from '../data/sideliteConfigurations'
 import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationHingeOptionLabel, doorConfigurationLabel, doubleDoorLockPrepOption } from '../data/doorConfigurationRules'
 import { doorSwingDisplayName } from '../data/doorHanding'
+import { resolvedDoorStyleLabel } from '../data/productCatalog'
 
 const COLORS = {
   dark: [5, 4, 11] as const,
@@ -238,7 +239,7 @@ async function generateLegacySummaryPdf(
     { label: 'DOOR CONFIGURATION', value: doorConfigurationLabel(doorConfigurationType) },
     ...(doorConfigurationHingeOptionLabel(doorConfigurationType) ? [{ label: 'HINGE OPTION', value: doorConfigurationHingeOptionLabel(doorConfigurationType)! }] : []),
     { label: 'DOOR LINE', value: grain ? `${material} - ${grain}` : material, icon: summaryIcons[0] },
-    { label: 'DOOR STYLE', value: style.name, icon: summaryIcons[1] },
+    { label: 'DOOR STYLE', value: resolvedDoorStyleLabel(style, product), icon: summaryIcons[1] },
     { label: 'SIDELITE CONFIGURATION', value: sideliteProductLabel(sidelites, doorSwing.id, doorConfigurationType) },
     ...(sideliteStyle ? [{ label: 'SIDELITE SLAB', value: sideliteStyle }] : []),
     ...(sideliteGlass ? [
@@ -412,7 +413,7 @@ export async function generateSummaryPdf(
     doorConfigurationLabel(doorConfigurationType),
     grain ? `${material} - ${grain}` : material,
     placement,
-    style.name,
+    resolvedDoorStyleLabel(style, product),
     sidelites === 'none' ? 'Not applicable' : sideliteStyle ?? 'Not selected',
     sidelites === 'none' ? 'Not applicable' : [sideliteGlass?.glass ?? 'Not selected', sideliteGridDetails].filter(Boolean).join(' - '),
     finish.finishType === 'paint' ? 'Paint' : 'Stain',
