@@ -4,6 +4,7 @@ import { chromium } from 'playwright-core'
 import { doorStyles, hardwareOptions } from '../src/data/options'
 import { doorLineChoices, doorLineChoicesForStyle } from '../src/data/productCatalog'
 import { sideliteAssetFamilyForSlab, sideliteStylesForFamily } from '../src/data/sideliteAssets'
+import { normalizeLegacySidelite } from '../src/data/sideliteConfigurations'
 import { sortByDisplayLabel } from '../src/utils/sortByDisplayLabel'
 import { validOptionId } from '../src/utils/optionSelection'
 
@@ -92,7 +93,7 @@ try {
       assert.equal(state.grainId, grain)
       assert.equal(state.styleId, doorStyles.find(item => item.code === 'F')!.id, 'Material/grain never replaces the already-selected slab')
       assert.equal(state.sideliteStyleId, firstSide(line, grain || doorLineChoices.find(item => item.id === line)?.autoGrain || null))
-      assert.equal(state.sidelites, relationship)
+      assert.equal(state.sidelites, normalizeLegacySidelite(relationship, 'RHI', 'single'))
       assert.equal(state.doorSwingId, 'RHI')
       assert.equal(state.hardwareId, hardwareOptions[0].id)
     }

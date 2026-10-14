@@ -35,7 +35,7 @@ import { cladColors } from './data/finishes'
 import { HomeVisualizer } from './features/home-visualizer/HomeVisualizer'
 import { HERO_PRESETS, heroDoorFilename, type HeroPreset } from './data/heroPresets'
 import { HeroDoorGenerator } from './features/hero/HeroDoorGenerator'
-import { sideliteBuilderOptions, sideliteProductCode, sideliteProductLabel, sideliteRelationshipLabel } from './data/sideliteConfigurations'
+import { normalizeLegacySidelite, sideliteBuilderOptions, sidelitePlacement, sideliteProductCode, sideliteProductLabel, sideliteRelationshipLabel } from './data/sideliteConfigurations'
 import { sideliteAssetFamilyForSlab, sideliteGlassMask, sideliteSlabAsset, sideliteStylesForFamily, type SideliteStyleId } from './data/sideliteAssets'
 import { clearDoorBuilderDraft, loadDoorBuilderDraft, saveDoorBuilderDraft, type DoorBuilderDraftConfiguration } from './utils/doorBuilderDraft'
 
@@ -1421,6 +1421,10 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const selectDoorConfiguration = (configurationType: DoorConfigurationType) => {
     if (configurationType === selectedDoorConfigurationType) return
     setSelectedDoorConfigurationType(configurationType)
+    if (sidelites && sidelites !== 'none' && sidelites !== 'both-sides') {
+      const physical = sidelitePlacement(sidelites, selectedDoorSwing?.id, selectedDoorConfigurationType || 'single')
+      setSidelites(normalizeLegacySidelite(physical, configurationType === 'french' ? undefined : selectedDoorSwing?.id, configurationType === 'single' ? 'single' : undefined))
+    }
     setDoubleDoorLockPrep(configurationType === 'french' ? DEFAULT_FRENCH_LOCK_PREP : '')
     // Preserve the initialized Full Lite or manual slab selection. Use catalog
     // order only when a later selection is genuinely invalid or unavailable.

@@ -90,8 +90,8 @@ export function sanitizeDoorBuilderDraft(value: unknown): DoorBuilderDraftConfig
     ...blankDraft,
     selectedDoorConfigurationType: allowed(input.selectedDoorConfigurationType, ['', 'single', 'french', 'savannah'], ''),
     styleId: text(input.styleId), doorLineId: text(input.doorLineId), grainId: text(input.grainId),
-    sidelites: ['LEFTSIDE', 'RIGHTSIDE', 'left', 'right', 'NOSIDE', 'BOTHSIDES', 'both'].includes(String(input.sidelites))
-      ? normalizeLegacySidelite(input.sidelites as SideliteInput, input.selectedDoorConfigurationType !== 'french' && ['LHI', 'LHO', 'RHI', 'RHO'].includes(String(input.doorSwingId)) ? input.doorSwingId as DoorSwing['id'] : undefined)
+    sidelites: (input.selectedDoorConfigurationType === 'single' && ['none', 'hinge-side', 'lock-side', 'both-sides'].includes(String(input.sidelites))) || ['LEFTSIDE', 'RIGHTSIDE', 'left', 'right', 'NOSIDE', 'BOTHSIDES', 'both'].includes(String(input.sidelites))
+      ? (input.sidelites === '' || input.sidelites == null ? '' : normalizeLegacySidelite(input.sidelites as SideliteInput, input.selectedDoorConfigurationType !== 'french' && ['LHI', 'LHO', 'RHI', 'RHO'].includes(String(input.doorSwingId)) ? input.doorSwingId as DoorSwing['id'] : undefined, input.selectedDoorConfigurationType === 'single' ? 'single' : undefined))
       : allowed(input.sidelites, ['', 'none', 'hinge-side', 'lock-side', 'both-sides'], ''),
     sideliteStyleId: text(input.sideliteStyleId),
     sideliteGlassCategory: allowed(input.sideliteGlassCategory, ['', 'clear', 'decorative', 'privacy', 'clic', 'blinds'], ''),

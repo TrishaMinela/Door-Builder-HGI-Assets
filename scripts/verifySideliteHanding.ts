@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
 import { doorHandingSides } from '../src/data/doorHanding'
-import { resolveSidelitePosition, sideliteProductCode, normalizeLegacySidelite } from '../src/data/sideliteConfigurations'
+import { resolveSidelitePosition, sideliteProductCode, sideliteProductLabel, normalizeLegacySidelite } from '../src/data/sideliteConfigurations'
 import { aiTestConfiguration } from './aiVisualizerFixture'
 import { buildDoorBuilderSubmissionPayload } from '../src/utils/submission'
 import { resolveAiProduct, aiStructuralInstructionBlock } from '../server/aiDoorVisualization'
@@ -23,7 +23,7 @@ for (const handing of ['LHI', 'LHO', 'RHI', 'RHO'] as const) {
     assert.equal(sideliteProductCode(relationship, handing), physical === 'left' ? 'LEFTSIDE' : 'RIGHTSIDE')
     const configuration = { ...aiTestConfiguration, sidelites: relationship, doorSwing: { ...aiTestConfiguration.doorSwing, id: handing }, sideliteSlab: 'ssl' as const }
     const payload = buildDoorBuilderSubmissionPayload({ contact: { fullName: 'Test User', email: 'test@example.com', phone: '', zip: '', notes: '' }, configuration })
-    assert.equal(payload.sidelite_placement, `Sidelite on ${physical === 'left' ? 'Left' : 'Right'}`)
+    assert.equal(payload.sidelite_placement, sideliteProductLabel(relationship, handing, 'single'))
     const product = resolveAiProduct(configuration)
     assert.ok(aiStructuralInstructionBlock(product.snapshot).includes(`sidelite_structure: ${physical}`))
   }

@@ -194,7 +194,7 @@ export function resolveAiProduct(value: unknown, jambFinishId?: unknown, glassFr
   const type = source.doorConfigurationType ?? 'single'
   const swing = objectValue(source.doorSwing)?.id
   const sidelites = source.sidelites ?? 'none'
-  if (!style || !finish || !hardware || variants.length !== requestedLines.length || !variants.length || !['single', 'french', 'savannah'].includes(String(type)) || !['LHI', 'LHO', 'RHI', 'RHO'].includes(String(swing)) || !['none', 'hinge-side', 'lock-side', 'both-sides'].includes(String(sidelites))) throw new AiInputError('INVALID_REQUEST', 'Please complete a valid door configuration.')
+  if (!style || !finish || !hardware || variants.length !== requestedLines.length || !variants.length || !['single', 'french', 'savannah'].includes(String(type)) || !['LHI', 'LHO', 'RHI', 'RHO'].includes(String(swing)) || !['none', 'hinge-side', 'lock-side', 'both-sides', 'left', 'right'].includes(String(sidelites))) throw new AiInputError('INVALID_REQUEST', 'Please complete a valid door configuration.')
   if (source.grain !== null && source.grain !== undefined && (typeof source.grain !== 'string' || !variants.some(item => item.grains.includes(source.grain as string)))) throw new AiInputError('INVALID_REQUEST', 'Door grain is invalid.')
   const selectedProduct = { doorTypeLabel: 'Door Line' as const, doorType: variants.map(item => item.lineName).join(' / '), doorTypes: variants.map(item => item.lineId), matchingVariants: variants, styleCodes: variants.map(item => item.code) }
   const doorPaths = resolveDoorPreviewCandidates(style, finish.finishType, selectedProduct, source.grain as string | null)

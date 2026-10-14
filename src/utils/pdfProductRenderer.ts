@@ -131,6 +131,8 @@ function recolorPrairie(image: HTMLImageElement, color: string) {
 
 /** PDF-only product render. No html2canvas, computed CSS, viewport or DPR. */
 export async function renderPdfProduct(configuration: DoorConfiguration, appearance: PdfProductAppearance) {
+  // Export is always OSLI, independent of the live preview's selected view.
+  const view = 'Exterior' as const
   // Freeze one generation before the first await; no layer reads later state.
   const config = structuredClone(configuration)
   const assets = structuredClone(appearance)
@@ -158,7 +160,7 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
   if (selectedGlass && !glassUrl) throw new Error(`No PDF glass asset is mapped for ${selectedGlass.name} / ${code}.`)
   const gridClear = ['f-clear-grids', 'f48-clear-grids', 's-clear-grids'].includes(selectedGlass?.id ?? '')
   const clearUrl = gridClear ? glassOptions.find(item => item.id === (code === 'S' ? 's-clear-no-grids' : ['F48', 'F482'].includes(code) ? 'f48-clear-no-grids' : 'f-clear-no-grids'))?.overlaysByDoorStyle[code] : undefined
-  const hardwareUrl = hardwarePreviewAssetUrl(config.hardware, 'Exterior', config.doorSwing)
+  const hardwareUrl = hardwarePreviewAssetUrl(config.hardware, view, config.doorSwing)
   if (!hardwareUrl) throw new Error(`No PDF hardware asset is mapped for ${config.hardware.manufacturer} / ${config.hardware.style} / ${config.hardware.finish}.`)
   const placement = sidelitePlacement(config.sidelites, config.doorSwing.id, config.doorConfigurationType)
   if (placement !== 'none' && (!assets.sideliteAssetSrc || !assets.sideliteMaskSrc)) throw new Error('PDF sidelite slab/mask assets are missing.')
@@ -220,7 +222,7 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
   }
   if (geometry.hasLeft) drawSide(geometry.contentLeft)
   if (geometry.hasRight) drawSide(geometry.doorLeft + geometry.doorAssemblyWidth + geometry.rightMullionWidth)
-  const exteriorSide = doorHandingSides(config.doorSwing.id).lockSide
+  const exteriorSide = doorHandingSides(config.doorSwing.id, view).lockSide
   const placements = doorHardwarePlacements(config.doorConfigurationType, exteriorSide, exteriorSide, config.doubleDoorLockPrep)
   const leaves = config.doorConfigurationType === 'french' || config.doorConfigurationType === 'savannah' ? 2 : 1
   for (let leaf = 0; leaf < leaves; leaf += 1) {
@@ -262,5 +264,5 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
   if (geometry.centerMeetingStileWidth) divider(geometry.centerMeetingStileLeft, geometry.centerMeetingStileWidth)
   ctx.fillStyle = '#111211'; ctx.fillRect(0, geometry.thresholdTop, geometry.totalWidth, ENTRANCE_GEOMETRY.thresholdHeight)
   ctx.fillStyle = '#3c3d3b'; ctx.fillRect(3, geometry.thresholdTop + 2, geometry.totalWidth - 6, 2)
-  return { dataUrl: output.toDataURL('image/png'), width: output.width, height: output.height, assets: [slab.src, ...urls], geometry }
+  return { dataUrl: output.toDataURL('image/png'), width: output.width, height: output.height, assets: [slab.src, ...urls], geometry, view }
 }

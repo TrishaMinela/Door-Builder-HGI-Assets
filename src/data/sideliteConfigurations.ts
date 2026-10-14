@@ -45,6 +45,7 @@ const doubleDoorBuilderOptions: readonly SideliteBuilderOption[] = sideliteProdu
 }))
 
 export function sideliteBuilderOptions(configurationType: DoorConfigurationType | '' | null | undefined): readonly SideliteBuilderOption[] {
+  if (!configurationType || configurationType === 'single') return singleDoorBuilderOptions.map(option => option.id === 'hinge-side' ? { ...option, id: 'left', name: 'Left', image: '/assets/hgi-assets/Sidelites/options/Left Side OSLI.webp' } : option.id === 'lock-side' ? { ...option, id: 'right', name: 'Right', image: '/assets/hgi-assets/Sidelites/options/Right Side OSLI.webp' } : option)
   if (configurationType === 'french') return doubleDoorBuilderOptions.map(option => ({ ...option, name: option.id === 'hinge-side' ? 'Left Sidelite' : option.id === 'lock-side' ? 'Right Sidelite' : option.name }))
   return configurationType === 'savannah' ? doubleDoorBuilderOptions : singleDoorBuilderOptions
 }
@@ -70,14 +71,21 @@ export function sideliteProductOption(value: SideliteInput): SideliteProductOpti
 
 export function sideliteProductCode(value: SideliteInput, handing?: DoorSwing['id'], configurationType?: DoorConfigurationType): SideliteProductCode {
   const placement = sidelitePlacement(value, handing, configurationType)
+  if (configurationType === 'single' && (placement === 'left' || placement === 'right')) return placement === doorHandingSides(handing ?? 'LHI', 'Exterior').hingeSide ? 'HINGESIDE' : 'LOCKSIDE'
   return placement === 'left' ? 'LEFTSIDE' : placement === 'right' ? 'RIGHTSIDE' : placement === 'both' ? 'BOTHSIDES' : 'NOSIDE'
 }
 
 export function sideliteProductLabel(value: SideliteInput, handing?: DoorSwing['id'], configurationType?: DoorConfigurationType): string {
-  return optionByCode.get(sideliteProductCode(value, handing, configurationType))!.label
+  const code = sideliteProductCode(value, handing, configurationType)
+  if (code === 'HINGESIDE' || code === 'LOCKSIDE') return `${code} - SIDELITE ON ${sidelitePlacement(value, handing, configurationType).toUpperCase()} OSLI`
+  return optionByCode.get(code)!.label
 }
 
-export function normalizeLegacySidelite(value: SideliteInput, handing?: DoorSwing['id']): SideliteConfiguration {
+export function normalizeLegacySidelite(value: SideliteInput, handing?: DoorSwing['id'], configurationType?: DoorConfigurationType): SideliteConfiguration {
+  if (configurationType === 'single') {
+    const physical = sidelitePlacement(value, handing, configurationType)
+    return physical === 'left' || physical === 'right' ? physical : physical === 'both' ? 'both-sides' : 'none'
+  }
   if (handing && ['LEFTSIDE', 'RIGHTSIDE', 'left', 'right'].includes(String(value))) {
     return sideliteProductOption(value).placement === doorHandingSides(handing).hingeSide ? 'hinge-side' : 'lock-side'
   }
@@ -103,6 +111,7 @@ export function sidelitePlacement(value: SideliteInput, handing: DoorSwing['id']
 }
 
 export function sideliteRelationshipLabel(value: SideliteInput, configurationType?: DoorConfigurationType) {
+  if (configurationType === 'single' || value === 'left' || value === 'right') return sideliteBuilderOptions('single').find(item => item.id === value)?.name ?? sideliteProductLabel(value)
   if (configurationType === 'french') return sideliteBuilderOptions(configurationType).find(item => item.id === value)?.name ?? sideliteProductLabel(value, undefined, configurationType)
   return singleDoorBuilderOptions.find(item => item.id === value)?.name ?? sideliteProductLabel(value)
 }

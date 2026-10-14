@@ -153,9 +153,9 @@ export type DoorConfiguration = {
 }
 
 export type DoorConfigurationType = 'single' | 'french' | 'savannah'
-export type SideliteProductCode = 'NOSIDE' | 'BOTHSIDES' | 'LEFTSIDE' | 'RIGHTSIDE'
+export type SideliteProductCode = 'NOSIDE' | 'BOTHSIDES' | 'LEFTSIDE' | 'RIGHTSIDE' | 'HINGESIDE' | 'LOCKSIDE'
 
-export type SideliteConfiguration = 'none' | 'hinge-side' | 'lock-side' | 'both-sides'
+export type SideliteConfiguration = 'none' | 'hinge-side' | 'lock-side' | 'both-sides' | 'left' | 'right'
 
 export type GlassCoating = 'Standard / No Low-E' | 'Low-E' | 'Low-E Plus' | 'ODL Clear' | 'Standard / No Low-E or Low-E' | 'Low-E or Low-E Plus' | 'Standard / No Low-E, Low-E or Low-E Plus'
 export type GridLocation = 'No Grids' | 'External' | 'Internal' | 'SDL' | 'Arts & Crafts'

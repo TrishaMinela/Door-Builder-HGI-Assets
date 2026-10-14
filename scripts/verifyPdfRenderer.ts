@@ -92,6 +92,18 @@ try {
     }
     await page.locator('#live-preview').screenshot({ path: `${output}/${name}-live.png` })
   }
+  for (const name of names.filter(name => name.startsWith('single-osli-'))) {
+    const index = names.indexOf(name), side = name.endsWith('-left') ? 'left' : 'right'
+    await page.evaluate(index => (window as unknown as { mountLiveFixture: (i: number, view: string) => Promise<unknown> }).mountLiveFixture(index, 'Interior'), index)
+    assert.equal(await page.locator('#live-preview .door-frame').getAttribute('data-view'), 'Interior')
+    const rendered = await page.evaluate(index => (window as unknown as { renderFixture: (i: number) => Promise<RenderResult & { view: string }> }).renderFixture(index), index)
+    assert.equal(rendered.view, 'Exterior')
+    assert.equal(rendered.geometry.hasLeft, side === 'left'); assert.equal(rendered.geometry.hasRight, side === 'right')
+    assert.equal(rendered.dataUrl, results[index].dataUrl, 'Exterior PDF image is independent of the on-screen Interior view')
+    const pdf = await page.evaluate(index => (window as unknown as { createFinishPdf: (i: number) => Promise<string> }).createFinishPdf(index), index)
+    await writeFile(`${output}/${name}.pdf`, Buffer.from(pdf.split(',')[1], 'base64'))
+    assert.equal(await page.locator('#live-preview .door-frame').getAttribute('data-view'), 'Interior', 'PDF export never changes the on-screen view')
+  }
   const clayPdf = await page.evaluate(index => (window as unknown as { createFinishPdf: (i: number) => Promise<string> }).createFinishPdf(index), names.indexOf('N1-clay'))
   await writeFile(`${output}/N1-clay.pdf`, Buffer.from(clayPdf.split(',')[1], 'base64'))
   for (const name of ['smooth-steel-ssl', 'textured-fiberglass-ssl']) {

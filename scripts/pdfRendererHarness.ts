@@ -96,10 +96,15 @@ const fixtures = [
     item.appearance.glassFrameFinish = item.configuration.finish
     return { name: `plain-frame-${code}-${finishId}`, ...item }
   }),
+  ...(['LHI', 'RHI'] as const).flatMap(handing => (['left', 'right'] as const).map(side => {
+    const item = fixture('F', 'paint-clay', side, 'single', 'f-clear-no-grids')
+    item.configuration.doorSwing = { id: handing, name: handing === 'LHI' ? 'Left Hand Inswing' : 'Right Hand Inswing', image: '' }
+    return { name: `single-osli-${handing}-${side}`, ...item }
+  })),
 ]
 let liveRoot: Root | undefined
 Object.assign(window, {
-  async mountLiveFixture(index: number) {
+  async mountLiveFixture(index: number, view: 'Exterior' | 'Interior' = 'Exterior') {
     liveRoot?.unmount()
     const container = document.getElementById('live-preview') ?? document.body.appendChild(Object.assign(document.createElement('div'), { id: 'live-preview' }))
     container.style.width = '450px'
@@ -108,7 +113,7 @@ Object.assign(window, {
     await new Promise<void>(resolve => liveRoot!.render(createElement(DoorPreview, {
       ...appearance, style: c.style, finish: c.finish, product: c.product, grain: c.grain,
       hardware: c.hardware, doorSwing: c.doorSwing, sidelites: c.sidelites,
-      applyFinish: true, showViewToggle: false, view: 'Exterior',
+      applyFinish: true, showViewToggle: false, view,
       renderConfigurationKey: `pdf-live-fixture-${index}`,
       onRenderReadinessChange: state => { if (state.ready) resolve() },
     })))
