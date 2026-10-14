@@ -3754,11 +3754,11 @@ body:has(.customer-form-app),
 .configuration-step .builder-options-scroll [data-equal-product-grid] > :is(.option-card,.glass-choice-card,.hardware-option-card){
   display:flex;flex-direction:column;align-self:stretch;box-sizing:border-box;
   height:auto;min-height:var(--product-card-height,0px);min-width:0;aspect-ratio:auto;
-  border-width:1px;
+  border:1px solid var(--border,#d7dee1);
   transition-property:border-color,background-color,box-shadow,outline-color,transform;
 }
 .configuration-step .builder-options-scroll [data-equal-product-grid] > :is(.option-card,.glass-choice-card,.hardware-option-card).selected{
-  border-width:1px;outline:2px solid var(--peacock);outline-offset:-2px;
+  border-width:1px;border-color:var(--peacock);outline:2px solid var(--peacock);outline-offset:-2px;
 }
 .configuration-step .builder-options-scroll [data-equal-product-grid] > :is(.glass-choice-card,.hardware-option-card) > :is(.glass-card-main,.hardware-card-main){
   display:flex;flex-direction:column;flex:0 0 auto;min-height:0;width:100%;
@@ -3779,6 +3779,16 @@ body:has(.customer-form-app),
   margin:0;min-height:0;overflow-wrap:anywhere;white-space:normal;
 }
 .configuration-step .builder-options-scroll [data-equal-product-grid] .option-copy > span{order:3}
+.configuration-step .builder-options-scroll [data-equal-product-grid] > .option-card .option-copy strong{font-weight:600}
+.configuration-step .builder-options-scroll [data-equal-product-grid].door-style-product-grid > .door-catalog-card .option-copy strong{font-size:18px;line-height:1.2;font-family:inherit}
+.option-card-select{display:flex;flex-direction:column;flex:none;width:100%;min-width:0;padding:0;border:0;background:transparent;color:inherit;text-align:inherit;cursor:pointer}
+.option-card-info{position:absolute;top:6px;right:6px;z-index:2;width:28px;height:28px;padding:0;border:1px solid #d7dee1;border-radius:50%;background:#fff;color:var(--peacock);font-size:16px;font-weight:600;cursor:pointer}
+.option-card-info:focus-visible,.option-card-select:focus-visible{outline:2px solid var(--peacock);outline-offset:-2px}
+.option-name-dialog{width:min(380px,calc(100vw - 32px));padding:22px;border:1px solid #d7dee1;border-radius:8px;color:var(--black);text-align:left}
+.option-name-dialog::backdrop{background:#0005}
+.option-name-dialog p{font-size:18px;line-height:1.4;margin:0 0 18px;overflow-wrap:anywhere}
+.option-name-dialog button{border:0;border-radius:4px;background:var(--peacock);color:#fff;padding:10px 18px}
+.door-style-help{font-size:13px;line-height:1.5;color:#687479;margin:0 0 12px}
 .configuration-step .builder-options-scroll [data-equal-product-grid] :is(.hardware-finish-options,.glass-caming-options){
   box-sizing:border-box;flex:0 0 auto;margin-top:auto;min-height:0;
   align-content:flex-start;
@@ -3788,6 +3798,8 @@ body:has(.customer-form-app),
   .configuration-step .builder-options-scroll [data-equal-product-grid].door-style-catalog-grid,
   .configuration-step .builder-options-scroll [data-equal-product-grid].sidelite-catalog-grid{--product-image-height:118px}
   .configuration-step .builder-options-scroll [data-equal-product-grid]:has(>.hardware-option-card){--product-image-height:136px}
+  .configuration-step .builder-options-scroll [data-equal-product-grid].door-style-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .configuration-step .builder-options-scroll [data-equal-product-grid].door-style-product-grid > .door-catalog-card .option-copy strong{font-size:16px}
 }
 .active-door-preview{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:110px;height:100px;max-width:100%;max-height:100%;padding:5px;border:2px solid #b8b8b8;border-radius:3px}
 .active-door-leaf{display:flex;align-items:center;justify-content:center;background:#ededed;color:#666;border:1px solid #b8b8b8;font-size:10px;font-weight:600}

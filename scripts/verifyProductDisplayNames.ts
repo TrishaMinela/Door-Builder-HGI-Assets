@@ -2,13 +2,16 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright-core'
 import { doorStyles, hardwareOptions, finishes } from '../src/data/options'
-import { doorStyleDisplayName, sideliteStyleDisplayName, glassDisplayName } from '../src/data/productDisplayNames'
+import { doorStyleDisplayName, doorStyleCardName, sideliteStyleDisplayName, glassDisplayName } from '../src/data/productDisplayNames'
 import { resolveDoorProduct } from '../src/data/productCatalog'
 import { buildDoorBuilderSubmissionPayload } from '../src/utils/submission'
 import { aiTestConfiguration } from './aiVisualizerFixture'
 
 const slab = doorStyles.find(style => style.code === '2PHD')!
 assert.equal(doorStyleDisplayName(slab), '2P HD Flat Top')
+const arch = doorStyles.find(style => style.code === 'S4')!
+assert.equal(doorStyleCardName(arch), 'Four Lite Arch Top')
+assert.equal(doorStyleDisplayName(arch), 'Four Lites Together Each With An Arch At Top')
 assert.equal(doorStyleDisplayName(doorStyles.find(style => style.code === 'F48')!), '3/4 Lite')
 assert.equal(sideliteStyleDisplayName('SSL'), 'Half Sidelite')
 assert.equal(sideliteStyleDisplayName('f48sl'), 'F48SL', 'Unverified names must not be invented')
@@ -31,10 +34,16 @@ try {
     const next=async()=>{await page.getByRole('button',{name:'Next configuration step'}).click();await page.waitForTimeout(120)}
     const navigate=async(name:string)=>{for(let i=0;i<30 && !(await page.getByRole('heading',{name,exact:true}).isVisible());i++){if(await page.getByRole('button',{name:'Start Configuring',exact:true}).isVisible())await page.getByRole('button',{name:'Start Configuring',exact:true}).click();await next()} await page.getByRole('heading',{name,exact:true}).waitFor()}
     await navigate('Choose a Door Style')
+    if(await page.getByRole('button',{name:'Start Configuring',exact:true}).isVisible())await page.getByRole('button',{name:'Start Configuring',exact:true}).click()
     const labels=await page.locator('.builder-options-scroll .option-card strong').allTextContents()
     assert.equal(labels.length,42)
     assert.ok(labels.includes('2P HD Flat Top')); assert.ok(labels.includes('3/4 Lite'))
     assert.ok(!labels.some(label=>label.startsWith('2PHD ')))
+    await page.getByRole('button',{name:'Full product name for Four Lite Arch Top',exact:true}).click()
+    const dialog=page.getByRole('dialog',{name:'Full product name'})
+    assert.match(await dialog.innerText(),/Four Lites Together Each With An Arch At Top/)
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration.styleId),slab.id,'Info does not select a different product')
+    await dialog.getByRole('button',{name:'Close',exact:true}).click()
     await navigate('Choose Your Sidelite Slab')
     assert.ok((await page.locator('.builder-options-scroll .option-card strong').allTextContents()).includes('Half Sidelite'))
     assert.equal(await page.locator('.builder-options-scroll .option-card.selected strong').innerText(),'Half Sidelite')

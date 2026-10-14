@@ -38,15 +38,28 @@ try {
           const s = getComputedStyle(grid)
           return { grid: { ...css(grid), rows: s.gridTemplateRows, autoRows: s.gridAutoRows, alignContent: s.alignContent }, cards: [...grid.children].map(card => {
             const visual = card.querySelector('.option-visual')!, copy = card.querySelector('.option-copy')!
-            return { title: card.querySelector('strong')!.textContent, card: css(card), visual: css(visual), copy: css(copy), text: [...copy.children].map(el => ({ name: el.tagName, ...css(el) })) }
+            const title = card.querySelector('strong')!, titleCss = getComputedStyle(title)
+            return { title: title.textContent, titleLines: title.getBoundingClientRect().height / parseFloat(titleCss.lineHeight), titleSize: parseFloat(titleCss.fontSize), titleWeight: titleCss.fontWeight, card: css(card), visual: css(visual), copy: css(copy), text: [...copy.children].map(el => ({ name: el.tagName, ...css(el) })) }
           }) }
         })
         const name = `${before ? 'before' : 'after'}-${width}-${heading.replace(/[^a-z0-9]+/gi, '-')}`
         await page.screenshot({ path: `${output}/${name}.png` })
+        if (/Door Style/.test(heading) && !before) {
+          const archCard = page.locator('.door-catalog-card').filter({ has: page.locator('strong').filter({ hasText: /^Four Lite Arch Top$/ }) })
+          await archCard.scrollIntoViewIfNeeded()
+          await archCard.locator('img').evaluate((el) => (el as HTMLImageElement).decode())
+          await page.waitForTimeout(350)
+          await page.screenshot({ path: `${output}/after-${width}-Arch-Top.png` })
+          await page.locator('.builder-options-scroll').evaluate(el => { el.scrollTop = 0 })
+        }
         await writeFile(`${output}/${name}.json`, JSON.stringify(metrics, null, 2))
         console.log(`${name}: ${JSON.stringify({ grid: metrics.grid, first: metrics.cards[0] })}`)
         if (!before) {
           const heights = metrics.cards.map(item => item.card.height)
+          if (/Door Style/.test(heading)) {
+            assert.ok(metrics.cards.every(item => item.titleLines <= 2.05), `Short door names fit two lines: ${JSON.stringify(metrics.cards.filter(item => item.titleLines > 2.05))}`)
+            assert.ok(metrics.cards.every(item => item.titleSize === (width < 768 ? 16 : 18) && item.titleWeight === '600'), 'Readable semibold title sizing')
+          }
           assert.ok(Math.max(...heights) - Math.min(...heights) < 1, 'Shared height comes from tallest card')
           assert.equal(metrics.grid.alignContent, 'start', 'Rows do not fill the viewport')
           for (const item of metrics.cards) assert.ok(Math.abs(item.copy.top - item.visual.bottom) < 1, 'Copy directly follows thumbnail; spacing is its padding')
