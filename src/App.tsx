@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, Download, ExternalLink, Eye, FileText, Globe, HelpCircle, Home as HomeIcon, Mail, MapPin, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview, type DoorPreviewProps } from './components/DoorPreview'
 import { DoorStyleThumbnail } from './components/DoorStyleThumbnail'
@@ -484,6 +484,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   useProductCardLayout(builderPanelRef, screen === 'builder')
   const builderOptionsRef = useRef<HTMLDivElement | null>(null)
   const entrywayDialogRef = useRef<HTMLDivElement | null>(null)
+  const resetDialogRef = useRef<HTMLDialogElement | null>(null)
+  const resetTriggerRef = useRef<HTMLButtonElement | null>(null)
   const entrywayStartButtonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
@@ -1519,8 +1521,17 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     goTo(0)
   }
 
-  const resetDesign = () => {
-    if (!window.confirm('Reset your door design? All current selections will be cleared.')) return
+  const closeResetDialog = () => {
+    resetDialogRef.current?.close()
+    resetTriggerRef.current?.focus()
+  }
+  const resetDesign = (event: MouseEvent<HTMLButtonElement>) => {
+    resetTriggerRef.current = event.currentTarget
+    resetDialogRef.current?.showModal()
+    resetDialogRef.current?.querySelector<HTMLButtonElement>('button')?.focus()
+  }
+  const confirmResetDesign = () => {
+    closeResetDialog()
     setBuilderPreviewView('Exterior')
     startOver()
   }
@@ -2053,6 +2064,28 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           <div className="header-dealer-cta"><span>Want this door? <strong>Connect with a Dealer</strong></span><a href="https://homeguardindustries.com/find-a-home-guard-dealer-hub/" target="_blank" rel="noreferrer">Find a Dealer <ExternalLink size={14} /></a></div>
         </div>
       </header>
+
+      <dialog ref={resetDialogRef} className="reset-design-dialog" aria-labelledby="reset-design-title" aria-describedby="reset-design-message"
+        onCancel={event => { event.preventDefault(); closeResetDialog() }}
+        onClick={event => {
+          if (event.target !== event.currentTarget) return
+          const rect = event.currentTarget.getBoundingClientRect()
+          if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) closeResetDialog()
+        }}
+        onKeyDown={event => {
+          if (event.key !== 'Tab') return
+          const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button')]
+          const first = buttons[0], last = buttons[buttons.length - 1]
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+        }}>
+        <h2 id="reset-design-title">Start over?</h2>
+        <p id="reset-design-message">This will clear your current door selections so you can build a new configuration.</p>
+        <div className="reset-design-actions">
+          <button type="button" className="reset-design-cancel" onClick={closeResetDialog}>Keep editing</button>
+          <button type="button" className="reset-design-confirm" onClick={confirmResetDesign}>Start over</button>
+        </div>
+      </dialog>
 
       {showEntrywayGuidance && <div className="entryway-guidance-backdrop" role="presentation">
         <div ref={entrywayDialogRef} className="entryway-guidance-dialog" role="dialog" aria-modal="true" aria-labelledby="entryway-guidance-title" aria-describedby="entryway-guidance-description">
