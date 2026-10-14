@@ -32,6 +32,16 @@ const baseGlassName = (name: string) => name
 
 export const isApprovedDecorativeGlassName = (name: string) => approvedDecorativeGlassNames.has(baseGlassName(name))
 
+// Client-approved restoration is scoped to F/F48 doors and FSL sidelites.
+// Other openings retain their existing approval lists.
+export const restoredFullLiteDecorativeGlassIds = new Set([
+  'courtyard', 'briselle', 'berkley', 'ashbury', 'calandra',
+  'elegant-black-white', 'elegant-nickel', 'elegant-patina',
+  'monterey-nickel', 'monterey-patina',
+])
+const restoredFullLiteDecorativeGlassNames = new Set(['courtyard', 'briselle', 'berkley', 'ashbury', 'elegant', 'monterey', 'calandra'])
+export const isApprovedFslDecorativeGlassName = (name: string) => isApprovedDecorativeGlassName(name) || restoredFullLiteDecorativeGlassNames.has(baseGlassName(name))
+
 export const approvedDecorativeGlassIds = new Set([
   'bay-point', 'cadence', 'cobblestone', 'cr14pl-dorian', 'dorian-nickel', 'dorian-patina',
   'dutchcraft', 'ca-grace-nickel', 'ca-grace-patina', 'grace-nickel', 'grace-patina',

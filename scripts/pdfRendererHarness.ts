@@ -10,6 +10,8 @@ import { createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { DoorPreview } from '../src/components/DoorPreview'
 import '../src/styles.css'
+import { restoredFullLiteDecorativeGlassIds, isApprovedDecorativeGlassName } from '../src/data/decorativeGlass'
+import { buildDoorBuilderSubmissionPayload } from '../src/utils/submission'
 
 function fixture(code: string, finishId: string, sidelites: DoorConfiguration['sidelites'] = 'none', double: DoorConfiguration['doorConfigurationType'] = 'single', glassId?: string, lineId = '22-gauge-steel') {
   const style = doorStyles.find(item => item.code === code)!
@@ -101,6 +103,13 @@ const fixtures = [
     item.configuration.doorSwing = { id: handing, name: handing === 'LHI' ? 'Left Hand Inswing' : 'Right Hand Inswing', image: '' }
     return { name: `single-osli-${handing}-${side}`, ...item }
   })),
+  ...(['F', 'F48'] as const).flatMap(code => glassOptions.filter(glass => restoredFullLiteDecorativeGlassIds.has(glass.id) && glass.overlaysByDoorStyle[code]).map(glass => ({ name: `restored-${code}-${glass.id}`, ...fixture(code, 'paint-white', 'none', 'single', glass.id) }))),
+  ...fslGlassOptions.filter(glass => glass.category === 'decorative' && !isApprovedDecorativeGlassName(glass.name)).map(glass => {
+    const item = fixture('F', 'paint-white', 'right', 'single', 'courtyard')
+    item.configuration.sideliteGlass = { glass: glass.name, glassCategory: 'Decorative Glass', glassAsset: glass.asset }
+    item.appearance.sideliteGlassSrc = glass.asset
+    return { name: `restored-FSL-${glass.id}`, ...item }
+  }),
 ]
 let liveRoot: Root | undefined
 Object.assign(window, {
@@ -120,6 +129,12 @@ Object.assign(window, {
     return { finishId: c.finish.id, finishHex: c.finish.color, finishName: c.finish.name }
   },
   pdfFixtures: fixtures.map(item => item.name),
+  restoredFixtureDetails(index: number) {
+    const { configuration: c } = fixtures[index]
+    return { glassId: c.glass?.id, mainAsset: c.glass?.overlaysByDoorStyle[c.style.code], sideAsset: c.sideliteGlass?.glassAsset,
+      mainName: c.glass?.name, sideName: c.sideliteGlass?.glass,
+      payload: buildDoorBuilderSubmissionPayload({ contact: { fullName: 'Glass Test', email: '', phone: '', zip: '', notes: '' }, configuration: c }) }
+  },
   async renderFixture(index: number) {
     const { configuration, appearance } = fixtures[index]
     return renderPdfProduct(configuration, appearance)

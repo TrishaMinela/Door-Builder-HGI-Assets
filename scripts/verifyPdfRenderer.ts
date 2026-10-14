@@ -20,6 +20,8 @@ try {
   })
   browser = await chromium.launch({ executablePath: process.env.CHROME_EXECUTABLE || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, timezoneId: 'Asia/Manila' })
+  const requestedAssets = new Set<string>()
+  page.on('request', request => requestedAssets.add(decodeURIComponent(new URL(request.url()).pathname)))
   await page.goto('http://127.0.0.1:5190/scripts/pdfRendererHarness.html')
   await page.waitForFunction(() => 'pdfFixtures' in window)
   const names = await page.evaluate(() => (window as unknown as { pdfFixtures: string[] }).pdfFixtures)
@@ -129,6 +131,21 @@ try {
     assert.equal(mobile.dataUrl, results[i].dataUrl, `${names[i]} identical at mobile size`)
   }
   const retinaContext = await browser.newContext({ viewport: { width: 768, height: 1024 }, deviceScaleFactor: 2 })
+  for (const name of names.filter(name => name.startsWith('restored-'))) {
+    const index = names.indexOf(name), result = results[index]
+    const details = await page.evaluate(i => (window as unknown as { restoredFixtureDetails: (i: number) => { glassId: string; mainAsset: string; sideAsset?: string; mainName: string; sideName?: string; payload: { main_door_glass: string; sidelite_glass: string } } }).restoredFixtureDetails(i), index)
+    assert.ok(result.assets.includes(details.mainAsset), `${name}: PDF uses exact main artwork`)
+    if (name.startsWith('restored-FSL-')) assert.ok(result.assets.includes(details.sideAsset!), `${name}: PDF uses exact sidelite artwork`)
+    assert.equal(details.payload.main_door_glass, details.mainName)
+    if (details.sideName) assert.equal(details.payload.sidelite_glass, details.sideName)
+    await page.evaluate(i => (window as unknown as { mountLiveFixture: (i: number) => Promise<unknown> }).mountLiveFixture(i), index)
+    assert.ok(requestedAssets.has(details.mainAsset), `${name}: exact configured artwork was loaded`)
+    assert.ok(await page.locator('#live-preview .door-glass-overlay').evaluateAll(images => images.some(image => (image as HTMLImageElement).naturalWidth > 0)), `${name}: fitted live glass is rendered`)
+  }
+  for (const name of ['restored-F-courtyard', 'restored-F48-briselle', 'restored-FSL-ber']) {
+    const pdf = await page.evaluate(index => (window as unknown as { createFinishPdf: (i: number) => Promise<string> }).createFinishPdf(index), names.indexOf(name))
+    await writeFile(`${output}/${name}.pdf`, Buffer.from(pdf.split(',')[1], 'base64'))
+  }
   const retina = await retinaContext.newPage()
   await retina.goto('http://127.0.0.1:5190/scripts/pdfRendererHarness.html')
   await retina.waitForFunction(() => 'pdfFixtures' in window)

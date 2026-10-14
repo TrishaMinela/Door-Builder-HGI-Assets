@@ -1,6 +1,6 @@
 import type { GlassOption } from '../types.js'
 import { approvedPrivacyGlassIds, knownPrivacyGlassIds } from './privacyGlass.js'
-import { approvedDecorativeGlassIds, knownDecorativeGlassIds } from './decorativeGlass.js'
+import { approvedDecorativeGlassIds, knownDecorativeGlassIds, restoredFullLiteDecorativeGlassIds } from './decorativeGlass.js'
 
 const glassPreviewAssets: Record<string, string> = {
   "CR14BAY.webp": "/assets/hgi-assets/Glass/CR14/CR14BAY.webp",
@@ -1123,7 +1123,8 @@ export const glassOptions: GlassOption[] = [
   ...variantThumbnailOptions,
 ]
   .filter(({ id }) => !knownPrivacyGlassIds.has(id) || approvedPrivacyGlassIds.has(id))
-  .filter(({ id }) => !knownDecorativeGlassIds.has(id) || approvedDecorativeGlassIds.has(id))
+  .filter(({ id }) => !knownDecorativeGlassIds.has(id) || approvedDecorativeGlassIds.has(id) || restoredFullLiteDecorativeGlassIds.has(id))
+  .filter(({ id }, index, options) => !restoredFullLiteDecorativeGlassIds.has(id) || options.findIndex(option => option.id === id) === index)
   .map(({ image, ...option }) => {
   const overlaysByDoorStyle: Record<string, string> = {}
   const cr14Overlay = cr14Overlays[option.id]
@@ -1271,6 +1272,8 @@ export const glassOptions: GlassOption[] = [
   return {
     ...option,
     thumbnailPath: image,
-    overlaysByDoorStyle,
+    overlaysByDoorStyle: restoredFullLiteDecorativeGlassIds.has(option.id)
+      ? Object.fromEntries(Object.entries(overlaysByDoorStyle).filter(([opening]) => opening === 'F' || opening === 'F48'))
+      : overlaysByDoorStyle,
   }
 })

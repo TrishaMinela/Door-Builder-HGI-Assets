@@ -1,5 +1,5 @@
 import type { GridColor, GridPattern, GridStyle, GridWidth } from '../types.js'
-import { isApprovedDecorativeGlassName } from './decorativeGlass.js'
+import { isApprovedFslDecorativeGlassName } from './decorativeGlass.js'
 import { isApprovedPrivacyGlassName } from './privacyGlass.js'
 
 export type SideliteGlassCategory = 'clear' | 'decorative' | 'privacy' | 'clic' | 'blinds'
@@ -39,7 +39,7 @@ const allFslGlassOptions: SideliteGlassOption[] = [
 ]
 
 export const fslGlassOptions = allFslGlassOptions.filter((glass) =>
-  (glass.category !== 'decorative' || isApprovedDecorativeGlassName(glass.name))
+  (glass.category !== 'decorative' || isApprovedFslDecorativeGlassName(glass.name))
   && (glass.category !== 'privacy' || isApprovedPrivacyGlassName(glass.name)),
 )
 
