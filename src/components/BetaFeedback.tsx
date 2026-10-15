@@ -32,7 +32,7 @@ export function BetaFeedback({ currentStep, configuration }: Props) {
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
   const [isPhoneLayout, setIsPhoneLayout] = useState(() => window.matchMedia('(max-width: 767px)').matches)
-  const [contentTriggerHost, setContentTriggerHost] = useState<HTMLElement | null>(null)
+  const [navigationTriggerHost, setNavigationTriggerHost] = useState<HTMLElement | null>(null)
   const [heroTriggerHost, setHeroTriggerHost] = useState<HTMLElement | null>(null)
   const lastTriggerRef = useRef<HTMLButtonElement | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -40,7 +40,7 @@ export function BetaFeedback({ currentStep, configuration }: Props) {
   const feedbackRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    setContentTriggerHost(document.querySelector<HTMLElement>('[data-feedback-trigger-host="content"]'))
+    setNavigationTriggerHost(document.querySelector<HTMLElement>('[data-feedback-trigger-host="navigation"]'))
     setHeroTriggerHost(document.querySelector<HTMLElement>('[data-feedback-trigger-host="hero"]'))
   }, [currentStep])
 
@@ -137,7 +137,7 @@ export function BetaFeedback({ currentStep, configuration }: Props) {
   const trigger = (className: string, label: string) => <button className={className} type="button" onClick={(event) => openFeedback(event.currentTarget)} aria-haspopup="dialog" aria-label={label}><MessageSquare size={17}/><span>Feedback</span><small>Beta</small></button>
 
   return <>
-    {contentTriggerHost ? createPortal(<button className="builder-feedback-trigger" type="button" onClick={event => openFeedback(event.currentTarget)} aria-haspopup="dialog"><MessageSquare size={15} aria-hidden="true"/><span>Send feedback</span></button>, contentTriggerHost)
+    {navigationTriggerHost ? createPortal(<button className="builder-feedback-trigger" type="button" onClick={event => openFeedback(event.currentTarget)} aria-haspopup="dialog"><MessageSquare size={15} aria-hidden="true"/><span>Send feedback</span></button>, navigationTriggerHost)
       : !isPhoneLayout && heroTriggerHost ? createPortal(trigger('beta-feedback-context-trigger', 'Give feedback about the home page preview'), heroTriggerHost)
       : trigger('beta-feedback-context-trigger beta-feedback-page-trigger', 'Open beta feedback form')}
     {open && <div className="beta-feedback-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) close() }}>

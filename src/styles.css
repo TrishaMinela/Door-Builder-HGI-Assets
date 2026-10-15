@@ -3831,23 +3831,21 @@ body:has(.customer-form-app),
   display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
   height:auto;min-height:76px;margin:0;padding:14px 0;flex:none;
 }
-.builder-step-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;width:100%}
-.configuration-step .step-heading{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;width:100%}
-.configuration-step .step-heading-copy{flex:1 1 360px;width:auto;min-width:0}
-.builder-feedback-host{flex:0 0 auto;margin-left:auto;display:flex;justify-content:flex-end;max-width:100%}
-.review-heading .builder-feedback-host{margin-top:12px}
-.app:not(.home-app) .builder-feedback-trigger{
+.builder-step-actions{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;margin:0;width:100%}
+.builder-forward-actions{display:flex;align-items:center;gap:8px;margin-left:auto;max-width:100%}
+.builder-feedback-host{flex:none;display:flex;align-items:center}
+.app:not(.home-app) .builder-actions .builder-feedback-trigger{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  width:auto;max-width:100%;min-width:0;min-height:36px;height:auto;padding:7px 10px;
-  background:transparent;color:var(--peacock);border:1px solid #0d666c66;border-radius:3px;box-shadow:none;
+  width:auto;max-width:none;min-width:44px;min-height:44px;height:auto;padding:6px;
+  background:transparent;color:#59666a;border:0;border-radius:3px;box-shadow:none;
   font:inherit;font-size:12px;font-weight:500;line-height:1.3;
 }
-.app:not(.home-app) .builder-feedback-trigger:hover{background:#e5eff4;border-color:var(--peacock);transform:none}
+.app:not(.home-app) .builder-actions .builder-feedback-trigger:hover{background:transparent;color:var(--peacock);text-decoration:underline;transform:none}
 .builder-feedback-trigger:focus-visible{outline:2px solid var(--peacock);outline-offset:3px}
 .app:not(.home-app) .builder-feedback-trigger svg{width:15px;height:15px;flex:none}
 .app:not(.home-app) .builder-feedback-trigger span{display:inline;white-space:nowrap}
-.app.visualizer-editing .builder-actions .next,
 .app.visualizer-editing .builder-actions .back{background:var(--white);border:1px solid #b9c3c6;color:var(--black);box-shadow:none}
+.app.visualizer-editing .builder-actions .next{background:var(--peacock);color:var(--white);border:1px solid var(--peacock)}
 .builder-actions .summary-edit-return{min-height:44px;padding:8px 16px;background:var(--black);color:var(--white);border:1px solid var(--black);border-radius:var(--radius-control)}
 .beta-feedback-backdrop{z-index:2000}
 @media(min-width:901px){
@@ -3864,13 +3862,13 @@ body:has(.customer-form-app),
   .app:not(.home-app):not(.visualizer-app):not(.customer-form-app)>main{
     padding-bottom:calc(70px + var(--builder-actions-height,var(--builder-actions-min-height)) + 24px + env(safe-area-inset-bottom));
   }
-  .app:not(.home-app) .builder-actions .builder-step-actions button{
+  .app:not(.home-app) .builder-actions .builder-step-actions :is(.back,.next){
     display:inline-flex;align-items:center;justify-content:center;gap:8px;
     width:auto;max-width:none;height:48px;min-height:48px;padding:0 17px;
     border-width:1px;border-radius:var(--radius-control);line-height:1.2;box-shadow:none;
   }
-  .app:not(.home-app) .builder-step-actions button span{display:inline}
-  .app:not(.home-app) .builder-step-actions button svg{width:18px;height:18px}
+  .app:not(.home-app) .builder-step-actions :is(.back,.next) span{display:inline}
+  .app:not(.home-app) .builder-step-actions :is(.back,.next) svg{width:18px;height:18px}
 }
 @media(max-width:900px){
   .app.visualizer-editing>.editing-bar{position:fixed;top:var(--mobile-header-height);left:0;right:0;min-height:56px}
@@ -3883,6 +3881,10 @@ body:has(.customer-form-app),
   .configuration-edit-return.editing-bar button{min-height:40px;padding:8px 12px;font-size:12px}
   .app:not(.home-app) .builder-actions{flex-direction:column;align-items:stretch;gap:8px;padding-top:8px;padding-bottom:12px}
   .builder-step-actions{justify-content:space-between;width:100%;margin:0}
+  .app:not(.home-app) .builder-actions .builder-step-actions :is(.back,.next){min-height:44px;height:44px;padding-inline:8px;gap:4px;font-size:11px}
+  .app:not(.home-app) .builder-actions .builder-step-actions :is(.back,.next) svg{width:16px;height:16px}
+  .app:not(.home-app) .builder-actions .builder-feedback-trigger{font-size:11px;padding-inline:4px;gap:4px}
+  .builder-forward-actions{gap:6px}
 }
 
 /* Four main groups remain readable; sub-step titles stay in the content. */

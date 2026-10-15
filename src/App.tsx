@@ -2205,7 +2205,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 </div>
                 <p>{currentPage === 'door-configuration' ? 'Start by choosing the type of entry door you want to build.' : currentPage === 'door-style' ? 'Select a door style to begin your configuration.' : currentPage === 'door-line' ? 'Choose the compatible material line for this door style.' : currentPage === 'door-grain' ? 'Choose the Signature Series grain for this door.' : currentPage === 'sidelites' ? 'Choose whether sidelites appear beside your selected door.' : currentPage === 'sidelite-style' ? `Select the sidelite slab for your ${selectedDoorLine?.name ?? 'steel'} entry unit.` : currentPage === 'door-finish' ? 'Choose the paint or stain applied to the door slab and sidelites.' : currentPage === 'jamb-type' ? 'Choose timber or clad for the frame, jambs, casing, brickmould, and mullions.' : currentPage === 'jamb-finish' ? 'Choose the finish applied only to the jamb and frame system.' : currentPage === 'glass-type' ? 'Choose the kind of glass you want to explore for the main door.' : currentPage === 'glass' ? 'Choose glass for the main door before selecting sidelite glass.' : currentPage === 'glass-variant' ? 'Choose the available finish for this glass design.' : currentPage === 'glass-frame-color' ? 'Match the insert trim to your door or choose a separate compatible paint color.' : currentPage.startsWith('sidelite-') ? `Choose the compatible ${sideliteStyleDisplayName(selectedSideliteStyle?.id)} sidelite option.` : currentPage === 'grid-location' ? 'Choose where the grids are installed.' : currentPage === 'grid-style' ? 'Choose the profile of your internal grids.' : currentPage === 'grid-pattern' ? 'Choose a pattern compatible with your selected grid style.' : currentPage === 'grid-color' ? 'Choose the confirmed color for this grid pattern.' : currentPage === 'grid-width' ? 'Choose the confirmed grid width.' : currentPage === 'lock-setup' ? 'Choose how you want your double doors prepared for hardware.' : currentPage === 'hardware' ? 'Complete your entry with hardware.' : 'Choose the direction your door will swing when viewed from the outside.'}</p>
               </div>
-              <div className="builder-feedback-host" data-feedback-trigger-host="content" />
               </div>
             </div>
             <div ref={builderOptionsRef} className="builder-options-scroll">
@@ -2274,7 +2273,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           </>}
 
           {currentPage === 'review' && !submitted && <>
-            <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p><div className="builder-feedback-host" data-feedback-trigger-host="content" /></div>
+            <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
             {!testMode && <button className="mobile-quote-form-cta" type="button" onClick={() => { setPendingCustomerAction(null); setSubmitted(false); showScreen('customer-form') }}>Continue to Quote Form <ArrowRight size={17}/></button>}
             <button className="floating-visualizer-launch" type="button" onClick={() => requestCustomerAction('open-visualizer')} aria-label="Launch Door Visualizer"><Eye size={19} /><span>Launch Door Visualizer</span><ArrowRight size={16} /></button>
             <div className="mobile-review-preview">{renderConfiguredPreviewMode()}</div>
@@ -2304,11 +2303,17 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <button className="post-submit-visualizer-button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Try the Door Visualizer <ArrowRight size={17} /></button>
           </div>}
 
-              {(currentPage !== 'review' || editReturnTo === 'summary') && <div className="builder-actions" aria-label="Builder actions">
-                {currentPage !== 'review' && <div className="builder-step-actions"><button className="back" aria-label="Previous configuration step" disabled={currentPageIndex === 0} onClick={() => goTo(currentPageIndex - 1)}><ArrowLeft size={17} /><span>Previous</span></button><button className="next" aria-label="Next configuration step" disabled={!editReturnTo && !isBuilderPageComplete(currentPage)} onClick={() => goTo(currentPageIndex + 1)}><span>{pages[currentPageIndex + 1] === 'review' ? 'Review & Quote' : 'Next'}</span><ArrowRight size={17} /></button></div>}
+              <div className="builder-actions" aria-label="Builder actions">
+                <div className="builder-step-actions">
+                  {currentPage !== 'review' && <button className="back" aria-label="Previous configuration step" disabled={currentPageIndex === 0} onClick={() => goTo(currentPageIndex - 1)}><ArrowLeft size={17} /><span>Previous</span></button>}
+                  <div className="builder-forward-actions">
+                    <div className="builder-feedback-host" data-feedback-trigger-host="navigation" />
+                    {currentPage !== 'review' && <button className="next" aria-label="Next configuration step" disabled={!editReturnTo && !isBuilderPageComplete(currentPage)} onClick={() => goTo(currentPageIndex + 1)}><span>{pages[currentPageIndex + 1] === 'review' ? 'Review & Quote' : 'Next'}</span><ArrowRight size={17} /></button>}
+                  </div>
+                </div>
                 {editReturnTo === 'summary' && <button type="button" className="summary-edit-return" onClick={doneEditing}>Back to summary</button>}
                 {editReturnTo === 'summary' && editReturnError && <p role="status">{editReturnError}</p>}
-              </div>}
+              </div>
         </section>
 
         {!submitted && <aside className={currentPage === 'review' ? 'review-preview-panel' : undefined}>
