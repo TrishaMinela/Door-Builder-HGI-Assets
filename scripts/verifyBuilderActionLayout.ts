@@ -3,6 +3,14 @@ import { spawn } from 'node:child_process'
 import { chromium } from 'playwright-core'
 import sharp from 'sharp'
 import { doorStyles, hardwareOptions } from '../src/data/options'
+import { builderGroupForPage, builderGroupStart } from '../src/utils/builderNavigation'
+
+for (const page of ['door-configuration', 'door-line', 'door-grain', 'door-style', 'sidelites', 'sidelite-style', 'door-swing']) assert.equal(builderGroupForPage(page), 'Door')
+for (const page of ['door-finish', 'jamb-type', 'jamb-finish']) assert.equal(builderGroupForPage(page), 'Finish')
+for (const page of ['glass-type', 'glass', 'glass-variant', 'grid-color', 'sidelite-glass-type', 'sidelite-glass-variant', 'sidelite-grid-width', 'glass-frame-color']) assert.equal(builderGroupForPage(page), 'Glass')
+for (const page of ['hardware', 'lock-setup']) assert.equal(builderGroupForPage(page), 'Hardware')
+assert.equal(builderGroupStart(['door-style', 'door-finish', 'sidelite-glass-type', 'hardware'], 'Glass'), 2)
+assert.equal(builderGroupStart(['door-style', 'door-finish', 'hardware'], 'Glass'), -1)
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5225', '--strictPort'], { stdio: 'pipe' })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
@@ -14,7 +22,7 @@ try {
   })
   browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
   const photo = await sharp({ create: { width: 800, height: 600, channels: 3, background: '#999999' } }).jpeg().toBuffer()
-  for (const [width, height] of [[1440, 1000], [820, 1180], [1180, 820], [390, 844]]) {
+  for (const [width, height] of [[1440, 1000], [820, 1180], [1180, 820], [390, 844], [320, 740]]) {
     const page = await browser.newPage({ viewport: { width, height } })
     page.on('pageerror', error => console.error('Browser error:', error.message))
     await page.addInitScript(configuration => {
@@ -56,13 +64,26 @@ try {
     await page.goto('http://127.0.0.1:5225/')
     await page.getByRole('button', { name: 'Start Building', exact: true }).click()
     assert.equal(await done().count(), 0, 'Normal configurations do not expose Done editing')
+    const assertGroups = async (glass = true) => {
+      const expected = glass ? ['Door', 'Finish', 'Glass', 'Hardware'] : ['Door', 'Finish', 'Hardware']
+      await page.waitForFunction(labels => Array.from(document.querySelectorAll('.stepper em')).map(element => element.textContent).join('|') === labels.join('|'), expected)
+      assert.deepEqual(await page.locator('.stepper em').allTextContents(), expected)
+      assert.ok(await page.locator('.stepper em').evaluateAll(elements => elements.every(element => {
+        const style = getComputedStyle(element), rect = element.getBoundingClientRect()
+        return style.display !== 'none' && rect.width > 0 && element.scrollWidth <= element.clientWidth + 1
+      })), 'All group labels are fully readable')
+    }
+    await assertGroups()
     for (let i = 0; i < 30 && await page.getByRole('button', { name: 'Next configuration step' }).count(); i++) {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
       if (await page.locator('.step-heading h1').innerText() === 'Choose a Door Style') {
+        assert.equal(await page.locator('.stepper button[aria-current="step"] em').innerText(), 'Door')
+        assert.match(await page.locator('.step-label-row').innerText(), /Step 1 of 4 · Door/i)
         await testFeedback()
         assert.equal(await page.locator('[data-feedback-trigger-host="preview"]').count(), 0)
         await page.screenshot({ path: `/tmp/builder-actions-normal-${width}.png` })
       }
+      if (await page.locator('.step-heading h1').innerText() === 'Choose Your Hardware') assert.equal(await page.getByRole('button', { name: 'Next configuration step' }).innerText(), 'Review & Quote')
       await next()
     }
     await page.getByRole('heading', { name: 'Configuration Summary' }).waitFor()
@@ -79,15 +100,14 @@ try {
     await testFeedback(true)
     assert.ok(await done().isVisible(), 'Feedback preserves editing context')
     assert.ok(feedbackPayload?.context.step.includes('door-style'))
-    if (width <= 600) {
-      const doneBox = (await done().boundingBox())!, navBox = (await page.locator('.builder-step-actions').boundingBox())!, feedbackBox = (await feedback().boundingBox())!
-      assert.ok(doneBox.y >= navBox.y + navBox.height && feedbackBox.y + feedbackBox.height <= navBox.y, 'Phone ordering: feedback, navigation, Done editing')
-      assert.ok(doneBox.width >= width - 40, 'Phone Done editing is full width')
-    } else {
-      assert.ok(await page.getByText('Editing your design', { exact: true }).isVisible())
-      const bar = (await page.locator('.editing-bar').boundingBox())!, toolbar = (await page.locator('.builder-toolbar').boundingBox())!
-      assert.ok(bar.y >= toolbar.y + toolbar.height - 1, 'Editing bar sits below main progress navigation')
-      assert.ok(bar.width >= width - 2, 'Editing bar spans the layout, including iPad portrait')
+    assert.ok(await page.getByText('Editing your design', { exact: true }).isVisible())
+    const bar = (await page.locator('.editing-bar').boundingBox())!, toolbar = (await page.locator('.builder-toolbar').boundingBox())!, header = (await page.locator('.app > header').boundingBox())!
+    assert.ok(Math.abs(bar.y - (header.y + header.height)) <= 1 && bar.y + bar.height <= toolbar.y + 1, 'Editing bar is directly below black header, above navigation')
+    assert.ok(bar.width >= width - 2, 'Editing bar spans every viewport')
+    assert.equal(await page.locator('.builder-actions').getByRole('button', { name: /^Done editing/ }).count(), 0, 'No duplicate bottom action')
+    assert.equal(await page.locator('.editing-bar').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(13, 102, 108)', 'Existing brand teal')
+    await assertGroups()
+    if (width > 600) {
       const feedbackBox = (await feedback().boundingBox())!, navBox = (await page.locator('.builder-step-actions').boundingBox())!
       assert.ok(feedbackBox.x + feedbackBox.width < navBox.x, 'Feedback is left of Previous/Next')
     }
@@ -112,7 +132,28 @@ try {
     await done().click()
     await page.locator('.visualizer-page').waitFor()
     assert.equal((await saved()).selectedPaint, 'paint-white', 'Done editing returns with updated selections without traversing other steps')
+    // A solid main slab hides Glass only when no sidelites need it either.
+    await page.locator('.configuration-edit-actions-visualizer').getByRole('button', { name: 'Edit Door', exact: true }).click()
+    await page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: /^Nine Panel$/ }) }).click()
+    await assertGroups(false)
+    await page.locator('.stepper button').filter({ hasText: 'Door' }).click()
+    await next() // Entry configuration → sidelite position, sequence unchanged.
+    await page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: /^Right$/ }) }).click()
+    await assertGroups()
+    // Invalid sidelites may not be bypassed by forward group navigation.
+    const glassGroup = page.locator('.stepper button').filter({ hasText: 'Glass' })
+    assert.equal(await glassGroup.isDisabled(), false, 'Complete prior groups allow navigation to sidelite-only glass')
+    await glassGroup.click()
+    assert.match(await page.locator('.step-heading h1').innerText(), /Sidelite Glass/)
+    assert.equal(await page.locator('.stepper button[aria-current="step"] em').innerText(), 'Glass')
     console.log(`${width}×${height}: normal/editing controls, feedback submit/close/focus, scrolling, padding, photo return passed.`)
     await page.close()
+    const fresh = await browser.newPage({ viewport: { width, height } })
+    await fresh.goto('http://127.0.0.1:5225/')
+    await fresh.getByRole('button', { name: 'Start Building', exact: true }).click()
+    assert.ok(await fresh.getByRole('button', { name: 'Next configuration step' }).isDisabled(), 'An unanswered entry question blocks Next')
+    for (const label of ['Finish', 'Hardware']) assert.ok(await fresh.locator('.stepper button').filter({ hasText: label }).isDisabled(), 'Group navigation cannot bypass required Door questions')
+    assert.equal(await fresh.getByRole('button', { name: 'Done editing', exact: true }).count(), 0)
+    await fresh.close()
   }
 } finally { await browser?.close(); server.kill('SIGTERM') }

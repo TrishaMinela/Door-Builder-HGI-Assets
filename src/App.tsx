@@ -9,6 +9,7 @@ import { BetaFeedback } from './components/BetaFeedback'
 import { DealerContextGate } from './components/DealerContextGate'
 import { sortByDisplayLabel } from './utils/sortByDisplayLabel'
 import { validOptionId } from './utils/optionSelection'
+import { builderGroupForPage, builderGroupStart, type BuilderGroup } from './utils/builderNavigation'
 import { clearGlassOption, retainGlassSelection } from './utils/retainGlassSelection'
 import { useInventoryShadow } from './inventory-shadow/useInventoryShadow'
 import { useProductCardLayout } from './utils/useProductCardLayout'
@@ -42,8 +43,6 @@ import { clearDoorBuilderDraft, loadDoorBuilderDraft, saveDoorBuilderDraft, type
 import { UNSELECTED_FINISH } from './utils/customerFinish'
 import { doorStyleDisplayName, doorStyleCardName, sideliteStyleDisplayName, glassDisplayName, sideliteConfigurationDisplayName } from './data/productDisplayNames'
 
-const glassSteps = ['Entry Type', 'Sidelites', 'Door Swing', 'Door', 'Finish', 'Glass', 'Hardware', 'Review & Quote']
-const noGlassSteps = ['Entry Type', 'Sidelites', 'Door Swing', 'Door', 'Finish', 'Hardware', 'Review & Quote']
 type BuilderPage = 'door-configuration' | 'door-style' | 'door-line' | 'door-grain' | 'sidelites' | 'sidelite-style' | 'door-finish' | 'jamb-type' | 'jamb-finish' | 'glass-type' | 'glass' | 'glass-variant' | 'glass-frame-color' | 'grid-location' | 'grid-style' | 'grid-pattern' | 'grid-color' | 'grid-width' | 'sidelite-glass-type' | 'sidelite-glass' | 'sidelite-glass-variant' | 'sidelite-grid-location' | 'sidelite-grid-style' | 'sidelite-grid-pattern' | 'sidelite-grid-color' | 'sidelite-grid-width' | 'lock-setup' | 'hardware' | 'door-swing' | 'review'
 const mainDoorGlassPages = new Set<BuilderPage>(['glass-type', 'glass', 'glass-variant', 'grid-location', 'grid-style', 'grid-pattern', 'grid-color', 'grid-width'])
 const sideliteGlassPages = new Set<BuilderPage>(['sidelite-glass-type', 'sidelite-glass', 'sidelite-glass-variant', 'sidelite-grid-location', 'sidelite-grid-style', 'sidelite-grid-pattern', 'sidelite-grid-color', 'sidelite-grid-width'])
@@ -615,7 +614,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const hasSideliteGlass = supportsSideliteLine && Boolean(sidelites && sidelites !== 'none' && sideliteStyleId)
   const hasMainDoorGlassFrame = supportsGlass && Boolean(glass) && selectedStyleCodes.some((code) => glassDoorCodes.has(code))
   const supportsGlassFrameColor = hasMainDoorGlassFrame || hasSideliteGlass
-  const steps = (supportsGlass || hasSideliteGlass ? glassSteps : noGlassSteps).filter(step => !isFrenchDoor || step !== 'Door Swing')
+  const steps: BuilderGroup[] = supportsGlass || hasSideliteGlass ? ['Door', 'Finish', 'Glass', 'Hardware'] : ['Door', 'Finish', 'Hardware']
   const selectedGlass = supportsGlass ? glass : null
   const clearOnlyGlass = !supportsGlass && compatibilitySupportsGlass
     ? availableGlass.find((option) => option.id === 'clear') ?? null
@@ -895,21 +894,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     }
   }, [screen, editReturnTo])
   const glassSelectionTarget = mainDoorGlassPages.has(currentPage) ? 'main-door' : sideliteGlassPages.has(currentPage) ? 'sidelite' : null
-  const currentStep = currentPage === 'door-configuration'
-    ? 'Entry Type'
-    : currentPage === 'sidelites'
-      ? 'Sidelites'
-      : currentPage === 'door-swing' ? 'Door Swing'
-      : currentPage === 'door-style' || currentPage === 'door-line' || currentPage === 'door-grain' || currentPage === 'sidelite-style'
-        ? 'Door'
-    : currentPage === 'door-finish' || currentPage === 'jamb-type' || currentPage === 'jamb-finish'
-      ? 'Finish'
-      : currentPage.startsWith('glass') || currentPage.startsWith('grid-') || currentPage.startsWith('sidelite-glass') || currentPage.startsWith('sidelite-grid')
-        ? 'Glass'
-        : currentPage === 'lock-setup' || currentPage === 'hardware'
-          ? 'Hardware'
-          : 'Review & Quote'
-  const activeMainStepIndex = steps.indexOf(currentStep)
+  const currentStep = builderGroupForPage(currentPage)
+  const activeMainStepIndex = currentStep === 'Review & Quote' ? steps.length : steps.indexOf(currentStep)
   const product = resolveDoorProduct(style, finish, selectedGrain ?? undefined, selectedDoorLine?.id)
   const previewConfig = {
     finish,
@@ -1526,17 +1512,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const canVisitStep = (target: number) => {
     const targetStep = steps[target]
     if (!targetStep) return false
-    const targetPage = pages.findIndex((page) => (
-      targetStep === 'Entry Type' ? page === 'door-configuration'
-        : targetStep === 'Sidelites' ? page === 'sidelites'
-          : targetStep === 'Door Swing' ? page === 'door-swing'
-          : targetStep === 'Door' ? page === 'door-style'
-        : targetStep === 'Finish' ? page === 'door-finish'
-          : targetStep === 'Glass' ? page === 'glass-type'
-            : targetStep === 'Hardware' ? page === 'hardware'
-              : page === 'review'
-    ))
-    return targetPage >= 0 && (Boolean(editReturnTo) || targetPage <= step)
+    const targetPage = builderGroupStart(pages, targetStep)
+    return targetPage >= 0 && (targetPage <= currentPageIndex || pages.slice(0, targetPage).every(isBuilderPageComplete))
   }
 
   const showScreen = (next: 'home' | 'builder' | 'customer-form' | 'visualizer') => {
@@ -1623,9 +1600,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   }
 
   const isVisualizerEditing = editReturnTo === 'visualizer'
-  const editModeControls = (phone = false) => isVisualizerEditing && <div className={`configuration-edit-return ${phone ? 'editing-phone-action' : 'editing-bar'}`}>
-    {!phone && <strong>Editing your design</strong>}
-    <button type="button" onClick={doneEditing}>{phone ? 'Done editing · Back to photo' : 'Done editing'}</button>
+  const editModeControls = isVisualizerEditing && <div className="configuration-edit-return editing-bar">
+    <strong>Editing your design</strong>
+    <button type="button" onClick={doneEditing}>Done editing</button>
     {editReturnError && <p role="status">{editReturnError}</p>}
   </div>
 
@@ -2188,11 +2165,12 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           </div> : <div className="success visualizer-form-confirmation"><span><Check size={32} /></span><small>Configuration received</small><h1>Thanks, {contact.fullName}.</h1><p>Your configuration PDF has been prepared. You can now see the same configured door on a photo of your home.</p><div className="visualizer-confirmation-action"><strong>Next: View your door on your home</strong><span>Upload a clear entrance photo and follow the guided placement steps.</span><button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Continue to Home Visualizer <ArrowRight size={17} /></button></div><button type="button" onClick={() => { setSubmitted(false); setCompletedCustomerAction(null); goTo(pages.indexOf('review')); showScreen('builder') }}>Return to Review</button></div>}
         </section>
       </main> : screen === 'visualizer' ? null : <>
+      {editModeControls}
       <div className={`builder-toolbar ${currentPage === 'review' && submitted ? 'confirmation-toolbar' : ''}`}>
         <nav className="stepper" aria-label="Configuration progress">
           {steps.map((label, index) => {
             const isReachable = canVisitStep(index)
-            const targetPage = pages.findIndex((page) => label === 'Entry Type' ? page === 'door-configuration' : label === 'Sidelites' ? page === 'sidelites' : label === 'Door Swing' ? page === 'door-swing' : label === 'Door' ? page === 'door-style' : label === 'Finish' ? page === 'door-finish' : label === 'Glass' ? page === 'glass-type' : label === 'Hardware' ? page === 'hardware' : page === 'review')
+            const targetPage = builderGroupStart(pages, label)
             return <button key={label} className={`${index === activeMainStepIndex ? 'active' : ''} ${index < activeMainStepIndex ? 'done' : ''}`} disabled={!isReachable} aria-current={index === activeMainStepIndex ? 'step' : undefined} onClick={() => isReachable && goTo(targetPage)}><span>{index + 1}</span><em>{label}</em></button>
           })}
         </nav>
@@ -2203,7 +2181,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           </div>}
         </div>}
       </div>
-      {editModeControls()}
       <main>
         {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">
           <button type="button" className="preview-reset-design" aria-label="Reset Design" title="Reset Design" onClick={resetDesign}><RotateCcw size={19} /></button>
@@ -2221,7 +2198,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
               <div className="section-heading step-heading">
               <div className="step-heading-copy">
                 <div className="step-label-row">
-                  <span>Step {activeMainStepIndex + 1} of {steps.length}</span>
+                  <span>Step {activeMainStepIndex + 1} of {steps.length} · {currentStep}</span>
                 </div>
                 <div className="step-title-row">
                   <h1>{currentPage === 'door-configuration' ? 'Choose Your Door Configuration' : currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'sidelites' ? 'Choose Your Sidelites' : currentPage === 'sidelite-style' ? 'Choose Your Sidelite Slab' : currentPage === 'door-finish' ? 'Choose Your Door Finish' : currentPage === 'jamb-type' ? 'Choose Your Jamb Type' : currentPage === 'jamb-finish' ? 'Choose Your Jamb Finish' : currentPage === 'glass-type' ? 'Choose Main Door Glass Type' : currentPage === 'glass' ? 'Choose Main Door Glass' : currentPage === 'glass-variant' ? `Choose ${selectedGlassGroup?.title ?? 'Glass'} Finish` : currentPage === 'glass-frame-color' ? 'Choose Glass Frame Color' : currentPage === 'grid-location' ? 'Choose Main Door Grid Location' : currentPage === 'grid-style' ? 'Choose Main Door Grid Style' : currentPage === 'grid-pattern' ? 'Choose Main Door Grid Pattern' : currentPage === 'grid-color' ? 'Choose Main Door Grid Color' : currentPage === 'grid-width' ? 'Choose Main Door Grid Width' : currentPage === 'sidelite-glass-type' ? 'Choose Sidelite Glass Type' : currentPage === 'sidelite-glass' ? 'Choose Sidelite Glass' : currentPage === 'sidelite-glass-variant' ? `Choose ${selectedSideliteGlassGroup?.title ?? 'Sidelite Glass'} Finish` : currentPage === 'sidelite-grid-location' ? 'Choose Sidelite Grid Location' : currentPage === 'sidelite-grid-style' ? 'Choose Sidelite Grid Style' : currentPage === 'sidelite-grid-pattern' ? 'Choose Sidelite Grid Pattern' : currentPage === 'sidelite-grid-color' ? 'Choose Sidelite Grid Color' : currentPage === 'sidelite-grid-width' ? 'Choose Sidelite Grid Width' : currentPage === 'lock-setup' ? 'Lock Setup' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>
@@ -2328,8 +2305,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
               <div className="builder-actions" aria-label="Builder actions">
                 <div className="builder-feedback-host" data-feedback-trigger-host="navigation" />
-                {currentPage !== 'review' && <div className="builder-step-actions"><button className="back" aria-label="Previous configuration step" disabled={currentPageIndex === 0} onClick={() => goTo(currentPageIndex - 1)}><ArrowLeft size={17} /><span>Previous</span></button><button className="next" aria-label="Next configuration step" disabled={!editReturnTo && !isBuilderPageComplete(currentPage)} onClick={() => goTo(currentPageIndex + 1)}><span>Next</span><ArrowRight size={17} /></button></div>}
-                {editModeControls(true)}
+                {currentPage !== 'review' && <div className="builder-step-actions"><button className="back" aria-label="Previous configuration step" disabled={currentPageIndex === 0} onClick={() => goTo(currentPageIndex - 1)}><ArrowLeft size={17} /><span>Previous</span></button><button className="next" aria-label="Next configuration step" disabled={!editReturnTo && !isBuilderPageComplete(currentPage)} onClick={() => goTo(currentPageIndex + 1)}><span>{pages[currentPageIndex + 1] === 'review' ? 'Review & Quote' : 'Next'}</span><ArrowRight size={17} /></button></div>}
                 {editReturnTo === 'summary' && <button type="button" className="summary-edit-return" onClick={doneEditing}>Back to summary</button>}
                 {editReturnTo === 'summary' && editReturnError && <p role="status">{editReturnError}</p>}
               </div>

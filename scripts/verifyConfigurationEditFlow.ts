@@ -130,6 +130,7 @@ try {
       if (area === 'Door') {
         await card(/^Half Lite$/).click()
         await page.getByRole('heading', { name: 'Choose a Door Style', exact: true }).waitFor()
+        await page.waitForFunction(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration.glassId === 's-clear-no-grids')
         const invalidated = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
         for (const field of ['sidelites', 'selectedPaint', 'hardwareId', 'doorSwingId']) assert.equal(invalidated[field], beforeEdit[field], `Invalid glass does not clear ${field}`)
         assert.equal(invalidated.doorLineId, doorLineChoicesForStyle(doorStyles.find(item => item.id === invalidated.styleId)!)[0].id, 'Edited style defaults to its first compatible material')

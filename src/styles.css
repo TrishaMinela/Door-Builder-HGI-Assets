@@ -2874,7 +2874,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
     gap:0;
   }
   .builder-toolbar .stepper button>span{
-    display:block!important;
+    display:block;
     width:auto;
     height:auto;
     min-width:0;
@@ -2888,7 +2888,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
     line-height:1;
   }
   .builder-toolbar .stepper button>em{
-    display:none!important;
+    display:block;
   }
 }
 @media(max-width:560px){
@@ -3819,18 +3819,16 @@ body:has(.customer-form-app),
    second per-layer interior transformation. Preserve responsive transform scale. */
 .door-frame.savannah-interior-mirrored{scale:-1 1}
 
-/* Persistent actions live outside the rendered entrance. Keep the two
-   responsive editing actions mutually exclusive, including for keyboards. */
+/* One full-width editing bar, between the black header and grouped steps. */
 .configuration-edit-return.editing-bar{
   position:sticky;top:0;left:auto;z-index:1041;flex:none;max-width:none;
   display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
-  padding:10px max(clamp(18px,3vw,52px),env(safe-area-inset-right)) 10px max(clamp(18px,3vw,52px),env(safe-area-inset-left));background:var(--white);border-bottom:1px solid var(--border);
+  padding:10px max(clamp(18px,3vw,52px),env(safe-area-inset-right)) 10px max(clamp(18px,3vw,52px),env(safe-area-inset-left));background:var(--peacock);border-bottom:1px solid var(--peacock);
 }
-.editing-bar>strong{font-size:14px;font-weight:600;color:var(--black)}
-.configuration-edit-return.editing-bar button,
-.builder-actions .configuration-edit-return button{min-height:44px;padding:10px 20px;font-size:13px;border-radius:var(--radius-control)}
+.editing-bar>strong{font-size:14px;font-weight:600;color:var(--white)}
+.configuration-edit-return.editing-bar button{min-height:44px;padding:10px 20px;font-size:13px;border-radius:var(--radius-control);background:var(--white);color:var(--peacock);border-color:var(--white);box-shadow:none}
+.configuration-edit-return.editing-bar button:hover{background:#e5eff4;color:var(--peacock);border-color:#e5eff4}
 .configuration-edit-return.editing-bar p{flex-basis:100%;max-width:none;margin:0;box-shadow:none}
-.configuration-edit-return.editing-phone-action{display:none}
 .app:not(.home-app) .builder-actions{
   display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
   height:auto;min-height:76px;margin:0;padding:14px 0;flex:none;
@@ -3872,24 +3870,31 @@ body:has(.customer-form-app),
   .app:not(.home-app) .builder-step-actions button span{display:inline}
   .app:not(.home-app) .builder-step-actions button svg{width:18px;height:18px}
 }
-/* Tablet portrait keeps the editing bar below the fixed progress navigation. */
-@media(min-width:601px) and (max-width:900px){
-  .app.visualizer-editing>.editing-bar{position:fixed;top:calc(var(--mobile-header-height) + var(--mobile-progress-height));left:0;right:0;min-height:64px}
+@media(max-width:900px){
+  .app.visualizer-editing>.editing-bar{position:fixed;top:var(--mobile-header-height);left:0;right:0;min-height:56px}
+  .app.visualizer-editing>.builder-toolbar{top:calc(var(--mobile-header-height) + var(--builder-editing-bar-height,64px))}
   .app.visualizer-editing>main{padding-top:calc(var(--mobile-header-height) + var(--mobile-progress-height) + var(--builder-editing-bar-height,64px))}
 }
 @media(max-width:600px){
-  .configuration-edit-return.editing-bar{display:none}
   .app:not(.home-app):not(.visualizer-app):not(.customer-form-app){--builder-actions-min-height:112px}
-  .app.visualizer-editing:not(.home-app):not(.visualizer-app):not(.customer-form-app){--builder-actions-min-height:168px}
+  .configuration-edit-return.editing-bar{padding-top:6px;padding-bottom:6px;gap:8px}
+  .editing-bar>strong{font-size:12px}
+  .configuration-edit-return.editing-bar button{min-height:40px;padding:8px 12px;font-size:12px}
   .app:not(.home-app) .builder-actions{flex-direction:column;align-items:stretch;gap:8px;padding-top:8px;padding-bottom:12px}
   .builder-feedback-host{display:flex;justify-content:flex-start}
   .app:not(.home-app) .builder-actions .builder-feedback-trigger{min-height:28px;padding:3px 0}
   .builder-step-actions{justify-content:space-between;width:100%;margin:0}
   .builder-step-actions>button{flex:1}
-  .configuration-edit-return.editing-phone-action{position:static;display:block;max-width:none;width:100%;margin:0}
-  .app:not(.home-app) .builder-actions .editing-phone-action button{
-    display:flex;align-items:center;justify-content:center;width:100%;max-width:none;min-height:48px;height:auto;
-    padding:10px 12px;background:#111;color:#fff;border:1px solid #111;border-radius:var(--radius-control);line-height:1.3;
-  }
-  .configuration-edit-return.editing-phone-action p{max-width:none;margin:8px 0 0;box-shadow:none}
+}
+
+/* Four main groups remain readable; sub-step titles stay in the content. */
+.builder-toolbar .stepper{display:flex;gap:0}
+.builder-toolbar .stepper button{flex:1 1 0;min-width:0;gap:8px;padding-inline:8px}
+.builder-toolbar .stepper button>em{display:block;flex:none;max-width:none;overflow:visible;text-overflow:clip;white-space:nowrap;font-size:12px}
+@media(max-width:600px){
+  .builder-toolbar .stepper{padding-inline:8px}
+  .builder-toolbar .stepper button{padding-inline:2px;gap:0}
+  .builder-toolbar .stepper button>span{display:none}
+  .builder-toolbar .stepper button>em{display:block;font-size:11px}
+  .builder-toolbar .stepper button:not(:last-child):after{width:8px;right:-4px}
 }
