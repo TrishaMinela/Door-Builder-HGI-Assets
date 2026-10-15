@@ -31,28 +31,11 @@ export function BetaFeedback({ currentStep, configuration }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
-  const [isPhoneLayout, setIsPhoneLayout] = useState(() => window.matchMedia('(max-width: 767px)').matches)
-  const [navigationTriggerHost, setNavigationTriggerHost] = useState<HTMLElement | null>(null)
-  const [heroTriggerHost, setHeroTriggerHost] = useState<HTMLElement | null>(null)
-  const [homeFooterHost, setHomeFooterHost] = useState<HTMLElement | null>(null)
   const lastTriggerRef = useRef<HTMLButtonElement | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const nameRef = useRef<HTMLInputElement>(null)
   const feedbackRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => {
-    setNavigationTriggerHost(document.querySelector<HTMLElement>('[data-feedback-trigger-host="navigation"]'))
-    setHeroTriggerHost(document.querySelector<HTMLElement>('[data-feedback-trigger-host="hero"]'))
-    setHomeFooterHost(document.querySelector<HTMLElement>('[data-feedback-trigger-host="home-footer"]'))
-  }, [currentStep])
-
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 767px)')
-    const updatePhoneLayout = () => setIsPhoneLayout(media.matches)
-    updatePhoneLayout()
-    media.addEventListener('change', updatePhoneLayout)
-    return () => media.removeEventListener('change', updatePhoneLayout)
-  }, [])
 
   const openFeedback = (trigger: HTMLButtonElement) => {
     lastTriggerRef.current = trigger
@@ -136,14 +119,9 @@ export function BetaFeedback({ currentStep, configuration }: Props) {
     }
   }
 
-  const trigger = (className: string, label: string) => <button className={className} type="button" onClick={(event) => openFeedback(event.currentTarget)} aria-haspopup="dialog" aria-label={label}><MessageSquare size={17}/><span>Feedback</span><small>Beta</small></button>
-
   return <>
-    {currentStep === 'home' ? homeFooterHost && createPortal(<button className="home-feedback-trigger" type="button" onClick={event => openFeedback(event.currentTarget)} aria-haspopup="dialog"><MessageSquare size={17} aria-hidden="true"/><span>Feedback</span></button>, homeFooterHost)
-      : navigationTriggerHost ? createPortal(<button className="builder-feedback-trigger" type="button" onClick={event => openFeedback(event.currentTarget)} aria-haspopup="dialog"><MessageSquare size={15} aria-hidden="true"/><span>Send feedback</span></button>, navigationTriggerHost)
-      : !isPhoneLayout && heroTriggerHost ? createPortal(trigger('beta-feedback-context-trigger', 'Give feedback about the home page preview'), heroTriggerHost)
-      : trigger('beta-feedback-context-trigger beta-feedback-page-trigger', 'Open beta feedback form')}
-    {open && <div className="beta-feedback-backdrop" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) close() }}>
+    <button className="site-feedback-trigger" type="button" onClick={event => openFeedback(event.currentTarget)} aria-haspopup="dialog"><MessageSquare size={17} aria-hidden="true"/><span>Feedback</span></button>
+    {open && createPortal(<div className="beta-feedback-backdrop builder-typography" role="presentation" onPointerDown={(event) => { if (event.target === event.currentTarget) close() }}>
       <div ref={dialogRef} className="beta-feedback-dialog" role="dialog" aria-modal="true" aria-labelledby="beta-feedback-title" aria-describedby="beta-feedback-description">
         <button className="beta-feedback-close" type="button" onClick={close} aria-label="Close feedback"><X size={20}/></button>
         {sent ? <div className="beta-feedback-success" role="status"><MessageSquare size={28}/><h2 id="beta-feedback-title">Thanks for the feedback!</h2><p id="beta-feedback-description">Your feedback has been sent.</p><button type="button" onClick={close}>Close</button></div> : <form onSubmit={submit}>
@@ -161,6 +139,6 @@ export function BetaFeedback({ currentStep, configuration }: Props) {
           <div className="beta-feedback-actions"><button type="button" onClick={close} disabled={submitting}>Cancel</button><button type="submit" disabled={submitting}>{submitting ? 'Sending...' : 'Send Feedback'}</button></div>
         </form>}
       </div>
-    </div>}
+    </div>, document.body)}
   </>
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { dealerSlugFromPath } from '../utils/dealerSlug'
+import { SiteFooter } from './SiteFooter'
 
 type Props = { children: (dealerSlug: string | null) => ReactNode }
 type DealerState = 'checking' | 'available' | 'unavailable'
@@ -31,11 +32,11 @@ export function DealerContextGate({ children }: Props) {
   }, [dealerSlug])
 
   if (state === 'checking') {
-    return <main className="dealer-link-state builder-typography"><section><span>Home Guard Door Builder</span><h1>Checking dealer link…</h1></section></main>
+    return <div className="shared-footer-shell builder-typography"><main className="dealer-link-state"><section><span>Home Guard Door Builder</span><h1>Checking dealer link…</h1></section></main><SiteFooter currentStep="dealer-link-check" configuration={{}}/></div>
   }
 
   if (state === 'unavailable') {
-    return <main className="dealer-link-state builder-typography"><section><span>Home Guard Door Builder</span><h1>This dealer link is unavailable.</h1><p>Please check the link or visit the main Door Builder.</p><a href="/">Open the Door Builder</a></section></main>
+    return <div className="shared-footer-shell builder-typography"><main className="dealer-link-state"><section><span>Home Guard Door Builder</span><h1>This dealer link is unavailable.</h1><p>Please check the link or visit the main Door Builder.</p><a href="/">Open the Door Builder</a></section></main><SiteFooter currentStep="dealer-link-unavailable" configuration={{}}/></div>
   }
 
   return children(dealerSlug)

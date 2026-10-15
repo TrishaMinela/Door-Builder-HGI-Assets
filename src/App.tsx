@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
-import { ArrowLeft, ArrowRight, Check, Download, ExternalLink, Eye, FileText, Globe, HelpCircle, Home as HomeIcon, Mail, MapPin, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Download, ExternalLink, Eye, FileText, HelpCircle, Home as HomeIcon, RotateCcw, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview, type DoorPreviewProps } from './components/DoorPreview'
 import { DoorStyleCard } from './components/DoorStyleCard'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
 import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
-import { BetaFeedback } from './components/BetaFeedback'
+import { SiteFooter } from './components/SiteFooter'
 import { DealerContextGate } from './components/DealerContextGate'
 import { sortByDisplayLabel } from './utils/sortByDisplayLabel'
 import { validOptionId } from './utils/optionSelection'
@@ -319,6 +319,9 @@ const heroDoorOpeningStyle = {
   top: `${HERO_DOOR_OPENING.topPct}%`,
   width: `${HERO_DOOR_OPENING.widthPct}%`,
   height: `${HERO_DOOR_OPENING.heightPct}%`,
+} as CSSProperties
+const heroSceneStyle = {
+  '--hero-door-center-y': `${HERO_DOOR_OPENING.topPct + HERO_DOOR_OPENING.heightPct / 2}%`,
 } as CSSProperties
 const HERO_FINISH_SPECS: Record<HeroPreset['finishKey'], { baseId: string; name: string; colorId?: string }> = {
   'black-paint': { baseId: 'paint-black', name: 'Black Paint' },
@@ -2111,7 +2114,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           </div>
           <div className="home-hero-visual">
             <div className="home-entryway-demo hero-composite" aria-label="Animated examples of configurable entry doors">
-              <div className="hero-composite-stage">
+              <div className="hero-composite-stage" style={heroSceneStyle}>
                 <img className="home-entryway-image" src="/assets/hero/hero-entryway.webp" alt="Welcoming home entryway with a customizable door preview" />
                 <div className="home-entryway-overlay" aria-hidden="true">
                   <div className="home-entryway-door-slot hero-door-stack entryway-door-stack hero-door-overlay" style={heroDoorOpeningStyle}>
@@ -2309,7 +2312,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 <div className="builder-step-actions">
                   {currentPage !== 'review' && <button className="back" aria-label="Previous configuration step" disabled={currentPageIndex === 0} onClick={() => goTo(currentPageIndex - 1)}><ArrowLeft size={17} /><span>Previous</span></button>}
                   <div className="builder-forward-actions">
-                    <div className="builder-feedback-host" data-feedback-trigger-host="navigation" />
                     {currentPage !== 'review' && <button className="next" aria-label="Next configuration step" disabled={!editReturnTo && !isBuilderPageComplete(currentPage)} onClick={() => goTo(currentPageIndex + 1)}><span>{pages[currentPageIndex + 1] === 'review' ? 'Review & Quote' : 'Next'}</span><ArrowRight size={17} /></button>}
                   </div>
                 </div>
@@ -2348,18 +2350,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         configurationKey={configuredDoorKey}
         doorConfiguration={currentDoorConfiguration}
       />}
-      <BetaFeedback currentStep={feedbackStep} configuration={feedbackConfiguration}/>
-      <footer className="site-footer">
-        {screen === 'home' && <a className="home-footer-logo" href="https://homeguardindustries.com" target="_blank" rel="noreferrer" aria-label="Home Guard Industries website"><img src="/assets/branding/hgi-logo-white.png" alt="Home Guard Industries" /></a>}
-        <div className="site-footer-contact">
-          <div className="site-footer-direct"><a href="tel:+18005251885" aria-label="Call Home Guard Industries at 1-800-525-1885"><Phone size={15} /><span>1-800-525-1885</span></a><a href="mailto:getintouch@homeguardindustries.com" aria-label="Email Home Guard Industries"><Mail size={15} /><span>getintouch@homeguardindustries.com</span></a></div>
-          <div className="site-footer-location"><a href="https://www.google.com/maps/place/13101+Main+St,+Grabill,+IN+46741/@41.20679,-84.9711317,17z/data=!3m1!4b1!4m5!3m4!1s0x8816004dd3ac2ac5:0x8788f6dae643c569!8m2!3d41.20679!4d-84.968943" target="_blank" rel="noreferrer" aria-label="View Home Guard Industries on Google Maps"><MapPin size={15} /><span>13101 Main Street, Grabill, IN 46741</span></a><a href="https://homeguardindustries.com" target="_blank" rel="noreferrer" aria-label="Visit the Home Guard Industries website"><Globe size={15} /><span>homeguardindustries.com</span></a></div>
-        </div>
-        {screen === 'home' ? <div className="home-footer-feedback" data-feedback-trigger-host="home-footer" /> : <div className="site-footer-meta">
-          <span>© 2026 Home Guard Industries</span>
-          <span>Built with 🤍 by <a href="https://schoolradius.co/" target="_blank" rel="noreferrer">School Radius</a></span>
-        </div>}
-      </footer>
+      <SiteFooter currentStep={feedbackStep} configuration={feedbackConfiguration}/>
     </div>
   )
 }

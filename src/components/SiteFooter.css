@@ -1,0 +1,39 @@
+/* Shared document footer. Legacy viewport/icon-only footer rules are retired
+   here; the home header/hero and captured product artwork remain untouched. */
+html:has(.shared-site-footer),body:has(.shared-site-footer){height:auto;min-height:100%;max-height:none;overflow-x:hidden;overflow-y:auto}
+#root:has(.shared-site-footer){height:auto;min-height:100dvh;overflow:visible}
+.app:has(>.shared-site-footer),.shared-footer-shell{display:flex;flex-direction:column;height:auto;min-height:100dvh;max-height:none;overflow:visible;--mobile-footer-height:0px}
+.app:has(>.shared-site-footer)>main{flex:1 0 auto}
+.app.customer-form-app>.customer-form-page,.app.visualizer-app>.visualizer-page{height:auto;min-height:0;max-height:none;overflow:visible}
+.shared-footer-shell>.dealer-link-state{flex:1;min-height:0}
+.shared-site-footer.site-footer{position:relative!important;inset:auto!important;z-index:auto!important;display:grid!important;grid-template-columns:170px minmax(0,1fr) auto;align-items:center!important;justify-content:stretch!important;flex:none;gap:40px;width:100%;max-width:none;height:auto!important;min-height:150px!important;margin:auto 0 0!important;padding:32px max(24px,calc((100vw - 1240px)/2))!important;background:var(--black);color:#fff;border:0;overflow:visible;letter-spacing:0;font-size:14px}
+.shared-site-footer .site-footer-logo{display:block;width:160px;height:auto;border:0;border-radius:0}
+.shared-site-footer .site-footer-logo img{display:block;width:100%;height:auto}
+.shared-site-footer .site-footer-contact{display:grid;grid-template-columns:auto auto;align-items:start;justify-content:center;gap:18px 28px;width:auto;min-width:0;flex-direction:row}
+.shared-site-footer :is(.site-footer-direct,.site-footer-location){display:grid;gap:12px;max-width:100%;align-items:start;justify-content:start;flex-direction:row}
+.shared-site-footer .site-footer-contact a{display:flex!important;align-items:center;justify-content:flex-start;gap:10px;width:auto;height:auto;min-height:32px;border:0;border-radius:0;font-size:13px;white-space:normal}
+.shared-site-footer .site-footer-contact a span{display:block;overflow-wrap:anywhere}
+.shared-site-footer .site-footer-contact a svg{width:17px;height:17px;flex:none;color:var(--gold)}
+.shared-site-footer .site-feedback-trigger{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;padding:12px 22px;border:0;border-radius:999px;background:var(--gold);color:var(--black);font-size:14px;font-weight:600;white-space:nowrap}
+.shared-site-footer .site-feedback-trigger:hover{background:#ffe239}
+.shared-site-footer :is(a,button):focus-visible{outline:3px solid var(--gold);outline-offset:4px}
+@media(min-width:901px){
+  /* Retain the desktop workspace's internal scrolling and sticky navigation;
+     the document can now scroll on to the complete footer underneath it. */
+  .app:not(.home-app):not(.visualizer-app):not(.customer-form-app):has(>.shared-site-footer)>main{flex:none;height:calc(100dvh - var(--builder-shell-top,160px) - var(--site-footer-height,150px));min-height:540px;overflow:hidden}
+}
+@media(max-width:1100px){
+  .shared-site-footer.site-footer{grid-template-columns:150px minmax(0,1fr);gap:24px}
+  .shared-site-footer .site-footer-contact{justify-content:end;gap:12px 24px}
+  .shared-site-footer .site-footer-feedback{grid-column:1/-1;justify-self:end}
+}
+@media(max-width:900px){
+  .app:not(.home-app):not(.visualizer-app):not(.customer-form-app):has(>.shared-site-footer)>main{padding-bottom:calc(var(--builder-actions-height,76px) + 24px + env(safe-area-inset-bottom))}
+  .app:has(>.shared-site-footer) .builder-actions{bottom:calc(var(--footer-viewport-overlap,0px) + env(safe-area-inset-bottom))}
+  .app:has(>.shared-site-footer) .review-step .floating-visualizer-launch{bottom:calc(var(--footer-viewport-overlap,0px) + var(--builder-actions-height,76px) + 12px + env(safe-area-inset-bottom))}
+}
+@media(max-width:700px){
+  .shared-site-footer.site-footer{grid-template-columns:1fr;gap:24px;padding:32px 24px calc(32px + env(safe-area-inset-bottom))!important}
+  .shared-site-footer .site-footer-contact{grid-template-columns:1fr;justify-content:start;gap:12px}
+  .shared-site-footer .site-footer-feedback{grid-column:auto;justify-self:start}
+}
