@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
 import { spawn } from 'node:child_process'
 import { writeFile } from 'node:fs/promises'
+import { frameFinishLighting } from '../src/utils/finishDetail'
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5193', '--strictPort'], { stdio: 'pipe' })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
@@ -25,7 +26,7 @@ try {
     const liveColor = await page.locator('.preview-scene').first().locator('.door-frame-svg-base stop').nth(1).getAttribute('stop-color')
     assert.ok(liveColor, 'Live preview has the selected frame color')
     const stops = await page.locator('.preview-scene').first().locator('.door-frame-svg-base stop').evaluateAll(elements => elements.map(element => element.getAttribute('stop-color')))
-    assert.equal(stops[2], liveColor, 'Frame highlight keeps the selected finish rather than mixing white')
+    assert.equal(stops[2], frameFinishLighting(liveColor, 'exterior', color.startsWith('stain') ? 'stain' : 'paint').highlight, 'Frame uses shared hue-preserving lighting instead of mixing white')
     const result = await page.locator(`img[data-reference="${color}"]`).evaluate(async element => {
       const image = element as HTMLImageElement; await image.decode()
       const canvas = document.createElement('canvas'); canvas.width = image.naturalWidth; canvas.height = image.naturalHeight

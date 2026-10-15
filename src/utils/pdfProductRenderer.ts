@@ -11,6 +11,7 @@ import { sidelitePlacement } from '../data/sideliteConfigurations'
 import { doorHandingSides } from '../data/doorHanding'
 import { createCanonicalEntranceGeometry, ENTRANCE_GEOMETRY } from '../features/home-visualizer/entranceGeometry'
 import { renderSslRelief } from './sideliteRelief'
+import { darkFinishStrength, renderDarkFinishSurface, frameFinishLighting } from './finishDetail'
 
 // Resolved asset selection is shared with the builder, not re-guessed from
 // human-readable grid labels. This is immutable data, never a DOM reference.
@@ -51,7 +52,7 @@ export function loadPdfImage(url: string): Promise<HTMLImageElement> {
 }
 
 type Masks = NonNullable<ReturnType<typeof buildPreviewMasks>>
-type PreparedSurface = { image: HTMLCanvasElement; masks: Masks | null; glass?: HTMLImageElement; frame?: HTMLImageElement; reliefSource?: { slab: HTMLImageElement; mask: HTMLImageElement } }
+type PreparedSurface = { image: HTMLCanvasElement; masks: Masks | null; glass?: HTMLImageElement; frame?: HTMLImageElement; reliefSource?: { slab: HTMLImageElement; mask?: HTMLImageElement; ssl: boolean } }
 
 async function prepareSurface(slab: HTMLImageElement, mask: HTMLImageElement | undefined, finish: Finish, code: string, opening?: HTMLImageElement, sidelite = false): Promise<PreparedSurface> {
   const masks = mask ? buildPreviewMasks(mask, slab, !sidelite, glassFrameMaskForOpening(sidelite ? null : code), opening) : null
@@ -73,12 +74,13 @@ async function prepareSurface(slab: HTMLImageElement, mask: HTMLImageElement | u
   paint.globalAlpha = finish.finishType === 'paint' ? FINISH_RENDERING.paintDetailOpacity : FINISH_RENDERING.stainDetailOpacity
   paint.filter = `grayscale(1) contrast(${finish.finishType === 'paint' ? 1.12 : FINISH_RENDERING.stainContrast})`
   paint.drawImage(slab, 0, 0)
-  const reliefSource = sidelite && code.toLowerCase() === 'ssl' && mask ? { slab, mask } : undefined
-  if (reliefSource) {
+  const ssl = sidelite && code.toLowerCase() === 'ssl' && Boolean(mask)
+  const reliefSource = { slab, mask: ssl ? mask : finishMask, ssl }
+  if (ssl || darkFinishStrength(finish.color) > 0) {
     paint.globalCompositeOperation = 'source-over'
     paint.globalAlpha = 1
     paint.filter = 'none'
-    paint.drawImage(renderSslRelief(slab, mask!, finish.color), 0, 0)
+    paint.drawImage(ssl ? renderSslRelief(slab, mask!, finish.color) : renderDarkFinishSurface(slab, finishMask, finish.color, finish.finishType), 0, 0)
   }
   paint.globalAlpha = 1
   paint.filter = 'none'
@@ -192,13 +194,12 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
   ctx.translate((output.width - geometry.totalWidth * scale) / 2, (output.height - geometry.totalHeight * scale) / 2)
   ctx.scale(scale, scale)
   const jambColor = assets.jambFinish?.color ?? config.finish.color
+  const frameLighting = frameFinishLighting(jambColor, 'exterior', assets.jambFinish?.finishType ?? config.finish.finishType)
   function frameFill(x: number, width: number) {
-    const numeric = parseInt(jambColor.replace('#', ''), 16)
-    const mix = (light: boolean, amount: number) => `#${[16, 8, 0].map(shift => Math.round(((numeric >> shift) & 255) * (1 - amount) + (light ? 255 : 0) * amount).toString(16).padStart(2, '0')).join('')}`
     const gradient = ctx.createLinearGradient(x, 0, x + width, 0)
-    gradient.addColorStop(0, mix(false, .035)); gradient.addColorStop(.18, jambColor)
-    gradient.addColorStop(.5, mix(true, .03)); gradient.addColorStop(.82, jambColor)
-    gradient.addColorStop(1, mix(false, .035))
+    gradient.addColorStop(0, frameLighting.shadow); gradient.addColorStop(.18, jambColor)
+    gradient.addColorStop(.5, frameLighting.highlight); gradient.addColorStop(.82, jambColor)
+    gradient.addColorStop(1, frameLighting.shadow)
     return gradient
   }
   ctx.fillStyle = frameFill(0, geometry.totalWidth)
@@ -209,8 +210,9 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
     const finish = assets.glassFrameFinish
     if (!finish || !frame) return
     const width = surface.image.width / PIXEL_SCALE, height = surface.image.height / PIXEL_SCALE
-    const tint = surface.reliefSource
-      ? clippedLayer(renderSslRelief(surface.reliefSource.slab, surface.reliefSource.mask, finish.color), frame, width, height)
+    const relief = surface.reliefSource
+    const tint = relief && (relief.ssl || darkFinishStrength(finish.color) > 0)
+      ? clippedLayer(relief.ssl ? renderSslRelief(relief.slab, relief.mask, finish.color) : renderDarkFinishSurface(relief.slab, relief.mask, finish.color, finish.finishType), frame, width, height)
       : clippedLayer(frame, undefined, width, height, finish.color)
     ctx.drawImage(tint, 0, 0, ENTRANCE_GEOMETRY.slabWidth, geometry.openingHeight)
   }

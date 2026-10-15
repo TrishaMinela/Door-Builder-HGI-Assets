@@ -23,7 +23,8 @@ try {
       const glass = wrapper.querySelector<HTMLElement>(main ? '.door-glass-overlay' : '.door-frame-sidelite-glass')!
       const mask = main ? glass : wrapper.querySelector<HTMLElement>('.door-frame-sidelite-glass-clip')!
       const treatment = getComputedStyle(frame)
-      if (treatment.opacity !== '1' || treatment.backgroundImage !== 'none' || treatment.mixBlendMode !== 'normal' || treatment.filter !== 'none') throw new Error('Glass frame must use a plain opaque color without gloss/texture/detail blending')
+      const authoredRelief = treatment.backgroundImage === 'none' || treatment.backgroundImage.startsWith('url("data:image/png')
+      if (treatment.opacity !== '1' || !authoredRelief || treatment.mixBlendMode !== 'normal' || treatment.filter !== 'none') throw new Error('Glass frame must remain opaque and neutral, with only source-derived relief (no gloss/gradient/blend treatment)')
       if (wrapper.querySelector('.door-glass-frame-material,.door-glass-frame-detail,.door-frame-sidelite-glass-frame-material,.door-frame-sidelite-glass-frame-detail')) throw new Error('Glossy authored material/detail layers must not be reintroduced')
       const rect = (element: Element) => { const r = element.getBoundingClientRect(); return [r.x, r.y, r.width, r.height] }
       return { code: wrapper.closest('[data-fixture]')!.getAttribute('data-fixture'), main, frame: rect(frame), glass: rect(glass), frameFit: getComputedStyle(frame).objectFit, glassFit: getComputedStyle(glass).objectFit, frameMask: getComputedStyle(frame).maskSize, glassMask: getComputedStyle(mask).maskSize, frameTransform: getComputedStyle(frame).transform, glassTransform: getComputedStyle(glass).transform }

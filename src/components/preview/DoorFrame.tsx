@@ -1,6 +1,7 @@
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import type { DoorConfigurationType } from '../../types'
 import { createCanonicalEntranceGeometry, ENTRANCE_GEOMETRY } from '../../features/home-visualizer/entranceGeometry'
+import { frameFinishLighting } from '../../utils/finishDetail'
 
 export type DoorFrameSidelites = 'none' | 'left' | 'right' | 'both'
 export type DoorFrameView = 'Exterior' | 'Interior'
@@ -37,15 +38,6 @@ type DoorFrameProps = {
 }
 
 const FRAME_SEAM_UNDERLAP = 1
-
-function mixHex(color: string, target: '#000000' | '#ffffff', amount: number) {
-  const match = color.match(/^#([\da-f]{6})$/i)
-  if (!match) return color
-  const source = Number.parseInt(match[1], 16)
-  const destination = Number.parseInt(target.slice(1), 16)
-  const channel = (shift: number) => Math.round(((source >> shift) & 255) * (1 - amount) + ((destination >> shift) & 255) * amount)
-  return `#${[channel(16), channel(8), channel(0)].map((value) => value.toString(16).padStart(2, '0')).join('')}`
-}
 
 export function DoorFrame({
   children,
@@ -86,13 +78,7 @@ export function DoorFrame({
   const outerRight = totalWidth
   const outerTop = 0
   const isInterior = view === 'Interior'
-  const frameFill = finishColor
-  const edgeAmount = variant === 'exterior' ? 0.035 : finishType === 'stain' ? 0.075 : 0.055
-  const frameEdge = mixHex(frameFill, '#000000', edgeAmount)
-  // The selected jamb color is the brightest face color. Mixing white into
-  // dark finishes washes them out in the preview and flattened AI reference.
-  // Retain depth through darker edges, not a lighter substitute finish.
-  const frameHighlight = frameFill
+  const { base: frameFill, shadow: frameEdge, highlight: frameHighlight } = frameFinishLighting(finishColor, variant, finishType)
   const faceGradientId = `door-frame-face-${frameId}`
   const mullionGradientId = `door-frame-mullion-${frameId}`
   const sideliteMaskId = sideliteMaskSrc?.split('/').pop()?.replace(/\.png$/i, '').toLowerCase() ?? 'default'

@@ -62,7 +62,7 @@ try {
     console.log(`${name}: selected hue/flat RGB preserved; panel range ${low}–${high}; desktop/mobile preview, exterior PDF render and AI captures saved`)
   }
   // Also inspect the actual responsive builder shell, not only the renderer harness.
-  for (const width of [390, 1280]) for (const color of ['wineberry', 'terratone', 'black', 'white']) {
+  for (const width of [390, 1280]) for (const color of ['musket', 'wineberry', 'terratone', 'black', 'white']) {
     const ui = await browser.newPage({ viewport: { width, height: 900 } })
     await ui.addInitScript(configuration => localStorage.setItem('hgi-door-builder-draft', JSON.stringify({ version: 1, configuration })), {
       selectedDoorConfigurationType: 'single', styleId: doorStyles.find(s => s.code === 'N1')!.id,

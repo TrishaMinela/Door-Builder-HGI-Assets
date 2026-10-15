@@ -90,7 +90,7 @@ const fixtures = [
   { name: 'N1-stain', ...fixture('N1', 'stain-nutmeg', 'lock-side') },
   { name: 'smooth-steel-ssl', ...halfSideliteFixture('20-gauge-smooth-steel') },
   { name: 'textured-fiberglass-ssl', ...halfSideliteFixture('textured-fiberglass') },
-  ...['20-gauge-smooth-steel', 'textured-fiberglass'].flatMap(line => ['wineberry', 'terratone', 'black', 'white'].map(color => {
+  ...['20-gauge-smooth-steel', 'textured-fiberglass'].flatMap(line => ['musket', 'wineberry', 'terratone', 'black', 'white'].map(color => {
     const item = halfSideliteFixture(line, `paint-${color}`)
     item.appearance.glassFrameFinish = item.configuration.finish
     return { name: `ssl-relief-${line}-${color}`, ...item }

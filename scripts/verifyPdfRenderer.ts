@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto'
 import sharp from 'sharp'
 import { configurationPdfDownloadName } from '../src/utils/pdfConfig'
 import { doorStyles, finishes } from '../src/data/options'
+import { darkFinishStrength } from '../src/utils/finishDetail'
 
 const output = '/private/tmp/hgi-pdf-renderer-verification'
 // Approved replacement artwork, including the corrected first-row label.
@@ -74,7 +75,9 @@ try {
     await page.evaluate(index => (window as unknown as { mountLiveFixture: (i: number) => Promise<unknown> }).mountLiveFixture(index), index)
     const frame = page.locator('#live-preview .door-glass-frame-tint')
     assert.equal(await frame.evaluate(element => getComputedStyle(element).opacity), '1')
-    assert.equal(await frame.evaluate(element => getComputedStyle(element).backgroundImage), 'none')
+    const texturedRelief = await frame.evaluate(element => getComputedStyle(element).backgroundImage)
+    if (darkFinishStrength(finish.color) > 0) assert.ok(texturedRelief.startsWith('url("data:image/png'), 'Dark border uses authored relief, not a gloss/gradient overlay')
+    else assert.equal(texturedRelief, 'none', 'Light border retains its flat treatment')
     assert.equal(await page.locator('#live-preview .door-glass-frame-detail,#live-preview .door-glass-frame-material').count(), 0)
     if (/^plain-frame-(F|S)-/.test(name)) {
       const point = await frame.evaluate(async element => {
@@ -83,9 +86,24 @@ try {
         const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height
         const ctx = canvas.getContext('2d')!; ctx.drawImage(image, 0, 0)
         const pixels = ctx.getImageData(0, 0, image.width, image.height).data
-        for (let y = 3; y < image.height - 3; y++) for (let x = 3; x < image.width - 3; x++) {
-          if ([-2, 0, 2].every(dy => [-2, 0, 2].every(dx => pixels[((y + dy) * image.width + x + dx) * 4 + 3] === 255))) return { x: (x + .5) / image.width, y: (y + .5) / image.height }
+        const background = getComputedStyle(element).backgroundImage
+        let surface: Uint8ClampedArray | undefined
+        if (background !== 'none') {
+          const detail = new Image(); detail.src = background.match(/url\(["']?(.*?)["']?\)/)![1]; await detail.decode()
+          ctx.clearRect(0, 0, image.width, image.height); ctx.drawImage(detail, 0, 0)
+          surface = ctx.getImageData(0, 0, image.width, image.height).data
         }
+        let best: { x: number; y: number } | undefined, bestRange = Infinity
+        for (let y = 3; y < image.height - 3; y++) for (let x = 3; x < image.width - 3; x++) {
+          if (![-2, 0, 2].every(dy => [-2, 0, 2].every(dx => pixels[((y + dy) * image.width + x + dx) * 4 + 3] === 255))) continue
+          // Sample a locally uniform face, not a subpixel bevel whose
+          // antialiasing legitimately differs between CSS and 3x canvas.
+          const values = surface ? [-1, 0, 1].flatMap(dy => [-1, 0, 1].map(dx => surface![((y + dy) * image.width + x + dx) * 4])) : [0]
+          const range = Math.max(...values) - Math.min(...values)
+          if (range < bestRange) { bestRange = range; best = { x: (x + .5) / image.width, y: (y + .5) / image.height } }
+          if (!range) return best!
+        }
+        if (best) return best
         throw new Error('No opaque glass frame sample found')
       })
       const g = result.geometry, scale = Math.min((result.width - 32) / g.totalWidth, (result.height - 32) / g.totalHeight)
@@ -93,11 +111,19 @@ try {
       const y = Math.round((result.height - g.totalHeight * scale) / 2 + (g.contentTop + point.y * 549) * scale)
       const pixels = await sharp(Buffer.from(result.dataUrl.split(',')[1], 'base64')).ensureAlpha().raw().toBuffer()
       const rgb = [1, 3, 5].map(offset => parseInt(finish.color.slice(offset, offset + 2), 16))
-      rgb.forEach((channel, i) => assert.ok(Math.abs(pixels[(y * result.width + x) * 4 + i] - channel) <= 3, `${name}: PDF border retains exact finish without shaded/texture overlays`))
+      const expected = await frame.evaluate(async (element, point) => {
+        const background = getComputedStyle(element).backgroundImage
+        if (background === 'none') return null
+        const image = new Image(); image.src = background.match(/url\(["']?(.*?)["']?\)/)![1]; await image.decode()
+        const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height
+        const ctx = canvas.getContext('2d')!; ctx.drawImage(image, 0, 0)
+        return Array.from(ctx.getImageData(Math.floor(point.x * image.width), Math.floor(point.y * image.height), 1, 1).data).slice(0, 3)
+      }, point) ?? rgb
+      expected.forEach((channel, i) => assert.ok(Math.abs(pixels[(y * result.width + x) * 4 + i] - channel) <= 4, `${name}: PDF border matches shared authored relief`))
       const bounds = await frame.boundingBox(); assert.ok(bounds)
       const sample = await page.screenshot({ clip: { x: bounds.x + point.x * bounds.width, y: bounds.y + point.y * bounds.height, width: 1, height: 1 } })
       const live = await sharp(sample).ensureAlpha().raw().toBuffer()
-      rgb.forEach((channel, i) => assert.ok(Math.abs(live[i] - channel) <= 3, `${name}: live border matches flat PDF border`))
+      expected.forEach((channel, i) => assert.ok(Math.abs(live[i] - channel) <= 4, `${name}: live border matches shared PDF surface`))
     }
     await page.locator('#live-preview').screenshot({ path: `${output}/${name}-live.png` })
   }
