@@ -1352,10 +1352,17 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
   useEffect(() => {
     if (screen !== 'home') return
-    const timer = window.setInterval(() => {
-      setHomeDemoIndex((current) => (current + 1) % homeDemoConfigurations.length)
-    }, 1800)
-    return () => window.clearInterval(timer)
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let timer: number | undefined
+    const updateMotion = () => {
+      window.clearInterval(timer)
+      if (!motion.matches) timer = window.setInterval(() => {
+        setHomeDemoIndex((current) => (current + 1) % homeDemoConfigurations.length)
+      }, 1800)
+    }
+    updateMotion()
+    motion.addEventListener('change', updateMotion)
+    return () => { window.clearInterval(timer); motion.removeEventListener('change', updateMotion) }
   }, [screen, homeDemoConfigurations.length])
 
   useEffect(() => setHeroImageError(''), [homeDemoIndex])
@@ -2051,11 +2058,11 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           <button className="brand-home" type="button" aria-label="Go to home page" onClick={() => showScreen('home')}>
             <img src="/assets/branding/hgi-logo-black.webp" alt="Home Guard Industries Doors and Windows" />
           </button>
-          <span className="app-name"><strong>Home Guard Door Builder</strong></span>
+          {screen !== 'home' && <span className="app-name"><strong>Home Guard Door Builder</strong></span>}
         </div>
         <div className="header-actions">
-          <button type="button" className={`test-flow-toggle ${testMode ? 'active' : ''}`} role="switch" aria-label="Test current review experience" aria-checked={testMode} onClick={() => { setTestMode((value) => !value); setCustomerFormCompleted(false); setPendingCustomerAction(null); setCompletedCustomerAction(null); setSubmitted(false); setSubmitError('') }}><span>Test</span><i aria-hidden="true"/></button>
-          <button className="home-return" aria-label="Home" onClick={() => showScreen('home')}><HomeIcon size={17} /><span>Home</span></button>
+          {screen !== 'home' && <><button type="button" className={`test-flow-toggle ${testMode ? 'active' : ''}`} role="switch" aria-label="Test current review experience" aria-checked={testMode} onClick={() => { setTestMode((value) => !value); setCustomerFormCompleted(false); setPendingCustomerAction(null); setCompletedCustomerAction(null); setSubmitted(false); setSubmitError('') }}><span>Test</span><i aria-hidden="true"/></button>
+          <button className="home-return" aria-label="Home" onClick={() => showScreen('home')}><HomeIcon size={17} /><span>Home</span></button></>}
           <div className="header-dealer-cta"><span>Want this door? <strong>Connect with a Dealer</strong></span><a href="https://homeguardindustries.com/find-a-home-guard-dealer-hub/" target="_blank" rel="noreferrer">Find a Dealer <ExternalLink size={14} /></a></div>
         </div>
       </header>
@@ -2098,13 +2105,11 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       {screen === 'home' ? <main className="home-page">
         <section className="home-hero">
           <div className="home-hero-copy">
-            <span className="home-eyebrow">Home Guard Door Builder</span>
-            <h1>Build a Door Made for Your Home.</h1>
+            <h1>Build a Door Made for <em>Your Home.</em></h1>
             <p>Choose your door style, finish, glass, and hardware, then preview your exact combination before requesting a quote.</p>
-            <button className="start-building" onClick={() => showScreen('builder')}>Start Building <ArrowRight size={18} /></button>
+            <button className="start-building" onClick={() => showScreen('builder')}>Start Building</button>
           </div>
           <div className="home-hero-visual">
-            <div className="beta-feedback-context-host beta-feedback-hero-host" data-feedback-trigger-host="hero" />
             <div className="home-entryway-demo hero-composite" aria-label="Animated examples of configurable entry doors">
               <div className="hero-composite-stage">
                 <img className="home-entryway-image" src="/assets/hero/hero-entryway.webp" alt="Welcoming home entryway with a customizable door preview" />
@@ -2131,13 +2136,10 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                   </div>
                 </div>
               </div>
-              <div className="home-preview-label">
-                <span>Preview as you build</span>
-                <small>{doorStyleDisplayName(activeHomeDemo.style)} · {activeHomeDemo.finish.name} · {activeHomeDemo.glass?.name ?? 'No glass'} · {hardwareDisplayName(activeHomeDemo.hardware)}</small>
-              </div>
             </div>
           </div>
         </section>
+        <div className="home-preview-caption"><p>Made to complement your home.</p><p>Styles. Finishes. Glass. Hardware.</p></div>
       </main> : screen === 'customer-form' ? <main className="customer-form-page">
         <section className={`customer-form-screen ${submitted && completedCustomerAction === 'open-visualizer' ? 'visualizer-success-screen' : ''}`} aria-labelledby="customer-form-title">
           <button type="button" className="back" onClick={() => { setPendingCustomerAction(null); setCompletedCustomerAction(null); setSubmitted(false); goTo(pages.indexOf('review')); showScreen('builder') }}><ArrowLeft size={17} /> Back to Review</button>
@@ -2348,14 +2350,15 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       />}
       <BetaFeedback currentStep={feedbackStep} configuration={feedbackConfiguration}/>
       <footer className="site-footer">
+        {screen === 'home' && <a className="home-footer-logo" href="https://homeguardindustries.com" target="_blank" rel="noreferrer" aria-label="Home Guard Industries website"><img src="/assets/branding/hgi-logo-white.png" alt="Home Guard Industries" /></a>}
         <div className="site-footer-contact">
           <div className="site-footer-direct"><a href="tel:+18005251885" aria-label="Call Home Guard Industries at 1-800-525-1885"><Phone size={15} /><span>1-800-525-1885</span></a><a href="mailto:getintouch@homeguardindustries.com" aria-label="Email Home Guard Industries"><Mail size={15} /><span>getintouch@homeguardindustries.com</span></a></div>
           <div className="site-footer-location"><a href="https://www.google.com/maps/place/13101+Main+St,+Grabill,+IN+46741/@41.20679,-84.9711317,17z/data=!3m1!4b1!4m5!3m4!1s0x8816004dd3ac2ac5:0x8788f6dae643c569!8m2!3d41.20679!4d-84.968943" target="_blank" rel="noreferrer" aria-label="View Home Guard Industries on Google Maps"><MapPin size={15} /><span>13101 Main Street, Grabill, IN 46741</span></a><a href="https://homeguardindustries.com" target="_blank" rel="noreferrer" aria-label="Visit the Home Guard Industries website"><Globe size={15} /><span>homeguardindustries.com</span></a></div>
         </div>
-        <div className="site-footer-meta">
+        {screen === 'home' ? <div className="home-footer-feedback" data-feedback-trigger-host="home-footer" /> : <div className="site-footer-meta">
           <span>© 2026 Home Guard Industries</span>
           <span>Built with 🤍 by <a href="https://schoolradius.co/" target="_blank" rel="noreferrer">School Radius</a></span>
-        </div>
+        </div>}
       </footer>
     </div>
   )

@@ -1,0 +1,96 @@
+import assert from 'node:assert/strict'
+import { mkdir } from 'node:fs/promises'
+import { spawn } from 'node:child_process'
+import { chromium } from 'playwright-core'
+
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5193', '--strictPort'], { stdio: 'pipe' })
+let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
+const output = '/tmp/hgi-home-redesign'
+try {
+  await new Promise<void>((resolve, reject) => {
+    server.stdout.on('data', chunk => { if (String(chunk).includes('127.0.0.1:5193')) resolve() })
+    server.once('error', reject)
+    server.once('exit', code => reject(new Error(`Vite exited ${code}`)))
+    setTimeout(() => reject(new Error('Vite startup timeout')), 10000).unref()
+  })
+  await mkdir(output, { recursive: true })
+  browser = await chromium.launch({ channel: 'chrome', headless: true })
+  for (const [width, height] of [[1440,1000],[820,1180],[1180,820],[390,844],[320,740]]) {
+    const page = await browser.newPage({ viewport: { width, height } })
+    await page.addInitScript('window.__name = (fn) => fn')
+    const errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    let feedbackSubmissions = 0
+    await page.route('**/api/submit-feedback', async route => {
+      const body = route.request().postDataJSON()
+      assert.equal(body.context.step, 'home')
+      assert.equal(body.feedback, 'Local automated layout verification')
+      feedbackSubmissions++
+      await route.fulfill({ status: 200, json: { success: true } })
+    })
+    await page.goto('http://127.0.0.1:5193/')
+    await page.getByRole('button', { name: 'Feedback', exact: true }).waitFor()
+    await page.locator('.home-entryway-image').evaluate(async (img: HTMLImageElement) => { await img.decode() })
+    await page.locator('.hero-static-door-image').evaluate(async (img: HTMLImageElement) => { await img.decode() })
+    assert.equal(await page.locator('h1').count(), 1)
+    assert.equal(await page.locator('h1 em').innerText(), 'Your Home.')
+    assert.equal(await page.locator('.home-app>header').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)')
+    assert.equal(await page.locator('.home-hero-copy').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)')
+    assert.equal(await page.locator('.home-entryway-demo').evaluate(el => getComputedStyle(el, ':after').display), 'none')
+    assert.equal(await page.locator('.beta-feedback-page-trigger,.beta-feedback-hero-host').count(), 0)
+    const dealer = page.getByRole('link', { name: 'Find a Dealer' })
+    assert.equal(await dealer.getAttribute('href'), 'https://homeguardindustries.com/find-a-home-guard-dealer-hub/')
+    assert.equal(await dealer.getAttribute('target'), '_blank')
+    const geometry = await page.evaluate(() => {
+      const stage = document.querySelector('.hero-composite-stage')!.getBoundingClientRect()
+      const frame = document.querySelector('.hero-composite')!.getBoundingClientRect()
+      const door = document.querySelector('.hero-door-overlay')!.getBoundingClientRect()
+      return { square: Math.abs(stage.width-stage.height)<1, contained: door.left>=frame.left&&door.right<=frame.right&&door.top>=frame.top&&door.bottom<=frame.bottom, noOverflow: document.documentElement.scrollWidth<=innerWidth }
+    })
+    assert.deepEqual(geometry, { square: true, contained: true, noOverflow: true })
+    const image = await page.locator('.hero-static-door-image').getAttribute('src')
+    await page.waitForFunction(before => document.querySelector('.hero-static-door-image')?.getAttribute('src') !== before, image)
+    assert.equal(await page.locator('.home-footer-feedback button').count(), 1)
+    assert.equal(await page.locator('.site-footer-contact a').count(), 4)
+    for (const contact of await page.locator('.site-footer-contact a span').all()) assert.equal(await contact.isVisible(), true)
+    await page.locator('.home-footer-feedback').scrollIntoViewIfNeeded()
+    await page.waitForTimeout(150)
+    await page.screenshot({ path: `${output}/home-${width}.png`, fullPage: true })
+    const feedback = page.getByRole('button', { name: 'Feedback', exact: true })
+    await feedback.click()
+    await page.getByRole('dialog').waitFor()
+    await page.keyboard.press('Escape')
+    await page.getByRole('dialog').waitFor({ state: 'hidden' })
+    await page.waitForFunction(() => document.activeElement?.matches('.home-feedback-trigger'))
+    await feedback.click()
+    await page.getByLabel(/^Name/).fill('Local UI Test')
+    await page.getByRole('textbox', { name: /^Email/ }).fill('ui-test@example.invalid')
+    await page.getByLabel(/^Phone/).fill('5550100000')
+    await page.getByLabel('Feedback', { exact: true }).fill('Local automated layout verification')
+    await page.getByRole('button', { name: 'Send Feedback', exact: true }).click()
+    await page.getByText('Your feedback has been sent.', { exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Close', exact: true }).click()
+    assert.equal(feedbackSubmissions, 1)
+    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.locator('.home-app').waitFor({ state: 'detached' })
+    const guidance = page.getByRole('button', { name: 'Start Configuring' })
+    if (await guidance.isVisible()) await guidance.click()
+    await page.locator('.builder-panel').waitFor()
+    assert.equal(await page.locator('.builder-feedback-trigger').count(), 1)
+    assert.equal(await page.locator('.home-footer-feedback,.home-footer-logo').count(), 0)
+    assert.deepEqual(errors, [])
+    console.log(`PASS ${width}x${height}: layout, complete door, animation, links, feedback/focus, Start Building and unchanged builder feedback`)
+    await page.close()
+  }
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })
+  await page.goto('http://127.0.0.1:5193/')
+  await page.locator('.hero-static-door-image').waitFor()
+  const initial = await page.locator('.hero-static-door-image').getAttribute('src')
+  await page.waitForTimeout(4000)
+  assert.equal(await page.locator('.hero-static-door-image').getAttribute('src'), initial)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.waitForFunction(before => document.querySelector('.hero-static-door-image')?.getAttribute('src') !== before, initial)
+  console.log('PASS reduced motion pauses rotation; changing preference resumes the existing timing.')
+  await page.close()
+  console.log(`Home page checks passed. Screenshots: ${output}`)
+} finally { await browser?.close(); server.kill() }

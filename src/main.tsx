@@ -4,6 +4,7 @@ import App from './App'
 import './styles.css'
 import './typography.css'
 import './components/DoorStyleCard.css'
+import './home.css'
 import { installStaleChunkRecovery } from './utils/staleChunkRecovery'
 
 installStaleChunkRecovery()
