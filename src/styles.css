@@ -2638,8 +2638,6 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .app:not(.home-app)>.site-footer{position:fixed;left:0;right:0;bottom:0;z-index:1050;width:100%;max-width:none}
   .app:not(.home-app)>main{padding-bottom:calc(var(--mobile-footer-height) + 12px + env(safe-area-inset-bottom))}
   .configuration-step .builder-options-scroll{padding-bottom:calc(var(--mobile-footer-height) + 106px + env(safe-area-inset-bottom))}
-  .configuration-step:has(.builder-options-scroll .step-0) .step-heading h1,
-  .configuration-step:has(.builder-options-scroll .step-0) .step-heading-copy>p{display:none}
   .configuration-step:has(.builder-options-scroll .step-0) .step-heading{margin-bottom:12px}
   .configuration-step:has(.builder-options-scroll .step-0) .step-label-row{margin-bottom:0}
   .configuration-step:has(.builder-options-scroll .step-0) .section-resets{position:fixed;top:calc(var(--mobile-header-height) + var(--mobile-progress-height) + var(--mobile-preview-height) - 58px);left:16px;right:auto;z-index:1038;margin:0}
@@ -3833,17 +3831,21 @@ body:has(.customer-form-app),
   display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
   height:auto;min-height:76px;margin:0;padding:14px 0;flex:none;
 }
-.builder-step-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-left:auto}
-.app:not(.home-app) .builder-actions .builder-feedback-trigger{
+.builder-step-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;width:100%}
+.configuration-step .step-heading{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;width:100%}
+.configuration-step .step-heading-copy{flex:1 1 360px;width:auto;min-width:0}
+.builder-feedback-host{flex:0 0 auto;margin-left:auto;display:flex;justify-content:flex-end;max-width:100%}
+.review-heading .builder-feedback-host{margin-top:12px}
+.app:not(.home-app) .builder-feedback-trigger{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  width:auto;max-width:none;min-width:0;min-height:36px;height:auto;padding:6px 0;
-  background:transparent;color:#59666a;border:0;border-radius:3px;box-shadow:none;
+  width:auto;max-width:100%;min-width:0;min-height:36px;height:auto;padding:7px 10px;
+  background:transparent;color:var(--peacock);border:1px solid #0d666c66;border-radius:3px;box-shadow:none;
   font:inherit;font-size:12px;font-weight:500;line-height:1.3;
 }
-.app:not(.home-app) .builder-actions .builder-feedback-trigger:hover{color:var(--peacock);text-decoration:underline;transform:none}
+.app:not(.home-app) .builder-feedback-trigger:hover{background:#e5eff4;border-color:var(--peacock);transform:none}
 .builder-feedback-trigger:focus-visible{outline:2px solid var(--peacock);outline-offset:3px}
-.app:not(.home-app) .builder-actions .builder-feedback-trigger svg{width:15px;height:15px}
-.app:not(.home-app) .builder-actions .builder-feedback-trigger span{display:inline}
+.app:not(.home-app) .builder-feedback-trigger svg{width:15px;height:15px;flex:none}
+.app:not(.home-app) .builder-feedback-trigger span{display:inline;white-space:nowrap}
 .app.visualizer-editing .builder-actions .next,
 .app.visualizer-editing .builder-actions .back{background:var(--white);border:1px solid #b9c3c6;color:var(--black);box-shadow:none}
 .builder-actions .summary-edit-return{min-height:44px;padding:8px 16px;background:var(--black);color:var(--white);border:1px solid var(--black);border-radius:var(--radius-control)}
@@ -3876,15 +3878,11 @@ body:has(.customer-form-app),
   .app.visualizer-editing>main{padding-top:calc(var(--mobile-header-height) + var(--mobile-progress-height) + var(--builder-editing-bar-height,64px))}
 }
 @media(max-width:600px){
-  .app:not(.home-app):not(.visualizer-app):not(.customer-form-app){--builder-actions-min-height:112px}
   .configuration-edit-return.editing-bar{padding-top:6px;padding-bottom:6px;gap:8px}
   .editing-bar>strong{font-size:12px}
   .configuration-edit-return.editing-bar button{min-height:40px;padding:8px 12px;font-size:12px}
   .app:not(.home-app) .builder-actions{flex-direction:column;align-items:stretch;gap:8px;padding-top:8px;padding-bottom:12px}
-  .builder-feedback-host{display:flex;justify-content:flex-start}
-  .app:not(.home-app) .builder-actions .builder-feedback-trigger{min-height:28px;padding:3px 0}
   .builder-step-actions{justify-content:space-between;width:100%;margin:0}
-  .builder-step-actions>button{flex:1}
 }
 
 /* Four main groups remain readable; sub-step titles stay in the content. */

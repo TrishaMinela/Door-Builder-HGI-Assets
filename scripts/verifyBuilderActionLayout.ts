@@ -43,6 +43,24 @@ try {
     const next = () => page.getByRole('button', { name: 'Next configuration step' }).click()
     const done = () => page.getByRole('button', { name: /^Done editing(?: · Back to photo)?$/ })
     const feedback = () => page.getByRole('button', { name: 'Send feedback', exact: true })
+    const assertContentFeedback = async () => {
+      assert.equal(await page.locator('.builder-actions .builder-feedback-trigger').count(), 0, 'No feedback in bottom navigation')
+      assert.ok(await feedback().evaluate(element => Boolean(element.closest('.step-heading')) && !element.closest('.options-grid, .preview-scene')), 'Feedback belongs to the heading layout')
+      const button = (await feedback().boundingBox())!, heading = (await page.locator('.step-heading').boundingBox())!, copy = (await page.locator('.step-heading-copy').boundingBox())!, grid = (await page.locator('.options-grid').boundingBox())!
+      assert.ok(Math.abs(button.x + button.width - heading.x - heading.width) < 2, 'Feedback is right-aligned with content')
+      assert.ok(button.y + button.height <= grid.y, 'Feedback is above the option grid')
+      assert.ok(button.x >= copy.x + copy.width - 1 || button.y >= copy.y + copy.height - 1, 'Feedback never overlaps heading or intro')
+      if (width <= 600) assert.ok(button.y >= copy.y + copy.height - 1, 'Narrow layout wraps feedback below intro')
+      assert.ok(await feedback().evaluate(element => {
+        const style = getComputedStyle(element)
+        return style.position === 'static' && style.borderTopStyle === 'solid' && style.borderTopWidth === '1px' && style.color === 'rgb(13, 102, 108)'
+      }), 'Subtle outlined brand-teal button stays in normal flow')
+    }
+    const assertBottomAlignment = async () => {
+      const nav = (await page.locator('.builder-step-actions').boundingBox())!, previous = (await page.getByRole('button', { name: 'Previous configuration step' }).boundingBox())!, forward = (await page.getByRole('button', { name: 'Next configuration step' }).boundingBox())!
+      assert.ok(Math.abs(previous.x - nav.x) < 2 && Math.abs(forward.x + forward.width - nav.x - nav.width) < 2, 'Previous is far left and Next far right')
+      assert.ok(Math.abs(previous.y - forward.y) < 2, 'Bottom actions share a baseline')
+    }
     const testFeedback = async (send = false) => {
       const before = await saved()
       await feedback().click()
@@ -74,12 +92,19 @@ try {
       })), 'All group labels are fully readable')
     }
     await assertGroups()
+    assert.ok(await page.locator('.step-heading h1').isVisible(), 'Long first-step heading stays readable on phones')
+    assert.ok(await page.locator('.step-heading-copy > p').isVisible(), 'Intro remains visible above feedback')
+    await assertContentFeedback()
+    await assertBottomAlignment()
+    await page.screenshot({ path: `/tmp/builder-actions-long-heading-${width}.png` })
     for (let i = 0; i < 30 && await page.getByRole('button', { name: 'Next configuration step' }).count(); i++) {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
       if (await page.locator('.step-heading h1').innerText() === 'Choose a Door Style') {
         assert.equal(await page.locator('.stepper button[aria-current="step"] em').innerText(), 'Door')
         assert.match(await page.locator('.step-label-row').innerText(), /Step 1 of 4 · Door/i)
         await testFeedback()
+        await assertContentFeedback()
+        await assertBottomAlignment()
         assert.equal(await page.locator('[data-feedback-trigger-host="preview"]').count(), 0)
         await page.screenshot({ path: `/tmp/builder-actions-normal-${width}.png` })
       }
@@ -107,16 +132,15 @@ try {
     assert.equal(await page.locator('.builder-actions').getByRole('button', { name: /^Done editing/ }).count(), 0, 'No duplicate bottom action')
     assert.equal(await page.locator('.editing-bar').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(13, 102, 108)', 'Existing brand teal')
     await assertGroups()
-    if (width > 600) {
-      const feedbackBox = (await feedback().boundingBox())!, navBox = (await page.locator('.builder-step-actions').boundingBox())!
-      assert.ok(feedbackBox.x + feedbackBox.width < navBox.x, 'Feedback is left of Previous/Next')
-    }
+    await assertContentFeedback()
+    await assertBottomAlignment()
     await page.locator('.builder-options-scroll').evaluate(element => element.scrollTo(0, element.scrollHeight))
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
     await page.waitForTimeout(100)
     assert.ok(await done().isVisible(), 'Done editing stays visible while scrolling')
     const visibleDone = (await done().boundingBox())!
     assert.ok(visibleDone.y >= 0 && visibleDone.y + visibleDone.height <= height, 'Editing action remains inside the viewport while scrolling')
+    await assertBottomAlignment()
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal overflow')
     if (width <= 900) {
       const last = (await page.locator('.builder-options-scroll .option-card').last().boundingBox())!, actions = (await page.locator('.builder-actions').boundingBox())!
