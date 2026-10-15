@@ -4,12 +4,14 @@ import { spawn } from 'node:child_process'
 import { chromium, type Page } from 'playwright-core'
 import sharp from 'sharp'
 import { doorStyles, hardwareOptions } from '../src/data/options'
+import { assertBuilderFontFamilies } from './builderTypographyAssertions'
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port','5196','--strictPort'], { stdio:'pipe' })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
 const draft = { version:1, configuration:{ selectedDoorConfigurationType:'single',styleId:doorStyles.find(s=>s.code==='F')!.id,doorLineId:'20-gauge-smooth-steel',sidelites:'none',selectedFinishType:'paint',selectedPaint:'paint-black',jambType:'timber',jambFinishType:'paint',jambFinishColor:'paint-black',hardwareId:hardwareOptions[0].id,doorSwingId:'LHI' } }
 const output='/tmp/hgi-shared-footer'
 async function verifyFooter(page: Page, label: string) {
+  await assertBuilderFontFamilies(page)
   assert.equal(await page.locator('footer').count(),1)
   assert.equal(await page.getByRole('button',{name:'Feedback',exact:true}).count(),1)
   assert.equal(await page.locator('.builder-feedback-trigger,.beta-feedback-page-trigger,.beta-feedback-context-trigger').count(),0)
@@ -32,6 +34,8 @@ async function verifyFooter(page: Page, label: string) {
   const button=page.getByRole('button',{name:'Feedback',exact:true})
   await button.click()
   await page.getByRole('dialog',{name:'Help us improve'}).waitFor()
+  await assertBuilderFontFamilies(page)
+  await page.getByRole('dialog',{name:'Help us improve'}).screenshot({path:`${output}/${label}-feedback.png`})
   await page.keyboard.press('Escape')
   await page.getByRole('dialog',{name:'Help us improve'}).waitFor({state:'hidden'})
   await page.waitForFunction(()=>document.activeElement?.matches('.site-feedback-trigger'))
@@ -70,6 +74,29 @@ try {
       await page.evaluate(()=>window.scrollTo(0,0))
       await page.waitForTimeout(120)
       if(await guidance.isVisible())await guidance.click()
+      await assertBuilderFontFamilies(page)
+      await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))))
+      const cardLayout=await page.evaluate(()=>{
+        const grids=[...document.querySelectorAll('[data-equal-product-grid]')].filter(el=>el.checkVisibility())
+        return grids.map(grid=>{
+          const cards=[...grid.children].filter(el=>el.matches('.option-card,.glass-choice-card,.hardware-option-card'))
+          const heights=cards.map(el=>el.getBoundingClientRect().height)
+          const clipped=[...grid.querySelectorAll('.option-copy>strong,.option-copy>span,.door-details-trigger')].filter(el=>el.checkVisibility()&&(el.scrollHeight>el.clientHeight+2||el.scrollWidth>el.clientWidth+2)).map(el=>el.textContent)
+          return {equal:!heights.length||Math.max(...heights)-Math.min(...heights)<2,clipped}
+        })
+      })
+      assert.ok(cardLayout.every(grid=>grid.equal),`Unequal card heights: ${JSON.stringify(cardLayout)}`)
+      assert.ok(cardLayout.every(grid=>!grid.clipped.length),`Clipped card labels: ${JSON.stringify(cardLayout)}`)
+      const details=page.locator('.door-details-trigger').first()
+      if(await details.isVisible()){
+        await details.click()
+        await page.getByRole('button',{name:'Close door details',exact:true}).waitFor()
+        await assertBuilderFontFamilies(page)
+        await page.locator('.door-details-dialog[open]').screenshot({path:`${output}/${width}-door-details.png`})
+        await page.keyboard.press('Escape')
+      }
+      const title=await page.locator('.step-heading h1').innerText()
+      if(/color|finish|glass|hardware/i.test(title))await page.screenshot({path:`${output}/${width}-step-${i}.png`})
       const next=page.getByRole('button',{name:'Next configuration step'})
       assert.equal(await next.isEnabled(),true,`Incomplete step: ${await page.locator('.step-heading h1').innerText()}`)
       await next.click()

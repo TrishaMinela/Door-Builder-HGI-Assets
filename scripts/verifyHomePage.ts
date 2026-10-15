@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { mkdir } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright-core'
+import { assertBuilderFontFamilies } from './builderTypographyAssertions'
 
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5193', '--strictPort'], { stdio: 'pipe' })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
@@ -30,6 +31,7 @@ try {
     })
     await page.goto('http://127.0.0.1:5193/')
     await page.getByRole('button', { name: 'Feedback', exact: true }).waitFor()
+    await assertBuilderFontFamilies(page)
     await page.locator('.home-entryway-image').evaluate(async (img: HTMLImageElement) => { await img.decode() })
     await page.locator('.hero-static-door-image').evaluate(async (img: HTMLImageElement) => { await img.decode() })
     assert.equal(await page.locator('h1').count(), 1)

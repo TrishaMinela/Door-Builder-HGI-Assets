@@ -3,7 +3,7 @@
    Typography-only !important rules retire competing legacy breakpoint rules;
    layout, colors, selection states and product image sizing remain independent. */
 .builder-typography {
-  --type-font: "Montserrat", sans-serif;
+  --type-font: var(--font-body);
   --type-h1: clamp(28px, calc(24px + 1vw), 36px);
   --type-h2: clamp(24px, calc(22px + .5vw), 28px);
   --type-h3: clamp(20px, calc(19px + .25vw), 22px);
@@ -17,6 +17,7 @@
   font-size: var(--type-body);
   line-height: 1.5;
 }
+.builder-typography :is(button,input,select,textarea,optgroup,option) { font-family: var(--font-body) !important; }
 .builder-typography :is(h1,h2,h3,h4) {
   font-family: var(--type-font) !important;
   font-weight: 600 !important;

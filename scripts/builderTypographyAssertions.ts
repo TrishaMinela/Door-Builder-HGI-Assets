@@ -1,6 +1,27 @@
 import assert from 'node:assert/strict'
 import type { Page } from 'playwright-core'
 
+/** Shared font coverage, including body-portaled dialogs and native controls. */
+export async function assertBuilderFontFamilies(page: Page) {
+  await page.evaluate('window.__name = (fn) => fn')
+  const metrics = await page.evaluate(async () => {
+    await document.fonts.ready
+    const bad = [...document.querySelectorAll('.builder-typography :is(h1,h2,h3,h4,p,span,strong,a,button,label,input,select,textarea),.promatch-tooltip')]
+      .filter(el => el.checkVisibility())
+      .filter(el => !getComputedStyle(el).fontFamily.includes(el.closest('.home-hero h1') ? 'Caladea' : 'PT Sans'))
+      .map(el => ({ tag: el.tagName, text: el.textContent?.slice(0,60), font: getComputedStyle(el).fontFamily }))
+    const hero = document.querySelector('.home-hero h1 em')
+    const faces = [...document.fonts].filter(face => face.status === 'loaded').map(face => ({ family: face.family, weight: face.weight, style: face.style }))
+    return { bad, faces, hero: hero ? { weight: getComputedStyle(hero).fontWeight, style: getComputedStyle(hero).fontStyle } : null }
+  })
+  assert.deepEqual(metrics.bad, [], 'All UI text uses PT Sans except the Caladea hero')
+  assert.ok(metrics.faces.some(face => face.family.replaceAll('"','') === 'PT Sans'), 'Actual self-hosted PT Sans loaded')
+  if (metrics.hero) {
+    assert.deepEqual(metrics.hero, { weight: '700', style: 'italic' })
+    assert.ok(metrics.faces.some(face => face.family.replaceAll('"','') === 'Caladea' && face.weight === '700' && face.style === 'italic'), 'Actual bold italic Caladea loaded')
+  }
+}
+
 /** Computed-style checks, not just stylesheet-string assertions. */
 export async function assertBuilderTypography(page: Page, stage: string) {
   await page.evaluate('window.__name = (fn) => fn') // tsx preserves names in serialized browser callbacks.
@@ -45,8 +66,9 @@ export async function assertBuilderTypography(page: Page, stage: string) {
   assert.equal(metrics.h1s, 1, `${stage}: exactly one visible main title`)
   for (const heading of metrics.headings) {
     assert.equal(heading.actual, heading.expected, `${stage}: shared heading size ${heading.text}`)
-    assert.match(heading.font, /Montserrat/, 'Existing brand font')
-    assert.ok(['600', '700'].includes(heading.weight))
+    const hero = stage === 'home' && heading.text?.includes('Build a Door Made for')
+    assert.match(heading.font, hero ? /Caladea/ : /PT Sans/, 'Shared app font with home hero exception')
+    assert.ok((hero ? ['400'] : ['600', '700']).includes(heading.weight))
   }
   assert.ok(metrics.inputs.every(size => size >= 16), `${stage}: readable form text, no mobile zoom`)
   assert.ok(metrics.titles.every(title => title.size >= 16 && title.size <= 18 && title.weight === '600' && !title.clipped), `${stage}: naturally wrapped, readable card titles: ${JSON.stringify(metrics.titles.filter(title => title.clipped))}`)
