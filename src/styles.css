@@ -2613,7 +2613,7 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
   .glass-choice-card,.hardware-option-card{min-width:0}
   .summary-card,.form-card{width:100%;max-width:none;padding:16px}
   .mobile-review-preview{width:100%;margin-bottom:16px}
-  .review-step .floating-visualizer-launch{position:fixed;left:16px;right:auto;top:auto;bottom:calc(var(--mobile-footer-height) + 16px + env(safe-area-inset-bottom));z-index:1065;width:max-content;margin:0}
+  .review-step .floating-visualizer-launch{position:fixed;left:16px;right:auto;top:auto;bottom:calc(70px + var(--builder-actions-height,76px) + 12px + env(safe-area-inset-bottom));z-index:1065;width:max-content;margin:0}
   .mobile-quote-form-cta{width:100%;min-height:52px;margin:0 0 16px;border:0;border-radius:var(--radius-control);padding:0 18px;display:flex;align-items:center;justify-content:center;gap:9px;background:var(--peacock);color:#fff;font-size:11px;font-weight:800;box-shadow:0 5px 16px #05040b24}
   .mobile-quote-form-cta svg{display:block;flex:none}
   .wizard-navigation,.visualizer-final-actions{position:sticky;left:0;right:0;bottom:0;z-index:30;margin:16px -14px -14px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--border);box-shadow:0 -7px 18px #05040b1a}
@@ -3833,6 +3833,7 @@ body:has(.customer-form-app),
 }
 .builder-step-actions{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;margin:0;width:100%}
 .builder-forward-actions{display:flex;align-items:center;gap:8px;margin-left:auto;max-width:100%}
+.review-step .builder-forward-actions{margin-left:0}
 .builder-feedback-host{flex:none;display:flex;align-items:center}
 .app:not(.home-app) .builder-actions .builder-feedback-trigger{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;

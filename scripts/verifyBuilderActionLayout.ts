@@ -113,6 +113,16 @@ try {
       await next()
     }
     await page.getByRole('heading', { name: 'Configuration Summary' }).waitFor()
+    await testFeedback()
+    assert.equal(await feedback().count(), 1, 'Results keep one feedback trigger')
+    const resultActions = (await page.locator('.builder-step-actions').boundingBox())!, resultFeedback = (await feedback().boundingBox())!
+    assert.ok(Math.abs(resultFeedback.x - resultActions.x) < 2, 'Results feedback is left-aligned, independently of configuration navigation')
+    if (width <= 600) {
+      const launch = (await page.getByRole('button', { name: 'Launch Door Visualizer', exact: true }).boundingBox())!
+      assert.ok(launch.y + launch.height <= resultActions.y, 'Floating visualizer launch cannot cover results feedback')
+    }
+    assert.equal(await page.getByRole('button', { name: 'Next configuration step' }).count(), 0, 'Results do not show configuration Next')
+    await page.screenshot({ path: `/tmp/builder-results-feedback-${width}.png` })
     await page.locator('.visualizer-promo-card:visible').getByRole('button', { name: 'Launch Visualizer' }).click()
     await page.locator('input[type=file]').setInputFiles({ name: 'house.jpg', mimeType: 'image/jpeg', buffer: photo })
     await page.getByText('AI Result', { exact: true }).waitFor({ timeout: 30000 })
