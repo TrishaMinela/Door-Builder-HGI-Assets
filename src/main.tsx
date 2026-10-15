@@ -7,6 +7,7 @@ import './typography.css'
 import './components/DoorStyleCard.css'
 import './home.css'
 import './components/SiteFooter.css'
+import './components/DoorConfigurationStep.css'
 import { installStaleChunkRecovery } from './utils/staleChunkRecovery'
 
 installStaleChunkRecovery()
