@@ -13,6 +13,11 @@ export async function assertDoorStyleCards(page: Page) {
   const sizes = await cards.evaluateAll(elements => elements.map(el => ({ height: el.getBoundingClientRect().height, image: el.querySelector('.option-visual')!.getBoundingClientRect().height })))
   assert.ok(Math.max(...sizes.map(x => x.height)) - Math.min(...sizes.map(x => x.height)) < 1, 'Equal card heights')
   assert.ok(Math.max(...sizes.map(x => x.image)) - Math.min(...sizes.map(x => x.image)) < 1, 'Consistent thumbnail region')
+  const actions = await cards.locator('.door-details-trigger').evaluateAll(elements => elements.map(el => {
+    const css = getComputedStyle(el), rect = el.getBoundingClientRect(), card = el.closest('article')!.getBoundingClientRect()
+    return { height: rect.height, border: css.borderTopWidth, background: css.backgroundColor, shadow: css.boxShadow, color: css.color, centered: Math.abs(rect.x + rect.width / 2 - card.x - card.width / 2) < 1, size: css.fontSize, chevrons: el.querySelectorAll('svg.lucide-chevron-right').length, info: el.querySelectorAll('svg.lucide-info').length }
+  }))
+  assert.ok(actions.every(x => x.height >= 44 && x.border === '0px' && x.background === 'rgba(0, 0, 0, 0)' && x.shadow === 'none' && x.color === 'rgb(13, 102, 108)' && x.centered && x.size === '14px' && x.chevrons === 1 && x.info === 0), 'Centered teal text/chevron action, shared typography, no chrome, 44px target')
   const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration.styleId as string)
   const original = await saved()
   const width = page.viewportSize()!.width
@@ -40,6 +45,11 @@ export async function assertDoorStyleCards(page: Page) {
     await page.keyboard.press('Escape')
     await modal.waitFor({ state: 'hidden' })
     assert.ok(await details.evaluate(el => el === document.activeElement), 'Escape restores trigger focus')
+    // Native close and React's onClose focus restoration run in separate tasks.
+    await page.waitForTimeout(50)
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Shift+Tab')
+    assert.ok(await details.evaluate(el => el.matches(':focus-visible') && getComputedStyle(el).outlineStyle !== 'none'), 'Visible keyboard focus indicator')
     await details.click()
     await page.mouse.click(2, 2)
     await modal.waitFor({ state: 'hidden' })

@@ -1,5 +1,5 @@
 import { useId, useRef } from 'react'
-import { Check, X } from 'lucide-react'
+import { Check, ChevronRight, X } from 'lucide-react'
 import type { DoorStyle } from '../types'
 import { doorStyleDisplayName } from '../data/productDisplayNames'
 import { doorLineChoicesForStyle } from '../data/productCatalog'
@@ -25,7 +25,7 @@ export function DoorStyleCard({ style, selected, onSelect }: {
       {selected && <span className="door-image-check" aria-hidden="true"><Check size={18}/></span>}
     </button>
     <div className="option-copy door-image-actions">
-      <button ref={details} type="button" className="door-details-trigger" aria-label={`View details for ${name}`} aria-haspopup="dialog" onClick={() => dialog.current?.showModal()}>View details</button>
+      <button ref={details} type="button" className="door-details-trigger" aria-label={`View details for ${name}`} aria-haspopup="dialog" onClick={() => dialog.current?.showModal()}>View details<ChevronRight size={15} aria-hidden="true"/></button>
     </div>
     <dialog ref={dialog} className="door-details-dialog" aria-labelledby={titleId}
       onClose={() => details.current?.focus({ preventScroll: true })}

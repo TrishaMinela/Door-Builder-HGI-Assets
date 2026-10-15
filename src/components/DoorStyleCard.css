@@ -21,14 +21,20 @@
   padding: 8px;
 }
 .door-details-trigger {
-  min-height: 36px;
-  padding: 6px 12px;
-  border: 1px solid #b7c8cb;
-  border-radius: var(--radius-control,4px);
-  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   color: var(--peacock);
 }
-.door-details-trigger:hover { background: #edf6f6; border-color: var(--peacock); }
+.door-details-trigger svg { flex: none; }
+.door-details-trigger:hover { text-decoration: underline; text-underline-offset: 3px; }
 .door-image-check {
   position: absolute;
   top: 8px;
