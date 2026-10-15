@@ -1144,15 +1144,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   useEffect(() => {
     if (!selectedDoorLine || (needsGrainStep && !signatureGrainOptions.some(item => item.id === grainId))) return
     if (!sidelites || sidelites === 'none') return
-    const nextId = validOptionId(sideliteStyleId, visibleSideliteStyleOptions)
-    if (nextId !== sideliteStyleId) {
-      setSideliteStyleId(nextId)
-      setSideliteGlassCategory('')
-      setSideliteGlassId('')
-      setSideliteGlassGroupKey('')
-      setSideliteGlassVariantConfirmed(false)
-      setSideliteGridLocation(''); setSideliteGridStyle(''); setSideliteGridPattern(''); setSideliteGridColor(''); setSideliteGridWidth('')
-    }
+    reconcileSideliteForParent(selectedDoorLine.id, selectedGrain)
   }, [selectedDoorLine?.id, needsGrainStep, grainId, signatureGrainOptions.map(item => item.id).join('|'), sideliteAssetFamily, sidelites, sideliteStyleId])
 
   useEffect(() => {
@@ -1452,7 +1444,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       const nextGrain = line?.id === signatureSeriesId ? grains[0]?.id ?? '' : ''
       setDoorLineId(line?.id ?? '')
       setGrainId(nextGrain)
-      defaultSideliteForParent(line?.id ?? '', nextGrain || line?.autoGrain || null)
+      reconcileSideliteForParent(line?.id ?? '', nextGrain || line?.autoGrain || null)
     }
     if (editReturnTo && nextStyleId !== styleId) {
       // Existing catalog reconciliation effects clear incompatible choices.
@@ -1700,7 +1692,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       const nextGrain = nextDoorLineId === signatureSeriesId ? grains[0]?.id ?? '' : ''
       setDoorLineId(nextDoorLineId)
       setGrainId(nextGrain)
-      defaultSideliteForParent(nextDoorLineId, nextGrain || line.autoGrain || null)
+      reconcileSideliteForParent(nextDoorLineId, nextGrain || line.autoGrain || null)
       // A newly invalid family is reconciled against the next material's
       // derived options, rather than cleared and left without a replacement.
       if (!glass || isGlassFamilyCompatible(glass, nextDoorLineId)) {
@@ -1718,7 +1710,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     if (!signatureGrainOptions.some((item) => item.id === nextGrain)) return
     if (nextGrain !== grainId) {
       setGrainId(nextGrain)
-      defaultSideliteForParent(doorLineId, nextGrain)
+      reconcileSideliteForParent(doorLineId, nextGrain)
     }
     if (!editReturnTo && signatureGrainOptions.length === 1) goTo(step + 1)
   }
@@ -1735,16 +1727,49 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const resetSideliteGrid = () => {
     setSideliteGridLocation(''); setSideliteGridStyle(''); setSideliteGridPattern(''); setSideliteGridColor(''); setSideliteGridWidth('')
   }
-  const defaultSideliteForParent = (lineId: string, grain: string | null) => {
+  const reconcileSideliteForParent = (lineId: string, grain: string | null) => {
     if (!sidelites || sidelites === 'none') return
     const family = sideliteAssetFamilyForSlab({ doorLineId: lineId, grain })
     const ids = sideliteStylesForFamily(family)
-    const nextId = sortByDisplayLabel(sideliteStyleOptions.filter(item => ids.includes(item.id)), item => sideliteStyleDisplayName(item.id))[0]?.id ?? ''
+    const options = sortByDisplayLabel(sideliteStyleOptions.filter(item => ids.includes(item.id)), item => sideliteStyleDisplayName(item.id))
+    const nextId = validOptionId(sideliteStyleId, options)
     if (nextId === sideliteStyleId) return
     setSideliteStyleId(nextId)
+    const catalog = sideliteGlassCatalogs[nextId as keyof typeof sideliteGlassCatalogs]
+    const retainedGlass = catalog?.options.find(option => option.id === sideliteGlassId && isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, lineId))
+    if (retainedGlass) {
+      // Shared IDs must also exist in the destination opening's catalog.
+      // Keep grid components only as far as the new opening supports them.
+      setSideliteGlassCategory(retainedGlass.category)
+      const group = groupSideliteGlassOptions(catalog.options.filter(option => option.category === retainedGlass.category && isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, lineId))).find(group => group.options.some(option => option.id === retainedGlass.id))
+      setSideliteGlassGroupKey(group?.key ?? '')
+      setSideliteGlassVariantConfirmed(Boolean(group && group.options.length === 1))
+      if (retainedGlass.id !== 'clear-grids') { resetSideliteGrid(); return }
+      if (sideliteGridLocation === 'sdl') {
+        const patterns = nextId === 'fsl' ? Object.values(fslSdlPatterns).flat() : catalog.sdlPatterns
+        if (sideliteGridPattern && !patterns.includes(sideliteGridPattern)) setSideliteGridPattern('')
+        return
+      }
+      if (sideliteGridLocation !== 'internal') { resetSideliteGrid(); return }
+      const standard = sideliteGridStyle ? catalog.standardRules[sideliteGridStyle] : undefined
+      const lowE = sideliteGridStyle ? catalog.lowERules[sideliteGridStyle] : undefined
+      if (!standard && !lowE) {
+        setSideliteGridStyle(''); setSideliteGridPattern(''); setSideliteGridColor(''); setSideliteGridWidth('')
+        return
+      }
+      const pattern = sideliteGridStyle === 'Prairie' ? catalog.prairiePattern : sideliteGridPattern
+      if (!pattern || (!standard?.[pattern] && !lowE?.[pattern])) {
+        setSideliteGridPattern(''); setSideliteGridColor(''); setSideliteGridWidth('')
+        return
+      }
+      const widths = [...(standard?.[pattern]?.[sideliteGridColor as GridColor] ?? []), ...(lowE?.[pattern]?.[sideliteGridColor as GridColor] ?? [])]
+      if (standard?.[pattern]?.[sideliteGridColor as GridColor] === undefined && lowE?.[pattern]?.[sideliteGridColor as GridColor] === undefined) {
+        setSideliteGridColor(''); setSideliteGridWidth('')
+      } else if (sideliteGridWidth && !widths.includes(sideliteGridWidth)) setSideliteGridWidth('')
+      return
+    }
     const previousGlass = selectedSideliteCatalog?.options.find(option => option.id === sideliteGlassId)
     if (previousGlass && !isGlassFamilyCompatible(previousGlass, lineId)) {
-      const catalog = sideliteGlassCatalogs[nextId as keyof typeof sideliteGlassCatalogs]
       const valid = catalog?.options.filter(option => isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, lineId)) ?? []
       const sameCategory = valid.filter(option => option.category === sideliteGlassCategory)
       const group = sortByDisplayLabel(groupSideliteGlassOptions(sameCategory.length ? sameCategory : valid), group => group.title)[0]

@@ -93,7 +93,7 @@ try {
       assert.equal(state.doorLineId, line)
       assert.equal(state.grainId, grain)
       assert.equal(state.styleId, doorStyles.find(item => item.code === 'F')!.id, 'Material/grain never replaces the already-selected slab')
-      assert.equal(state.sideliteStyleId, firstSide(line, grain || doorLineChoices.find(item => item.id === line)?.autoGrain || null))
+      assert.equal(state.sideliteStyleId, 'ssl', 'Compatible sidelite survives parent defaults')
       assert.equal(state.sidelites, normalizeLegacySidelite(relationship, 'RHI', 'single'))
       assert.equal(state.doorSwingId, 'RHI')
       assert.equal(state.hardwareId, hardwareOptions[0].id)
@@ -109,8 +109,8 @@ try {
     const signature = doorLineChoices.find(item => item.id === 'signature-series')!
     const firstGrain = signature.lineIds.flatMap(id => doorStyles.flatMap(slab => slab.variants.filter(v => v.lineId === id).flatMap(v => v.grains)))[0]
     await defaults(signature.id, firstGrain)
-    assert.equal((await saved()).sideliteGlassId, '', 'Old SSL glass is cleared when sidelite slab resets')
-    assert.equal((await saved()).sideliteGridStyle, '', 'Old SSL grid state is cleared with the old slab')
+    assert.equal((await saved()).sideliteGlassId, 'clear-grids', 'Compatible SSL glass survives a material change')
+    assert.equal((await saved()).sideliteGridStyle, 'Flat', 'Compatible SSL grids survive a material change')
     await next()
     await card(/^Mahogany$/)
     await defaults(signature.id, 'Mahogany')
@@ -158,7 +158,46 @@ try {
     assert.equal(await page.locator('.builder-options-scroll .option-card strong').filter({ hasText: /^Signature Series/ }).count(), 0)
     await page.close()
   }
-  console.log('Style-first defaults passed: desktop/mobile; all 42 styles before/after material selection; style-filtered materials/grains; CR14→Fir (not Cherry); incompatible downstream recalculation; first sidelite defaults; manual overrides; all relationships; handing/hardware preserved.')
+  for (const width of [1280, 390]) for (const scenario of [
+    { line: '20-gauge-smooth-steel', grain: '', side: 'fsl', target: /^Signature Series/, expected: 'fsl' },
+    { line: 'signature-series', grain: 'Cherry', side: 'fsl', target: /^Fir$/, expected: 'fsl', grainChange: true },
+    { line: 'signature-series', grain: 'Cherry', side: 'f48sl', target: /^Fir$/, expected: 'cr14sl', grainChange: true, expectedGlass: '' },
+    { line: 'signature-series', grain: 'Fir', side: 'fsl', target: /^Smooth Steel$/, expected: 'fsl' },
+    { line: '20-gauge-smooth-steel', grain: '', side: 'ssl', target: /^Brushed Smooth Fiberglass$/, expected: firstSide('brushed-smooth-fiberglass', null), grids: true },
+    { line: 'brushed-smooth-fiberglass', grain: '', side: 'fsl', target: /^Textured Fiberglass$/, expected: 'fsl' },
+    { line: '20-gauge-smooth-steel', grain: '', side: 'fsl', target: /^Craftsman Rectangle$/, expected: 'fsl', styleChange: true },
+    { line: '20-gauge-smooth-steel', grain: '', side: 'ssl', target: /^Craftsman Rectangle$/, expected: 'cr14sl', styleChange: true, expectedGlass: '' },
+  ]) {
+    const page = await browser.newPage({ viewport: { width, height: 1000 } })
+    await page.addInitScript(configuration => {
+      localStorage.setItem('hgi-door-builder-draft', JSON.stringify({ version: 1, configuration }))
+    }, { selectedDoorConfigurationType: 'single', styleId: doorStyles.find(item => item.code === 'F')!.id,
+      doorLineId: scenario.line, grainId: scenario.grain, sidelites: 'right', sideliteStyleId: scenario.side,
+      sideliteGlassCategory: 'clear', sideliteGlassId: scenario.grids ? 'clear-grids' : 'clear-no-grids', doorSwingId: 'LHI',
+      ...(scenario.grids ? { sideliteGridLocation: 'internal', sideliteGridStyle: 'Flat', sideliteGridPattern: '3 Lite', sideliteGridColor: 'White', sideliteGridWidth: '5/8"' } : {}) })
+    await page.goto('http://127.0.0.1:5197/')
+    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    for (let i = 0; i < 10 && await page.locator('.step-heading h1').innerText() !== 'Choose Your Door Line'; i++) {
+      if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
+      await page.getByRole('button', { name: 'Next configuration step' }).click()
+    }
+    if (scenario.grainChange) await page.getByRole('button', { name: 'Next configuration step' }).click()
+    if (scenario.styleChange) await page.getByRole('button', { name: 'Previous configuration step' }).click()
+    await page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: scenario.target }) }).click()
+    await page.waitForTimeout(200)
+    const state = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
+    assert.equal(state.sideliteStyleId, scenario.expected, `${width}px ${scenario.line}/${scenario.grain}/${scenario.side} → ${scenario.target}`)
+    assert.equal(state.sidelites, 'right', 'Style reconciliation never changes position')
+    assert.equal(state.doorSwingId, 'LHI', 'Style reconciliation never changes handing')
+    assert.equal(state.sideliteGlassId, scenario.expectedGlass ?? (scenario.grids ? 'clear-grids' : 'clear-no-grids'), 'Keep shared compatible glass; clear IDs absent from the destination catalog')
+    if (scenario.grids) {
+      assert.deepEqual([state.sideliteGridLocation, state.sideliteGridStyle, state.sideliteGridPattern, state.sideliteGridColor, state.sideliteGridWidth], ['internal', 'Flat', '3 Lite', 'White', '5/8"'], 'Compatible grid components survive a sidelite slab fallback')
+    }
+    await page.waitForTimeout(200)
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration.sideliteStyleId), scenario.expected, 'Later effects do not overwrite the reconciled selection')
+    await page.close()
+  }
+  console.log('Style-first defaults and sidelite preservation passed: desktop/mobile; 42 styles; compatible material/grain/style transitions; first-valid incompatible fallback; retained glass/grids; all relationships; handing/hardware preserved.')
 } finally {
   await browser?.close()
   server.kill('SIGTERM')
