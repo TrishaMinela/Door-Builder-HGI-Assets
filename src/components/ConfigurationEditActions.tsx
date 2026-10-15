@@ -2,11 +2,13 @@ import { Pencil } from 'lucide-react'
 
 export type ConfigurationEditArea = 'door-style' | 'sidelites' | 'door-finish' | 'glass-type' | 'hardware'
 
-export function ConfigurationEditActions({ onEdit, hasGlass, visualizer = false }: {
+export function ConfigurationEditActions({ onEdit, hasGlass, visualizer = false, headingLevel = 2 }: {
   onEdit: (area: ConfigurationEditArea) => void
   hasGlass: boolean
   visualizer?: boolean
+  headingLevel?: 2 | 3
 }) {
+  const Heading = headingLevel === 3 ? 'h3' : 'h2'
   const actions: { area: ConfigurationEditArea; label: string }[] = [
     { area: 'door-style', label: 'Door' },
     { area: 'sidelites', label: 'Sidelites' },
@@ -15,7 +17,7 @@ export function ConfigurationEditActions({ onEdit, hasGlass, visualizer = false 
     { area: 'hardware', label: 'Hardware' },
   ]
   return <section className={`configuration-edit-actions${visualizer ? ' configuration-edit-actions-visualizer' : ''}`} aria-label="Edit Configuration">
-    <h3>{visualizer ? 'Edit your design' : 'Edit Configuration'}</h3>
+    <Heading>{visualizer ? 'Edit your design' : 'Edit Configuration'}</Heading>
     <div>{actions.map(({ area, label }) => <button type="button" key={area}
       aria-label={`Edit ${label}`} disabled={area === 'glass-type' && !hasGlass}
       title={area === 'glass-type' && !hasGlass ? 'This door style has no glass selection' : undefined}

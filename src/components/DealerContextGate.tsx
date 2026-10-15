@@ -31,11 +31,11 @@ export function DealerContextGate({ children }: Props) {
   }, [dealerSlug])
 
   if (state === 'checking') {
-    return <main className="dealer-link-state"><section><span>Home Guard Door Builder</span><h1>Checking dealer link…</h1></section></main>
+    return <main className="dealer-link-state builder-typography"><section><span>Home Guard Door Builder</span><h1>Checking dealer link…</h1></section></main>
   }
 
   if (state === 'unavailable') {
-    return <main className="dealer-link-state"><section><span>Home Guard Door Builder</span><h1>This dealer link is unavailable.</h1><p>Please check the link or visit the main Door Builder.</p><a href="/">Open the Door Builder</a></section></main>
+    return <main className="dealer-link-state builder-typography"><section><span>Home Guard Door Builder</span><h1>This dealer link is unavailable.</h1><p>Please check the link or visit the main Door Builder.</p><a href="/">Open the Door Builder</a></section></main>
   }
 
   return children(dealerSlug)

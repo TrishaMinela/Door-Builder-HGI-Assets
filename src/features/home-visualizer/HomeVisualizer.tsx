@@ -309,7 +309,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
 
   const leaveVisualizer = () => onBack()
   const returnFromFinal = () => setShowResult(false)
-  const editToolbar = onEditConfiguration && <ConfigurationEditActions visualizer onEdit={onEditConfiguration} hasGlass={Boolean(configuredDoorPreview.glass || configuredDoorPreview.sideliteGlassSrc)} />
+  const editToolbar = onEditConfiguration && <ConfigurationEditActions visualizer headingLevel={showResult ? 3 : 2} onEdit={onEditConfiguration} hasGlass={Boolean(configuredDoorPreview.glass || configuredDoorPreview.sideliteGlassSrc)} />
   if (!active) return null
   return (
     <main className="visualizer-page">
@@ -385,7 +385,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
 
         <ConfiguredDoorSource configurationKey={configurationKey} previewProps={configuredDoorPreview} onStateChange={updateDoorSource} />
       </div>
-      {showIncompatibilityModal&&createPortal(<div className="ai-incompatibility-backdrop"><div ref={incompatibilityDialogRef} className="ai-incompatibility-modal" role="dialog" aria-modal="true" aria-labelledby="ai-incompatibility-title" aria-describedby="ai-incompatibility-description"><h2 id="ai-incompatibility-title">This door configuration doesn’t match your entrance</h2><div id="ai-incompatibility-description"><p>{entranceCompatibility?.detectedSummary} {entranceCompatibility?.selectedSummary}</p><p>Choose a different photo or review your door configuration to continue.</p><p>If this seems wrong, the photo may be too far away, poorly lit, or unclear for accurate AI detection.</p></div><div className="ai-incompatibility-actions"><button type="button" className="ai-incompatibility-change-photo" onClick={removePhoto}>Change Photo</button><button type="button" className="ai-incompatibility-review" onClick={onReturnToReview??onBack}>Review Configuration</button></div></div></div>,document.body)}
+      {showIncompatibilityModal&&createPortal(<div className="builder-typography ai-incompatibility-backdrop"><div ref={incompatibilityDialogRef} className="ai-incompatibility-modal" role="dialog" aria-modal="true" aria-labelledby="ai-incompatibility-title" aria-describedby="ai-incompatibility-description"><h2 id="ai-incompatibility-title">This door configuration doesn’t match your entrance</h2><div id="ai-incompatibility-description"><p>{entranceCompatibility?.detectedSummary} {entranceCompatibility?.selectedSummary}</p><p>Choose a different photo or review your door configuration to continue.</p><p>If this seems wrong, the photo may be too far away, poorly lit, or unclear for accurate AI detection.</p></div><div className="ai-incompatibility-actions"><button type="button" className="ai-incompatibility-change-photo" onClick={removePhoto}>Change Photo</button><button type="button" className="ai-incompatibility-review" onClick={onReturnToReview??onBack}>Review Configuration</button></div></div></div>,document.body)}
     </main>
   )
 }

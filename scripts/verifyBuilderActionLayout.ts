@@ -4,6 +4,7 @@ import { chromium } from 'playwright-core'
 import sharp from 'sharp'
 import { doorStyles, hardwareOptions } from '../src/data/options'
 import { builderGroupForPage, builderGroupStart } from '../src/utils/builderNavigation'
+import { assertBuilderTypography } from './builderTypographyAssertions'
 
 for (const page of ['door-configuration', 'door-line', 'door-grain', 'door-style', 'sidelites', 'sidelite-style', 'door-swing']) assert.equal(builderGroupForPage(page), 'Door')
 for (const page of ['door-finish', 'jamb-type', 'jamb-finish']) assert.equal(builderGroupForPage(page), 'Finish')
@@ -60,13 +61,14 @@ try {
     const assertBottomAlignment = async () => {
       const nav = (await page.locator('.builder-step-actions').boundingBox())!, previous = (await page.getByRole('button', { name: 'Previous configuration step' }).boundingBox())!, forward = (await page.getByRole('button', { name: 'Next configuration step' }).boundingBox())!
       assert.ok(Math.abs(previous.x - nav.x) < 2 && Math.abs(forward.x + forward.width - nav.x - nav.width) < 2, 'Previous is far left and Next far right')
-      assert.ok(Math.abs(previous.y - forward.y) < 2, 'Bottom actions share a baseline')
+      assert.ok(Math.abs(previous.y - forward.y) < 2, `Bottom actions share a baseline: ${JSON.stringify({ nav, previous, forward })}`)
     }
     const testFeedback = async (send = false) => {
       const before = await saved()
       await feedback().click()
       const dialog = page.getByRole('dialog', { name: 'Help us improve' })
       await dialog.waitFor()
+      await assertBuilderTypography(page, 'feedback')
       if (send) {
         await dialog.getByLabel('Name', { exact: false }).fill('Layout Test')
         await dialog.getByLabel('Email', { exact: false }).fill('layout@example.com')
@@ -81,6 +83,7 @@ try {
       assert.ok(await feedback().evaluate(element => element === document.activeElement), 'Feedback restores trigger focus')
     }
     await page.goto('http://127.0.0.1:5225/')
+    await assertBuilderTypography(page, 'home')
     await page.getByRole('button', { name: 'Start Building', exact: true }).click()
     assert.equal(await done().count(), 0, 'Normal configurations do not expose Done editing')
     const assertGroups = async (glass = true) => {
@@ -93,6 +96,11 @@ try {
       })), 'All group labels are fully readable')
     }
     await assertGroups()
+    const reset = page.getByRole('button', { name: 'Reset Design', exact: true }).filter({ visible: true }).first()
+    await reset.click()
+    await page.getByRole('dialog', { name: 'Start over?' }).waitFor()
+    await assertBuilderTypography(page, 'reset-dialog')
+    await page.keyboard.press('Escape')
     assert.ok(await page.locator('.step-heading h1').isVisible(), 'Long first-step heading stays readable on phones')
     assert.ok(await page.locator('.step-heading-copy > p').isVisible(), 'Intro remains visible above feedback')
     await assertNavigationFeedback()
@@ -100,6 +108,7 @@ try {
     await page.screenshot({ path: `/tmp/builder-actions-long-heading-${width}.png` })
     for (let i = 0; i < 30 && await page.getByRole('button', { name: 'Next configuration step' }).count(); i++) {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
+      await assertBuilderTypography(page, `step-${i}`)
       if (await page.locator('.step-heading h1').innerText() === 'Choose a Door Style') {
         assert.equal(await page.locator('.stepper button[aria-current="step"] em').innerText(), 'Door')
         assert.match(await page.locator('.step-label-row').innerText(), /Step 1 of 4 · Door/i)
@@ -113,6 +122,7 @@ try {
       await next()
     }
     await page.getByRole('heading', { name: 'Configuration Summary' }).waitFor()
+    await assertBuilderTypography(page, 'results')
     await testFeedback()
     assert.equal(await feedback().count(), 1, 'Results keep one feedback trigger')
     const resultActions = (await page.locator('.builder-step-actions').boundingBox())!, resultFeedback = (await feedback().boundingBox())!
@@ -123,9 +133,22 @@ try {
     }
     assert.equal(await page.getByRole('button', { name: 'Next configuration step' }).count(), 0, 'Results do not show configuration Next')
     await page.screenshot({ path: `/tmp/builder-results-feedback-${width}.png` })
+    const testSwitch = page.getByRole('switch', { name: 'Test current review experience' })
+    const wasTestMode = await testSwitch.getAttribute('aria-checked') === 'true'
+    if (wasTestMode) await testSwitch.click()
+    await page.getByRole('button', { name: 'Download PDF', exact: true }).click()
+    await page.getByRole('heading', { name: 'Complete Your Information' }).waitFor()
+    await assertBuilderTypography(page, 'contact-form')
+    await page.getByRole('button', { name: 'Submit & Download PDF', exact: true }).click()
+    assert.ok(await page.locator('.quote-fields [aria-invalid=true]').count() > 0)
+    await assertBuilderTypography(page, 'contact-validation')
+    await page.getByRole('button', { name: 'Back to Review', exact: true }).click()
+    if (wasTestMode) await testSwitch.click()
     await page.locator('.visualizer-promo-card:visible').getByRole('button', { name: 'Launch Visualizer' }).click()
+    await assertBuilderTypography(page, 'visualizer-upload')
     await page.locator('input[type=file]').setInputFiles({ name: 'house.jpg', mimeType: 'image/jpeg', buffer: photo })
     await page.getByText('AI Result', { exact: true }).waitFor({ timeout: 30000 })
+    await assertBuilderTypography(page, 'visualizer-result')
     const original = await page.locator('.cleanup-comparison-original').getAttribute('src')
     await page.locator('.configuration-edit-actions-visualizer').getByRole('button', { name: 'Edit Door', exact: true }).click()
     await page.getByRole('heading', { name: 'Choose a Door Style', exact: true }).waitFor()
@@ -181,6 +204,11 @@ try {
     await glassGroup.click()
     assert.match(await page.locator('.step-heading h1').innerText(), /Sidelite Glass/)
     assert.equal(await page.locator('.stepper button[aria-current="step"] em').innerText(), 'Glass')
+    await done().click()
+    // Adding a sidelite no longer matches the previously detected single opening.
+    await page.getByRole('dialog', { name: 'This door configuration doesn’t match your entrance' }).waitFor()
+    await assertBuilderTypography(page, 'incompatible-dialog')
+    await page.getByRole('button', { name: 'Change Photo', exact: true }).click()
     console.log(`${width}×${height}: normal/editing controls, feedback submit/close/focus, scrolling, padding, photo return passed.`)
     await page.close()
     const fresh = await browser.newPage({ viewport: { width, height } })

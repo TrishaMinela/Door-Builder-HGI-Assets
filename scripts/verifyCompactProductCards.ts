@@ -58,7 +58,8 @@ try {
           const heights = metrics.cards.map(item => item.card.height)
           if (/Door Style/.test(heading)) {
             assert.ok(metrics.cards.every(item => item.titleLines <= 2.05), `Short door names fit two lines: ${JSON.stringify(metrics.cards.filter(item => item.titleLines > 2.05))}`)
-            assert.ok(metrics.cards.every(item => item.titleSize === (width < 768 ? 16 : 18) && item.titleWeight === '600'), 'Readable semibold title sizing')
+            const expectedTitleSize = Math.min(18, Math.max(16, 15 + width * .0025))
+            assert.ok(metrics.cards.every(item => Math.abs(item.titleSize - expectedTitleSize) < .02 && item.titleWeight === '600'), 'Shared fluid semibold title sizing')
           }
           assert.ok(Math.max(...heights) - Math.min(...heights) < 1, 'Shared height comes from tallest card')
           assert.equal(metrics.grid.alignContent, 'start', 'Rows do not fill the viewport')
