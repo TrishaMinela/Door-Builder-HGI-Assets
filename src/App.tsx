@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, Download, ExternalLink, Eye, FileText, Globe, HelpCircle, Home as HomeIcon, Mail, MapPin, Phone, RotateCcw, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview, type DoorPreviewProps } from './components/DoorPreview'
-import { DoorStyleThumbnail } from './components/DoorStyleThumbnail'
+import { DoorStyleCard } from './components/DoorStyleCard'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
 import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
@@ -41,7 +41,7 @@ import { normalizeLegacySidelite, sideliteBuilderOptions, sidelitePlacement, sid
 import { sideliteAssetFamilyForSlab, sideliteGlassMask, sideliteSlabAsset, sideliteStylesForFamily, type SideliteStyleId } from './data/sideliteAssets'
 import { clearDoorBuilderDraft, loadDoorBuilderDraft, saveDoorBuilderDraft, type DoorBuilderDraftConfiguration } from './utils/doorBuilderDraft'
 import { UNSELECTED_FINISH } from './utils/customerFinish'
-import { doorStyleDisplayName, doorStyleCardName, sideliteStyleDisplayName, glassDisplayName, sideliteConfigurationDisplayName } from './data/productDisplayNames'
+import { doorStyleDisplayName, sideliteStyleDisplayName, glassDisplayName, sideliteConfigurationDisplayName } from './data/productDisplayNames'
 
 type BuilderPage = 'door-configuration' | 'door-style' | 'door-line' | 'door-grain' | 'sidelites' | 'sidelite-style' | 'door-finish' | 'jamb-type' | 'jamb-finish' | 'glass-type' | 'glass' | 'glass-variant' | 'glass-frame-color' | 'grid-location' | 'grid-style' | 'grid-pattern' | 'grid-color' | 'grid-width' | 'sidelite-glass-type' | 'sidelite-glass' | 'sidelite-glass-variant' | 'sidelite-grid-location' | 'sidelite-grid-style' | 'sidelite-grid-pattern' | 'sidelite-grid-color' | 'sidelite-grid-width' | 'lock-setup' | 'hardware' | 'door-swing' | 'review'
 const mainDoorGlassPages = new Set<BuilderPage>(['glass-type', 'glass', 'glass-variant', 'grid-location', 'grid-style', 'grid-pattern', 'grid-color', 'grid-width'])
@@ -2208,7 +2208,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
               </div>
             </div>
             <div ref={builderOptionsRef} className="builder-options-scroll">
-              {currentPage === 'door-style' && <p className="door-style-help">Choose from solid-panel and glazed designs. Use the info button for the full product name.</p>}
+                {currentPage === 'door-style' && <p className="door-style-help">Choose from solid-panel and glazed designs. Use View details for the full product name and details.</p>}
               {glassSelectionTarget && <div className={`glass-target-banner glass-target-${glassSelectionTarget}`} role="status" aria-live="polite">
                 <span className="glass-target-icon" aria-hidden="true">{glassSelectionTarget === 'main-door' ? 'D' : 'SL'}</span>
                 <span><small>You are choosing glass for</small><strong>{glassSelectionTarget === 'main-door' ? 'Main Door' : 'Sidelite'}</strong>{glassSelectionTarget === 'sidelite' && <em>{sideliteStyleDisplayName(selectedSideliteStyle?.id)}{sidelites && sidelites !== 'none' ? ` · ${sideliteRelationshipLabel(sidelites, selectedDoorConfigurationType || 'single')}` : ''}</em>}</span>
@@ -2229,7 +2229,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
               </div>}
               <div className={`options-grid step-${step} ${currentPage === 'door-configuration' ? 'door-configuration-grid door-style-catalog-grid' : ''} ${currentPage === 'door-style' || currentPage === 'lock-setup' ? 'door-style-catalog-grid ' : ''}${currentPage === 'door-style' ? 'door-style-product-grid ' : ''}${currentPage === 'lock-setup' ? 'lock-setup-grid ' : ''}${currentPage === 'door-style' || currentPage === 'lock-setup' || currentPage === 'door-grain' || currentPage === 'door-finish' || currentPage === 'jamb-type' || currentPage === 'jamb-finish' || currentPage === 'glass-type' || currentPage === 'glass-variant' || currentPage.startsWith('grid-') || currentPage.startsWith('sidelite-') ? 'door-style-grid' : ''} ${currentPage === 'sidelites' || currentPage === 'sidelite-style' ? 'sidelite-catalog-grid' : ''} ${currentPage === 'glass' || currentPage === 'glass-variant' || currentPage === 'sidelite-glass' || currentPage === 'sidelite-glass-variant' ? 'glass-options-grid' : ''}`}>
                 {currentPage === 'door-configuration' && doorConfigurationOptions.map((item) => <OptionCard key={item.id} className="door-catalog-card door-configuration-card" title={item.name} description={item.description} eyebrow="Entry configuration" selected={selectedDoorConfigurationType === item.id} onClick={() => selectDoorConfiguration(item.id)} visual={<div className="door-configuration-preview"><img className="door-configuration-card-image" src={item.image} alt="" loading="eager" decoding="async" /></div>} />)}
-                {currentPage === 'door-style' && sortByDisplayLabel(availableDoorStyles, item => doorCatalogModelName(item.name)).map((item) => <OptionCard key={item.id} className="door-catalog-card" title={doorStyleCardName(item)} fullName={doorStyleDisplayName(item)} selected={styleId === item.id} onClick={() => selectDoorStyle(item.id)} visual={<DoorStyleThumbnail style={item} />} />)}
+                {currentPage === 'door-style' && sortByDisplayLabel(availableDoorStyles, item => doorCatalogModelName(item.name)).map((item) => <DoorStyleCard key={item.id} style={item} selected={styleId === item.id} onSelect={() => selectDoorStyle(item.id)} />)}
                 {currentPage === 'door-line' && sortByDisplayLabel(availableDoorLines, item => item.name).map((item) => <OptionCard key={item.id} title={item.name} description={item.description} eyebrow="Door Line" selected={doorLineId === item.id} onClick={() => selectDoorLine(item.id)} visual={<span className="door-line-card-image"><img src={item.image} alt="" loading="lazy" decoding="async" /></span>} />)}
                 {currentPage === 'door-grain' && sortByDisplayLabel(signatureGrainOptions, item => item.name).map((item) => <OptionCard key={item.id} title={item.name} eyebrow="Signature grain" selected={selectedGrain === item.id} onClick={() => selectGrain(item.id)} visual={<img className="grain-card-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'sidelites' && sideliteOptions.map((item) => <OptionCard key={item.id} className="sidelite-catalog-card" title={item.name} eyebrow="Entry layout" selected={sidelites === item.id} onClick={() => selectSidelites(item.id)} visual={<img className="sidelite-option-image sidelite-option-image-unflipped" src={item.image} alt="" loading="eager" decoding="async" />} />)}

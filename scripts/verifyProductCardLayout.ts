@@ -79,10 +79,12 @@ try {
       if (/Door Style|Sidelite Slab|Door Line/.test(heading)) await page.screenshot({path:`/private/tmp/hgi-card-spacing-${width}-${heading.replace(/[^a-z0-9]+/gi,'-')}.png`})
       // Long text must grow the entire grid, not one card or a clipped label.
       const title=page.locator('[data-equal-product-grid] .option-copy strong').first()
-      const original=await title.innerText()
-      await title.evaluate(el=>{el.textContent+=' - Extended product description with a significantly longer title'})
-      await check(page,`${width}px ${heading} long title`)
-      await title.evaluate((el,value)=>{el.textContent=value},original)
+      if(await title.count()) {
+        const original=await title.innerText()
+        await title.evaluate(el=>{el.textContent+=' - Extended product description with a significantly longer title'})
+        await check(page,`${width}px ${heading} long title`)
+        await title.evaluate((el,value)=>{el.textContent=value},original)
+      }
       const description=page.locator('[data-equal-product-grid] .option-copy>span').first()
       if(await description.count()) {
         const originalDescription=await description.innerText()
@@ -95,7 +97,7 @@ try {
       if(await next.isDisabled())throw new Error(`${heading} requires an explicit test selection`)
       await next.click();await page.waitForTimeout(100)
     }
-    assert.ok(visited.some(v=>/Hardware/.test(v)))
+    assert.ok(visited.some(v=>/Hardware/.test(v)), `Hardware reached: ${visited.join(' → ')}`)
     console.log(`${width}px: ${visited.join(' → ')}`)
     await page.close()
   }

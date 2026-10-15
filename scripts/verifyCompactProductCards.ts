@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { chromium } from 'playwright-core'
 import { doorStyles } from '../src/data/options'
+import { assertDoorStyleCards } from './doorStyleCardAssertions'
 
 const before = process.argv.includes('--before')
 const output = '/private/tmp/hgi-compact-product-cards'
@@ -28,6 +29,11 @@ try {
     for (let step = 0; step < 10; step++) {
       const heading = await page.locator('.step-heading h1').innerText()
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
+      if (/Door Style/.test(heading) && !before) {
+        await assertDoorStyleCards(page)
+        await next.click()
+        continue
+      }
       if (/Door Style|Door Line|Sidelite Slab/.test(heading)) {
         await page.waitForTimeout(200)
         const metrics = await page.locator('[data-equal-product-grid]').first().evaluate(grid => {
@@ -44,23 +50,10 @@ try {
         })
         const name = `${before ? 'before' : 'after'}-${width}-${heading.replace(/[^a-z0-9]+/gi, '-')}`
         await page.screenshot({ path: `${output}/${name}.png` })
-        if (/Door Style/.test(heading) && !before) {
-          const archCard = page.locator('.door-catalog-card').filter({ has: page.locator('strong').filter({ hasText: /^Four Lite Arch Top$/ }) })
-          await archCard.scrollIntoViewIfNeeded()
-          await archCard.locator('img').evaluate((el) => (el as HTMLImageElement).decode())
-          await page.waitForTimeout(350)
-          await page.screenshot({ path: `${output}/after-${width}-Arch-Top.png` })
-          await page.locator('.builder-options-scroll').evaluate(el => { el.scrollTop = 0 })
-        }
         await writeFile(`${output}/${name}.json`, JSON.stringify(metrics, null, 2))
         console.log(`${name}: ${JSON.stringify({ grid: metrics.grid, first: metrics.cards[0] })}`)
         if (!before) {
           const heights = metrics.cards.map(item => item.card.height)
-          if (/Door Style/.test(heading)) {
-            assert.ok(metrics.cards.every(item => item.titleLines <= 2.05), `Short door names fit two lines: ${JSON.stringify(metrics.cards.filter(item => item.titleLines > 2.05))}`)
-            const expectedTitleSize = Math.min(18, Math.max(16, 15 + width * .0025))
-            assert.ok(metrics.cards.every(item => Math.abs(item.titleSize - expectedTitleSize) < .02 && item.titleWeight === '600'), 'Shared fluid semibold title sizing')
-          }
           assert.ok(Math.max(...heights) - Math.min(...heights) < 1, 'Shared height comes from tallest card')
           assert.equal(metrics.grid.alignContent, 'start', 'Rows do not fill the viewport')
           for (const item of metrics.cards) assert.ok(Math.abs(item.copy.top - item.visual.bottom) < 1, 'Copy directly follows thumbnail; spacing is its padding')

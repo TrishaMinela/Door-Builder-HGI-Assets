@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import './styles.css'
 import './typography.css'
+import './components/DoorStyleCard.css'
 import { installStaleChunkRecovery } from './utils/staleChunkRecovery'
 
 installStaleChunkRecovery()

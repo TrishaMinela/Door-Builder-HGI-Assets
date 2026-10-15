@@ -1,0 +1,79 @@
+/* Keep the shared equal-height measurement and image region, without a title
+   region on door-style cards. Other option card types are unchanged. */
+.configuration-step .builder-options-scroll [data-equal-product-grid].door-style-product-grid {
+  --product-image-height: clamp(156px,18vw,204px);
+}
+.configuration-step .builder-options-scroll [data-equal-product-grid].door-style-product-grid>.door-image-card {
+  padding: 0;
+  cursor: pointer;
+}
+.door-image-select {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.configuration-step .builder-options-scroll [data-equal-product-grid] .door-image-card .option-copy.door-image-actions {
+  align-items: center;
+  padding: 8px;
+}
+.door-details-trigger {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid #b7c8cb;
+  border-radius: var(--radius-control,4px);
+  background: #fff;
+  color: var(--peacock);
+}
+.door-details-trigger:hover { background: #edf6f6; border-color: var(--peacock); }
+.door-image-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--peacock);
+  color: #fff;
+  pointer-events: none;
+}
+.door-image-select:focus-visible,.door-details-trigger:focus-visible,.door-details-dialog button:focus-visible {
+  outline: 3px solid var(--peacock);
+  outline-offset: -3px;
+}
+.door-details-dialog {
+  width: min(560px,calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid #d7dee1;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--black);
+  text-align: left;
+  cursor: auto;
+  overflow: hidden;
+  box-shadow: 0 20px 60px #0004;
+}
+.door-details-dialog[open] { display: flex; flex-direction: column; }
+.door-details-dialog::backdrop { background: #05040b99; }
+.door-details-header { display: flex; justify-content: flex-end; flex: none; padding: 8px 8px 0; }
+.door-details-header button { display: grid; place-items: center; min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--peacock); }
+.door-details-body { min-height: 0; padding: 0 24px 16px; overflow-y: auto; overscroll-behavior: contain; }
+.door-details-image { display: block; width: 100%; height: min(38dvh,320px); object-fit: contain; object-position: center; margin: 0 0 16px; }
+.door-details-body dl { margin: 12px 0 0; font-size: 14px; line-height: 1.5; }
+.door-details-body dt { font-weight: 600; margin-bottom: 4px; }
+.door-details-body dd { margin: 0; color: #536267; }
+.door-details-actions { display: flex; justify-content: flex-end; flex: none; border-top: 1px solid #d7dee1; padding: 12px 24px max(12px,env(safe-area-inset-bottom)); }
+.door-details-actions button { min-height: 44px; padding: 10px 20px; border: 1px solid var(--peacock); border-radius: var(--radius-control,4px); background: var(--peacock); color: #fff; }
+.door-details-actions button:disabled { background: #e4f1f1; color: var(--peacock); cursor: default; }
+@media(max-width:600px) {
+  .door-details-body { padding-inline: 16px; }
+  .door-details-actions { padding-inline: 16px; }
+  .door-details-actions button { width: 100%; }
+}

@@ -5,6 +5,7 @@ import sharp from 'sharp'
 import { doorStyles, hardwareOptions } from '../src/data/options'
 import { builderGroupForPage, builderGroupStart } from '../src/utils/builderNavigation'
 import { assertBuilderTypography } from './builderTypographyAssertions'
+import { assertDoorStyleCards } from './doorStyleCardAssertions'
 
 for (const page of ['door-configuration', 'door-line', 'door-grain', 'door-style', 'sidelites', 'sidelite-style', 'door-swing']) assert.equal(builderGroupForPage(page), 'Door')
 for (const page of ['door-finish', 'jamb-type', 'jamb-finish']) assert.equal(builderGroupForPage(page), 'Finish')
@@ -110,6 +111,7 @@ try {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
       await assertBuilderTypography(page, `step-${i}`)
       if (await page.locator('.step-heading h1').innerText() === 'Choose a Door Style') {
+        await assertDoorStyleCards(page)
         assert.equal(await page.locator('.stepper button[aria-current="step"] em').innerText(), 'Door')
         assert.match(await page.locator('.step-label-row').innerText(), /Step 1 of 4 · Door/i)
         await testFeedback()
@@ -192,7 +194,7 @@ try {
     assert.equal((await saved()).selectedPaint, 'paint-white', 'Done editing returns with updated selections without traversing other steps')
     // A solid main slab hides Glass only when no sidelites need it either.
     await page.locator('.configuration-edit-actions-visualizer').getByRole('button', { name: 'Edit Door', exact: true }).click()
-    await page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: /^Nine Panel$/ }) }).click()
+    await page.getByRole('button', { name: 'Select Nine Panel No Glass', exact: true }).click()
     await assertGroups(false)
     await page.locator('.stepper button').filter({ hasText: 'Door' }).click()
     await next() // Entry configuration → sidelite position, sequence unchanged.
