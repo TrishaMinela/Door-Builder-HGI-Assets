@@ -161,12 +161,12 @@ try {
   for (const width of [1280, 390]) for (const scenario of [
     { line: '20-gauge-smooth-steel', grain: '', side: 'fsl', target: /^Signature Series/, expected: 'fsl' },
     { line: 'signature-series', grain: 'Cherry', side: 'fsl', target: /^Fir$/, expected: 'fsl', grainChange: true },
-    { line: 'signature-series', grain: 'Cherry', side: 'f48sl', target: /^Fir$/, expected: 'cr14sl', grainChange: true, expectedGlass: '' },
+    { line: 'signature-series', grain: 'Cherry', side: 'f48sl', target: /^Fir$/, expected: 'cr14sl', grainChange: true, expectedGlass: 'clear' },
     { line: 'signature-series', grain: 'Fir', side: 'fsl', target: /^Smooth Steel$/, expected: 'fsl' },
     { line: '20-gauge-smooth-steel', grain: '', side: 'ssl', target: /^Brushed Smooth Fiberglass$/, expected: firstSide('brushed-smooth-fiberglass', null), grids: true },
     { line: 'brushed-smooth-fiberglass', grain: '', side: 'fsl', target: /^Textured Fiberglass$/, expected: 'fsl' },
     { line: '20-gauge-smooth-steel', grain: '', side: 'fsl', target: /^Craftsman Rectangle$/, expected: 'fsl', styleChange: true },
-    { line: '20-gauge-smooth-steel', grain: '', side: 'ssl', target: /^Craftsman Rectangle$/, expected: 'cr14sl', styleChange: true, expectedGlass: '' },
+    { line: '20-gauge-smooth-steel', grain: '', side: 'ssl', target: /^Craftsman Rectangle$/, expected: 'cr14sl', styleChange: true, expectedGlass: 'clear' },
   ]) {
     const page = await browser.newPage({ viewport: { width, height: 1000 } })
     await page.addInitScript(configuration => {

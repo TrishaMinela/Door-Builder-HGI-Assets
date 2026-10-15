@@ -44,7 +44,7 @@ try {
     if (line.id !== 'signature-series') {
       const state = await saved()
       assert.notEqual(state.glassId, family)
-      assert.ok(state.glassId, 'Restricted selection immediately receives a valid fallback')
+      assert.equal(state.glassId, 'f-clear-no-grids', 'Restricted selection falls back to Clear, not alphabetical decorative glass')
       assert.ok(isGlassFamilyCompatible(glassOptions.find(option => option.id === state.glassId)!, line.id))
       if (state.sideliteStyleId) {
         assert.ok(state.sideliteGlassId, `${line.id}/${family}: restricted sidelite receives a replacement: ${JSON.stringify(state)}`)
@@ -55,8 +55,9 @@ try {
     for (let i = 0; i < 12 && await page.locator('.step-heading h1').innerText() !== 'Choose Main Door Glass'; i++) await next()
     const names = await page.locator('.builder-options-scroll .option-card strong').allTextContents()
     for (const name of ['Cobblestone', 'Dutchcraft', 'Leland']) assert.equal(names.includes(name), line.id === 'signature-series', `${line.name}: ${name} visibility`)
-    if (line.id !== 'signature-series') assert.ok(await page.locator('.builder-options-scroll .option-card').first().evaluate(element => element.classList.contains('selected')), 'Fallback is the first valid displayed glass family')
+    const selectedName = line.id !== 'signature-series' ? /^Clear Glass with No Grids$/ : new RegExp(`^${family}$`, 'i')
+    assert.ok(await page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: selectedName }) }).evaluate(element => element.classList.contains('selected')), 'Retained glass or Clear fallback is visibly selected')
     await page.close()
   }
-  console.log('Signature-only families verified across all five material choices, main/sidelite catalogs, valid first-option fallbacks and desktop/mobile flows; unrelated families unchanged.')
+  console.log('Signature-only families verified across all five material choices, main/sidelite catalogs, Clear fallbacks and selected cards on desktop/mobile; unrelated families unchanged.')
 } finally { await browser?.close(); server.kill('SIGTERM') }

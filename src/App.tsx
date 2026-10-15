@@ -9,6 +9,7 @@ import { BetaFeedback } from './components/BetaFeedback'
 import { DealerContextGate } from './components/DealerContextGate'
 import { sortByDisplayLabel } from './utils/sortByDisplayLabel'
 import { validOptionId } from './utils/optionSelection'
+import { clearGlassOption, retainGlassSelection } from './utils/retainGlassSelection'
 import { useInventoryShadow } from './inventory-shadow/useInventoryShadow'
 import { useProductCardLayout } from './utils/useProductCardLayout'
 import { safeDynamicImport } from './utils/staleChunkRecovery'
@@ -1112,32 +1113,26 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       setSelectedPaint('')
       setSelectedStain('')
     }
-    if (selectedDoorLine && glass && (isHiddenDecorativeGlass(glass) || !isGlassFamilyCompatible(glass, selectedDoorLine.id))) {
-      const choices = availableGlass.filter(isCustomerSelectableGlass)
-      const categoryChoices = choices.filter(option => glassCategory(option) === selectedGlassCategory)
-      const fallback = sortByDisplayLabel(categoryChoices.length ? categoryChoices : choices, glassGroupTitle)[0]
-      setGlassId(fallback?.id ?? '')
-      setSelectedGlassCategory(fallback ? glassCategory(fallback) : '')
-      setSelectedGlassGroupKey(fallback ? glassGroupKey(fallback) : '')
-      setGlassVariantConfirmed(Boolean(fallback && choices.filter(option => glassGroupKey(option) === glassGroupKey(fallback)).length === 1))
-      setGridPathId(''); setGridStyle(''); setGridPattern(''); setGridColor(''); setGridWidth('')
-      return
-    }
-    if (selectedGlassCategory && !availableGlassCategories.some((item) => item.id === selectedGlassCategory)) {
-      setSelectedGlassCategory('')
-      setGlassId('')
-    }
-    if (glassId && selectedGlassCategory && !visibleGlass.some((item) => item.id === glassId)) setGlassId('')
-    if (glassId && (!supportsGlass || !availableGlass.some((item) => item.id === glassId))) {
-      setGlassId('')
-      if (editReturnTo) {
-        setSelectedGlassGroupKey('')
-        setGlassVariantConfirmed(false)
-        setGridPathId(''); setGridStyle(''); setGridPattern(''); setGridColor(''); setGridWidth('')
-      }
-    }
     if (!editReturnTo && step >= pages.length) setStep(pages.length - 1)
   }, [selectedDoorConfigurationType, styleId, resolvedStyleId, availableDoorStyleIds, doorLineId, grainId, availableDoorLineIds, isSignatureDoorLine, selectedDoorLineLineIdsKey, needsGrainStep, effectiveFinishTypes, selectedFinishType, finishId, availableFinishIds, selectedGlassCategory, glassId, availableGlassIds, supportsGlass, step, pages.length, editReturnTo])
+
+  const lastGlassParent = useRef('')
+  useEffect(() => {
+    // Do not reconcile against a transient unresolved material/grain.
+    if (!selectedDoorConfigurationType || !selectedDoorLine || (needsGrainStep && !signatureGrainOptions.some(item => item.id === grainId))) return
+    const parent = `${styleId}|${doorLineId}|${grainId}`
+    const parentChanged = parent !== lastGlassParent.current
+    lastGlassParent.current = parent
+    // An empty selection during a manual category change is intentional.
+    if (!glassId && !parentChanged) return
+    const next = supportsGlass ? retainGlassSelection(glass, availableGlass.filter(isCustomerSelectableGlass)) : undefined
+    if (next?.id === glassId && !parentChanged) return
+    setGlassId(next?.id ?? '')
+    setSelectedGlassCategory(next ? (usesRetroGlassCategory ? 'retro' : glassCategory(next)) : '')
+    setSelectedGlassGroupKey(next ? glassGroupKey(next) : '')
+    setGlassVariantConfirmed(Boolean(next))
+    if (next?.id !== glassId) resetGridOptions()
+  }, [selectedDoorConfigurationType, styleId, doorLineId, grainId, needsGrainStep, availableGlassIds, glassId, supportsGlass])
 
   // A missing line/grain while navigating upstream is unresolved, not an
   // incompatible family. Wait for a valid family before reconciling sidelites.
@@ -1149,17 +1144,22 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
   useEffect(() => {
     const current = selectedSideliteCatalog?.options.find(option => option.id === sideliteGlassId)
-    if (!selectedDoorLine || !current || (!isHiddenDecorativeGlass(current) && isGlassFamilyCompatible(current, selectedDoorLine.id))) return
+    if (!selectedDoorLine || !selectedSideliteCatalog || !sideliteGlassId) return
     const valid = selectedSideliteCatalog!.options.filter(option => isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, selectedDoorLine.id))
-    const sameCategory = valid.filter(option => option.category === sideliteGlassCategory)
-    const group = sortByDisplayLabel(groupSideliteGlassOptions(sameCategory.length ? sameCategory : valid), group => group.title)[0]
-    const fallback = group?.options[0]
+    if (current && valid.includes(current)) {
+      const group = groupSideliteGlassOptions(valid).find(group => group.options.some(option => option.id === current.id))
+      if (sideliteGlassCategory !== current.category) setSideliteGlassCategory(current.category)
+      if (sideliteGlassGroupKey !== group?.key) setSideliteGlassGroupKey(group?.key ?? '')
+      return
+    }
+    const fallback = clearGlassOption(valid)
+    const group = groupSideliteGlassOptions(valid).find(group => group.options.some(option => option.id === fallback?.id))
     setSideliteGlassId(fallback?.id ?? '')
     setSideliteGlassCategory(fallback?.category ?? '')
     setSideliteGlassGroupKey(group?.key ?? '')
     setSideliteGlassVariantConfirmed(Boolean(group && group.options.length === 1))
     setSideliteGridLocation(''); setSideliteGridStyle(''); setSideliteGridPattern(''); setSideliteGridColor(''); setSideliteGridWidth('')
-  }, [selectedDoorLine?.id, selectedSideliteCatalog, sideliteGlassId, sideliteGlassCategory])
+  }, [selectedDoorLine?.id, selectedSideliteCatalog, sideliteGlassId, sideliteGlassCategory, sideliteGlassGroupKey])
 
   useEffect(() => {
     if (screen !== 'builder') return
@@ -1454,14 +1454,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     }
     if (nextStyleId !== styleId) {
       setStyleId(nextStyleId)
-      setSelectedGlassCategory('')
-      setGlassId('')
-      setSelectedGlassGroupKey('')
-      setGlassVariantConfirmed(false)
       setGlassFrameColorMode('')
       setGlassFrameFinishId('')
       setGlassFrameFinishType('paint')
-      resetGridOptions()
     }
     if (!editReturnTo && availableDoorStyles.length === 1) goTo(step + 1)
   }
@@ -1693,15 +1688,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       setDoorLineId(nextDoorLineId)
       setGrainId(nextGrain)
       reconcileSideliteForParent(nextDoorLineId, nextGrain || line.autoGrain || null)
-      // A newly invalid family is reconciled against the next material's
-      // derived options, rather than cleared and left without a replacement.
-      if (!glass || isGlassFamilyCompatible(glass, nextDoorLineId)) {
-        setSelectedGlassCategory('')
-        setGlassId('')
-      }
-      setSelectedGlassGroupKey('')
-      setGlassVariantConfirmed(false)
-      resetGridOptions()
+      // Main glass is reconciled after destination material/grain lists settle.
     }
     if (!editReturnTo && availableDoorLines.length === 1) goTo(step + 1)
   }
@@ -1727,23 +1714,26 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const resetSideliteGrid = () => {
     setSideliteGridLocation(''); setSideliteGridStyle(''); setSideliteGridPattern(''); setSideliteGridColor(''); setSideliteGridWidth('')
   }
-  const reconcileSideliteForParent = (lineId: string, grain: string | null) => {
+  const reconcileSideliteForParent = (lineId: string, grain: string | null, requestedStyleId = sideliteStyleId) => {
     if (!sidelites || sidelites === 'none') return
     const family = sideliteAssetFamilyForSlab({ doorLineId: lineId, grain })
     const ids = sideliteStylesForFamily(family)
     const options = sortByDisplayLabel(sideliteStyleOptions.filter(item => ids.includes(item.id)), item => sideliteStyleDisplayName(item.id))
-    const nextId = validOptionId(sideliteStyleId, options)
+    const nextId = validOptionId(requestedStyleId, options)
     if (nextId === sideliteStyleId) return
     setSideliteStyleId(nextId)
     const catalog = sideliteGlassCatalogs[nextId as keyof typeof sideliteGlassCatalogs]
-    const retainedGlass = catalog?.options.find(option => option.id === sideliteGlassId && isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, lineId))
+    const previousGlass = selectedSideliteCatalog?.options.find(option => option.id === sideliteGlassId)
+    const valid = catalog?.options.filter(option => isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, lineId)) ?? []
+    const retainedGlass = retainGlassSelection(previousGlass, valid)
     if (retainedGlass) {
       // Shared IDs must also exist in the destination opening's catalog.
       // Keep grid components only as far as the new opening supports them.
       setSideliteGlassCategory(retainedGlass.category)
+      setSideliteGlassId(retainedGlass.id)
       const group = groupSideliteGlassOptions(catalog.options.filter(option => option.category === retainedGlass.category && isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, lineId))).find(group => group.options.some(option => option.id === retainedGlass.id))
       setSideliteGlassGroupKey(group?.key ?? '')
-      setSideliteGlassVariantConfirmed(Boolean(group && group.options.length === 1))
+      setSideliteGlassVariantConfirmed(true)
       if (retainedGlass.id !== 'clear-grids') { resetSideliteGrid(); return }
       if (sideliteGridLocation === 'sdl') {
         const patterns = nextId === 'fsl' ? Object.values(fslSdlPatterns).flat() : catalog.sdlPatterns
@@ -1768,16 +1758,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       } else if (sideliteGridWidth && !widths.includes(sideliteGridWidth)) setSideliteGridWidth('')
       return
     }
-    const previousGlass = selectedSideliteCatalog?.options.find(option => option.id === sideliteGlassId)
-    if (previousGlass && !isGlassFamilyCompatible(previousGlass, lineId)) {
-      const valid = catalog?.options.filter(option => isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, lineId)) ?? []
-      const sameCategory = valid.filter(option => option.category === sideliteGlassCategory)
-      const group = sortByDisplayLabel(groupSideliteGlassOptions(sameCategory.length ? sameCategory : valid), group => group.title)[0]
-      setSideliteGlassCategory(group?.options[0]?.category ?? ''); setSideliteGlassId(group?.options[0]?.id ?? '')
-      setSideliteGlassGroupKey(group?.key ?? ''); setSideliteGlassVariantConfirmed(Boolean(group && group.options.length === 1))
-      resetSideliteGrid()
-      return
-    }
     setSideliteGlassCategory(''); setSideliteGlassId('')
     setSideliteGlassGroupKey(''); setSideliteGlassVariantConfirmed(false)
     resetSideliteGrid()
@@ -1785,14 +1765,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const selectSideliteStyle = (styleId: string) => {
     if (!visibleSideliteStyleOptions.some((option) => option.id === styleId)) return
     if (styleId !== sideliteStyleId) {
-      const catalog = sideliteGlassCatalogs[styleId as keyof typeof sideliteGlassCatalogs]
-      const clearGlass = defaultClearSideliteGlass(catalog)
-      setSideliteStyleId(styleId)
-      setSideliteGlassCategory(clearGlass ? 'clear' : '')
-      setSideliteGlassId(clearGlass?.id ?? '')
-      setSideliteGlassGroupKey('')
-      setSideliteGlassVariantConfirmed(false)
-      resetSideliteGrid()
+      reconcileSideliteForParent(doorLineId, selectedGrain, styleId)
     }
   }
   const selectSideliteGlassCategory = (category: SideliteGlassCategory) => { setSideliteGlassCategory(category); setSideliteGlassId(''); setSideliteGlassGroupKey(''); setSideliteGlassVariantConfirmed(false); resetSideliteGrid() }
@@ -2033,7 +2006,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     ['Jamb type', jambType === 'clad' ? 'Clad' : 'Timber', pages.indexOf('jamb-type')],
     ['Jamb finish type', jambType === 'clad' ? 'Clad' : jambFinishType === 'stain' ? 'Stain' : 'Paint', pages.indexOf('jamb-finish')],
     ['Jamb finish color', jambFinish?.name ?? 'Not selected', pages.indexOf('jamb-finish')],
-    ...(compatibilitySupportsGlass ? [['Main Door Glass', glassDisplayName(configuredGlass?.name ?? 'Clear'), pages.indexOf('glass-type')] as [string, string, number]] : []),
+    ...(compatibilitySupportsGlass ? [['Main Door Glass', glassDisplayName(configuredGlass?.name ?? 'Not selected'), pages.indexOf('glass-type')] as [string, string, number]] : []),
     ...(supportsGlassFrameColor && appliedGlassFrameFinish ? [['Glass Frame Color', glassFrameColorMode === 'match-door' ? `Match Door (${appliedGlassFrameFinish.name})` : appliedGlassFrameFinish.name, pages.indexOf('glass-frame-color')] as [string, string, number]] : []),
     ...(gridConfiguration ? [
       ...(gridConfiguration.glassCoating !== 'Standard / No Low-E' ? [['Glass Coating', gridConfiguration.glassCoating, pages.indexOf('grid-location')] as [string, string, number]] : []),
@@ -2349,7 +2322,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           {currentPage !== 'review' && <div className="mini-summary">
             <span><b>Door Style</b><strong>{selectedStyle ? doorStyleDisplayName(selectedStyle) : 'Not selected'}</strong></span>
             <span><b>Finish</b><strong>{selectedFinish?.name ?? 'Not selected'}</strong></span>
-            <span><b>Glass</b><strong>{compatibilitySupportsGlass ? (glassDisplayName(configuredGlass?.name ?? 'Clear')) : 'Not applicable'}</strong></span>
+            <span><b>Glass</b><strong>{compatibilitySupportsGlass ? (glassDisplayName(configuredGlass?.name ?? 'Not selected')) : 'Not applicable'}</strong></span>
             <span><b>Sidelites</b><strong>{sideliteRelationshipLabel(sidelites || 'none', selectedDoorConfigurationType || 'single')}</strong></span>
             {selectedDoorConfigurationType === 'french' && <span><b>Lock Setup</b><strong>{selectedDoubleDoorLockPrep?.name ?? 'Not selected'}</strong></span>}
             <span><b>Hardware</b><strong>{selectedHardware ? hardwareDisplayName(selectedHardware) : 'Not selected'}</strong></span>
