@@ -1622,8 +1622,10 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     }
   }
 
-  const editModeControls = editReturnTo && <div className="configuration-edit-return">
-    <button type="button" onClick={doneEditing}>Done Editing</button>
+  const isVisualizerEditing = editReturnTo === 'visualizer'
+  const editModeControls = (phone = false) => isVisualizerEditing && <div className={`configuration-edit-return ${phone ? 'editing-phone-action' : 'editing-bar'}`}>
+    {!phone && <strong>Editing your design</strong>}
+    <button type="button" onClick={doneEditing}>{phone ? 'Done editing · Back to photo' : 'Done editing'}</button>
     {editReturnError && <p role="status">{editReturnError}</p>}
   </div>
 
@@ -2034,6 +2036,24 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     doorSwing: selectedDoorSwing?.name ?? 'Not selected',
   }
   const feedbackStep = screen === 'builder' ? `${currentStep}: ${currentPage}` : screen
+
+  useEffect(() => {
+    if (screen !== 'builder') return
+    const app = document.querySelector<HTMLElement>('.app')
+    const actions = app?.querySelector<HTMLElement>('.builder-actions')
+    const editingBar = app?.querySelector<HTMLElement>('.editing-bar')
+    const observer = new ResizeObserver(() => {
+      if (actions) app?.style.setProperty('--builder-actions-height', `${actions.getBoundingClientRect().height}px`)
+      if (editingBar) app?.style.setProperty('--builder-editing-bar-height', `${editingBar.getBoundingClientRect().height}px`)
+    })
+    if (actions) observer.observe(actions)
+    if (editingBar) observer.observe(editingBar)
+    return () => {
+      observer.disconnect()
+      app?.style.removeProperty('--builder-actions-height')
+      app?.style.removeProperty('--builder-editing-bar-height')
+    }
+  }, [screen, currentPage, editReturnTo])
   useInventoryShadow({styleId,lineId:doorLineId,grain:selectedGrain,finishType:selectedFinishType,glassId,sideliteStyle:sideliteStyleId,hardwareId},screen==='builder')
 
   const heroGenerationParam = new URLSearchParams(window.location.search).get('generateHeroDoor')
@@ -2048,7 +2068,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   }
 
   return (
-    <div className={`app ${screen === 'home' ? 'home-app' : screen === 'visualizer' ? 'visualizer-app' : screen === 'customer-form' ? 'customer-form-app' : ''} ${screen === 'builder' && currentPage === 'review' && submitted ? 'review-confirmation-centered' : ''}`}>
+    <div className={`app ${screen === 'home' ? 'home-app' : screen === 'visualizer' ? 'visualizer-app' : screen === 'customer-form' ? 'customer-form-app' : ''} ${screen === 'builder' && isVisualizerEditing ? 'visualizer-editing' : ''} ${screen === 'builder' && currentPage === 'review' && submitted ? 'review-confirmation-centered' : ''}`}>
       <header>
         <div className="brand">
           <button className="brand-home" type="button" aria-label="Go to home page" onClick={() => showScreen('home')}>
@@ -2183,13 +2203,13 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           </div>}
         </div>}
       </div>
+      {editModeControls()}
       <main>
         {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">
           <button type="button" className="preview-reset-design" aria-label="Reset Design" title="Reset Design" onClick={resetDesign}><RotateCcw size={19} /></button>
           {selectedStyle && <div className="preview-view-toggle mobile-preview-view-toggle" role="group" aria-label="Preview view">
             {previewModes.map((view) => <button type="button" className={builderPreviewView === view ? 'active' : ''} aria-pressed={builderPreviewView === view} key={view} onClick={() => setBuilderPreviewView(view)}>{view}</button>)}
           </div>}
-          {editModeControls}
           {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
         </div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
@@ -2279,7 +2299,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
             {!testMode && <button className="mobile-quote-form-cta" type="button" onClick={() => { setPendingCustomerAction(null); setSubmitted(false); showScreen('customer-form') }}>Continue to Quote Form <ArrowRight size={17}/></button>}
             <button className="floating-visualizer-launch" type="button" onClick={() => requestCustomerAction('open-visualizer')} aria-label="Launch Door Visualizer"><Eye size={19} /><span>Launch Door Visualizer</span><ArrowRight size={16} /></button>
-            <div className="mobile-review-preview">{editModeControls}{renderConfiguredPreviewMode()}</div>
+            <div className="mobile-review-preview">{renderConfiguredPreviewMode()}</div>
             <section className="visualizer-promo-card visualizer-promo-card-mobile" aria-labelledby="mobile-visualizer-promo-title">
               <div className="visualizer-promo-graphic" aria-hidden="true"><img src="/assets/visualizer/view-on-your-home-tablet.webp" alt="" /></div>
               <div className="visualizer-promo-copy"><span className="visualizer-promo-eyebrow">Home Visualizer</span><h2 id="mobile-visualizer-promo-title">View on your home</h2><p>Upload a photo and see this door on your entryway.</p><button type="button" onClick={() => requestCustomerAction('open-visualizer')}>Launch Visualizer <ArrowRight size={16} /></button><small>It’s fast, easy, and helps you buy with confidence.</small></div>
@@ -2306,13 +2326,17 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
             <button className="post-submit-visualizer-button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Try the Door Visualizer <ArrowRight size={17} /></button>
           </div>}
 
-              {currentPage !== 'review' && <div className="builder-actions"><button className="back" aria-label="Previous configuration step" disabled={currentPageIndex === 0} onClick={() => goTo(currentPageIndex - 1)}><ArrowLeft size={17} /><span>Previous</span></button><button className="next" aria-label="Next configuration step" disabled={!editReturnTo && !isBuilderPageComplete(currentPage)} onClick={() => goTo(currentPageIndex + 1)}><span>Next</span><ArrowRight size={17} /></button></div>}
+              <div className="builder-actions" aria-label="Builder actions">
+                <div className="builder-feedback-host" data-feedback-trigger-host="navigation" />
+                {currentPage !== 'review' && <div className="builder-step-actions"><button className="back" aria-label="Previous configuration step" disabled={currentPageIndex === 0} onClick={() => goTo(currentPageIndex - 1)}><ArrowLeft size={17} /><span>Previous</span></button><button className="next" aria-label="Next configuration step" disabled={!editReturnTo && !isBuilderPageComplete(currentPage)} onClick={() => goTo(currentPageIndex + 1)}><span>Next</span><ArrowRight size={17} /></button></div>}
+                {editModeControls(true)}
+                {editReturnTo === 'summary' && <button type="button" className="summary-edit-return" onClick={doneEditing}>Back to summary</button>}
+                {editReturnTo === 'summary' && editReturnError && <p role="status">{editReturnError}</p>}
+              </div>
         </section>
 
         {!submitted && <aside className={currentPage === 'review' ? 'review-preview-panel' : undefined}>
-          <div className="beta-feedback-context-host beta-feedback-preview-host" data-feedback-trigger-host="preview" />
           <div className="aside-preview-area">
-            {editModeControls}
             {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
           </div>
           {currentPage === 'review' && <section className="visualizer-promo-card visualizer-promo-card-desktop" aria-labelledby="desktop-visualizer-promo-title">

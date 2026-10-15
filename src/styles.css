@@ -3818,3 +3818,78 @@ body:has(.customer-form-app),
 /* Mirror Savannah's complete product, without reversing its UI or applying a
    second per-layer interior transformation. Preserve responsive transform scale. */
 .door-frame.savannah-interior-mirrored{scale:-1 1}
+
+/* Persistent actions live outside the rendered entrance. Keep the two
+   responsive editing actions mutually exclusive, including for keyboards. */
+.configuration-edit-return.editing-bar{
+  position:sticky;top:0;left:auto;z-index:1041;flex:none;max-width:none;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  padding:10px max(clamp(18px,3vw,52px),env(safe-area-inset-right)) 10px max(clamp(18px,3vw,52px),env(safe-area-inset-left));background:var(--white);border-bottom:1px solid var(--border);
+}
+.editing-bar>strong{font-size:14px;font-weight:600;color:var(--black)}
+.configuration-edit-return.editing-bar button,
+.builder-actions .configuration-edit-return button{min-height:44px;padding:10px 20px;font-size:13px;border-radius:var(--radius-control)}
+.configuration-edit-return.editing-bar p{flex-basis:100%;max-width:none;margin:0;box-shadow:none}
+.configuration-edit-return.editing-phone-action{display:none}
+.app:not(.home-app) .builder-actions{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  height:auto;min-height:76px;margin:0;padding:14px 0;flex:none;
+}
+.builder-step-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-left:auto}
+.app:not(.home-app) .builder-actions .builder-feedback-trigger{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  width:auto;max-width:none;min-width:0;min-height:36px;height:auto;padding:6px 0;
+  background:transparent;color:#59666a;border:0;border-radius:3px;box-shadow:none;
+  font:inherit;font-size:12px;font-weight:500;line-height:1.3;
+}
+.app:not(.home-app) .builder-actions .builder-feedback-trigger:hover{color:var(--peacock);text-decoration:underline;transform:none}
+.builder-feedback-trigger:focus-visible{outline:2px solid var(--peacock);outline-offset:3px}
+.app:not(.home-app) .builder-actions .builder-feedback-trigger svg{width:15px;height:15px}
+.app:not(.home-app) .builder-actions .builder-feedback-trigger span{display:inline}
+.app.visualizer-editing .builder-actions .next,
+.app.visualizer-editing .builder-actions .back{background:var(--white);border:1px solid #b9c3c6;color:var(--black);box-shadow:none}
+.builder-actions .summary-edit-return{min-height:44px;padding:8px 16px;background:var(--black);color:var(--white);border:1px solid var(--black);border-radius:var(--radius-control)}
+.beta-feedback-backdrop{z-index:2000}
+@media(min-width:901px){
+  .app:not(.home-app) .builder-panel.review-step .builder-actions{position:sticky;bottom:-40px;background:var(--page)}
+}
+@media(max-width:900px){
+  .app:not(.home-app):not(.visualizer-app):not(.customer-form-app){--builder-actions-min-height:76px}
+  .app:not(.home-app) .builder-actions{
+    position:fixed;left:0;right:0;bottom:calc(70px + env(safe-area-inset-bottom));
+    z-index:1060;width:100%;max-width:none;height:auto;min-height:var(--builder-actions-min-height);
+    margin:0;padding:12px max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left));
+    background:var(--white);border-top:1px solid var(--border);box-shadow:0 -4px 12px #05040b0d;pointer-events:auto;
+  }
+  .app:not(.home-app):not(.visualizer-app):not(.customer-form-app)>main{
+    padding-bottom:calc(70px + var(--builder-actions-height,var(--builder-actions-min-height)) + 24px + env(safe-area-inset-bottom));
+  }
+  .app:not(.home-app) .builder-actions .builder-step-actions button{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    width:auto;max-width:none;height:48px;min-height:48px;padding:0 17px;
+    border-width:1px;border-radius:var(--radius-control);line-height:1.2;box-shadow:none;
+  }
+  .app:not(.home-app) .builder-step-actions button span{display:inline}
+  .app:not(.home-app) .builder-step-actions button svg{width:18px;height:18px}
+}
+/* Tablet portrait keeps the editing bar below the fixed progress navigation. */
+@media(min-width:601px) and (max-width:900px){
+  .app.visualizer-editing>.editing-bar{position:fixed;top:calc(var(--mobile-header-height) + var(--mobile-progress-height));left:0;right:0;min-height:64px}
+  .app.visualizer-editing>main{padding-top:calc(var(--mobile-header-height) + var(--mobile-progress-height) + var(--builder-editing-bar-height,64px))}
+}
+@media(max-width:600px){
+  .configuration-edit-return.editing-bar{display:none}
+  .app:not(.home-app):not(.visualizer-app):not(.customer-form-app){--builder-actions-min-height:112px}
+  .app.visualizer-editing:not(.home-app):not(.visualizer-app):not(.customer-form-app){--builder-actions-min-height:168px}
+  .app:not(.home-app) .builder-actions{flex-direction:column;align-items:stretch;gap:8px;padding-top:8px;padding-bottom:12px}
+  .builder-feedback-host{display:flex;justify-content:flex-start}
+  .app:not(.home-app) .builder-actions .builder-feedback-trigger{min-height:28px;padding:3px 0}
+  .builder-step-actions{justify-content:space-between;width:100%;margin:0}
+  .builder-step-actions>button{flex:1}
+  .configuration-edit-return.editing-phone-action{position:static;display:block;max-width:none;width:100%;margin:0}
+  .app:not(.home-app) .builder-actions .editing-phone-action button{
+    display:flex;align-items:center;justify-content:center;width:100%;max-width:none;min-height:48px;height:auto;
+    padding:10px 12px;background:#111;color:#fff;border:1px solid #111;border-radius:var(--radius-control);line-height:1.3;
+  }
+  .configuration-edit-return.editing-phone-action p{max-width:none;margin:8px 0 0;box-shadow:none}
+}
