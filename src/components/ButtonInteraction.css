@@ -1,0 +1,23 @@
+/* Shared button hover contract, including body-portaled builder dialogs.
+   Only compositing properties change: layout, text and colors stay untouched. */
+.builder-typography :is(.entrance-corner-handle,.frame-corner-handle,.sidelite-edge-handle,.cleanup-comparison-handle,.visualizer-comparison-handle){
+  --button-rest-transform:translate(-50%,-50%);
+}
+/* Low specificity: retain the component's existing focus ring where supplied. */
+:where(.builder-typography) :where(button,[role="button"],.header-dealer-cta a):focus-visible{
+  outline:2px solid var(--peacock);outline-offset:3px;
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  .builder-typography :is(button,[role="button"],.header-dealer-cta a){
+    transition-property:transform,box-shadow!important;
+    transition-duration:180ms!important;
+    transition-timing-function:ease!important;
+  }
+  .builder-typography :is(button,[role="button"],.header-dealer-cta a):not(:disabled):not([aria-disabled="true"]):hover{
+    transform:var(--button-rest-transform,translateY(0)) translateY(-2px)!important;
+    box-shadow:0 4px 10px #05040b1f!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .builder-typography :is(button,[role="button"],.header-dealer-cta a){transition:none!important}
+}

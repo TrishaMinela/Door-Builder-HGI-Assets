@@ -34,7 +34,6 @@
   color: var(--peacock);
 }
 .door-details-trigger svg { flex: none; }
-.door-details-trigger:hover { text-decoration: underline; text-underline-offset: 3px; }
 .door-image-check {
   position: absolute;
   top: 8px;
