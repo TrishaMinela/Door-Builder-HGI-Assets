@@ -28,19 +28,37 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
   const captureRootRef = useRef<HTMLDivElement>(null)
   const outputUrlRef = useRef<string | null>(null)
   const captureRunRef = useRef(0)
+  const failedAttemptRef = useRef('')
   const [retry, setRetry] = useState(0)
   const [capture, setCapture] = useState<CaptureState | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [readyConfigurationKey, setReadyConfigurationKey] = useState('')
+  const retryCapture = useCallback(() => {
+    setReadyConfigurationKey('')
+    setRetry(value => value + 1)
+  }, [])
   const updateRenderReadiness = useCallback((state: { ready: boolean; configurationKey: string }) => {
     setReadyConfigurationKey(state.ready ? state.configurationKey : '')
   }, [])
 
   useEffect(() => {
+    const attempt = `${captureKey}:${retry}`
+    if (failedAttemptRef.current === attempt) return
     const run = ++captureRunRef.current
     setLoading(true)
     setError('')
+    const fail = () => {
+      if (captureRunRef.current !== run) return
+      window.clearTimeout(timer)
+      failedAttemptRef.current = attempt
+      captureRunRef.current += 1
+      setCapture(null)
+      setLoading(false)
+      setError('We couldn’t prepare your configured door. Please retry rendering.')
+    }
+    // Covers both asset readiness and capture itself; neither may silently hang.
+    const timer = window.setTimeout(fail, 30_000)
 
     const captureCurrentDoor = async () => {
       try {
@@ -61,6 +79,7 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         let lastError: unknown = null
         for (let attempt = 1; attempt <= MAX_SOURCE_CAPTURE_ATTEMPTS; attempt += 1) {
           await waitForLayout()
+          if (captureRunRef.current !== run) return
           try {
             // AI always uses the complete configured jamb/profile reference.
             result = await captureFinalDoorPreview(root, {
@@ -83,16 +102,18 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
         setCapture({ configurationKey: captureKey, url, width: result.width, height: result.height })
       } catch (reason) {
         if (captureRunRef.current !== run) return
-        setCapture(null)
         if (import.meta.env.DEV) console.error('CONFIGURED_DOOR_SOURCE_DEBUG', { outcome: 'failed-after-retries', reason })
-        setError('We couldn’t prepare your configured door. Please retry rendering.')
+        fail()
       } finally {
-        if (captureRunRef.current === run) setLoading(false)
+        if (captureRunRef.current === run && (readyConfigurationKey === configurationKey || getCachedEntranceImage(captureKey))) {
+          window.clearTimeout(timer)
+          setLoading(false)
+        }
       }
     }
 
     void captureCurrentDoor()
-    return () => { captureRunRef.current += 1 }
+    return () => { window.clearTimeout(timer); captureRunRef.current += 1 }
   }, [captureKey, configurationKey, readyConfigurationKey, retry, frameMode])
 
   useEffect(() => () => {
@@ -106,9 +127,9 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
       height: capture?.height ?? 0,
       error,
       ready: Boolean(capture && capture.configurationKey === captureKey && !loading && !error),
-      retry: () => setRetry((value) => value + 1),
+      retry: retryCapture,
     })
-  }, [capture, captureKey, error, loading, onStateChange])
+  }, [capture, captureKey, error, loading, onStateChange, retryCapture])
 
   return <><section className="configured-door-source" aria-labelledby="configured-door-source-title" hidden>
     <div className="configured-door-source-heading">
@@ -123,8 +144,8 @@ export function ConfiguredDoorSource({ configurationKey, onStateChange, previewP
       {!loading && capture && <img src={capture.url} alt="Flattened transparent source of the configured exterior door" />}
       {!loading && error && <div className="configured-door-source-error" role="alert">
         <p>{error}</p>
-        <button type="button" onClick={() => setRetry((value) => value + 1)}><RefreshCw size={16} /> Retry</button>
+        <button type="button" onClick={retryCapture}><RefreshCw size={16} /> Retry</button>
       </div>}
     </div>
-  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview {...previewProps} renderConfigurationKey={configurationKey} onRenderReadinessChange={updateRenderReadiness} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} /></div></>
+  </section><div className="configured-door-capture-host visualizer-door-source" ref={captureRootRef} aria-hidden="true"><DoorPreview key={retry} {...previewProps} renderConfigurationKey={configurationKey} onRenderReadinessChange={updateRenderReadiness} view="Exterior" showViewToggle={false} compact={false} sharedComparisonCanvas={false} /></div></>
 }

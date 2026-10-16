@@ -9,6 +9,7 @@ import { CleanupComparisonSlider } from './CleanupComparisonSlider'
 import { AiVisualizationError, generateAiVisualization, type AiVisualizationFailure } from './aiVisualization'
 import { AiGenerationLoading, EntranceDetectionLoading, useAiGenerationLoading, useEntranceDetectionLoading } from './AiGenerationLoading'
 import { detectEntranceStructure } from './entranceDetection'
+import { boundedStage, validateVisualizationImage } from './visualizationLifecycle'
 import { detectionForManualStructure, evaluateEntranceCompatibility, MANUAL_ENTRANCE_OPTIONS, type EntranceDetection, type EntranceFitStrategy, type ExistingEntranceStructure } from './entranceFitStrategy'
 
 // Original uploads are decoded locally; only the budgeted normalized image is
@@ -79,17 +80,20 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
   const [manualEntranceStructure, setManualEntranceStructure] = useState<ExistingEntranceStructure>('unknown')
   const detectionAbortRef = useRef<AbortController | null>(null)
   const autoCompatibilityGenerationKeyRef = useRef('')
-  const [aiResult, setAiResult] = useState<{ image: string; key: string; strategy: EntranceFitStrategy } | null>(null)
-  const aiLoadingExperience = useAiGenerationLoading(aiGenerating, aiResult?.image ?? '', aiError?.userMessage ?? '')
+  const [aiResult, setAiResult] = useState<{ image: string; key: string; strategy: EntranceFitStrategy; attemptId: number; requestId: string } | null>(null)
   const entranceDetectionLoadingExperience = useEntranceDetectionLoading(entranceDetectionLoading, Boolean(entranceDetection), Boolean(entranceDetectionError))
   const aiRequestIdRef = useRef(0)
   const aiPendingRef = useRef(false)
   const aiAbortRef = useRef<AbortController | null>(null)
+  const photoChoiceRef = useRef(0)
+  const displayWaitRef = useRef<{ attemptId: number; resolve: () => void; reject: (error: Error) => void } | null>(null)
   const [photo, setPhoto] = useState<SelectedPhoto | null>(null)
+  const [photoPreparing, setPhotoPreparing] = useState(false)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const objectUrlRef = useRef<string | null>(null)
   const [showResult, setShowResult] = useState(false)
+  const aiLoadingExperience = useAiGenerationLoading(aiGenerating, showResult ? aiResult?.image ?? '' : '', aiError?.userMessage ?? '')
   const [downloadError, setDownloadError] = useState('')
   const [pdfDownloadPreparing, setPdfDownloadPreparing] = useState(false)
   const incompatibilityDialogRef = useRef<HTMLDivElement>(null)
@@ -138,6 +142,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
     setAiGenerating(false)
     setAiResult(null)
     setAiError(null)
+    displayWaitRef.current = null
   }
 
   const runEntranceDetection = useCallback(async () => {
@@ -151,7 +156,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
       if (controller.signal.aborted) return
       setEntranceDetection(detected)
     } catch (reason) {
-      if (reason instanceof Error && reason.name === 'AbortError') return
+      if (controller.signal.aborted || detectionAbortRef.current !== controller) return
       setEntranceDetectionError(reason instanceof AiVisualizationError ? reason : { userMessage: 'We could not detect the entrance. Please retry or identify the entrance structure below.', errorCode: 'ENTRANCE_DETECTION_FAILED', requestId: '' })
     } finally {
       if (detectionAbortRef.current === controller) { detectionAbortRef.current = null; setEntranceDetectionLoading(false) }
@@ -159,13 +164,13 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
   }, [photo, entranceDetectionLoading, doorConfiguration])
 
   useEffect(() => {
-    if (active && photo && !entranceDetection && !entranceDetectionError && !entranceDetectionLoading) void runEntranceDetection()
-  }, [active, photo, entranceDetection, entranceDetectionError, entranceDetectionLoading, runEntranceDetection])
+    if (active && photo && !photoPreparing && !entranceDetection && !entranceDetectionError && !entranceDetectionLoading) void runEntranceDetection()
+  }, [active, photo, photoPreparing, entranceDetection, entranceDetectionError, entranceDetectionLoading, runEntranceDetection])
 
   useEffect(() => () => detectionAbortRef.current?.abort(), [])
 
   const runAiVisualization = async (strategyOverride?: EntranceFitStrategy) => {
-    if (!active || entranceCompatibility?.status !== 'good-fit' || !photo || !doorConfiguration || !doorSource.ready || !doorSource.url || aiPendingRef.current) return
+    if (!active || photoPreparing || entranceCompatibility?.status !== 'good-fit' || !photo || !doorConfiguration || !doorSource.ready || !doorSource.url || aiPendingRef.current) return
     const activeStrategy = strategyOverride ?? 'use-selected-product'
     const requestKey = JSON.stringify({ configurationKey, corners: 'automatic', fitStrategy: activeStrategy, photo: `${photo.file.name}:${photo.file.size}:${photo.file.lastModified}` })
     const requestId = ++aiRequestIdRef.current
@@ -174,8 +179,21 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
     aiAbortRef.current = controller
     setAiGenerating(true)
     setAiError(null)
+    setAiResult(null)
+    setShowResult(false)
+    let responseRequestId = ''
+    // Also bounds normalization, response-body delivery and any browser stalls.
+    const deadline = window.setTimeout(() => {
+      if (requestId !== aiRequestIdRef.current) return
+      aiRequestIdRef.current += 1
+      controller.abort()
+      aiPendingRef.current = false
+      setAiGenerating(false)
+      setAiResult(null)
+      setAiError(new AiVisualizationError('The visualization took too long. Please try again.', 'VISUALIZATION_TIMEOUT', responseRequestId))
+    }, 190_000)
     try {
-      const image = await generateAiVisualization({
+      const result = await generateAiVisualization({
         photoUrl: photo.objectUrl,
         productReferenceUrl: doorSource.url,
         corners: undefined,
@@ -186,25 +204,56 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
         fitStrategy: activeStrategy,
         uploadMetadata: { mimeType: photo.originalMimeType, format: photo.originalFormat, byteSize: photo.originalByteSize },
         signal: controller.signal,
+        onResponseRequestId: id => { if (requestId === aiRequestIdRef.current) responseRequestId = id },
       })
+      responseRequestId = result.requestId
+      await validateVisualizationImage(photo.objectUrl, controller.signal, new AiVisualizationError('Your photo could not be loaded for comparison. Please retry or replace the photo.', 'ORIGINAL_IMAGE_FAILED', responseRequestId))
       if (requestId === aiRequestIdRef.current) {
-        setAiResult({ image, key: requestKey, strategy: activeStrategy })
+        // Wait for the real comparison elements too, not just a preloaded Image.
+        const displayed = new Promise<void>((resolve, reject) => { displayWaitRef.current = { attemptId: requestId, resolve, reject } })
+        setAiResult({ image: result.image, key: requestKey, strategy: activeStrategy, attemptId: requestId, requestId: responseRequestId })
+        await boundedStage(displayed, controller.signal, 20_000, new AiVisualizationError('The comparison images could not be displayed. Please try again.', 'COMPARISON_IMAGE_TIMEOUT', responseRequestId))
+        if (requestId !== aiRequestIdRef.current) return
         setShowResult(true)
       }
     } catch (reason) {
-      if (requestId === aiRequestIdRef.current) setAiError(reason instanceof AiVisualizationError ? reason : { userMessage: reason instanceof Error ? reason.message : 'The AI visualization could not be created. Please try again.', errorCode: 'UNKNOWN_ERROR', requestId: '' })
+      if (requestId === aiRequestIdRef.current) {
+        controller.abort()
+        setAiResult(null)
+        setShowResult(false)
+        setAiError(reason instanceof AiVisualizationError ? reason : { userMessage: reason instanceof Error ? reason.message : 'The AI visualization could not be created. Please try again.', errorCode: 'UNKNOWN_ERROR', requestId: responseRequestId })
+      }
     } finally {
+      window.clearTimeout(deadline)
+      if (displayWaitRef.current?.attemptId === requestId) displayWaitRef.current = null
       if (requestId === aiRequestIdRef.current) { aiPendingRef.current = false; aiAbortRef.current = null; setAiGenerating(false) }
     }
   }
 
   useEffect(() => {
-    if (!active || entranceCompatibility?.status !== 'good-fit' || !photo || !entranceDetection || !doorSource.ready || aiGenerating || aiResult || aiError) return
+    if (!active || photoPreparing || entranceCompatibility?.status !== 'good-fit' || !photo || !entranceDetection || !doorSource.ready || !doorSource.url || aiPendingRef.current || aiGenerating || aiResult || aiError) return
     const key = JSON.stringify({ photo: `${photo.file.name}:${photo.file.size}:${photo.file.lastModified}`, configurationKey, detection: entranceDetection })
     if (autoCompatibilityGenerationKeyRef.current === key) return
     autoCompatibilityGenerationKeyRef.current = key
     void runAiVisualization('use-selected-product')
-  }, [active, entranceCompatibility?.status, photo, entranceDetection, doorSource.ready, aiGenerating, aiResult, aiError, configurationKey])
+  }, [active, photoPreparing, entranceCompatibility?.status, photo, entranceDetection, doorSource.ready, doorSource.url, aiGenerating, aiResult, aiError, configurationKey])
+
+  const comparisonReady = useCallback(() => {
+    if (aiResult?.attemptId === aiRequestIdRef.current && displayWaitRef.current?.attemptId === aiResult.attemptId) displayWaitRef.current.resolve()
+  }, [aiResult])
+  const comparisonFailed = useCallback(() => {
+    if (!aiResult || aiResult.attemptId !== aiRequestIdRef.current) return
+    const failure = new AiVisualizationError('The comparison image could not be loaded. Please try again.', 'COMPARISON_IMAGE_FAILED', aiResult.requestId)
+    if (displayWaitRef.current?.attemptId === aiResult.attemptId) displayWaitRef.current.reject(failure)
+    else { setAiResult(null); setShowResult(false); setAiError(failure) }
+  }, [aiResult])
+
+  const retryReference = () => {
+    invalidateAiResult()
+    setShowResult(false)
+    autoCompatibilityGenerationKeyRef.current = ''
+    doorSource.retry?.()
+  }
 
   const selectManualEntranceStructure = (structure: ExistingEntranceStructure) => {
     setManualEntranceStructure(structure)
@@ -241,7 +290,15 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
   }, [configurationKey])
   useEffect(() => {
     if (!active) {
-      aiRequestIdRef.current += 1
+      photoChoiceRef.current += 1
+      setPhotoPreparing(false)
+      // Keep completed results when merely leaving/re-entering. An interrupted
+      // candidate must not masquerade as a retained completed visualization.
+      if (aiPendingRef.current) {
+        aiRequestIdRef.current += 1
+        setAiResult(null); setShowResult(false); setAiError(null)
+        displayWaitRef.current = null
+      }
       aiAbortRef.current?.abort(); aiPendingRef.current = false; setAiGenerating(false)
       detectionAbortRef.current?.abort(); detectionAbortRef.current = null; setEntranceDetectionLoading(false)
       setDoorSource({ url: '', width: 0, height: 0, error: '', ready: false })
@@ -249,6 +306,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
     }
   }, [active])
   useEffect(() => () => {
+    photoChoiceRef.current += 1
     aiRequestIdRef.current += 1
     aiAbortRef.current?.abort()
     detectionAbortRef.current?.abort()
@@ -263,16 +321,25 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
     }
 
     setError('')
+    const choice = ++photoChoiceRef.current
+    setPhotoPreparing(true)
+    invalidateAiResult()
+    setShowResult(false)
+    detectionAbortRef.current?.abort()
     let displayFile: File
     let originalFormat = 'unknown'
     try {
       originalFormat = await detectedImageFormat(file)
       displayFile = await normalizePhoto(file, originalFormat)
     } catch (reason) {
+      if (choice !== photoChoiceRef.current) return
+      setPhotoPreparing(false)
       console.error('[home-visualizer:photo-conversion]', reason)
       setError('That HEIC photo could not be opened. Please try another photo.')
       return
     }
+    if (choice !== photoChoiceRef.current) return
+    setPhotoPreparing(false)
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
     const objectUrl = URL.createObjectURL(displayFile)
     objectUrlRef.current = objectUrl
@@ -296,6 +363,8 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
   }
 
   const removePhoto = () => {
+    photoChoiceRef.current += 1
+    setPhotoPreparing(false)
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
     objectUrlRef.current = null
     setError('')
@@ -356,6 +425,9 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
             </div>
           </> : <>
 {!showResult && <>{editToolbar}<div className="ai-photo-placement-area"><div className="visualizer-editor ai-automatic-photo"><img src={photo.objectUrl} alt={'Uploaded entrance photo: ' + photo.file.name}/></div><EntranceDetectionLoading state={entranceDetectionLoadingExperience}/><AiGenerationLoading state={aiLoadingExperience}/></div>
+              {entranceCompatibility?.status === 'good-fit' && !aiGenerating && !aiResult && !doorSource.ready && <div className="visualizer-source-loading" role={doorSource.error ? 'alert' : 'status'}>
+                {doorSource.error ? <><p>{doorSource.error}</p><button type="button" onClick={retryReference}><RefreshCw size={16}/> Retry configured door</button></> : <p>Preparing your configured exterior door…</p>}
+              </div>}
               {!entranceDetectionLoading&&!entranceCompatibility&&<section className="ai-fit-strategy" aria-labelledby="ai-fit-strategy-title">
                 <div className="ai-fit-strategy-heading"><div><span>Entrance compatibility</span><h3 id="ai-fit-strategy-title">Help us identify the opening</h3></div></div>
                 {entranceDetection&&!entranceCompatibility&&<p className="ai-detection-summary">We couldn't confidently identify the entrance structure. Please identify it below or retry the analysis.</p>}
@@ -364,11 +436,10 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
               </section>}
               {aiError&&<div className="visualizer-error ai-visualizer-error" role="alert"><div><p>{aiError.userMessage}</p>{aiError.requestId&&<small title={aiError.requestId}>Reference: {aiError.requestId.slice(0,8)}</small>}{import.meta.env.DEV&&<small>Error code: {aiError.errorCode}</small>}</div><button type="button" disabled={aiGenerating} onClick={()=>void runAiVisualization()}>Try Again</button></div>}
 </>}
-            {showResult&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title">
+            {aiResult&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title" hidden={!showResult}>
               <div className="visualizer-final-heading"><h2 id="visualizer-final-title">Your new entrance</h2></div>
               {editToolbar}
-              {aiResult?<div className="ai-photo-result-area"><CleanupComparisonSlider originalSrc={photo.objectUrl} cleanupSrc={aiResult.image} imageAlt={'AI visualization: ' + photo.file.name} originalLabel="Original" resultLabel="AI Result" ariaLabel="Original photo and AI visualization comparison"/><AiGenerationLoading state={aiLoadingExperience}/></div>:<div className="visualizer-source-loading" role="status"><span>Preparing your best-fit AI visualization.</span></div>}
-              {aiError&&<div className="visualizer-error ai-visualizer-error" role="alert"><div><p>{aiError.userMessage}</p>{aiError.requestId&&<small>Reference: {aiError.requestId.slice(0,8)}</small>}</div><button type="button" disabled={aiGenerating} onClick={()=>void runAiVisualization('use-selected-product')}>Try Again</button></div>}
+              <div className="ai-photo-result-area"><CleanupComparisonSlider key={aiResult.attemptId} originalSrc={photo.objectUrl} cleanupSrc={aiResult.image} imageAlt={'AI visualization: ' + photo.file.name} originalLabel="Original" resultLabel="AI Result" ariaLabel="Original photo and AI visualization comparison" onReady={comparisonReady} onError={comparisonFailed} visible={showResult}/><AiGenerationLoading state={aiLoadingExperience}/></div>
               <div className="visualizer-final-actions"><button type="button" className="visualizer-download-button" aria-label="Download completed home visualization photo" disabled={!aiResult} onClick={downloadAiVisualization}><Download size={18}/>Download Photo</button>{onDownloadPdf&&<button type="button" className="visualizer-download-button" aria-label="Download configured door PDF" disabled={pdfDownloadPreparing} onClick={downloadConfigurationPdf}><FileText size={18}/>{pdfDownloadPreparing?'Preparing PDF…':'Download Configuration PDF'}</button>}<button type="button" className="visualizer-review-button" aria-label="Return to the previous visualizer step" onClick={returnFromFinal}>Return to Previous Step</button></div>
               <span className="visualizer-download-status" role="status" aria-live="polite">{aiGenerating?'Creating your AI visualization. This may take a moment.':pdfDownloadPreparing?'Preparing your configuration PDF.':''}</span>{downloadError&&<p className="visualizer-error" role="alert">{downloadError}</p>}
             </section>}
@@ -383,7 +454,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
           </div>
         </section>
 
-        <ConfiguredDoorSource configurationKey={configurationKey} previewProps={configuredDoorPreview} onStateChange={updateDoorSource} />
+        <ConfiguredDoorSource key={configurationKey} configurationKey={configurationKey} previewProps={configuredDoorPreview} onStateChange={updateDoorSource} />
       </div>
       {showIncompatibilityModal&&createPortal(<div className="builder-typography ai-incompatibility-backdrop"><div ref={incompatibilityDialogRef} className="ai-incompatibility-modal" role="dialog" aria-modal="true" aria-labelledby="ai-incompatibility-title" aria-describedby="ai-incompatibility-description"><h2 id="ai-incompatibility-title">This door configuration doesn’t match your entrance</h2><div id="ai-incompatibility-description"><p>{entranceCompatibility?.detectedSummary} {entranceCompatibility?.selectedSummary}</p><p>Choose a different photo or review your door configuration to continue.</p><p>If this seems wrong, the photo may be too far away, poorly lit, or unclear for accurate AI detection.</p></div><div className="ai-incompatibility-actions"><button type="button" className="ai-incompatibility-change-photo" onClick={removePhoto}>Change Photo</button><button type="button" className="ai-incompatibility-review" onClick={onReturnToReview??onBack}>Review Configuration</button></div></div></div>,document.body)}
     </main>

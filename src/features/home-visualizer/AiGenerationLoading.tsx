@@ -39,9 +39,15 @@ function useIllustrativeProgress(active: boolean, succeeded: boolean, failed: bo
       }, 150)
       return () => clearInterval(timer)
     }
+    // A displayed image can fail later, or be invalidated during the completion
+    // animation. Never leave the previous attempt's ready message behind.
+    if (failed || !succeeded) {
+      wasActive.current = false
+      setProgress(0); setPhase('idle')
+      return
+    }
     if (!wasActive.current) return
     wasActive.current = false
-    if (failed || !succeeded) { setProgress(0); setPhase('idle'); return }
     setProgress(100); setPhase('completing')
     const fadeTimer = window.setTimeout(() => setPhase('fading'), 400)
     const removeTimer = window.setTimeout(() => { setProgress(0); setPhase('idle') }, 700)

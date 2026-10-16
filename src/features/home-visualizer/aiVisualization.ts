@@ -2,6 +2,7 @@ import type { DoorConfiguration, Finish } from '../../types'
 import type { EntranceCorners } from './EntranceSelector'
 import { AI_MAX_PHOTO_BYTES, AI_MAX_REQUEST_BYTES, aiWorkingSize } from './aiImagePreparation'
 import type { EntranceDetection, EntranceFitStrategy } from './entranceFitStrategy'
+import { boundedStage, validateVisualizationImage } from './visualizationLifecycle'
 
 export type AiVisualizationFailure = { userMessage: string; errorCode: string; requestId: string }
 
@@ -24,10 +25,10 @@ export function prepareAiHousePhoto(source: string, maxEdge = 1536, quality = .9
     if (import.meta.env.DEV) console.debug('[ai-visualizer:normalization-cache]', { cache_hit: true, max_edge: maxEdge, quality })
     return cached
   }
-  const pending = normalizeAiHousePhoto(source, maxEdge, quality)
+  const pending = boundedStage(normalizeAiHousePhoto(source, maxEdge, quality), undefined, 30_000, new AiVisualizationError('Preparing the photo took too long. Please try again.', 'PHOTO_PREPARATION_TIMEOUT'))
   preparedPhotos.set(key, pending)
   while (preparedPhotos.size > 6) preparedPhotos.delete(preparedPhotos.keys().next().value!)
-  void pending.catch(() => preparedPhotos.delete(key))
+  void pending.catch(() => { if (preparedPhotos.get(key) === pending) preparedPhotos.delete(key) })
   return pending
 }
 
@@ -98,14 +99,15 @@ export async function generateAiVisualization(input: {
   fitStrategy: EntranceFitStrategy
   uploadMetadata?: { mimeType: string; format: string; byteSize: number }
   signal?: AbortSignal
+  onResponseRequestId?: (requestId: string) => void
 }) {
   // The completed configured render is the authoritative product image. The
   // server still validates the configuration and normalizes this image before
   // forwarding it; browser-provided catalog paths remain ignored.
-  const [prepared, productReference] = await Promise.all([
+  const [prepared, productReference] = await boundedStage(Promise.all([
     prepareAiHousePhoto(input.photoUrl),
     prepareAiConfiguredProductReference(input.productReferenceUrl),
-  ])
+  ]), input.signal, 30_000, new AiVisualizationError('Preparing the images took too long. Please try again.', 'REFERENCE_PREPARATION_TIMEOUT'))
   const bodyFor = (photo: string) => JSON.stringify({ photo, productReference, corners: input.corners, configuration: input.configuration,
     entranceDetection: input.entranceDetection, fitStrategy: input.fitStrategy,
     uploadMetadata: { ...input.uploadMetadata, width: prepared.naturalWidth, height: prepared.naturalHeight },
@@ -135,10 +137,12 @@ export async function generateAiVisualization(input: {
   let result: { image?: string; error_code?: string; user_message?: string; request_id?: string } | null = null
   try { result = JSON.parse(rawBody) } catch { result = null }
   const responseRequestId = result?.request_id || response.headers.get('x-request-id') || ''
+  input.onResponseRequestId?.(responseRequestId)
   if (!response.ok) {
     if (result?.user_message && result.error_code) throw new AiVisualizationError(result.user_message, result.error_code, responseRequestId)
     throw new AiVisualizationError('The AI API route did not return a valid response. Run the app with the Vercel development runtime and try again.', 'API_ROUTE_UNAVAILABLE', responseRequestId)
   }
   if (!result?.image?.startsWith('data:image/jpeg;base64,')) throw new AiVisualizationError(result?.user_message || 'The AI service completed without returning a usable image.', result?.error_code || 'NO_GENERATED_IMAGE', responseRequestId)
-  return result.image
+  await validateVisualizationImage(result.image, input.signal, new AiVisualizationError('The visualization image could not be loaded. Please try again.', 'RESULT_IMAGE_FAILED', responseRequestId))
+  return { image: result.image, requestId: responseRequestId }
 }

@@ -9,15 +9,22 @@ type Props = {
   originalLabel?: string
   resultLabel?: string
   ariaLabel?: string
+  onReady?: () => void
+  onError?: () => void
+  visible?: boolean
 }
 
-export function CleanupComparisonSlider({ originalSrc, cleanupSrc, imageAlt, originalLabel = 'Original', resultLabel = 'Cleanup Preview', ariaLabel = 'Cleanup before and after comparison' }: Props) {
+export function CleanupComparisonSlider({ originalSrc, cleanupSrc, imageAlt, originalLabel = 'Original', resultLabel = 'Cleanup Preview', ariaLabel = 'Cleanup before and after comparison', onReady, onError, visible = true }: Props) {
   const editorRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const naturalSizeRef = useRef({ width: 0, height: 0 })
   const activePointerRef = useRef<number | null>(null)
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 })
   const [position, setPosition] = useState(50)
+  const [loaded, setLoaded] = useState({ original: '', result: '' })
+  useEffect(() => {
+    if (loaded.original === originalSrc && loaded.result === cleanupSrc) onReady?.()
+  }, [loaded, originalSrc, cleanupSrc, onReady])
   const { zoom, pan, onWheel, zoomIn, zoomOut, resetZoom } = usePhotoZoom(editorRef, stageSize)
 
   const updateStageSize = () => {
@@ -28,6 +35,12 @@ export function CleanupComparisonSlider({ originalSrc, cleanupSrc, imageAlt, ori
     const scale = Math.min(bounds.width / natural.width, bounds.height / natural.height)
     setStageSize({ width: natural.width * scale, height: natural.height * scale })
   }
+
+  useEffect(() => {
+    if (!visible) return
+    const frame = requestAnimationFrame(updateStageSize)
+    return () => cancelAnimationFrame(frame)
+  }, [visible])
 
   useEffect(() => {
     const editor = editorRef.current
@@ -77,8 +90,8 @@ export function CleanupComparisonSlider({ originalSrc, cleanupSrc, imageAlt, ori
 
   return <div ref={editorRef} className="visualizer-editor cleanup-comparison-editor" aria-label={ariaLabel}>
     <div ref={stageRef} className="entrance-image-stage cleanup-comparison-stage" style={stageSize.width ? { width: stageSize.width, height: stageSize.height, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` } : undefined} onWheel={onWheel}>
-      <img className="cleanup-comparison-original" src={originalSrc} alt={imageAlt} draggable={false} onLoad={(event) => { naturalSizeRef.current = { width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }; updateStageSize() }} />
-      <img className="cleanup-comparison-proposed" src={cleanupSrc} alt="" draggable={false} style={{ clipPath: `inset(0 0 0 ${position}%)` }} />
+      <img className="cleanup-comparison-original" src={originalSrc} alt={imageAlt} draggable={false} onError={onError} onLoad={(event) => { naturalSizeRef.current = { width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight }; updateStageSize(); setLoaded(value => ({ ...value, original: originalSrc })) }} />
+      <img className="cleanup-comparison-proposed" src={cleanupSrc} alt="" draggable={false} onError={onError} onLoad={() => setLoaded(value => ({ ...value, result: cleanupSrc }))} style={{ clipPath: `inset(0 0 0 ${position}%)` }} />
       <span className="cleanup-comparison-label cleanup-comparison-label-original">{originalLabel}</span>
       <span className="cleanup-comparison-label cleanup-comparison-label-proposed">{resultLabel}</span>
       <span className="cleanup-comparison-divider" aria-hidden="true" style={{ left: `${position}%` }} />
