@@ -46,6 +46,9 @@ export function SiteFooter({ currentStep, configuration }: Props) {
         <a href="https://homeguardindustries.com" target="_blank" rel="noreferrer" aria-label="Visit the Home Guard Industries website"><Globe size={17}/><span>homeguardindustries.com</span></a>
       </div>
     </div>
-    <div className="site-footer-feedback"><BetaFeedback currentStep={currentStep} configuration={configuration}/></div>
+    <div className="site-footer-feedback">
+      <BetaFeedback currentStep={currentStep} configuration={configuration}/>
+      <small>Built with <span aria-hidden="true">♥</span> by <a href="https://schoolradius.co/" target="_blank" rel="noreferrer">School Radius</a></small>
+    </div>
   </footer>
 }

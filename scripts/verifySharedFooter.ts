@@ -21,6 +21,12 @@ async function verifyFooter(page: Page, label: string) {
   assert.equal(await footer.evaluate(el=>getComputedStyle(el).position),'relative')
   for(const span of await footer.locator('.site-footer-contact a span').all()) assert.equal(await span.isVisible(),true)
   assert.equal(await footer.locator('.site-footer-logo img').getAttribute('src'),'/assets/branding/hgi-logo-white.png')
+  const credit=footer.locator('.site-footer-feedback small')
+  await credit.getByRole('link',{name:'School Radius',exact:true}).waitFor()
+  assert.equal(await credit.getByRole('link',{name:'School Radius',exact:true}).getAttribute('href'),'https://schoolradius.co/')
+  const feedbackBox=await page.getByRole('button',{name:'Feedback',exact:true}).boundingBox()
+  const creditBox=await credit.boundingBox()
+  assert.ok(feedbackBox&&creditBox&&creditBox.y>=feedbackBox.y+feedbackBox.height,`${label}: School Radius credit sits beneath Feedback`)
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false)
   const geometry=await page.evaluate(()=>{
     const footer=document.querySelector('.shared-site-footer')!.getBoundingClientRect()

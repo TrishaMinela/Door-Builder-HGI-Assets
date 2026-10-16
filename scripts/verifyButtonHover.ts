@@ -32,6 +32,17 @@ async function check(page:Page,button:Locator,label:string,animated=true){
   }
   console.log(`PASS ${label}`)
 }
+async function checkSegmentedView(page:Page,button:Locator,label:string,selected=false){
+  await button.scrollIntoViewIfNeeded();await page.mouse.move(1,1);await page.waitForTimeout(220)
+  const before=await snapshot(button)
+  await button.hover();await page.waitForTimeout(220)
+  const after=await snapshot(button)
+  assert.deepEqual(after.matrix,before.matrix,`${label}: stays stationary`)
+  assert.equal(after.shadow,before.shadow,`${label}: no hover shadow`)
+  if(selected)assert.equal(after.unchanged.backgroundColor,before.unchanged.backgroundColor,`${label}: selected teal remains unchanged`)
+  else assert.notEqual(after.unchanged.backgroundColor,before.unchanged.backgroundColor,`${label}: subtle hover highlight`)
+  console.log(`PASS ${label}`)
+}
 try{
   await new Promise<void>((resolve,reject)=>{server.stdout.on('data',chunk=>{if(String(chunk).includes('127.0.0.1:5201'))resolve()});server.once('error',reject);server.once('exit',code=>reject(new Error(`Vite exited ${code}`)));setTimeout(()=>reject(new Error('Vite startup timeout')),10000).unref()})
   browser=await chromium.launch({channel:'chrome',headless:true})
@@ -53,7 +64,9 @@ try{
   await check(page,page.getByRole('button',{name:'Next configuration step'}),'Next')
   await check(page,page.locator('.door-configuration-card').first(),'Selected configuration card')
   await check(page,page.locator('.preview-toolbar-reset'),'Reset icon stays unrotated')
-  await check(page,page.locator('.preview-toolbar .preview-view-toggle button').first(),'Selected preview view')
+  const viewToggle=page.locator('.preview-toolbar .preview-view-toggle')
+  await checkSegmentedView(page,viewToggle.locator('button.active'),'Selected preview view',true)
+  await checkSegmentedView(page,viewToggle.locator('button:not(.active)').first(),'Unselected preview view')
   // Existing positional transforms must survive the shared lift; exercise the
   // same CSS classes used by interactive comparison/position handles.
   await page.evaluate(()=>{

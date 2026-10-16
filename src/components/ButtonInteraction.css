@@ -8,14 +8,25 @@
   outline:2px solid var(--peacock);outline-offset:3px;
 }
 @media(hover:hover) and (prefers-reduced-motion:no-preference){
-  .builder-typography :is(button,[role="button"],.header-dealer-cta a){
+  .builder-typography :is(button,[role="button"],.header-dealer-cta a):not(.preview-view-toggle button):not(.mobile-preview-view-toggle button){
     transition-property:transform,box-shadow!important;
     transition-duration:180ms!important;
     transition-timing-function:ease!important;
   }
-  .builder-typography :is(button,[role="button"],.header-dealer-cta a):not(:disabled):not([aria-disabled="true"]):hover{
+  .builder-typography :is(button,[role="button"],.header-dealer-cta a):not(.preview-view-toggle button):not(.mobile-preview-view-toggle button):not(:disabled):not([aria-disabled="true"]):hover{
     transform:var(--button-rest-transform,translateY(0)) translateY(-2px)!important;
     box-shadow:0 4px 10px #05040b1f!important;
+  }
+  .builder-typography :is(.preview-view-toggle,.mobile-preview-view-toggle) button{
+    transition-property:background-color,color,border-color!important;
+  }
+  .builder-typography :is(.preview-view-toggle,.mobile-preview-view-toggle) button:not(:disabled):hover{
+    transform:none!important;
+    box-shadow:none!important;
+    background:#edf4f5!important;
+  }
+  .builder-typography :is(.preview-view-toggle,.mobile-preview-view-toggle) button.active:not(:disabled):hover{
+    background:var(--peacock)!important;
   }
 }
 @media(prefers-reduced-motion:reduce){
