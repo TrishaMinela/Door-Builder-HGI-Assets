@@ -54,6 +54,22 @@ Configured captures still include their fully rendered finishes/grids as before.
 
 ## Verification and maintenance
 
+Validate the entire configuration against Vercel's current official
+JSON Schema before pushing (temporary test tools only; no package.json changes):
+
+```sh
+npm exec --yes --package=ajv@8.17.1 --package=ajv-formats@3.0.1 -- node scripts/verifyVercelConfiguration.mjs
+```
+
+This downloads the actual schema, validates `vercel.json`, and proves that both
+an array and a 257-character inclusion string are rejected. The published schema
+labels itself draft-04 while using modern numeric `exclusiveMinimum`; the test
+removes only that obsolete dialect annotation so Ajv can compile every actual
+constraint unchanged. The configuration's
+`$schema` also enables editor validation. The supported packaging approach is
+static tracing of the manifest's exact reads, not an includeFiles list or a copy
+of the product library. Do not replace it with a broad public glob.
+
 Run:
 
 ```sh
@@ -135,3 +151,23 @@ must be reported separately after the pushed deployment reaches Ready.
 
 Unrelated pending Montserrat/font changes remain local and must not be included
 in this performance commit.
+
+## Pre-push schema/package gate (2026-10-16)
+
+Before any new push, production was confirmed as Ready deployment
+`dpl_Ew6BK5DxKevfcTHKNuZWAVsofQKH` / `fa0ca09`. The live home page and
+Start Building navigation worked, the site returned HTTP 200, and both AI
+functions returned the expected HTTP 405 for GET without invoking AI.
+
+The full official schema validation passed with schema SHA-256
+`644589780d0d1c3a9a8dd603c4afa8a21dc527d65f2569781124e1e7f5ebe9a1`.
+Negative checks rejected both the array and over-256-character string.
+The supported packaging approach remains exact literal manifest tracing with
+`includeFiles` omitted; no staging copies or broad public inclusions are needed.
+
+The actual local Vercel Node builder was rerun before pushing: generation had
+exactly 627 assets, detection had none, all packaged reference groups decoded,
+and all 79,515 compiled resolver cases matched. Package sizes remained the macOS
+figures above. Configuration integrity, targeted mocked generation/detection
+regressions, explicit ES2022 server TypeScript, the frontend production build
+and diff checks passed again. Existing testing limitations above still apply.
