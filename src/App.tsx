@@ -12,6 +12,7 @@ import { validOptionId } from './utils/optionSelection'
 import { builderGroupForPage, builderGroupStart, type BuilderGroup } from './utils/builderNavigation'
 import { clearGlassOption, retainGlassSelection } from './utils/retainGlassSelection'
 import { useInventoryShadow } from './inventory-shadow/useInventoryShadow'
+import { usePublishedCatalogShadow } from './published-catalog/usePublishedCatalogShadow'
 import { useProductCardLayout } from './utils/useProductCardLayout'
 import { safeDynamicImport } from './utils/staleChunkRecovery'
 import { doorStyles, finishes, glassOptions } from './data/options'
@@ -2042,6 +2043,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     }
   }, [screen, currentPage, editReturnTo])
   useInventoryShadow({styleId,lineId:doorLineId,grain:selectedGrain,finishType:selectedFinishType,glassId,sideliteStyle:sideliteStyleId,hardwareId},screen==='builder')
+  usePublishedCatalogShadow(screen === 'builder')
 
   const heroGenerationParam = new URLSearchParams(window.location.search).get('generateHeroDoor')
   if (heroGenerationParam !== null) {
