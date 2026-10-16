@@ -9,7 +9,7 @@ import { resolveGlassMaskAsset } from '../data/glassMaskAssets'
 import { glassFrameMaskForOpening, type GlassFrameMaskDefinition, type GlassFrameShape } from '../data/glassFrameMasks'
 import { DoorFrame } from './preview/DoorFrame'
 import { resolveSidelitePosition } from '../data/sideliteConfigurations'
-import { doorHandingSides } from '../data/doorHanding'
+import { doorHandingSides, oppositeDoorSide } from '../data/doorHanding'
 import { doorStyleDisplayName, glassDisplayName } from '../data/productDisplayNames'
 import { renderSslRelief } from '../utils/sideliteRelief'
 import { FINISH_RENDERING, darkFinishStrength, renderDarkFinishSurface } from '../utils/finishDetail'
@@ -533,6 +533,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   // Keep geometry, frame profiles and sidelite positions in that coordinate
   // system, but use the actual viewpoint's authored hardware artwork.
   const renderView = doorConfigurationType === 'savannah' ? 'Exterior' : previewView
+  const frenchInterior = doorConfigurationType === 'french' && previewView === 'Interior'
   const setPreviewView = onViewChange ?? setInternalPreviewView
   const hardwareSideExterior = doorHandingSides(doorSwing?.id ?? 'LHI').lockSide
   const hardwareSideInterior = doorHandingSides(doorSwing?.id ?? 'LHI', 'Interior').lockSide
@@ -1043,16 +1044,17 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   return (
     <div ref={previewSceneRef} className={`preview-scene ${compact ? 'compact' : ''}`} data-render-configuration-key={renderConfigurationKey} data-render-semantically-ready={semanticLayersReady ? 'true' : 'false'} aria-busy={previewAssetsLoading} aria-label={`Preview of ${finish.name} ${doorStyleDisplayName(style)} door${style.hasGlass && glass ? ` with ${glassDisplayName(glass.name)} glass` : ''}`}>
       <div className="preview-glow" />
-      <DoorFrame doorConfigurationType={doorConfigurationType} view={renderView} className={doorConfigurationType === 'savannah' && previewView === 'Interior' ? 'savannah-interior-mirrored' : ''} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={renderedSideliteGlass} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGlassIsGrid={sideliteGlassIsGrid} sideliteGridIsPrairie={sideliteGridIsPrairie} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteGridFinishColor={applyFinish ? finishColor : '#d9d9d9'} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteGlassOpeningStyle={sideliteGlassOpeningStyle} sideliteGlassFrameMaskStyle={sideliteGlassFrameMaskStyle} sideliteGlassFrameTintStyle={sideliteGlassFrameTintStyle}>
+      <DoorFrame doorConfigurationType={doorConfigurationType} view={renderView} className={doorConfigurationType === 'savannah' && previewView === 'Interior' ? 'savannah-interior-mirrored' : frenchInterior ? 'french-interior' : ''} sharedComparisonCanvas={sharedComparisonCanvas} showFrame={!compact && placementMode !== 'opening-only'} openingOnly={placementMode === 'opening-only'} finishColor={jambFinish?.color ?? (applyFinish ? finishColor : '#d9d9d9')} finishType={jambFinish?.finishType ?? finish.finishType} finishSurface={jambType} sidelites={frameSidelites} leftSideliteSrc={frameSidelites === 'left' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} rightSideliteSrc={frameSidelites === 'right' || frameSidelites === 'both' ? sideliteAssetSrc : undefined} sideliteMaskSrc={sideliteMaskSrc} sideliteGlassSrc={renderedSideliteGlass} sideliteClearGlassBase={sideliteClearGlassBase} sideliteGlassIsGrid={sideliteGlassIsGrid} sideliteGridIsPrairie={sideliteGridIsPrairie} sideliteGridMatchesFinish={sideliteGridMatchesFinish} sideliteGridFinishColor={applyFinish ? finishColor : '#d9d9d9'} sideliteFinishStyle={sideliteFinishStyle} sideliteDetailStyle={sideliteDetailStyle} sideliteGlassOpeningStyle={sideliteGlassOpeningStyle} sideliteGlassFrameMaskStyle={sideliteGlassFrameMaskStyle} sideliteGlassFrameTintStyle={sideliteGlassFrameTintStyle}>
         {Array.from({ length: doorConfigurationLeafCount(doorConfigurationType) }).map((_, leafIndex) => {
-          // Resolve leaf-local hardware placement through the same mapping as
-          // the PDF renderer; Savannah stays on its fixed outer-left edge.
+          // Placements identify physical leaves in exterior coordinates, just
+          // like the PDF. Interior changes screen position, not leaf ownership.
           const hardwarePlacementForLeaf = doorHardwarePlacements(doorConfigurationType, hardwareSide, hardwareSideExterior, doubleDoorLockPrep).find((placement) => placement.leafIndex === leafIndex)
-          const leafHardwareSide = hardwarePlacementForLeaf?.side ?? hardwareSide
+          const canonicalHardwareSide = hardwarePlacementForLeaf?.side ?? hardwareSide
+          const leafHardwareSide = frenchInterior ? oppositeDoorSide(canonicalHardwareSide) : canonicalHardwareSide
           const showHardwareOnLeaf = Boolean(hardwarePlacementForLeaf)
           const leafHardwareImagePlacementClass = hardwareImagePlacementClassForSide(leafHardwareSide)
 
-          return <div key={leafIndex} className={`door door-leaf door-leaf-${leafIndex === 0 ? 'left' : 'right'} door-${style.panel} ${hasMappedPreview ? 'mapped-preview-door' : ''}${isHrtDoor ? ' door-preview-hrt' : ''}`} data-door-style-id={maskCode} style={{ '--door': finishColor, '--door-dark': finish.accent } as React.CSSProperties}>
+          return <div key={leafIndex} className={`door door-leaf door-leaf-${leafIndex === 0 ? 'left' : 'right'} door-${style.panel} ${hasMappedPreview ? 'mapped-preview-door' : ''}${isHrtDoor ? ' door-preview-hrt' : ''}`} data-physical-leaf={leafIndex === 0 ? 'left' : 'right'} data-door-style-id={maskCode} style={{ '--door': finishColor, '--door-dark': finish.accent } as React.CSSProperties}>
           {style.hasGlass && <div className="glass glass-clear" />}
           <div className="panels">
             {Array.from({ length: style.panel === 'classic' ? 6 : style.panel === 'craftsman' ? 3 : 4 }).map((_, index) => <span key={index} />)}

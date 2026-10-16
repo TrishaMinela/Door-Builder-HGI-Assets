@@ -470,6 +470,13 @@ body:has(.visualizer-app){
 .door-frame[data-double-door=true] .door-frame-door-slot{display:grid;grid-template-columns:minmax(0,1fr) 7px minmax(0,1fr);background:transparent;overflow:hidden}
 .door-frame[data-double-door=true] .door-leaf-left{grid-column:1}
 .door-frame[data-double-door=true] .door-leaf-right{grid-column:3}
+/* French leaf identities stay exterior-relative. Only their screen slots and
+   non-hardware artwork reverse inside; authored interior hardware stays on its
+   own layer, so its handed placement/readable-artwork rules run exactly once. */
+.door-frame.french-interior .door-leaf-left{grid-column:3;grid-row:1}
+.door-frame.french-interior .door-leaf-right{grid-column:1;grid-row:1}
+.door-frame.french-interior .door-leaf>:not(.hardware),
+.door-frame.french-interior .door-frame-sidelite-slot>*{transform:scaleX(-1);transform-origin:center}
 .door-frame-sidelite-slot{position:relative;min-width:0;min-height:0}
 .door-frame-sidelite-slot-left{grid-column:1}
 .door-frame-sidelite-slot-right{grid-column:5}
