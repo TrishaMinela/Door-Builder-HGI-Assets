@@ -1,6 +1,5 @@
 import sharp from 'sharp'
-import { readFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
+import { aiReferenceAssetReaders } from './aiReferenceAssets.generated.js'
 import { doorStyles, finishes } from '../src/data/options.js'
 import { productCatalog } from '../src/data/productCatalog.js'
 import { resolveDoorPreviewCandidates } from '../src/data/doorPreviewAssets.js'
@@ -159,7 +158,9 @@ export async function loadAiReference(paths: string[]) {
     const localPath = path.split('?')[0]
     if (!localPath.startsWith('/assets/') || localPath.includes('..') || localPath.includes('\\')) continue
     try {
-      const bytes = await readFile(resolve(process.cwd(), 'public', localPath.slice(1)))
+      const reader = aiReferenceAssetReaders[localPath]
+      if (!reader) continue
+      const bytes = await reader()
       return await sharp(bytes, { limitInputPixels: 24_000_000 }).resize({ width: AI_MAX_REFERENCE_EDGE, height: AI_MAX_REFERENCE_EDGE, fit: 'inside', withoutEnlargement: true }).png().toBuffer()
     } catch { /* Try the next trusted original source candidate. */ }
   }
