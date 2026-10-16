@@ -9,12 +9,6 @@ import { s2slGlassOptions } from '../src/data/s2slGlass'
 import { cr14slGlassOptions } from '../src/data/cr14slGlass'
 import { aiTestConfiguration } from './aiVisualizerFixture'
 
-// vercel.json accepts one glob string, not the array supported internally by
-// @vercel/node. Escape literal filename syntax (including an authored comma).
-export function aiReferenceIncludePattern(paths: string[]) {
-  return `{${paths.map(path => `public${path}`.replace(/[\\{}[\]*?,()!+@]/g, character => `\\${character}`)).join(',')}}`
-}
-
 /** Enumerate the server resolver, not UI filters. Retained/legacy references and
  * secondary source candidates must keep working too. Independent dimensions
  * avoid a huge Cartesian product: finish colors, swing, placement and lock prep

@@ -41,8 +41,7 @@ assert.equal(visited.size, 3, 'Only endpoint, preprocessing and shared image con
 const config = JSON.parse(readFileSync('vercel.json', 'utf8'))
 assert.equal(config.functions['api/detect-entrance-structure.ts'].includeFiles, undefined)
 assert.equal(config.functions['api/detect-entrance-structure.ts'].maxDuration, 60)
-assert.equal(typeof config.functions['api/generate-door-visualization.ts'].includeFiles, 'string', 'Vercel project schema requires a string')
-assert.ok(!config.functions['api/generate-door-visualization.ts'].includeFiles.includes('**'), 'No broad public inclusion')
+assert.equal(config.functions['api/generate-door-visualization.ts'].includeFiles, undefined, 'Generation assets are traced from exact literal manifest reads, not a broad inclusion')
 for (const key of ['AiInputError', 'prepareHouseAndMask', 'objectValue', 'optionalCorners', 'validateCorners'] as const) assert.equal(generation[key], preprocessing[key], `Shared ${key} identity is preserved`)
 
 const originalFetch = globalThis.fetch

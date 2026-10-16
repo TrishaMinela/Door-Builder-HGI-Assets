@@ -9,12 +9,13 @@ assets, frontend/PDF behavior, compatibility rules or Supabase settings changed.
 
 `server/aiReferenceAssets.generated.ts` is the verified manifest and file loader.
 Every reader has an exact literal file URL. The former dynamic read rooted at
-`public/` is gone. `vercel.json` includes the same exact files, not a directory
-glob or raw `src/data/**` inclusion. Vercel's project schema requires one string,
-so the exact paths use a brace list with escaped literal filename punctuation
-(including the authored comma in one slab filename), not a JSON array. Imported
-catalog code is traced normally. The packaged-file assertion checks the expanded
-list against the manifest, catching missing files or unintended matches.
+`public/` is gone. Vercel traces the exact manifest reads; there is no manual
+`includeFiles`, directory glob or raw `src/data/**` inclusion. Vercel's deployed
+project schema accepts only one inclusion string, capped at 256 characters, so
+neither an array nor a 627-file brace list is supported there. The actual builder
+test verifies the complete file set **without** any forced asset inclusion.
+Imported catalog code is traced normally. This also avoids glob interpretation
+of authored filename punctuation (including a comma in one slab filename).
 
 ## Coverage
 
@@ -68,7 +69,7 @@ git diff --check
 ```
 
 After catalog changes, run the generator with `--patch` and apply its emitted
-patch. Commit both generated readers and the synchronized Vercel inclusion list.
+patch. Commit the generated readers. Keep the broad Vercel inclusion removed.
 The default command fails on missing candidates or stale generated declarations.
 
 With the local Vercel Node builder installed under `.vercel/builders`, also run:
