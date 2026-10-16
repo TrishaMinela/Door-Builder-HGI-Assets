@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process'
 import { writeFile } from 'node:fs/promises'
 import sharp from 'sharp'
 import { doorHardwarePlacements } from '../src/data/doorConfigurationRules'
+import { hardwareOptions, hardwarePreviewAssetUrl } from '../src/data/hardware'
 
 const modes = ['DDLLBO', 'DDLLAC', 'DDLLKP'] as const
 for (const side of ['left', 'right'] as const) {
@@ -81,7 +82,10 @@ try {
     await page.getByRole('button', { name: 'Add Sidelite', exact: true }).click()
     await page.waitForFunction(() => document.querySelector('.preview-scene')?.getAttribute('data-render-semantically-ready') === 'true' && document.querySelector('.door-frame')?.getAttribute('data-sidelites') === 'right')
     const frame = page.locator('.door-frame')
+    const exteriorWithHardware = await frame.screenshot()
+    await page.locator('.hardware').evaluateAll(elements => elements.forEach(element => { (element as HTMLElement).style.visibility = 'hidden' }))
     const exterior = await frame.screenshot()
+    await page.locator('.hardware').evaluateAll(elements => elements.forEach(element => { (element as HTMLElement).style.visibility = '' }))
     const exteriorLeaf = await page.locator('.door-leaf-left').boundingBox()
     const exteriorSidelite = await page.locator('.door-frame-sidelite-slot-right').boundingBox()
     assert.ok(exteriorLeaf && exteriorSidelite && exteriorLeaf.x < exteriorSidelite.x)
@@ -89,21 +93,26 @@ try {
     await page.getByRole('button', { name: 'Interior', exact: true }).click()
     await page.waitForTimeout(200)
     assert.equal(await frame.evaluate(element => getComputedStyle(element).scale), '-1 1')
-    assert.equal(await page.locator('.hardware img').getAttribute('src'), hardwareSource, 'Savannah does not swap artwork separately from the unit flip')
+    assert.equal(await page.locator('.hardware img').getAttribute('src'), hardwarePreviewAssetUrl(hardwareOptions[0], 'Interior'), 'Savannah uses matching interior artwork within the mirrored entrance')
+    assert.notEqual(await page.locator('.hardware img').getAttribute('src'), hardwareSource)
+    await page.waitForFunction(() => Array.from(document.querySelectorAll('.hardware img')).every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))
     const interiorLeaf = await page.locator('.door-leaf-left').boundingBox()
     const interiorSidelite = await page.locator('.door-frame-sidelite-slot-right').boundingBox()
     assert.ok(interiorLeaf && interiorSidelite && interiorLeaf.x > interiorSidelite.x, 'Both the operating leaf and sidelite reverse visually as one unit')
+    await page.locator('.hardware').evaluateAll(elements => elements.forEach(element => { (element as HTMLElement).style.visibility = 'hidden' }))
     const interior = await frame.screenshot()
+    await page.locator('.hardware').evaluateAll(elements => elements.forEach(element => { (element as HTMLElement).style.visibility = '' }))
     const mirrored = await sharp(exterior).flop().ensureAlpha().raw().toBuffer()
     const actual = await sharp(interior).ensureAlpha().raw().toBuffer()
     assert.equal(actual.length, mirrored.length)
     const meanDifference = actual.reduce((total, channel, index) => total + Math.abs(channel - mirrored[index]), 0) / actual.length
-    assert.ok(meanDifference < 2, `Full entrance pixel mirror includes hardware, glass, finish, jamb, mullions and threshold (${meanDifference})`)
-    await writeFile(`/tmp/savannah-${width}-exterior-unit.png`, exterior)
-    await writeFile(`/tmp/savannah-${width}-interior-unit.png`, interior)
+    assert.ok(meanDifference < 2, `Entrance geometry, glass, finish, jamb, mullions and threshold still mirror together (${meanDifference})`)
+    await writeFile(`/tmp/savannah-${width}-exterior-unit.png`, exteriorWithHardware)
+    await writeFile(`/tmp/savannah-${width}-interior-unit.png`, await frame.screenshot())
     await page.getByRole('button', { name: 'Exterior', exact: true }).click()
     assert.equal(await frame.evaluate(element => getComputedStyle(element).scale), 'none')
-    assert.deepEqual(await frame.screenshot(), exterior, 'Returning to Exterior restores the original complete entrance')
+    await page.waitForFunction(() => Array.from(document.querySelectorAll('.hardware img')).every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))
+    assert.deepEqual(await frame.screenshot(), exteriorWithHardware, 'Returning to Exterior restores the original complete entrance')
     await page.getByRole('button', { name: 'Single', exact: true }).click()
     for (const [label, side] of [['Left Active', 'right'], ['Right Active', 'left']]) {
       await page.getByRole('button', { name: label, exact: true }).click()

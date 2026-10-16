@@ -530,25 +530,27 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const [internalPreviewView, setInternalPreviewView] = useState<HardwareView>('Exterior')
   const previewView = view ?? internalPreviewView
   // Savannah changes viewpoint by mirroring the complete exterior composition.
-  // Do not also swap individual artwork, frame profiles or sidelite positions.
+  // Keep geometry, frame profiles and sidelite positions in that coordinate
+  // system, but use the actual viewpoint's authored hardware artwork.
   const renderView = doorConfigurationType === 'savannah' ? 'Exterior' : previewView
   const setPreviewView = onViewChange ?? setInternalPreviewView
   const hardwareSideExterior = doorHandingSides(doorSwing?.id ?? 'LHI').lockSide
   const hardwareSideInterior = doorHandingSides(doorSwing?.id ?? 'LHI', 'Interior').lockSide
   const hardwareSide = renderView === 'Exterior' ? hardwareSideExterior : hardwareSideInterior
-  const hardwareSourceSide = sourceHardwareSideByView[renderView]
+  const hardwareSourceSide = sourceHardwareSideByView[previewView]
   const keepHardwareReadable = preservesReadableHardware(hardware)
   const hardwareImagePlacementClassForSide = (targetSide: HardwareSide) => targetSide !== hardwareSourceSide
     ? keepHardwareReadable
       ? `hardware-image-shift-${targetSide}`
       : 'hardware-image-mirrored'
     : ''
-  const selectedHardwareImage = hardwarePreviewAssetUrl(hardware, renderView, doorSwing)
+  const selectedHardwareImage = hardwarePreviewAssetUrl(hardware, previewView, doorSwing)
   const configuredSidelitePlacement = resolveSidelitePosition({ relationship: sidelites, handing: doorSwing?.id, view: renderView, configurationType: doorConfigurationType })
   const frameSidelites = compact ? 'none' : configuredSidelitePlacement ?? 'none'
-  const defaultHardware = hardwareOptions.find((option) => Boolean(hardwarePreviewAssetUrl(option, renderView, doorSwing)))
+  // Never silently replace missing Savannah artwork with another product.
+  const defaultHardware = doorConfigurationType === 'savannah' ? undefined : hardwareOptions.find((option) => Boolean(hardwarePreviewAssetUrl(option, previewView, doorSwing)))
   const previewHardware: PreviewHardware = selectedHardwareImage ? hardware : defaultHardware ?? hardware
-  const requestedHardwareImage = selectedHardwareImage || hardwarePreviewAssetUrl(previewHardware, renderView, doorSwing)
+  const requestedHardwareImage = selectedHardwareImage || hardwarePreviewAssetUrl(previewHardware, previewView, doorSwing)
   const [hardwareImage, setHardwareImage] = useState(requestedHardwareImage)
 
   const usesAuthoredSideliteArtsAndCrafts = sideliteGlassSrc?.includes('/F48SL%20SSL%20Arts%20Crafts%20White.webp')
