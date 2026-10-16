@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { AI_MAX_REQUEST_BYTES, AiInputError, objectValue, prepareHouseAndMask } from '../server/aiDoorVisualization.js'
+import { AI_MAX_REQUEST_BYTES, AiInputError, objectValue, prepareHouseAndMask } from '../server/aiImagePreprocessing.js'
 import type { EntranceDetection } from '../src/features/home-visualizer/entranceFitStrategy.js'
 
 type ApiRequest = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> }

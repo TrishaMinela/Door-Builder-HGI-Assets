@@ -15,30 +15,12 @@ import { f48slGlassOptions } from '../src/data/f48slGlass.js'
 import { sslGlassOptions } from '../src/data/sslGlass.js'
 import { s2slGlassOptions } from '../src/data/s2slGlass.js'
 import { cr14slGlassOptions } from '../src/data/cr14slGlass.js'
-import { AI_CORNER_ORDER, AI_MASK_PADDING_PX, AI_MAX_PHOTO_BYTES, AI_MAX_PHOTO_EDGE, aiPixelCorners, aiWorkingSize, type AiCorners } from '../src/features/home-visualizer/aiImagePreparation.js'
+import type { AiCorners } from '../src/features/home-visualizer/aiImagePreparation.js'
+import { AiInputError, objectValue, type AiErrorCode } from './aiImagePreprocessing.js'
+export { AiInputError, objectValue, prepareHouseAndMask, optionalCorners, validateCorners, AI_MAX_ORIGINAL_PHOTO_BYTES, AI_MAX_ORIGINAL_PIXELS, AI_NORMALIZED_QUALITY } from './aiImagePreprocessing.js'
+export type { AiErrorCode } from './aiImagePreprocessing.js'
 import type { DoorConfiguration, SideliteConfiguration } from '../src/types.js'
 import type { EntranceDetection, EntranceFitStrategy } from '../src/features/home-visualizer/entranceFitStrategy.js'
-
-export type AiErrorCode =
-  | 'INVALID_IMAGE_INPUT'
-  | 'IMAGE_DECODE_FAILED'
-  | 'PAYLOAD_TOO_LARGE'
-  | 'INVALID_REQUEST'
-  | 'REFERENCE_IMAGE_FAILED'
-  | 'OPENAI_REQUEST_REJECTED'
-  | 'OPENAI_RATE_LIMITED'
-  | 'AI_GENERATION_TIMEOUT'
-  | 'SERVERLESS_TIMEOUT'
-  | 'NO_GENERATED_IMAGE'
-  | 'SERVER_CONFIGURATION_ERROR'
-  | 'UNKNOWN_ERROR'
-
-export class AiInputError extends Error {
-  constructor(public readonly code: AiErrorCode, message: string, public readonly status = 400, options?: ErrorOptions) {
-    super(message, options)
-    this.name = 'AiInputError'
-  }
-}
 
 export class AiGenerationError extends Error {
   constructor(public readonly code: AiErrorCode, message: string, public readonly status = 502, options?: ErrorOptions) {
@@ -51,29 +33,7 @@ export const AI_QUALITY = 'xhigh' // Favor product detail; keep below the maximu
 export const AI_SINGLE_DOOR_WIDTH_BIAS = 0.94 // Small AI-only correction after estimating a normal slab from photo scale cues.
 export { AI_MAX_REQUEST_BYTES } from '../src/features/home-visualizer/aiImagePreparation.js'
 export const AI_MAX_REFERENCE_EDGE = 1536
-export const AI_MAX_ORIGINAL_PHOTO_BYTES = 30 * 1024 * 1024
-export const AI_MAX_ORIGINAL_PIXELS = 40_000_000
-export const AI_NORMALIZED_QUALITY = 90
 export const AI_MAX_PRODUCT_REFERENCE_BYTES = 5 * 1024 * 1024
-type ObjectValue = Record<string, unknown>
-export const objectValue = (value: unknown): ObjectValue | null => value && typeof value === 'object' && !Array.isArray(value) ? value as ObjectValue : null
-
-export function validateCorners(value: unknown): AiCorners {
-  const source = objectValue(value)
-  if (!source || Object.keys(source).length !== 4) throw new AiInputError('INVALID_REQUEST', 'Select all four doorway corners before generating.')
-  const points = AI_CORNER_ORDER.map(name => {
-    const point = objectValue(source[name])
-    if (!point || Object.keys(point).length !== 2 || typeof point.x !== 'number' || typeof point.y !== 'number' || !Number.isFinite(point.x) || !Number.isFinite(point.y) || point.x < 0 || point.x > 1 || point.y < 0 || point.y > 1) throw new AiInputError('INVALID_REQUEST', 'Doorway corners must be inside the photo.')
-    return { x: point.x, y: point.y }
-  })
-  const turns = points.map((a, i) => { const b = points[(i + 1) % 4], c = points[(i + 2) % 4]; return (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x) })
-  if (!turns.every(turn => turn > .0001)) throw new AiInputError('INVALID_REQUEST', 'Please select a valid, non-crossing doorway outline.')
-  return Object.fromEntries(AI_CORNER_ORDER.map((name, i) => [name, points[i]])) as AiCorners
-}
-
-export function optionalCorners(value: unknown): AiCorners | null {
-  return value === undefined || value === null ? null : validateCorners(value)
-}
 
 const fitStrategies = new Set<EntranceFitStrategy>(['use-selected-product', 'preserve-sidelites', 'preserve-sidelites-and-transom', 'single-with-matching-sidelites', 'matching-double-doors', 'convert-opening-to-double', 'rebuild-opening'])
 
@@ -92,52 +52,6 @@ export function entranceFitContext(detectionValue: unknown, strategyValue: unkno
     summary: typeof source.summary === 'string' ? source.summary.slice(0, 240) : '',
   }
   return { detection, strategy }
-}
-
-export async function prepareHouseAndMask(value: unknown, corners: AiCorners | null) {
-  if (typeof value !== 'string') throw new AiInputError('INVALID_IMAGE_INPUT', 'Your house photo is missing.')
-  const match = /^data:image\/([a-z0-9.+-]+);base64,([A-Za-z0-9+/]+={0,2})$/i.exec(value)
-  if (!match) throw new AiInputError('INVALID_IMAGE_INPUT', 'Please use a valid JPG, PNG, WebP, AVIF, HEIC, or HEIF photo.')
-  if (match[2].length > Math.ceil(AI_MAX_ORIGINAL_PHOTO_BYTES * 4 / 3) + 4) throw new AiInputError('PAYLOAD_TOO_LARGE', 'Your photo is too large to process safely. Please choose a smaller photo.', 413)
-  const bytes = Buffer.from(match[2], 'base64')
-  if (!bytes.length) throw new AiInputError('INVALID_IMAGE_INPUT', 'The uploaded photo is empty. Please choose another photo.')
-  if (bytes.length > AI_MAX_ORIGINAL_PHOTO_BYTES) throw new AiInputError('PAYLOAD_TOO_LARGE', 'Your photo is too large to process safely. Please choose a smaller photo.', 413)
-  try {
-    const metadata = await sharp(bytes, { limitInputPixels: AI_MAX_ORIGINAL_PIXELS }).metadata()
-    if (!metadata.width || !metadata.height || (metadata.pages ?? 1) > 1 || !['jpeg', 'png', 'webp', 'avif', 'heif'].includes(metadata.format ?? '')) throw new AiInputError('INVALID_IMAGE_INPUT', 'This image format is not supported. Please use JPG, PNG, WebP, AVIF, HEIC, or HEIF.')
-    const swapsAxes = [5, 6, 7, 8].includes(metadata.orientation ?? 1)
-    const orientedWidth = swapsAxes ? metadata.height : metadata.width
-    const orientedHeight = swapsAxes ? metadata.width : metadata.height
-    let size = aiWorkingSize(orientedWidth, orientedHeight)
-    const alreadyNormalized = metadata.format === 'webp' && (metadata.orientation ?? 1) === 1 && !metadata.hasAlpha && metadata.width === size.width && metadata.height === size.height && bytes.length <= AI_MAX_PHOTO_BYTES
-    let photo = alreadyNormalized ? bytes : await sharp(bytes, { limitInputPixels: AI_MAX_ORIGINAL_PIXELS })
-      .rotate()
-      .resize(size.width, size.height, { fit: 'inside', withoutEnlargement: true })
-      .flatten({ background: '#ffffff' })
-      .webp({ quality: AI_NORMALIZED_QUALITY, effort: 5, smartSubsample: true })
-      .toBuffer()
-    for (const edge of [1280, 1024]) {
-      if (photo.length <= AI_MAX_PHOTO_BYTES) break
-      size = aiWorkingSize(orientedWidth, orientedHeight, edge)
-      photo = await sharp(bytes, { limitInputPixels: AI_MAX_ORIGINAL_PIXELS }).rotate().resize(size.width, size.height, { fit: 'inside', withoutEnlargement: true }).flatten({ background: '#ffffff' }).webp({ quality: AI_NORMALIZED_QUALITY, effort: 5, smartSubsample: true }).toBuffer()
-    }
-    if (photo.length > AI_MAX_PHOTO_BYTES) throw new AiInputError('PAYLOAD_TOO_LARGE', 'This photo could not be compressed enough for AI generation. Please choose a less detailed photo.', 413)
-    let mask: Buffer | undefined
-    if (corners) {
-      const padding = AI_MASK_PADDING_PX * Math.max(size.width, size.height) / AI_MAX_PHOTO_EDGE
-      const polygon = aiPixelCorners(corners, size.width, size.height).map(point => `${point.x},${point.y}`).join(' ')
-      const cutout = Buffer.from(`<svg width="${size.width}" height="${size.height}"><polygon points="${polygon}" fill="black" stroke="black" stroke-width="${padding * 2}" stroke-linejoin="round"/></svg>`)
-      mask = await sharp({ create: { ...size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } } }).composite([{ input: cutout, blend: 'dest-out' }]).webp({ lossless: true, effort: 5 }).toBuffer()
-    }
-    return {
-      photo, mask, width: size.width, height: size.height,
-      original: { declaredMimeType: `image/${match[1].toLowerCase()}`, format: metadata.format, width: metadata.width, height: metadata.height, orientation: metadata.orientation ?? 1, byteSize: bytes.length },
-      normalized: { format: 'webp', width: size.width, height: size.height, byteSize: photo.length },
-    }
-  } catch (error) {
-    if (error instanceof AiInputError) throw error
-    throw new AiInputError('IMAGE_DECODE_FAILED', 'Your house photo could not be decoded. Please choose another photo.', 400, { cause: error })
-  }
 }
 
 export async function prepareConfiguredProductReferences(value: unknown) {
