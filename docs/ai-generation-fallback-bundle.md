@@ -10,7 +10,11 @@ assets, frontend/PDF behavior, compatibility rules or Supabase settings changed.
 `server/aiReferenceAssets.generated.ts` is the verified manifest and file loader.
 Every reader has an exact literal file URL. The former dynamic read rooted at
 `public/` is gone. `vercel.json` includes the same exact files, not a directory
-glob or raw `src/data/**` inclusion. Imported catalog code is traced normally.
+glob or raw `src/data/**` inclusion. Vercel's project schema requires one string,
+so the exact paths use a brace list with escaped literal filename punctuation
+(including the authored comma in one slab filename), not a JSON array. Imported
+catalog code is traced normally. The packaged-file assertion checks the expanded
+list against the manifest, catching missing files or unintended matches.
 
 ## Coverage
 

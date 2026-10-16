@@ -8,14 +8,14 @@ import { dirname, resolve, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { Stream } from 'node:stream'
 import sharp from 'sharp'
-import { collectAiFallbackReferences } from './aiFallbackReferenceInventory'
+import { aiReferenceIncludePattern, collectAiFallbackReferences } from './aiFallbackReferenceInventory'
 import { aiReferenceAssetReaders } from '../server/aiReferenceAssets.generated'
 import { AiGenerationError, loadAiReference } from '../server/aiDoorVisualization'
 
 const inventory = collectAiFallbackReferences()
 assert.deepEqual(Object.keys(aiReferenceAssetReaders).sort(), inventory.paths)
 const config = JSON.parse(readFileSync('vercel.json', 'utf8'))
-assert.deepEqual(config.functions['api/generate-door-visualization.ts'].includeFiles, inventory.paths.map(path => `public${path}`))
+assert.equal(config.functions['api/generate-door-visualization.ts'].includeFiles, aiReferenceIncludePattern(inventory.paths))
 for (const excluded of ['/fonts/', '/hero/', '/logos/', '/templates/', '/finishes/']) {
   assert.ok(!inventory.paths.some(path => path.includes(excluded)), `Unexpected ${excluded} fallback dependency`)
 }
