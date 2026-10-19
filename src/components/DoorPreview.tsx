@@ -561,7 +561,9 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const mainMaskReady = Boolean(surfaceDetailReady && previewImage && previewCandidates.includes(previewImage) && processedMask?.source === previewImage && processedMask.finishUrl)
   const mainGlassReady = !glassOverlay || isHrtDoor || isSatDoor
     || Boolean(fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage)
-  const clearBaseReady = !clearNoGridOverlay || Boolean(fittedClearBase?.source === clearNoGridOverlay && fittedClearBase.maskSource === previewImage)
+  // Only F482 fits the base to its different opening. Other openings render
+  // the authored base directly; confirmLoadedSnapshot still decodes that image.
+  const clearBaseReady = !clearNoGridOverlay || maskCode !== 'F482' || Boolean(fittedClearBase?.source === clearNoGridOverlay && fittedClearBase.maskSource === previewImage)
   const sideliteMaskReady = frameSidelites === 'none' || Boolean(sslReliefReady && sideliteFinishMask && sideliteFinishMask.slab === sideliteAssetSrc && sideliteFinishMask.mask === sideliteMaskSrc && sideliteFinishMask.url)
   const sideliteGlassReady = frameSidelites === 'none' || !sideliteGlassSrc || !sideliteGlassNeedsFitting || Boolean(fittedSideliteGlass && fittedSideliteGlass.source === sideliteGlassSrc && fittedSideliteGlass.slab === sideliteAssetSrc && fittedSideliteGlass.mask === sideliteMaskSrc)
   const prairieGridReady = frameSidelites === 'none' || !sideliteGridIsPrairie || !sideliteGridColor || usesAuthoredSidelitePrairieColor || Boolean(tintedPrairieGrid && tintedPrairieGrid.source === fittedOrSourceSideliteGlass && tintedPrairieGrid.color === sideliteGridColor)

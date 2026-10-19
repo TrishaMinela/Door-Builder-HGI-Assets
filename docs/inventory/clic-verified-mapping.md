@@ -6,19 +6,19 @@ Implementation guide: user-supplied **FeneVision CLiC — Expanded Verified Find
 
 Main IDs and existing artwork are retained. Names now identify CLiC in summaries/PDFs; `orderingCodes` retain the distinct ordering identity in the configuration snapshot. Submission text includes the verified code sequence and non-stock marker. Reusing pixels does not grant ordinary clear availability or codes.
 
-All paths below are relative to `public/assets/` and exist. Existing opening masks, proportional overlay fitting, clear-base rendering and shared PDF/AI capture renderer are reused. CLiC EXTG overlays now explicitly receive the opening-matched ordinary clear artwork underneath in both preview and PDF; F10LXX/S4LXX contain only transparent black shadow/grid detail, so treating them as complete glass images is unsuitable. This is pixel reuse only, not reuse of clear product availability or ordering codes.
+All paths below are relative to `public/assets/` and exist. Existing opening masks, proportional overlay fitting, clear-base rendering and shared PDF/AI capture renderer are reused. **20 October correction:** CLiC EXTG now uses the same white grid artwork resolver as ordinary clear external grids, rather than the old SDL/*XX files. The matching clear artwork remains underneath in preview and PDF. This is pixel reuse only, not reuse of clear product availability or ordering codes.
 
 | Verified FeneVision path | Builder ID | Reused artwork/rendering |
 | --- | --- | --- |
 | F: CLIC → NOGRID | f-clic-nogrid | hgi-assets/Glass/F/CLEAR STOCK/FF10.webp |
-| F: CLIC → EXTG → 8L | f-clic-ext-8l | hgi-assets/Glass/SDL/F8LXX.webp |
-| F: CLIC → EXTG → 10L | f-clic-ext-10l | hgi-assets/Glass/SDL/F10LXX.webp |
-| F: CLIC → EXTG → 15L | f-clic-ext-15l | hgi-assets/Glass/SDL/F15LXX.webp |
+| F: CLIC → EXTG → 8L | f-clic-ext-8l | hgi-assets/Glass/F/INTERNAL GRIDS/FINT8LWH.webp |
+| F: CLIC → EXTG → 10L | f-clic-ext-10l | hgi-assets/Glass/F/INTERNAL GRIDS/FINT10LWH.webp |
+| F: CLIC → EXTG → 15L | f-clic-ext-15l | hgi-assets/Glass/F/INTERNAL GRIDS/FINT15LWH.webp |
 | F48/F482: CLIC → NOGRID | f48-clic-nogrid | hgi-assets/Glass/F48/CLEAR STOCK/F48F10.webp; existing shared F482 overlay mapping |
-| F48/F482: CLIC → EXTG → 12L | f48-clic-ext-12l | hgi-assets/Glass/SDL/F4812LXX.webp; existing shared F482 mapping |
+| F48/F482: CLIC → EXTG → 12L | f48-clic-ext-12l | hgi-assets/Glass/F48/INTERNAL GRIDS/F48INT12LWH.webp; shared F482 mapping |
 | S: CLIC → NOGRID | s-clic-nogrid | hgi-assets/Glass/S/DECO/SF5.webp; existing plain-clear artwork despite legacy DECO directory |
-| S: CLIC → EXTG → 4L | s-clic-ext-4l | hgi-assets/Glass/SDL/S4LXX.webp |
-| S: CLIC → EXTG → 9L | s-clic-ext-9l | hgi-assets/Glass/SDL/S9LXX.webp |
+| S: CLIC → EXTG → 4L | s-clic-ext-4l | hgi-assets/Glass/S/INTERNAL GRIDS/SINT4LWH.webp |
+| S: CLIC → EXTG → 9L | s-clic-ext-9l | hgi-assets/Glass/S/INTERNAL GRIDS/SINT9LWH.webp |
 | FSL: CLICS → NOGRID | scoped clic-nogrid | Existing FSL slab + masks/Sidelites/FSL.png + rendered clear base; no decorative overlay |
 | F48SL: CLICS → NOGRID | scoped clic-nogrid | Existing F48SL slab + masks/Sidelites/F48SL.png + rendered clear base |
 | SSL: CLICS → NOGRID | scoped clic-nogrid | Existing SSL slab + masks/Sidelites/SSL.png + rendered clear base |
@@ -81,3 +81,13 @@ Completed checks:
 - Broader `test:submission` remains blocked by its existing Savannah expectation of “Locks on Both Doors.” The untouched HEAD implementation was separately loaded and returns “Lock on Main Door Only,” reproducing the baseline mismatch. Neither that expectation nor Savannah behavior was changed for this task. CLiC-specific submission assertions passed in the new suite.
 
 Supabase and the published catalog were not modified. Pending font changes were excluded from the CLiC commit. Original ENTL/ENTR files were retained.
+
+## 20 October external-grid artwork follow-up
+
+- Shared `externalGridArtwork(opening, pattern)` extracts ordinary clear's existing white-template resolution. Both ordinary clear external previews and canonical CLiC catalog records use it. The directory name INTERNAL GRIDS is historical; this is the existing external-preview artwork, not new internal-grid availability. SDL resolution is left alone.
+- The six required files exist. Unknown opening/pattern pairs return no mapping; CLiC catalog construction fails explicitly rather than silently choosing another grid. No source artwork was changed or deleted.
+- Capture readiness now matches rendering: F/F48/S render the authored clear base directly; only F482 requires a fitted base. Waiting for a fitted base on every opening prevented configured AI references from becoming ready. Actual image decoding/loading remains required.
+- `scripts/verifyClicExternalGrids.ts` compares ordinary clear and CLiC using paint Clay and stain Nutmeg, all six patterns, and both F48/F482 openings. All 14 comparisons / 42 pixel-equality checks passed across live preview screenshots, PDF canvas images and real `ConfiguredDoorSource` captures. All side-by-side screenshots were visually inspected; outputs are in `/private/tmp/hgi-clic-external-grids`.
+- Existing CLiC checks passed (9 responsive flows, 33 PDF renders), as did the 86-case PDF suite. Configuration integrity checked 806 distinct paths with zero missing assets or broken dynamic paths. TypeScript, production build and diff checks passed. Existing large-chunk warnings remain.
+- Regenerated AI manifest: 623 assets / 579 reference groups / 79,520 resolver cases. Actual local Vercel packages were verified: all 623 generation assets present, zero detection assets. Existing local Node-builder diagnostics described above remain; package assertions pass. No deployed-size or real paid AI-generation claim is made.
+- CLiC rules/codes, no-grid selections, sidelite CLiC, Fir SDL deferrals and frame/grid finish behavior remain unchanged. Ordinary clear availability is not expanded (including its current F48 external-location visibility restriction); the F48/F482 comparison uses the existing resolver/template at the rendering boundary, not newly exposed clear options.

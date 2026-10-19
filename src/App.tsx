@@ -24,6 +24,7 @@ import { matchingJambFinish } from './utils/matchingFrameFinish'
 import { isCustomerSelectableGlass, isHiddenDecorativeGlass } from './data/customerGlassAvailability'
 import { isGlassFamilyCompatible } from './data/glassFamilyCompatibility'
 import { clicAvailable, isClicGlass } from './data/clicGlass'
+import { externalGridArtwork } from './data/externalGridArtwork'
 import type { ContactForm, DoorConfiguration, DoorConfigurationType, DoorSwing, DoubleDoorLockPrepCode, GlassCoating, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, HardwareView, PreviewHardware, SideliteConfiguration, SideliteGlassConfiguration } from './types'
 import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationLabel, lockSetupOptionsForHardware, requiredDoorConfigurationProductOption } from './data/doorConfigurationRules'
 import { doorSwingDisplayName, savannahOpening } from './data/doorHanding'
@@ -774,7 +775,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       : gridPattern && previewGridColor && internalGridPatternCodes[gridPattern] && internalGridColorCodes[previewGridColor]
         ? usesSGridFlow ? sInternalGridAsset(gridPattern, previewGridColor) : usesF48GridFlow ? f48InternalGridAsset(gridPattern, previewGridColor) : internalGridAsset(gridPattern, previewGridColor)
         : null
-  const externalPreviewOverlay = gridPattern && internalGridPatternCodes[gridPattern]
+  const externalPreviewOverlay = gridPathId === 'external' && gridPattern
+    ? externalGridArtwork(usesSGridFlow ? 'S' : usesF48GridFlow ? selectedStyleCodes.includes('F482') ? 'F482' : 'F48' : 'F', gridPattern)
+    : gridPattern && internalGridPatternCodes[gridPattern]
     ? usesSGridFlow
       ? sInternalGridAsset(gridPattern, 'White')
       : usesF48GridFlow

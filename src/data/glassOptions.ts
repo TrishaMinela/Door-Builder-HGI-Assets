@@ -1,5 +1,7 @@
 import type { GlassOption } from '../types.js'
 import { clicDisplayName, clicOrderingCodes } from './clicGlass.js'
+import { externalGridArtwork } from './externalGridArtwork.js'
+import type { GridPattern } from '../types.js'
 import { approvedPrivacyGlassIds, knownPrivacyGlassIds } from './privacyGlass.js'
 import { approvedDecorativeGlassIds, knownDecorativeGlassIds, restoredFullLiteDecorativeGlassIds } from './decorativeGlass.js'
 
@@ -1268,6 +1270,16 @@ export const glassOptions: GlassOption[] = [
 
   if (swOverlay) {
     overlaysByDoorStyle.SW = glassOverlayAssetUrl('SW', swOverlay)
+  }
+
+  const clicCodes = clicOrderingCodes(option.id)
+  if (clicCodes?.includes('EXTG')) {
+    const pattern = `${clicCodes[2].replace('L', '')} Lite` as GridPattern
+    for (const opening of Object.keys(overlaysByDoorStyle)) {
+      const overlay = externalGridArtwork(opening, pattern)
+      if (!overlay) throw new Error(`Missing external-grid mapping: ${option.id} / ${opening} / ${pattern}`)
+      overlaysByDoorStyle[opening] = overlay
+    }
   }
 
   return {
