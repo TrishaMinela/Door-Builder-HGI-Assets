@@ -15,7 +15,7 @@ All paths below are relative to `public/assets/` and exist. Existing opening mas
 | F: CLIC → EXTG → 10L | f-clic-ext-10l | hgi-assets/Glass/F/INTERNAL GRIDS/FINT10LWH.webp |
 | F: CLIC → EXTG → 15L | f-clic-ext-15l | hgi-assets/Glass/F/INTERNAL GRIDS/FINT15LWH.webp |
 | F48/F482: CLIC → NOGRID | f48-clic-nogrid | hgi-assets/Glass/F48/CLEAR STOCK/F48F10.webp; existing shared F482 overlay mapping |
-| F48/F482: CLIC → EXTG → 12L | f48-clic-ext-12l | hgi-assets/Glass/F48/INTERNAL GRIDS/F48INT12LWH.webp; shared F482 mapping |
+| F48/F482: CLIC → EXTG → 12L | f48-clic-ext-12l | hgi-assets/Glass/F48/CLEAR STOCK/F48F1248WH.webp; customer-confirmed detailed/contoured artwork, shared F482 mapping |
 | S: CLIC → NOGRID | s-clic-nogrid | hgi-assets/Glass/S/DECO/SF5.webp; existing plain-clear artwork despite legacy DECO directory |
 | S: CLIC → EXTG → 4L | s-clic-ext-4l | hgi-assets/Glass/S/INTERNAL GRIDS/SINT4LWH.webp |
 | S: CLIC → EXTG → 9L | s-clic-ext-9l | hgi-assets/Glass/S/INTERNAL GRIDS/SINT9LWH.webp |
@@ -91,3 +91,13 @@ Supabase and the published catalog were not modified. Pending font changes were 
 - Existing CLiC checks passed (9 responsive flows, 33 PDF renders), as did the 86-case PDF suite. Configuration integrity checked 806 distinct paths with zero missing assets or broken dynamic paths. TypeScript, production build and diff checks passed. Existing large-chunk warnings remain.
 - Regenerated AI manifest: 623 assets / 579 reference groups / 79,520 resolver cases. Actual local Vercel packages were verified: all 623 generation assets present, zero detection assets. Existing local Node-builder diagnostics described above remain; package assertions pass. No deployed-size or real paid AI-generation claim is made.
 - CLiC rules/codes, no-grid selections, sidelite CLiC, Fir SDL deferrals and frame/grid finish behavior remain unchanged. Ordinary clear availability is not expanded (including its current F48 external-location visibility restriction); the F48/F482 comparison uses the existing resolver/template at the rendering boundary, not newly exposed clear options.
+
+## Customer-confirmed three-quarter 12-lite correction
+
+The customer explicitly confirmed `F48F1248WH.webp` as the intended detailed/contoured artwork for **F48/F482 CLiC 12 Lite only**. It is historically cataloged as “12 Lite External”; the correction does not rename ordinary products or infer another ordering category.
+
+Only the canonical `f48-clic-ext-12l` overlay mappings for F48/F482 now use `/assets/hgi-assets/Glass/F48/CLEAR STOCK/F48F1248WH.webp`. The option label and `CLIC / EXTG / 12L / NONSTOCKGL` codes remain unchanged. The ordinary-clear external/contoured resolver still returns `F48INT12LWH.webp`, and other CLiC patterns, no-grid, sidelites, Fir SDL, grid tint flags and frame finish logic are untouched. The previous follow-up's F48/F482 identical-to-ordinary-clear comparison is superseded for this intentional artwork difference.
+
+Verification: `verifyClicExternalGrids.ts --three-quarter-only` passed four paint-Clay/stain-Nutmeg comparisons and 12 pixel-equality checks against the explicitly approved artwork reference across live preview, PDF and real configured-door AI-reference capture. It also asserts the intended visual difference from unchanged ordinary clear. The four side-by-side outputs were visually inspected. The broader visual run was terminated before completion; focused verification was rerun successfully with reduced image memory use. Existing CLiC regression checks passed nine responsive flows and 33 PDF renders. Integrity checked 807 distinct paths with zero missing/broken references; TypeScript, production build and diff checks passed (existing chunk-size warnings remain).
+
+The asset was already included in the AI reference manifest, so no manifest update was required. The generator consistency check and reference loading suite passed with 623 assets, 579 groups and 79,520 resolver cases. No paid AI generation or Supabase/published-catalog writes occurred. Pending font changes remain excluded.

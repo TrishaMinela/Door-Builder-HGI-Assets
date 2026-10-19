@@ -1276,7 +1276,11 @@ export const glassOptions: GlassOption[] = [
   if (clicCodes?.includes('EXTG')) {
     const pattern = `${clicCodes[2].replace('L', '')} Lite` as GridPattern
     for (const opening of Object.keys(overlaysByDoorStyle)) {
-      const overlay = externalGridArtwork(opening, pattern)
+      // Customer-confirmed three-quarter CLiC artwork only. Keep EXTG/12L
+      // ordering identity and ordinary clear's separate template unchanged.
+      const overlay = option.id === 'f48-clic-ext-12l' && ['F48', 'F482'].includes(opening)
+        ? '/assets/hgi-assets/Glass/F48/CLEAR STOCK/F48F1248WH.webp'
+        : externalGridArtwork(opening, pattern)
       if (!overlay) throw new Error(`Missing external-grid mapping: ${option.id} / ${opening} / ${pattern}`)
       overlaysByDoorStyle[opening] = overlay
     }
