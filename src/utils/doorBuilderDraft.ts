@@ -11,6 +11,7 @@ import type { FslGridLocationId, SideliteGlassCategory } from '../data/fslGlass'
 import { normalizeLegacySidelite, type SideliteInput } from '../data/sideliteConfigurations'
 import type { DoorSwing } from '../types'
 import { isHiddenDecorativeGlass } from '../data/customerGlassAvailability'
+import { isLegacyClicGlass } from '../data/clicGlass'
 
 export const DOOR_BUILDER_DRAFT_KEY = 'hgi-door-builder-draft'
 export const DOOR_BUILDER_DRAFT_VERSION = 1
@@ -92,9 +93,10 @@ export function sanitizeDoorBuilderDraft(value: unknown): DoorBuilderDraftConfig
     for (const key of ['glassId', 'selectedGlassGroupKey', 'gridPathId', 'gridStyle', 'gridPattern', 'gridColor', 'gridWidth']) input[key] = ''
     input.glassVariantConfirmed = false
   }
-  if (isHiddenDecorativeGlass({ id: text(input.sideliteGlassId) }) || isHiddenDecorativeGlass({ id: text(input.sideliteGlassGroupKey) })) {
+  if (isLegacyClicGlass({ id: text(input.sideliteGlassId) }) || isHiddenDecorativeGlass({ id: text(input.sideliteGlassId) }) || isHiddenDecorativeGlass({ id: text(input.sideliteGlassGroupKey) })) {
     for (const key of ['sideliteGlassId', 'sideliteGlassGroupKey', 'sideliteGridLocation', 'sideliteGridStyle', 'sideliteGridPattern', 'sideliteGridColor', 'sideliteGridWidth']) input[key] = ''
     input.sideliteGlassVariantConfirmed = false
+    input.sideliteGlassCategory = ''
   }
   return {
     ...blankDraft,

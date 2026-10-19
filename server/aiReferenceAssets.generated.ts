@@ -570,8 +570,6 @@ export const aiReferenceAssetReaders: Record<string, () => Promise<Buffer>> = {
   "/assets/hgi-assets/Sidelites/FSL/Glass/FSLELEBW.webp": () => readFile(new URL("../public/assets/hgi-assets/Sidelites/FSL/Glass/FSLELEBW.webp", import.meta.url)),
   "/assets/hgi-assets/Sidelites/FSL/Glass/FSLELENI.webp": () => readFile(new URL("../public/assets/hgi-assets/Sidelites/FSL/Glass/FSLELENI.webp", import.meta.url)),
   "/assets/hgi-assets/Sidelites/FSL/Glass/FSLELEPA.webp": () => readFile(new URL("../public/assets/hgi-assets/Sidelites/FSL/Glass/FSLELEPA.webp", import.meta.url)),
-  "/assets/hgi-assets/Sidelites/FSL/Glass/FSLENTL.webp": () => readFile(new URL("../public/assets/hgi-assets/Sidelites/FSL/Glass/FSLENTL.webp", import.meta.url)),
-  "/assets/hgi-assets/Sidelites/FSL/Glass/FSLENTR.webp": () => readFile(new URL("../public/assets/hgi-assets/Sidelites/FSL/Glass/FSLENTR.webp", import.meta.url)),
   "/assets/hgi-assets/Sidelites/FSL/Glass/FSLFRLBSL.webp": () => readFile(new URL("../public/assets/hgi-assets/Sidelites/FSL/Glass/FSLFRLBSL.webp", import.meta.url)),
   "/assets/hgi-assets/Sidelites/FSL/Glass/FSLGRA.webp": () => readFile(new URL("../public/assets/hgi-assets/Sidelites/FSL/Glass/FSLGRA.webp", import.meta.url)),
   "/assets/hgi-assets/Sidelites/FSL/Glass/FSLHEIBB.webp": () => readFile(new URL("../public/assets/hgi-assets/Sidelites/FSL/Glass/FSLHEIBB.webp", import.meta.url)),

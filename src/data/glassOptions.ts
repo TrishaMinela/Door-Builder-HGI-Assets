@@ -1,4 +1,5 @@
 import type { GlassOption } from '../types.js'
+import { clicDisplayName, clicOrderingCodes } from './clicGlass.js'
 import { approvedPrivacyGlassIds, knownPrivacyGlassIds } from './privacyGlass.js'
 import { approvedDecorativeGlassIds, knownDecorativeGlassIds, restoredFullLiteDecorativeGlassIds } from './decorativeGlass.js'
 
@@ -1271,6 +1272,7 @@ export const glassOptions: GlassOption[] = [
 
   return {
     ...option,
+    ...(clicOrderingCodes(option.id) ? { name: clicDisplayName(option.id)!, orderingCodes: clicOrderingCodes(option.id) } : {}),
     thumbnailPath: image,
     overlaysByDoorStyle: restoredFullLiteDecorativeGlassIds.has(option.id)
       ? Object.fromEntries(Object.entries(overlaysByDoorStyle).filter(([opening]) => opening === 'F' || opening === 'F48'))

@@ -168,7 +168,7 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
   const selectedGlass = assets.glass
   const glassUrl = selectedGlass ? codes.map(item => selectedGlass.overlaysByDoorStyle[item]).find(Boolean) : undefined
   if (selectedGlass && !glassUrl) throw new Error(`No PDF glass asset is mapped for ${selectedGlass.name} / ${code}.`)
-  const gridClear = ['f-clear-grids', 'f48-clear-grids', 's-clear-grids'].includes(selectedGlass?.id ?? '')
+  const gridClear = ['f-clear-grids', 'f48-clear-grids', 's-clear-grids'].includes(selectedGlass?.id ?? '') || Boolean(selectedGlass?.orderingCodes?.includes('EXTG'))
   const clearUrl = gridClear ? glassOptions.find(item => item.id === (code === 'S' ? 's-clear-no-grids' : ['F48', 'F482'].includes(code) ? 'f48-clear-no-grids' : 'f-clear-no-grids'))?.overlaysByDoorStyle[code] : undefined
   const hardwareUrl = hardwarePreviewAssetUrl(config.hardware, view, config.doorSwing)
   if (!hardwareUrl) throw new Error(`No PDF hardware asset is mapped for ${config.hardware.manufacturer} / ${config.hardware.style} / ${config.hardware.finish}.`)

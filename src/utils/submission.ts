@@ -5,6 +5,7 @@ import { sidelitePlacement, sideliteProductLabel } from '../data/sideliteConfigu
 import { isHiddenDecorativeGlass } from '../data/customerGlassAvailability'
 import { resolvedDoorStyleCode, resolvedDoorStyleLabel } from '../data/productCatalog'
 import { assertCustomerFinish } from './customerFinish'
+import { clicAvailable, clicOrderingCodes, isClicGlass, isLegacyClicGlass } from '../data/clicGlass'
 import type { ContactForm, DoorConfiguration, GridConfiguration, SideliteGlassConfiguration } from '../types'
 
 export type DoorBuilderSubmissionPayload = {
@@ -78,13 +79,15 @@ function readableMainGlass(configuration: DoorConfiguration) {
   const glass = configuration.mainDoorGlass ?? configuration.glass
   if (!glass) return NOT_APPLICABLE
   const details = gridDetails(configuration.grid)
-  return details ? `${glass.name} — ${details}` : glass.name
+  const codes = clicOrderingCodes(glass.id)
+  return [glass.name, details, codes?.join(' / ')].filter(Boolean).join(' — ')
 }
 
 function readableSideliteGlass(glass?: SideliteGlassConfiguration | null) {
   if (!glass) return NOT_APPLICABLE
   const details = [glass.gridLocation, glass.gridStyle, glass.gridPattern, glass.gridColor, glass.gridWidth].filter(Boolean).join(' / ')
-  return details ? `${glass.glass} — ${details}` : glass.glass
+  const codes = glass.glass === 'CLiC – No grids' ? clicOrderingCodes('clic-nogrid') : undefined
+  return [glass.glass, details, codes?.join(' / ')].filter(Boolean).join(' — ')
 }
 
 function readableSidelitePlacement(configuration: DoorConfiguration) {
@@ -98,6 +101,11 @@ function readableSidelitePlacement(configuration: DoorConfiguration) {
 
 export function buildDoorBuilderSubmissionPayload({ contact, configuration, submittedAt }: SubmissionSource): DoorBuilderSubmissionPayload {
   assertCustomerFinish(configuration.finish)
+  const context = { configurationType: configuration.doorConfigurationType ?? 'single', lineId: configuration.product.matchingVariants[0]?.lineId, grain: configuration.grain, openingCodes: configuration.product.styleCodes }
+  const main = configuration.mainDoorGlass ?? configuration.glass
+  if ((main && isClicGlass(main) && !clicAvailable(context)) || isLegacyClicGlass({ name: configuration.sideliteGlass?.glass }) || (configuration.sideliteGlass?.glass === 'CLiC – No grids' && (!configuration.sideliteSlab || !clicAvailable(context, configuration.sideliteSlab)))) {
+    throw new Error('Please choose a verified CLiC option for this configuration before submitting.')
+  }
   if ([configuration.glass, configuration.mainDoorGlass].some(glass => glass && isHiddenDecorativeGlass(glass)) || isHiddenDecorativeGlass({ name: configuration.sideliteGlass?.glass })) {
     throw new Error('Please choose an available glass option before submitting.')
   }

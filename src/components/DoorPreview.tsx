@@ -509,7 +509,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const previewGlass = glass && compatibleGlass.some((option) => option.id === glass.id) ? glass : null
   const glassOverlay = previewGlass ? styleCodes.map((code) => previewGlass.overlaysByDoorStyle[code]).find(Boolean) : undefined
   const isHrtClearGlass = isHrtDoor && previewGlass?.id === 'hrt-clear-s11rt'
-  const gridGlassUsesClearBase = previewGlass?.id === 'f-clear-grids' || previewGlass?.id === 'f48-clear-grids' || previewGlass?.id === 's-clear-grids'
+  const gridGlassUsesClearBase = previewGlass?.id === 'f-clear-grids' || previewGlass?.id === 'f48-clear-grids' || previewGlass?.id === 's-clear-grids' || Boolean(previewGlass?.orderingCodes?.includes('EXTG'))
   const clearNoGridGlass = glassOptions.find((option) => option.id === (maskCode === 'S' ? 's-clear-no-grids' : maskCode === 'F48' || maskCode === 'F482' ? 'f48-clear-no-grids' : 'f-clear-no-grids'))
   const clearNoGridOverlay = gridGlassUsesClearBase && maskCode
     ? clearNoGridGlass?.overlaysByDoorStyle[maskCode]

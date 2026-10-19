@@ -23,6 +23,7 @@ import { builderUx } from './config/builderUx'
 import { matchingJambFinish } from './utils/matchingFrameFinish'
 import { isCustomerSelectableGlass, isHiddenDecorativeGlass } from './data/customerGlassAvailability'
 import { isGlassFamilyCompatible } from './data/glassFamilyCompatibility'
+import { clicAvailable, isClicGlass } from './data/clicGlass'
 import type { ContactForm, DoorConfiguration, DoorConfigurationType, DoorSwing, DoubleDoorLockPrepCode, GlassCoating, GlassOption, GridColor, GridConfiguration, GridPattern, GridStyle, GridWidth, HardwareView, PreviewHardware, SideliteConfiguration, SideliteGlassConfiguration } from './types'
 import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationLabel, lockSetupOptionsForHardware, requiredDoorConfigurationProductOption } from './data/doorConfigurationRules'
 import { doorSwingDisplayName, savannahOpening } from './data/doorHanding'
@@ -173,7 +174,7 @@ const defaultClearSideliteGlass = (catalog: (typeof sideliteGlassCatalogs)[keyof
   ?? catalog?.options.find((option) => option.id === 'clear')
   ?? catalog?.options.find((option) => option.category === 'clear')
 const groupSideliteGlassOptions = (options: SideliteGlassOption[]) => [...options.reduce((groups, option) => {
-  const title = option.name.split(/\s+[–-]\s+/)[0]
+  const title = isClicGlass(option) ? option.name : option.name.split(/\s+[–-]\s+/)[0]
   const key = title.toLowerCase()
   const existing = groups.get(key)
   if (existing) existing.options.push(option)
@@ -596,8 +597,9 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       ? selectedStyle.variants.filter((variant) => selectedDoorLine.lineIds.includes(variant.lineId)).map((variant) => variant.code)
       : styleCodesForGlass(selectedStyle)
     : []
+  const clicContext = { configurationType: selectedDoorConfigurationType, lineId: selectedDoorLine?.id, grain: selectedGrain, openingCodes: selectedStyleCodes }
   const availableGlass = selectedStyle && compatibilitySupportsGlass
-    ? glassOptions.filter((option) => !isHiddenDecorativeGlass(option) && isGlassFamilyCompatible(option, selectedDoorLine?.id) && selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])) && !(selectedStyleCodes.includes('F') && legacyFullLiteGlassIds.has(option.id)) && !(selectedStyleCodes.includes('S') && legacySHalfLiteClearGlassIds.has(option.id)) && !((selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && legacyF48ClearGlassIds.has(option.id)) && (!(selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) || f48GlassOptionIds.has(option.id)) && !(selectedStyleCodes.includes('SAT') && glassCategory(option) === 'privacy'))
+    ? glassOptions.filter((option) => (!isClicGlass(option) || clicAvailable(clicContext)) && !isHiddenDecorativeGlass(option) && isGlassFamilyCompatible(option, selectedDoorLine?.id) && selectedStyleCodes.some((code) => Boolean(option.overlaysByDoorStyle[code])) && !(selectedStyleCodes.includes('F') && legacyFullLiteGlassIds.has(option.id)) && !(selectedStyleCodes.includes('S') && legacySHalfLiteClearGlassIds.has(option.id)) && !((selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) && legacyF48ClearGlassIds.has(option.id)) && (!(selectedStyleCodes.includes('F48') || selectedStyleCodes.includes('F482')) || f48GlassOptionIds.has(option.id)) && !(selectedStyleCodes.includes('SAT') && glassCategory(option) === 'privacy'))
     : []
   const supportsGlass = Boolean(compatibilitySupportsGlass && availableGlass.length > 0)
   const supportsGlassFrameStain = availableFinishes.some((item) => item.finishType === 'stain')
@@ -637,12 +639,14 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const selectedSidelitePreview = sideliteSlabAsset(sideliteAssetFamily, selectedSideliteStyle?.id ?? null)
   const selectedSideliteMask = sideliteGlassMask(sideliteAssetFamily, selectedSideliteStyle?.id ?? null)
   const selectedSideliteCatalog = selectedSideliteStyle ? sideliteGlassCatalogs[selectedSideliteStyle.id] : null
+  const validSideliteGlass = selectedSideliteCatalog?.options.filter(option => isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, selectedDoorLine?.id) && (!isClicGlass(option) || clicAvailable(clicContext, sideliteStyleId))) ?? []
+  const availableSideliteGlassCategories = selectedSideliteCatalog?.categories.filter(category => validSideliteGlass.some(option => option.category === category.id)) ?? []
   const defaultSideliteGlass = defaultClearSideliteGlass(selectedSideliteCatalog)
   const usesFslGlassFlow = Boolean(selectedSideliteCatalog)
-  const visibleFslGlass = sideliteGlassCategory ? selectedSideliteCatalog?.options.filter((option) => option.category === sideliteGlassCategory && isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, selectedDoorLine?.id)) ?? [] : []
+  const visibleFslGlass = sideliteGlassCategory ? validSideliteGlass.filter(option => option.category === sideliteGlassCategory) : []
   const sideliteGlassOptionGroups = groupSideliteGlassOptions(visibleFslGlass)
   const selectedSideliteGlassGroup = sideliteGlassOptionGroups.find((group) => group.key === sideliteGlassGroupKey)
-  const selectedFslGlass = selectedSideliteCatalog?.options.find((option) => option.id === sideliteGlassId && !isHiddenDecorativeGlass(option) && isGlassFamilyCompatible(option, selectedDoorLine?.id))
+  const selectedFslGlass = validSideliteGlass.find(option => option.id === sideliteGlassId)
   const usesFslGridFlow = usesFslGlassFlow && sideliteGlassId === 'clear-grids'
   const usesExactFslRules = selectedSideliteStyle?.id === 'fsl'
   const fslGridStyles = (['Arts & Crafts', 'Contoured', 'Flat', 'Prairie'] as GridStyle[]).filter((styleName) => selectedSideliteCatalog?.standardRules[styleName] || selectedSideliteCatalog?.lowERules[styleName])
@@ -685,6 +689,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       : defaultSideliteGlass?.asset)
   const sideliteGlassConfiguration: SideliteGlassConfiguration | null = selectedFslGlass ? {
     glass: selectedFslGlass.name,
+    ...(selectedFslGlass.orderingCodes ? { orderingCodes: selectedFslGlass.orderingCodes } : {}),
     glassCategory: sideliteGlassCategory === 'decorative' ? 'Decorative Glass' : sideliteGlassCategory === 'privacy' ? 'Privacy Glass' : sideliteGlassCategory === 'clic' ? 'CLiC Glass' : sideliteGlassCategory === 'blinds' ? 'Mini Blinds' : 'Clear Glass',
     ...(selectedFslGlass.asset ? { glassAsset: selectedFslGlass.asset } : {}),
     ...(usesFslGridFlow ? {
@@ -1135,7 +1140,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   useEffect(() => {
     const current = selectedSideliteCatalog?.options.find(option => option.id === sideliteGlassId)
     if (!selectedDoorLine || !selectedSideliteCatalog || !sideliteGlassId) return
-    const valid = selectedSideliteCatalog!.options.filter(option => isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, selectedDoorLine.id))
+    const valid = validSideliteGlass
     if (current && valid.includes(current)) {
       const group = groupSideliteGlassOptions(valid).find(group => group.options.some(option => option.id === current.id))
       if (sideliteGlassCategory !== current.category) setSideliteGlassCategory(current.category)
@@ -1149,7 +1154,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     setSideliteGlassGroupKey(group?.key ?? '')
     setSideliteGlassVariantConfirmed(Boolean(group && group.options.length === 1))
     setSideliteGridLocation(''); setSideliteGridStyle(''); setSideliteGridPattern(''); setSideliteGridColor(''); setSideliteGridWidth('')
-  }, [selectedDoorLine?.id, selectedSideliteCatalog, sideliteGlassId, sideliteGlassCategory, sideliteGlassGroupKey])
+  }, [selectedDoorConfigurationType, styleId, grainId, selectedDoorLine?.id, selectedSideliteCatalog, sideliteGlassId, sideliteGlassCategory, sideliteGlassGroupKey])
 
   useEffect(() => {
     if (screen !== 'builder') return
@@ -1218,7 +1223,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         if (!gridWidth && compatibleGridWidths[0]) setGridWidth(compatibleGridWidths[0])
         break
       case 'sidelite-glass-type':
-        if (!sideliteGlassCategory && selectedSideliteCatalog?.categories[0]) setSideliteGlassCategory(selectedSideliteCatalog.categories[0].id)
+        if ((!sideliteGlassCategory || !availableSideliteGlassCategories.some(item => item.id === sideliteGlassCategory)) && availableSideliteGlassCategories[0]) setSideliteGlassCategory(availableSideliteGlassCategories[0].id)
         break
       case 'sidelite-glass': {
         const firstGroup = sideliteGlassOptionGroups[0]
@@ -1714,14 +1719,14 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     setSideliteStyleId(nextId)
     const catalog = sideliteGlassCatalogs[nextId as keyof typeof sideliteGlassCatalogs]
     const previousGlass = selectedSideliteCatalog?.options.find(option => option.id === sideliteGlassId)
-    const valid = catalog?.options.filter(option => isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, lineId)) ?? []
+    const valid = catalog?.options.filter(option => isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, lineId) && (!isClicGlass(option) || clicAvailable({ ...clicContext, lineId, grain }, nextId))) ?? []
     const retainedGlass = retainGlassSelection(previousGlass, valid)
     if (retainedGlass) {
       // Shared IDs must also exist in the destination opening's catalog.
       // Keep grid components only as far as the new opening supports them.
       setSideliteGlassCategory(retainedGlass.category)
       setSideliteGlassId(retainedGlass.id)
-      const group = groupSideliteGlassOptions(catalog.options.filter(option => option.category === retainedGlass.category && isCustomerSelectableGlass(option) && isGlassFamilyCompatible(option, lineId))).find(group => group.options.some(option => option.id === retainedGlass.id))
+      const group = groupSideliteGlassOptions(valid.filter(option => option.category === retainedGlass.category)).find(group => group.options.some(option => option.id === retainedGlass.id))
       setSideliteGlassGroupKey(group?.key ?? '')
       setSideliteGlassVariantConfirmed(true)
       if (retainedGlass.id !== 'clear-grids') { resetSideliteGrid(); return }
@@ -2260,7 +2265,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 {currentPage === 'grid-pattern' && compatibleGridPatterns.map((item) => <OptionCard key={item.id} title={item.id} selected={gridPattern === item.id} onClick={() => selectGridPattern(item.id)} visual={<img className="grid-pattern-thumbnail" src="/assets/grid-options/All Lites.webp" alt="" loading="eager" decoding="async" />} />)}
                 {currentPage === 'grid-color' && sortByDisplayLabel(compatibleGridColors, item => item).map((color) => <OptionCard key={color} title={color} eyebrow="Grid color" selected={gridColor === color} onClick={() => selectGridColor(color)} visual={<span className="finish-tile-wrap grid-color-tile" style={{ '--fallback-finish': gridColorValues[color] ?? '#efeee8' } as CSSProperties} />} />)}
                 {currentPage === 'grid-width' && gridColor && compatibleGridWidths.map((width) => <OptionCard key={width} className="bar-size-option-card" title={width} eyebrow="Bar size" selected={gridWidth === width} onClick={() => selectGridWidth(width)} />)}
-                {currentPage === 'sidelite-glass-type' && sortByDisplayLabel(selectedSideliteCatalog?.categories ?? [], item => item.name).map((item) => <OptionCard key={item.id} title={item.name} eyebrow={`${sideliteStyleDisplayName(selectedSideliteStyle?.id)} glass`} selected={sideliteGlassCategory === item.id} onClick={() => selectSideliteGlassCategory(item.id)} visual={<img className={`glass-option-thumbnail${item.id === 'clic' ? ' clic-glass-thumbnail' : ''}`} src={glassCategoryChoices.find((category) => category.id === item.id)?.image ?? item.image} alt="" loading="lazy" decoding="async" />} />)}
+                {currentPage === 'sidelite-glass-type' && sortByDisplayLabel(availableSideliteGlassCategories, item => item.name).map((item) => <OptionCard key={item.id} title={item.name} eyebrow={`${sideliteStyleDisplayName(selectedSideliteStyle?.id)} glass`} selected={sideliteGlassCategory === item.id} onClick={() => selectSideliteGlassCategory(item.id)} visual={<img className={`glass-option-thumbnail${item.id === 'clic' ? ' clic-glass-thumbnail' : ''}`} src={glassCategoryChoices.find((category) => category.id === item.id)?.image ?? item.image} alt="" loading="lazy" decoding="async" />} />)}
                 {currentPage === 'sidelite-glass' && sortByDisplayLabel(sideliteGlassOptionGroups, group => group.title).map((group) => {
                   const displayOption = group.options.find((item) => item.id === sideliteGlassId) ?? group.options[0]
                   const thumbnail = glassSelectionThumbnail(displayOption.name) ?? displayOption.asset ?? (displayOption.id === 'clear-grids' ? '/assets/grid-options/Internal Grids.webp' : '/assets/glass/thumbnails/Clear-option.webp')

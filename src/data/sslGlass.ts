@@ -2,6 +2,7 @@ import type { GridColor, GridPattern, GridStyle, GridWidth } from '../types.js'
 import type { SideliteGlassCategory, SideliteGlassOption, SideliteGridRules } from './fslGlass.js'
 import { isApprovedDecorativeGlassName } from './decorativeGlass.js'
 import { isApprovedPrivacyGlassName } from './privacyGlass.js'
+import { clicSideliteOption } from './clicGlass.js'
 
 const asset = (code: string) => `/assets/hgi-assets/Sidelites/SSL/Glass/SSL${code}.webp`
 const option = (code: string, name: string, category: SideliteGlassCategory = 'decorative'): SideliteGlassOption => ({ id: code.toLowerCase(), name, category, asset: asset(code) })
@@ -10,12 +11,14 @@ export const sslGlassCategories = [
   { id: 'clear', name: 'Clear Glass', image: '/assets/glass/thumbnails/Clear.webp' },
   { id: 'decorative', name: 'Decorative Glass', image: '/assets/glass/thumbnails/Decorative.webp' },
   { id: 'privacy', name: 'Privacy Glass', image: '/assets/glass/thumbnails/Privacy.webp' },
+  { id: 'clic', name: 'CLiC Glass', image: '/assets/glass/thumbnails/CLIC.webp' },
   { id: 'blinds', name: 'Mini Blinds', image: '/assets/glass/thumbnails/Blinds.webp' },
 ] as const
 
 const allSslGlassOptions: SideliteGlassOption[] = [
   { id: 'clear-no-grids', name: 'Clear Glass with No Grids', category: 'clear' },
   { id: 'clear-grids', name: 'Clear Glass with Grids', category: 'clear' },
+  clicSideliteOption,
   option('BER', 'Berkley'), option('BRI', 'Bristol'), option('COB', 'Cobblestone'), option('COU', 'Courtyard'),
   option('CRO', 'Crosswalk'), option('DORNI', 'Dorian – Nickel'), option('DORPA', 'Dorian – Patina'),
   option('DUT', 'Dutchcraft'), option('EDG', 'Edgewood'), option('ELEBW', 'Elegant – Black/White'),

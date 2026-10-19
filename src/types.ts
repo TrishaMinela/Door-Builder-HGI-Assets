@@ -33,6 +33,7 @@ export type Finish = {
 }
 
 export type GlassOption = {
+  orderingCodes?: string[]
   id: string
   name: string
   thumbnailPath: string
@@ -182,6 +183,7 @@ export type GridConfiguration = {
 }
 
 export type SideliteGlassConfiguration = {
+  orderingCodes?: string[]
   glass: string
   glassCategory: 'Clear Glass' | 'Decorative Glass' | 'Privacy Glass' | 'CLiC Glass' | 'Mini Blinds'
   glassAsset?: string

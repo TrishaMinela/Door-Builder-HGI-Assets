@@ -1,9 +1,10 @@
 import type { GridColor, GridPattern, GridStyle, GridWidth } from '../types.js'
 import { isApprovedFslDecorativeGlassName } from './decorativeGlass.js'
 import { isApprovedPrivacyGlassName } from './privacyGlass.js'
+import { clicSideliteOption } from './clicGlass.js'
 
 export type SideliteGlassCategory = 'clear' | 'decorative' | 'privacy' | 'clic' | 'blinds'
-export type SideliteGlassOption = { id: string; name: string; category: SideliteGlassCategory; asset?: string }
+export type SideliteGlassOption = { id: string; name: string; category: SideliteGlassCategory; asset?: string; orderingCodes?: string[] }
 
 const asset = (code: string) => `/assets/hgi-assets/Sidelites/FSL/Glass/FSL${code}.webp`
 const option = (code: string, name: string, category: SideliteGlassCategory = 'decorative'): SideliteGlassOption => ({ id: code.toLowerCase(), name, category, asset: asset(code) })
@@ -34,7 +35,7 @@ const allFslGlassOptions: SideliteGlassOption[] = [
   option('BLA', 'Blanca', 'privacy'), option('CELOC', 'Celestial', 'privacy'), option('CHI', 'Chinchilla', 'privacy'),
   option('CUM', 'Cumulus', 'privacy'), option('LIN', 'Linen', 'privacy'), option('MIC', 'Micro Granite', 'privacy'),
   option('RAI', 'Rain', 'privacy'), option('VAP', 'Vapor', 'privacy'),
-  option('ENTL', 'CLiC – Left', 'clic'), option('ENTR', 'CLiC – Right', 'clic'),
+  clicSideliteOption,
   option('FRLBSL', 'Mini Blinds', 'blinds'),
 ]
 
