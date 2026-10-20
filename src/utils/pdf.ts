@@ -241,7 +241,7 @@ async function generateLegacySummaryPdf(
     ...(doorConfigurationHingeOptionLabel(doorConfigurationType) ? [{ label: 'HINGE OPTION', value: doorConfigurationHingeOptionLabel(doorConfigurationType)! }] : []),
     { label: 'DOOR LINE', value: grain ? `${material} - ${grain}` : material, icon: summaryIcons[0] },
     { label: 'DOOR STYLE', value: doorStyleDisplayName(style), icon: summaryIcons[1] },
-    { label: 'SIDELITE CONFIGURATION', value: sideliteConfigurationDisplayName(sidelites, doorSwing.id, doorConfigurationType) },
+    { label: 'SIDELITE CONFIGURATION', value: sideliteConfigurationDisplayName(sidelites, doorSwing.id, doorConfigurationType, sideliteStyle) },
     ...(sideliteStyle ? [{ label: 'SIDELITE SLAB', value: sideliteStyleDisplayName(sideliteStyle) }] : []),
     ...(sideliteGlass ? [
       { label: 'SIDELITE GLASS', value: glassDisplayName(sideliteGlass.glass) },
@@ -408,7 +408,7 @@ export async function generateSummaryPdf(
   // column. Keep the right side exclusively for the configured-door image.
 
   const material = product.doorTypes.map((doorType) => grain ? doorType.replace(` - ${grain}`, '') : doorType).join(' / ')
-  const placement = sideliteConfigurationDisplayName(sidelites, doorSwing.id, doorConfigurationType)
+  const placement = sideliteConfigurationDisplayName(sidelites, doorSwing.id, doorConfigurationType, sideliteStyle)
   const gridDetails = grid ? [grid.glassCoating !== 'Standard / No Low-E' ? grid.glassCoating : '', grid.gridLocation, grid.gridStyle, grid.gridPattern, grid.gridColor, grid.gridWidth].filter(Boolean).join(' / ') : ''
   const sideliteGridDetails = sideliteGlass ? [sideliteGlass.glassCoating, sideliteGlass.gridLocation, sideliteGlass.gridStyle, sideliteGlass.gridPattern, sideliteGlass.gridColor, sideliteGlass.gridWidth].filter(Boolean).join(' / ') : ''
   const pageOneValues = [

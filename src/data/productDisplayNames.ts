@@ -1,10 +1,10 @@
 import type { DoorStyle } from '../types'
 import type { DoorConfigurationType, DoorSwing } from '../types'
-import { sidelitePlacement, sideliteProductCode, type SideliteInput } from './sideliteConfigurations'
+import { sidelitePlacement, type SideliteInput } from './sideliteConfigurations'
 
 /** Presentation only. IDs, manufacturer codes and catalog labels stay intact. */
 export const verifiedProductDisplayNames = {
-  sidelite: { ssl: 'Half Sidelite' }, // Verified by the SSL correction (b17ca6d).
+  sidelite: { ssl: 'Half Sidelite', fsl: 'Full Sidelite' }, // SSL correction and customer-confirmed FSL name.
 } as const
 const readableCase = (name: string) => name.toLowerCase().replace(/\b[a-z]/g, letter => letter.toUpperCase())
   .replace(/\bhd\b/gi, 'HD').replace(/\b2p\b/gi, '2P')
@@ -41,11 +41,9 @@ export function glassDisplayName(name?: string | null): string {
   return name.replace(/^[A-Z][A-Z0-9]+\s+[–-]\s+/, '')
 }
 
-export function sideliteConfigurationDisplayName(value: SideliteInput, swing: DoorSwing['id'], type: DoorConfigurationType): string {
+export function sideliteConfigurationDisplayName(value: SideliteInput, swing: DoorSwing['id'], type: DoorConfigurationType, style?: string | null): string {
   const side = sidelitePlacement(value, swing, type)
-  if (side === 'none') return 'No Sidelites'
-  if (side === 'both') return 'Both Sidelites'
-  const description = side === 'left' ? 'Left Sidelite' : 'Right Sidelite'
-  const code = sideliteProductCode(value, swing, type)
-  return code === 'HINGESIDE' ? `${description} (Hinge Side)` : code === 'LOCKSIDE' ? `${description} (Lock Side)` : description
+  if (side === 'none') return 'None'
+  const position = side === 'both' ? 'Both sides' : side === 'left' ? 'Left' : 'Right'
+  return style ? `${position} - ${sideliteStyleDisplayName(style)}` : position
 }

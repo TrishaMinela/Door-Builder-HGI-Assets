@@ -1907,7 +1907,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     sidelites: sidelites || 'none',
     sidelitePlacement: sidelites || 'none',
     sideliteConfigurationCode: sideliteProductCode(sidelites || 'none', selectedDoorSwing.id, selectedDoorConfigurationType || 'single'),
-    sideliteConfigurationLabel: sideliteConfigurationDisplayName(sidelites || 'none', selectedDoorSwing.id, selectedDoorConfigurationType || 'single'),
+    sideliteConfigurationLabel: sideliteConfigurationDisplayName(sidelites || 'none', selectedDoorSwing.id, selectedDoorConfigurationType || 'single', selectedSideliteStyle?.id),
     ...((sidelites || 'none') !== 'none' && selectedSideliteStyle ? { sideliteStyle: selectedSideliteStyle.name, sideliteSlab: selectedSideliteStyle.id } : {}),
     ...((sidelites || 'none') !== 'none' && sideliteGlassConfiguration ? { sideliteGlass: sideliteGlassConfiguration } : {}),
   } : null
@@ -1985,7 +1985,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     ...(isSavannahDoor ? [['Lock Setup', 'Lock on Main Door Only', pages.indexOf('hardware')] as [string, string, number]] : isFrenchDoor && selectedDoubleDoorLockPrep ? [['Lock Setup', selectedDoubleDoorLockPrep.name, pages.indexOf('lock-setup')] as [string, string, number]] : []),
     ['Door style', doorStyleDisplayName(style), pages.indexOf('door-style')],
     ['Door Line', selectedDoorLine?.name ?? product.doorType, pages.indexOf('door-line')],
-    ['Sidelite Configuration', sideliteRelationshipLabel(sidelites || 'none', selectedDoorConfigurationType || 'single'), pages.indexOf('sidelites')],
+    ['Sidelite Configuration', sideliteConfigurationDisplayName(sidelites || 'none', selectedDoorSwing?.id ?? 'LHI', selectedDoorConfigurationType || 'single', selectedSideliteStyle?.id), pages.indexOf('sidelites')],
     ...(selectedSideliteStyle ? [['Sidelite Slab', sideliteStyleDisplayName(selectedSideliteStyle.id), pages.indexOf('sidelite-style')] as [string, string, number]] : []),
     ...(selectedFslGlass ? [
       ['Sidelite Glass', glassDisplayName(selectedFslGlass.name), pages.indexOf('sidelite-glass')] as [string, string, number],
