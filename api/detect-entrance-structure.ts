@@ -6,6 +6,22 @@ type ApiRequest = { method?: string; body?: unknown; headers?: Record<string, st
 type ApiResponse = { status: (code: number) => ApiResponse; json: (body: unknown) => void; setHeader: (name: string, value: string) => void }
 const DETECTION_MODEL = process.env.OPENAI_ENTRANCE_DETECTION_MODEL || 'gpt-5.4-mini'
 
+// Never echo upstream free text: even an error can contain a credential,
+// reflected image data, or customer content. Emit known categories only.
+const safeErrorTypes = new Set(['invalid_request_error', 'authentication_error', 'permission_error', 'rate_limit_error', 'server_error', 'insufficient_quota'])
+const safeErrorCodes = new Set(['invalid_api_key', 'token_invalidated', 'account_deactivated', 'organization_deactivated', 'insufficient_quota', 'rate_limit_exceeded', 'model_not_found', 'permission_denied', 'invalid_request_error', 'invalid_json_schema', 'unsupported_parameter', 'invalid_value', 'missing_required_parameter', 'unsupported_value', 'billing_hard_limit_reached', 'unsupported_country_region_territory', 'invalid_project', 'project_not_found'])
+function safeCategory(value: unknown, allowed: Set<string>) {
+  return typeof value === 'string' ? allowed.has(value) ? value : '[unrecognized]' : null
+}
+function safeUpstreamMessage(status: number, code: string | null) {
+  if (code === 'invalid_api_key' || code === 'token_invalidated' || status === 401) return 'Upstream authentication rejected; credential details omitted.'
+  if (code === 'insufficient_quota' || code === 'billing_hard_limit_reached') return 'Upstream quota or billing limit rejected the request.'
+  if (code === 'model_not_found') return 'Upstream model was not found or is not accessible.'
+  if (status === 403) return 'Upstream access denied; account/project details omitted.'
+  if (status === 429) return 'Upstream rate or usage limit rejected the request.'
+  return 'Upstream rejected the request; free-text error message omitted.'
+}
+
 const schema = {
   type: 'object', additionalProperties: false,
   properties: {
@@ -68,10 +84,31 @@ export default async function handler(request: ApiRequest, response: ApiResponse
       }),
     })
     openAiDurationMs = Math.round(performance.now() - openAiStartedAt)
-    const result = await upstream.json().catch(() => null) as Record<string, unknown> | null
-    if (!upstream.ok || !result) throw new AiInputError('OPENAI_REQUEST_REJECTED', 'We could not analyze this entrance. Retry or choose the fit manually.', upstream.status === 429 ? 429 : 502)
-    const detection = JSON.parse(outputText(result)) as EntranceDetection
-    console.info('[ai-entrance-detection:success]', { request_id: requestId, model: DETECTION_MODEL, normalized_image: prepared.normalized, detection, confidence: detection.confidence, durations_ms: { preprocessing: preprocessingDurationMs, openai: openAiDurationMs, total: Math.round(performance.now() - totalStartedAt) } })
+    // Only the response's known request-ID header is eligible for logging.
+    const rawUpstreamId = upstream.headers.get('x-request-id')
+    const upstreamRequestId = rawUpstreamId && /^req_[a-zA-Z0-9_-]{1,120}$/.test(rawUpstreamId) ? rawUpstreamId : null
+    let jsonValid = true
+    const result = await upstream.json().catch(() => { jsonValid = false; return null }) as unknown
+    const resultObject = objectValue(result)
+    const logUpstreamFailure = (stage: 'http_error' | 'invalid_json_response' | 'invalid_response_shape' | 'invalid_detection_json') => {
+      const error = objectValue(resultObject?.error)
+      const code = safeCategory(error?.code, safeErrorCodes)
+      console.error('[ai-entrance-detection:upstream-failure]', {
+        request_id: requestId, openai_request_id: upstreamRequestId,
+        upstream_status: upstream.status, stage, response_json_valid: jsonValid,
+        error_type: safeCategory(error?.type, safeErrorTypes), error_code: code,
+        message: stage === 'http_error' ? safeUpstreamMessage(upstream.status, code) : 'Upstream returned an unusable detection response; response content omitted.',
+      })
+    }
+    if (!upstream.ok || !result) {
+      logUpstreamFailure(!upstream.ok ? 'http_error' : !jsonValid ? 'invalid_json_response' : 'invalid_response_shape')
+      throw new AiInputError('OPENAI_REQUEST_REJECTED', 'We could not analyze this entrance. Retry or choose the fit manually.', upstream.status === 429 ? 429 : 502)
+    }
+    if (!resultObject) logUpstreamFailure('invalid_response_shape')
+    let detection: EntranceDetection
+    try { detection = JSON.parse(outputText(result as Record<string, unknown>)) as EntranceDetection }
+    catch (error) { logUpstreamFailure('invalid_detection_json'); throw error }
+    console.info('[ai-entrance-detection:success]', { request_id: requestId, model: DETECTION_MODEL, normalized_image: prepared.normalized, confidence: typeof detection.confidence === 'number' && Number.isFinite(detection.confidence) ? detection.confidence : null, durations_ms: { preprocessing: preprocessingDurationMs, openai: openAiDurationMs, total: Math.round(performance.now() - totalStartedAt) } })
     response.status(200).json({ detection, request_id: requestId })
   } catch (error) {
     if (!preprocessingDurationMs && preprocessingStartedAt) preprocessingDurationMs = Math.round(performance.now() - preprocessingStartedAt)
@@ -79,7 +116,9 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     const status = error instanceof AiInputError ? error.status : error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError') ? 504 : 500
     const errorCode = error instanceof AiInputError ? error.code : status === 504 ? 'AI_GENERATION_TIMEOUT' : 'UNKNOWN_ERROR'
     const message = error instanceof AiInputError ? error.message : status === 504 ? 'Entrance detection took too long. Retry or choose the fit manually.' : 'We could not detect the entrance. Retry or choose the fit manually.'
-    console.error('[ai-entrance-detection:failure]', { request_id: requestId, model: DETECTION_MODEL, error_code: errorCode, normalized_image: normalizedImage, durations_ms: { preprocessing: preprocessingDurationMs, openai: openAiDurationMs, total: Math.round(performance.now() - totalStartedAt) }, technical_error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : String(error) })
+    // Native parse/fetch errors may quote response text. Do not log their raw
+    // message, stack or cause; known input errors contain our static messages.
+    console.error('[ai-entrance-detection:failure]', { request_id: requestId, model: DETECTION_MODEL, error_code: errorCode, normalized_image: normalizedImage, durations_ms: { preprocessing: preprocessingDurationMs, openai: openAiDurationMs, total: Math.round(performance.now() - totalStartedAt) }, technical_error: { name: error instanceof AiInputError ? 'AiInputError' : status === 504 ? 'TimeoutError' : 'Error', message: error instanceof AiInputError ? error.message : 'Detection did not complete; technical content omitted.' } })
     response.status(status).json({ error_code: errorCode, user_message: message, request_id: requestId })
   }
 }
