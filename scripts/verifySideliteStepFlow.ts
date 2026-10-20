@@ -42,7 +42,7 @@ try {
     await page.getByRole('button', { name: 'Next configuration step' }).click(); await page.waitForTimeout(120)
   }
   await page.getByRole('heading', { name: 'Configuration Summary' }).waitFor()
-  assert.equal(await page.locator('.summary-row').filter({ hasText: 'Sidelite Configuration' }).locator('strong').innerText(), 'Right - Half Sidelite')
+  assert.equal(await page.locator('.summary-row').filter({ hasText: 'Sidelite Configuration' }).locator('strong').innerText(), 'Right - Half Side Lite')
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
   assert.equal(saved.sidelites, 'lock-side'); assert.equal(saved.doorSwingId, 'RHO')
   await page.close()

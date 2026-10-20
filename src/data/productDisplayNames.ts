@@ -4,7 +4,12 @@ import { sidelitePlacement, type SideliteInput } from './sideliteConfigurations'
 
 /** Presentation only. IDs, manufacturer codes and catalog labels stay intact. */
 export const verifiedProductDisplayNames = {
-  sidelite: { ssl: 'Half Sidelite', fsl: 'Full Sidelite' }, // SSL correction and customer-confirmed FSL name.
+  sidelite: {
+    f48sl: 'Three Quarter Side Lite',
+    fsl: 'Full Side Lite Cut Out',
+    s2sl: 'S2 Sidelite',
+    ssl: 'Half Side Lite',
+  }, // Customer-confirmed catalog wording; product IDs/codes stay unchanged.
 } as const
 const readableCase = (name: string) => name.toLowerCase().replace(/\b[a-z]/g, letter => letter.toUpperCase())
   .replace(/\bhd\b/gi, 'HD').replace(/\b2p\b/gi, '2P')

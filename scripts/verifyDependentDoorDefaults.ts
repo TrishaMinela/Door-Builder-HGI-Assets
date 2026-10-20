@@ -124,7 +124,7 @@ try {
     assert.equal((await saved()).styleId, doorStyles.find(item => item.code === 'F')!.id, 'Manual slab remains')
     assert.equal((await saved()).grainId, 'Mahogany')
     await next(); await next(); await next() // line, grain, sidelite slab
-    await card(/^Half Sidelite$/)
+    await card(/^Half Side Lite$/)
     await page.waitForTimeout(250)
     assert.equal((await saved()).sideliteStyleId, 'ssl', 'Manual sidelite remains')
     await back(); await back() // line

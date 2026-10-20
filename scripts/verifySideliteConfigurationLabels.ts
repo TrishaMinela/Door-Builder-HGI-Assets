@@ -5,10 +5,13 @@ import { sidelitePlacement, sideliteProductCode, sideliteProductLabel } from '..
 import { buildDoorBuilderSubmissionPayload } from '../src/utils/submission'
 import { aiTestConfiguration } from './aiVisualizerFixture'
 
-assert.equal(sideliteStyleDisplayName('FSL'), 'Full Sidelite')
-assert.equal(sideliteConfigurationDisplayName('right', 'LHI', 'single', 'ssl'), 'Right - Half Sidelite')
-assert.equal(sideliteConfigurationDisplayName('left', 'LHI', 'single', 'fsl'), 'Left - Full Sidelite')
-assert.equal(sideliteConfigurationDisplayName('both-sides', 'LHI', 'single', 'ssl'), 'Both sides - Half Sidelite')
+for (const [code, name] of Object.entries({ F48SL: 'Three Quarter Side Lite', FSL: 'Full Side Lite Cut Out', S2SL: 'S2 Sidelite', SSL: 'Half Side Lite' })) {
+  assert.equal(sideliteStyleDisplayName(code), name)
+  assert.equal(sideliteStyleDisplayName(code.toLowerCase()), name)
+}
+assert.equal(sideliteConfigurationDisplayName('right', 'LHI', 'single', 'ssl'), 'Right - Half Side Lite')
+assert.equal(sideliteConfigurationDisplayName('left', 'LHI', 'single', 'fsl'), 'Left - Full Side Lite Cut Out')
+assert.equal(sideliteConfigurationDisplayName('both-sides', 'LHI', 'single', 'ssl'), 'Both sides - Half Side Lite')
 assert.equal(sideliteConfigurationDisplayName('none', 'LHI', 'single', 'ssl'), 'None', 'Ignore retained style when no sidelites are enabled')
 assert.equal(sideliteConfigurationDisplayName('right', 'LHI', 'single', 'Future readable style'), 'Right - Future readable style', 'Use the selected name, not a fixed style')
 assert.equal(sideliteConfigurationDisplayName('left', 'LHI', 'single'), 'Left', 'Do not invent a missing selection')
