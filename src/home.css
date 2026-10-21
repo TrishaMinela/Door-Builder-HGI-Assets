@@ -3,8 +3,8 @@
 html:has(.home-app),body:has(.home-app){height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto}
 #root:has(>.home-app){height:auto;min-height:100dvh;overflow:visible}
 .app.home-app{display:flex;flex-direction:column;height:auto;min-height:100dvh;overflow:visible;background:#fff;--type-h1:clamp(36px,4.5vw,64px)}
-.home-app>header{position:relative;inset:auto;display:flex;justify-content:space-between;align-items:center;gap:20px;height:auto;min-height:96px;padding:22px max(24px,calc((100vw - 1240px)/2));background:#fff;border:0;box-shadow:none}
-.home-app .brand{gap:0}.home-app .brand-home img{display:block;width:160px;height:auto;max-height:none;object-fit:contain;filter:none}
+.home-app>header{position:relative;inset:auto;display:flex;justify-content:space-between;align-items:center;gap:20px;height:auto;min-height:96px;padding:10px max(24px,calc((100vw - 1240px)/2));background:#fff;border:0;box-shadow:none}
+.home-app .brand{gap:0}.home-app .brand-home img{display:block;width:clamp(190px,20vw,230px);height:auto;max-height:none;object-fit:contain;filter:none}
 .home-app .header-actions{gap:0}.home-app .header-dealer-cta>span{display:none}
 .home-app .header-dealer-cta a{width:auto;min-height:46px;padding:12px 20px;border:0;border-radius:999px;background:var(--gold);font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;white-space:nowrap}
 .home-app .header-dealer-cta a svg{display:none}
@@ -15,7 +15,7 @@ html:has(.home-app),body:has(.home-app){height:auto;min-height:100%;overflow-x:h
 .builder-typography.home-app .home-hero h1{font-family:var(--font-hero)!important;font-weight:400!important;max-width:940px;margin:0 0 24px;line-height:1.12;letter-spacing:-.045em}
 .home-app .home-hero h1 em{font-family:inherit;font-weight:700;font-style:italic;white-space:nowrap}
 .home-app .home-hero h1:after{display:none}
-.home-app .home-hero-copy>p{max-width:680px;margin:0 0 28px;font-size:16px;line-height:1.6;color:#50565c}
+.home-app .home-hero-copy>p{max-width:760px;margin:0 0 28px;font-size:16px;line-height:1.6;color:#50565c}
 .home-app .start-building{display:inline-flex;justify-content:center;min-height:50px;height:auto;padding:14px 28px;border:0;border-radius:999px;background:var(--black);color:#fff;box-shadow:none;text-transform:none;letter-spacing:0;font-size:16px;font-weight:600}
 .home-app .start-building:focus-visible{outline:3px solid var(--peacock);outline-offset:4px}
 .home-app .home-hero-visual{position:relative;display:block;align-self:auto;width:100%;height:auto;min-height:0;margin:0;padding:0;aspect-ratio:auto;overflow:hidden;container-type:normal;border-radius:12px}
@@ -30,8 +30,8 @@ html:has(.home-app),body:has(.home-app){height:auto;min-height:100%;overflow-x:h
 .home-app .home-preview-caption{display:flex;justify-content:space-between;align-items:baseline;gap:20px;max-width:1240px;margin:0 auto;padding:24px 0 52px}
 .home-app .home-preview-caption p{margin:0;font-size:16px;line-height:1.5}.home-app .home-preview-caption p:first-child{font-weight:600}
 @media(max-width:700px){
-  .home-app>header{min-height:80px;padding:18px 20px;gap:12px}
-  .home-app .brand-home img{width:125px}.home-app .header-dealer-cta a{font-size:13px;padding:11px 16px;min-height:44px}
+  .home-app>header{min-height:80px;padding:12px 20px;gap:12px}
+  .home-app .brand-home img{width:clamp(140px,40vw,170px)}.home-app .header-dealer-cta a{font-size:13px;padding:11px 16px;min-height:44px}
   .home-app .home-page{padding:0 20px}
   .home-app .home-hero-copy{padding:40px 0 32px}
   .home-app .home-hero h1{margin-bottom:20px}

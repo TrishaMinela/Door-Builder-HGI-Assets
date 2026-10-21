@@ -40,6 +40,7 @@ import { cladColors } from './data/finishes'
 import { HomeVisualizer } from './features/home-visualizer/HomeVisualizer'
 import { HERO_PRESETS, heroDoorFilename, type HeroPreset } from './data/heroPresets'
 import { HeroDoorGenerator } from './features/hero/HeroDoorGenerator'
+import { HomepageDoorShowcase } from './features/hero/HomepageDoorShowcase'
 import { normalizeLegacySidelite, sideliteBuilderOptions, sidelitePlacement, sideliteProductCode, sideliteRelationshipLabel } from './data/sideliteConfigurations'
 import { sideliteAssetFamilyForSlab, sideliteGlassMask, sideliteSlabAsset, sideliteStylesForFamily, type SideliteStyleId } from './data/sideliteAssets'
 import { clearDoorBuilderDraft, loadDoorBuilderDraft, saveDoorBuilderDraft, type DoorBuilderDraftConfiguration } from './utils/doorBuilderDraft'
@@ -480,8 +481,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [completedCustomerAction, setCompletedCustomerAction] = useState<null | 'download-pdf' | 'open-visualizer'>(null)
   const [customerFormCompleted, setCustomerFormCompleted] = useState(false)
   const [testMode, setTestMode] = useState(true)
-  const [homeDemoIndex, setHomeDemoIndex] = useState(0)
-  const [heroImageError, setHeroImageError] = useState('')
   const [builderPreviewView, setBuilderPreviewView] = useState<'Exterior' | 'Interior' | 'Both'>('Exterior')
   const [pdfProductRender, setPdfProductRender] = useState<{ configurationKey: string; dataUrl: string } | null>(null)
   const [pdfError, setPdfError] = useState('')
@@ -1083,7 +1082,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     }
   }
   const homeDemoConfigurations = HERO_PRESETS.map((preset, index) => buildHomeDemo(preset, index))
-  const activeHomeDemo = homeDemoConfigurations[homeDemoIndex % homeDemoConfigurations.length]
 
   useEffect(() => {
     if (!selectedDoorConfigurationType) return
@@ -1361,23 +1359,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       builderOptionsRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     })
   }, [screen, currentPage])
-
-  useEffect(() => {
-    if (screen !== 'home') return
-    const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
-    let timer: number | undefined
-    const updateMotion = () => {
-      window.clearInterval(timer)
-      if (!motion.matches) timer = window.setInterval(() => {
-        setHomeDemoIndex((current) => (current + 1) % homeDemoConfigurations.length)
-      }, 1800)
-    }
-    updateMotion()
-    motion.addEventListener('change', updateMotion)
-    return () => { window.clearInterval(timer); motion.removeEventListener('change', updateMotion) }
-  }, [screen, homeDemoConfigurations.length])
-
-  useEffect(() => setHeroImageError(''), [homeDemoIndex])
 
   useEffect(() => {
     if (!showEntrywayGuidance) return
@@ -2119,8 +2100,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         <section className="home-hero">
           <div className="home-hero-copy">
             <h1>Build a Door Made for <em>Your Home.</em></h1>
-            <p>Choose your door style, finish, glass, and hardware, then preview your exact combination before requesting a quote.</p>
-            <button className="start-building" onClick={() => showScreen('builder')}>Start Building</button>
+            <p>Choose your door style, finish, glass, and hardware, then bring your vision to life by seeing how your custom door looks on your own home.</p>
+            <button className="start-building" onClick={() => showScreen('builder')}>Start Building Your Door</button>
           </div>
           <div className="home-hero-visual">
             <div className="home-entryway-demo hero-composite" aria-label="Animated examples of configurable entry doors">
@@ -2128,24 +2109,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 <img className="home-entryway-image" src="/assets/hero/hero-entryway.webp" alt="Welcoming home entryway with a customizable door preview" />
                 <div className="home-entryway-overlay" aria-hidden="true">
                   <div className="home-entryway-door-slot hero-door-stack entryway-door-stack hero-door-overlay" style={heroDoorOpeningStyle}>
-                    <div className="home-demo-door-layer active" key={`${activeHomeDemo.style.code}-${activeHomeDemo.finish.id}-${activeHomeDemo.glass?.id ?? 'no-glass'}-${activeHomeDemo.hardware.id}`}>
-                      <img
-                        className="hero-static-door-image"
-                        src={`/assets/generated/hero-doors/${heroDoorFilename(HERO_PRESETS[homeDemoIndex % HERO_PRESETS.length], homeDemoIndex % HERO_PRESETS.length)}`}
-                        alt={`${doorStyleDisplayName(activeHomeDemo.style)} in ${activeHomeDemo.finish.name}${activeHomeDemo.glass ? ` with ${activeHomeDemo.glass.name} glass` : ''}`}
-                        width="484"
-                        height="1100"
-                        loading={homeDemoIndex === 0 ? 'eager' : 'lazy'}
-                        decoding={homeDemoIndex === 0 ? 'sync' : 'async'}
-                        fetchPriority={homeDemoIndex === 0 ? 'high' : 'auto'}
-                        onLoad={() => setHeroImageError('')}
-                        onError={(event) => {
-                          const message = `Missing generated hero door: ${event.currentTarget.currentSrc || event.currentTarget.src}`
-                          if (import.meta.env.DEV) { console.error(`[hero-door-image:missing] ${message}`); setHeroImageError(message) }
-                        }}
-                      />
-                      {import.meta.env.DEV && heroImageError && <span className="hero-image-warning" role="alert">{heroImageError}</span>}
-                    </div>
+                    <HomepageDoorShowcase />
                   </div>
                 </div>
               </div>

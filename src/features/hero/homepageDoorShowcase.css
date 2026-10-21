@@ -1,0 +1,8 @@
+/* Retain the previous opaque doorway underneath the incoming fade. */
+.home-entryway-door-slot .hero-ai-layer{opacity:1;transition:none;z-index:1}
+.home-entryway-door-slot .hero-ai-layer.active{z-index:2}
+.home-entryway-door-slot .hero-ai-layer.is-entering{animation:homepage-door-fade .7s ease both}
+@keyframes homepage-door-fade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  .home-entryway-door-slot .hero-ai-layer.is-entering{animation:none}
+}

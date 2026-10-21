@@ -36,6 +36,17 @@ try {
     await page.locator('.hero-static-door-image').evaluate(async (img: HTMLImageElement) => { await img.decode() })
     assert.equal(await page.locator('h1').count(), 1)
     assert.equal(await page.locator('h1 em').innerText(), 'Your Home.')
+    assert.equal(await page.locator('h1').innerText(), 'Build a Door Made for Your Home.')
+    assert.equal(await page.locator('.home-hero-copy>p').innerText(), 'Choose your door style, finish, glass, and hardware, then bring your vision to life by seeing how your custom door looks on your own home.')
+    const headerGeometry = await page.evaluate(() => {
+      const logo = document.querySelector<HTMLImageElement>('.home-app .brand-home img')!, dealer = document.querySelector('.header-dealer-cta a')!, header = document.querySelector('.home-app>header')!
+      const l = logo.getBoundingClientRect(), d = dealer.getBoundingClientRect(), h = header.getBoundingClientRect()
+      return { width: l.width, ratio: l.width / l.height, sourceRatio: logo.naturalWidth / logo.naturalHeight, height: h.height, fits: l.right + 10 <= d.left && l.top >= h.top && l.bottom <= h.bottom }
+    })
+    assert.ok(headerGeometry.width > (width <= 700 ? 125 : 160))
+    assert.ok(Math.abs(headerGeometry.ratio - headerGeometry.sourceRatio) < .02)
+    assert.ok(headerGeometry.height <= (width <= 700 ? 81 : 97))
+    assert.equal(headerGeometry.fits, true)
     assert.equal(await page.locator('.home-app>header').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)')
     assert.equal(await page.locator('.home-hero-copy').evaluate(el => getComputedStyle(el).backgroundColor), 'rgb(255, 255, 255)')
     assert.equal(await page.locator('.home-entryway-demo').evaluate(el => getComputedStyle(el, ':after').display), 'none')
@@ -75,7 +86,7 @@ try {
     await page.getByText('Your feedback has been sent.', { exact: true }).waitFor()
     await page.getByRole('button', { name: 'Close', exact: true }).click()
     assert.equal(feedbackSubmissions, 1)
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     await page.locator('.home-app').waitFor({ state: 'detached' })
     const guidance = page.getByRole('button', { name: 'Start Configuring' })
     if (await guidance.isVisible()) await guidance.click()
