@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { AI_MAX_REQUEST_BYTES, AiInputError, objectValue, prepareHouseAndMask } from '../server/aiImagePreprocessing.js'
+import { aiUsageEnvironment, estimateEntranceDetectionCost, normalizeResponseUsage, recordAiEntranceDetectionUsage } from '../server/aiUsage.js'
 import type { EntranceDetection } from '../src/features/home-visualizer/entranceFitStrategy.js'
 
 type ApiRequest = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> }
@@ -58,6 +59,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   let openAiStartedAt = 0
   let normalizedImage: unknown = null
   const requestId = randomUUID()
+  const modelRequestId = randomUUID()
   response.setHeader('Content-Type', 'application/json'); response.setHeader('Cache-Control', 'no-store'); response.setHeader('X-Request-Id', requestId)
   if (request.method !== 'POST') { response.setHeader('Allow', 'POST'); response.status(405).json({ error_code: 'INVALID_REQUEST', user_message: 'Method not allowed.', request_id: requestId }); return }
   try {
@@ -72,7 +74,9 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) throw new AiInputError('SERVER_CONFIGURATION_ERROR', 'Entrance detection is temporarily unavailable. You can choose the fit manually.', 503)
     openAiStartedAt = performance.now()
-    const upstream = await fetch('https://api.openai.com/v1/responses', {
+    let upstream: Response
+    try {
+      upstream = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(45_000),
       body: JSON.stringify({
         model: DETECTION_MODEL, store: false,
@@ -82,7 +86,13 @@ export default async function handler(request: ApiRequest, response: ApiResponse
         ] }],
         text: { format: { type: 'json_schema', name: 'entrance_structure', strict: true, schema } },
       }),
-    })
+      })
+    } catch (error) {
+      openAiDurationMs = Math.round(performance.now() - openAiStartedAt)
+      const usage = normalizeResponseUsage(null)
+      await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'failed', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType: 'primary', usage, estimatedCostUsd: null, detectionDurationMs: openAiDurationMs, requestId: modelRequestId, providerRequestId: null, workflowRequestId: requestId, errorCode: error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError') ? 'AI_GENERATION_TIMEOUT' : 'OPENAI_REQUEST_REJECTED' })
+      throw error
+    }
     openAiDurationMs = Math.round(performance.now() - openAiStartedAt)
     // Only the response's known request-ID header is eligible for logging.
     const rawUpstreamId = upstream.headers.get('x-request-id')
@@ -90,6 +100,8 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     let jsonValid = true
     const result = await upstream.json().catch(() => { jsonValid = false; return null }) as unknown
     const resultObject = objectValue(result)
+    const usage = normalizeResponseUsage(resultObject?.usage)
+    const estimatedCostUsd = estimateEntranceDetectionCost(DETECTION_MODEL, usage)
     const logUpstreamFailure = (stage: 'http_error' | 'invalid_json_response' | 'invalid_response_shape' | 'invalid_detection_json') => {
       const error = objectValue(resultObject?.error)
       const code = safeCategory(error?.code, safeErrorCodes)
@@ -102,12 +114,18 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     }
     if (!upstream.ok || !result) {
       logUpstreamFailure(!upstream.ok ? 'http_error' : !jsonValid ? 'invalid_json_response' : 'invalid_response_shape')
+      await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'failed', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType: 'primary', usage, estimatedCostUsd, detectionDurationMs: openAiDurationMs, requestId: modelRequestId, providerRequestId: upstreamRequestId, workflowRequestId: requestId, errorCode: upstream.status === 429 ? 'OPENAI_RATE_LIMITED' : 'OPENAI_REQUEST_REJECTED' })
       throw new AiInputError('OPENAI_REQUEST_REJECTED', 'We could not analyze this entrance. Retry or choose the fit manually.', upstream.status === 429 ? 429 : 502)
     }
     if (!resultObject) logUpstreamFailure('invalid_response_shape')
     let detection: EntranceDetection
     try { detection = JSON.parse(outputText(result as Record<string, unknown>)) as EntranceDetection }
-    catch (error) { logUpstreamFailure('invalid_detection_json'); throw error }
+    catch (error) {
+      logUpstreamFailure('invalid_detection_json')
+      await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'failed', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType: 'primary', usage, estimatedCostUsd, detectionDurationMs: openAiDurationMs, requestId: modelRequestId, providerRequestId: upstreamRequestId, workflowRequestId: requestId, errorCode: 'INVALID_MODEL_RESPONSE' })
+      throw error
+    }
+    await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'succeeded', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType: 'primary', usage, estimatedCostUsd, detectionDurationMs: openAiDurationMs, requestId: modelRequestId, providerRequestId: upstreamRequestId, workflowRequestId: requestId, errorCode: null })
     console.info('[ai-entrance-detection:success]', { request_id: requestId, model: DETECTION_MODEL, normalized_image: prepared.normalized, confidence: typeof detection.confidence === 'number' && Number.isFinite(detection.confidence) ? detection.confidence : null, durations_ms: { preprocessing: preprocessingDurationMs, openai: openAiDurationMs, total: Math.round(performance.now() - totalStartedAt) } })
     response.status(200).json({ detection, request_id: requestId })
   } catch (error) {

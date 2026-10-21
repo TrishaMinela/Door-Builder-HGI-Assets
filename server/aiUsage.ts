@@ -91,6 +91,8 @@ type AiUsageRecord = {
   openAiGenerationDurationMs: number
   totalApiDurationMs: number
   requestId: string
+  providerRequestId: string | null
+  workflowRequestId: string | null
   errorCode: string | null
   environment: AiUsageEnvironment
   completionTokenHash: string | null
@@ -138,6 +140,8 @@ export async function recordAiGenerationUsage(record: AiUsageRecord) {
         openai_generation_duration_ms: record.openAiGenerationDurationMs,
         total_api_duration_ms: record.totalApiDurationMs,
         request_id: record.requestId,
+        provider_request_id: record.providerRequestId,
+        workflow_request_id: record.workflowRequestId,
         error_code: record.errorCode,
         environment: record.environment,
         completion_token_hash: record.completionTokenHash,
@@ -170,6 +174,7 @@ type EntranceDetectionUsageRecord = {
   estimatedCostUsd: number | null
   detectionDurationMs: number
   requestId: string
+  providerRequestId: string | null
   workflowRequestId: string
   errorCode: string | null
 }
@@ -204,6 +209,7 @@ export async function recordAiEntranceDetectionUsage(record: EntranceDetectionUs
         estimated_cost_usd: record.estimatedCostUsd,
         detection_duration_ms: record.detectionDurationMs,
         request_id: record.requestId,
+        provider_request_id: record.providerRequestId,
         workflow_request_id: record.workflowRequestId,
         error_code: record.errorCode,
       }),

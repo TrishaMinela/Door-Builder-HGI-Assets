@@ -40,5 +40,5 @@ export async function detectEntranceStructure(photoUrl: string, signal?: AbortSi
     throw new AiVisualizationError(import.meta.env.DEV ? 'Entrance detection returned invalid JSON or omitted its detection result.' : 'Entrance analysis returned an unusable response. Please retry or identify the entrance manually.', 'INVALID_API_RESPONSE', requestId)
   }
   if (import.meta.env.DEV) console.debug('[ai-entrance-detection:response]', { duration_ms: durationMs, request_id: requestId, detection: body.detection, outcome: body.detection.confidence < .65 || body.detection.doorStructure === 'unknown' || body.detection.sidelites === 'unknown' ? 'low-confidence' : 'confident' })
-  return body.detection
+  return { ...body.detection, telemetryRequestId: requestId }
 }
