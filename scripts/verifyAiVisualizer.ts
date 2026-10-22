@@ -19,7 +19,7 @@ const productReference = `data:image/png;base64,${productReferenceBytes.toString
 const source = { photo: `data:image/jpeg;base64,${bytes.toString('base64')}`, productReference, corners, configuration: aiTestConfiguration }
 let forwardedForm: FormData | null = null
 let calls = 0
-let openAiFailure: 'none' | 'rate' | 'rejected' | 'empty' = 'none'
+let openAiFailure: 'none' | 'rate' | 'credit' | 'spend' | 'credential' | 'rejected' | 'empty' | 'timeout' = 'none'
 let gate: Promise<void> | null = null
 globalThis.fetch = (async (url, init) => {
   calls += 1
@@ -28,7 +28,11 @@ globalThis.fetch = (async (url, init) => {
   assert.ok(init?.body instanceof FormData)
   forwardedForm = init.body
   if (gate) await gate
+  if (openAiFailure === 'timeout') throw Object.assign(new Error('SECRET PROVIDER TIMEOUT DETAIL'), { name: 'TimeoutError' })
   if (openAiFailure === 'rate') return new Response(JSON.stringify({ error: { code: 'rate_limit_exceeded', message: 'SECRET INTERNAL ERROR' } }), { status: 429, headers: { 'x-request-id': 'openai-rate-test' } })
+  if (openAiFailure === 'credit') return new Response(JSON.stringify({ error: { code: 'credit_balance_exhausted', message: 'SECRET BILLING ERROR' } }), { status: 429, headers: { 'x-request-id': 'openai-credit-test' } })
+  if (openAiFailure === 'spend') return new Response(JSON.stringify({ error: { code: 'project_spend_limit_exceeded', message: 'SECRET SPEND ERROR' } }), { status: 429, headers: { 'x-request-id': 'openai-spend-test' } })
+  if (openAiFailure === 'credential') return new Response(JSON.stringify({ error: { code: 'invalid_api_key', message: 'SECRET CREDENTIAL ERROR' } }), { status: 401, headers: { 'x-request-id': 'openai-credential-test' } })
   if (openAiFailure === 'rejected') return new Response(JSON.stringify({ error: { code: 'invalid_image', type: 'image_generation_user_error', message: 'SECRET INTERNAL ERROR' } }), { status: 400, headers: { 'x-request-id': 'openai-rejected-test' } })
   if (openAiFailure === 'empty') return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { 'x-request-id': 'openai-empty-test' } })
   return new Response(JSON.stringify({ data: [{ b64_json: 'YWktcmVzdWx0' }] }), { status: 200, headers: { 'x-request-id': 'openai-success-test' } })
@@ -197,7 +201,7 @@ try {
   assert.equal(evaluateEntranceCompatibility({ ...singleNone, sidelites: 'both' }, aiTestConfiguration)?.status, 'caution')
   assert.equal(evaluateEntranceCompatibility({ ...singleNone, doorStructure: 'double' }, aiTestConfiguration)?.status, 'caution')
   assert.equal(evaluateEntranceCompatibility({ ...singleNone, doorStructure: 'double', sidelites: 'both' }, aiTestConfiguration)?.status, 'not-recommended')
-  assert.match(evaluateEntranceCompatibility({ ...singleNone, transom: true }, aiTestConfiguration)?.notes.join(' ') ?? '', /transom was detected/)
+  assert.deepEqual(evaluateEntranceCompatibility({ ...singleNone, transom: true }, aiTestConfiguration)?.notes, [], 'Existing compatible-opening behavior does not show structural warnings')
   assert.equal(evaluateEntranceCompatibility({ ...singleNone, confidence: .4 }, aiTestConfiguration), null)
   const compatibilityCodes = ['S0', 'SL', 'SR', 'SB', 'D0', 'DL', 'DR', 'DB'] as const
   const sideBySuffix = { '0': 'none', L: 'left', R: 'right', B: 'both' } as const
@@ -212,7 +216,7 @@ try {
     assert.ok(result)
     compatibilityCounts[result!.status] += 1
   }
-  assert.deepEqual(compatibilityCounts, { 'good-fit': 8, caution: 32, 'not-recommended': 24, unsupported: 0 })
+  assert.deepEqual(compatibilityCounts, { 'good-fit': 14, caution: 28, 'not-recommended': 22, unsupported: 0 }, 'Existing five-family compatibility includes equivalent left/right sidelite openings')
   const doNotInventBlock = aiDoNotInventInstructionBlock(trusted.snapshot)
   assert.match(doNotInventBlock, /DO NOT ADD OR INVENT DETAILS/)
   assert.match(doNotInventBlock, /UNSELECTED FEATURES MUST NOT APPEAR/)
@@ -308,16 +312,30 @@ try {
 
   openAiFailure = 'rate'
   const failed = await request(source, 429)
-  assert.equal(failed.error_code, 'OPENAI_RATE_LIMITED')
-  assert.match(failed.user_message!, /try again/)
+  assert.equal(failed.error_code, 'AI_BUSY')
+  assert.equal(failed.user_message, 'AI visualization is busy right now. Please try again shortly.')
   assert.ok(failed.request_id)
   assert.doesNotMatch(JSON.stringify(failed), /SECRET|billing-test|mock-only-key/)
+  for (const mode of ['credit', 'spend', 'credential'] as const) {
+    openAiFailure = mode
+    const unavailable = await request(source, 503)
+    assert.equal(unavailable.error_code, 'AI_TEMPORARILY_UNAVAILABLE')
+    assert.equal(unavailable.user_message, 'AI visualization is temporarily unavailable. Please try again later.')
+    assert.doesNotMatch(JSON.stringify(unavailable), /credit|spend|credential|api.key|SECRET|provider|billing/i)
+  }
+  openAiFailure = 'timeout'
+  const timeout = await request(source, 504)
+  assert.equal(timeout.error_code, 'AI_TIMEOUT')
+  assert.equal(timeout.user_message, 'Your visualization took too long to complete. Please try again.')
+  assert.doesNotMatch(JSON.stringify(timeout), /SECRET|provider|timeout detail/i)
   openAiFailure = 'rejected'
   const rejected = await request(source, 422)
-  assert.equal(rejected.error_code, 'OPENAI_REQUEST_REJECTED')
+  assert.equal(rejected.error_code, 'AI_GENERATION_FAILED')
+  assert.equal(rejected.user_message, 'We couldn’t create your visualization right now. Please try again.')
+  assert.doesNotMatch(JSON.stringify(rejected), /OpenAI|SECRET|provider|invalid_image/i)
   openAiFailure = 'empty'
   const empty = await request(source, 502)
-  assert.equal(empty.error_code, 'NO_GENERATED_IMAGE')
+  assert.equal(empty.error_code, 'AI_GENERATION_FAILED')
   openAiFailure = 'none'
   const before = calls
   let release!: () => void

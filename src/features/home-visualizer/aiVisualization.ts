@@ -3,13 +3,16 @@ import type { EntranceCorners } from './EntranceSelector'
 import { AI_MAX_PHOTO_BYTES, AI_MAX_REQUEST_BYTES, aiWorkingSize } from './aiImagePreparation'
 import type { EntranceDetection, EntranceFitStrategy } from './entranceFitStrategy'
 import { boundedStage, validateVisualizationImage } from './visualizationLifecycle'
+import { customerAiFailure } from './publicAiErrors'
 
 export type AiVisualizationFailure = { userMessage: string; errorCode: string; requestId: string }
 
 export class AiVisualizationError extends Error implements AiVisualizationFailure {
-  constructor(public readonly userMessage: string, public readonly errorCode: string, public readonly requestId = '', options?: { cause?: unknown }) {
+  readonly reportedByServer: boolean
+  constructor(public readonly userMessage: string, public readonly errorCode: string, public readonly requestId = '', options?: { cause?: unknown; reportedByServer?: boolean }) {
     super(userMessage)
     this.name = 'AiVisualizationError'
+    this.reportedByServer = options?.reportedByServer ?? false
     if (options?.cause !== undefined) (this as Error & { cause?: unknown }).cause = options.cause
   }
 }
@@ -25,7 +28,7 @@ export function prepareAiHousePhoto(source: string, maxEdge = 1536, quality = .9
     if (import.meta.env.DEV) console.debug('[ai-visualizer:normalization-cache]', { cache_hit: true, max_edge: maxEdge, quality })
     return cached
   }
-  const pending = boundedStage(normalizeAiHousePhoto(source, maxEdge, quality), undefined, 30_000, new AiVisualizationError('Preparing the photo took too long. Please try again.', 'PHOTO_PREPARATION_TIMEOUT'))
+  const pending = boundedStage(normalizeAiHousePhoto(source, maxEdge, quality), undefined, 30_000, new AiVisualizationError('Your visualization took too long to complete. Please try again.', 'AI_TIMEOUT'))
   preparedPhotos.set(key, pending)
   while (preparedPhotos.size > 6) preparedPhotos.delete(preparedPhotos.keys().next().value!)
   void pending.catch(() => { if (preparedPhotos.get(key) === pending) preparedPhotos.delete(key) })
@@ -107,7 +110,7 @@ export async function generateAiVisualization(input: {
   const [prepared, productReference] = await boundedStage(Promise.all([
     prepareAiHousePhoto(input.photoUrl),
     prepareAiConfiguredProductReference(input.productReferenceUrl),
-  ]), input.signal, 30_000, new AiVisualizationError('Preparing the images took too long. Please try again.', 'REFERENCE_PREPARATION_TIMEOUT'))
+  ]), input.signal, 30_000, new AiVisualizationError('Your visualization took too long to complete. Please try again.', 'AI_TIMEOUT'))
   const bodyFor = (photo: string) => JSON.stringify({ photo, productReference, corners: input.corners, configuration: input.configuration,
     entranceDetection: input.entranceDetection, fitStrategy: input.fitStrategy,
     uploadMetadata: { ...input.uploadMetadata, width: prepared.naturalWidth, height: prepared.naturalHeight },
@@ -131,7 +134,7 @@ export async function generateAiVisualization(input: {
     })
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error
-    throw new AiVisualizationError('The AI service could not be reached. Please confirm the local API runtime is running and try again.', 'API_ROUTE_UNAVAILABLE', '', { cause: error })
+    throw new AiVisualizationError('AI visualization is temporarily unavailable. Please try again later.', 'AI_TEMPORARILY_UNAVAILABLE', '', { cause: error })
   }
   const rawBody = await response.text()
   let result: { image?: string; error_code?: string; user_message?: string; request_id?: string } | null = null
@@ -139,10 +142,10 @@ export async function generateAiVisualization(input: {
   const responseRequestId = result?.request_id || response.headers.get('x-request-id') || ''
   input.onResponseRequestId?.(responseRequestId)
   if (!response.ok) {
-    if (result?.user_message && result.error_code) throw new AiVisualizationError(result.user_message, result.error_code, responseRequestId)
-    throw new AiVisualizationError('The AI API route did not return a valid response. Run the app with the Vercel development runtime and try again.', 'API_ROUTE_UNAVAILABLE', responseRequestId)
+    const failure = customerAiFailure(result?.error_code, response.status)
+    throw new AiVisualizationError(failure.userMessage, failure.errorCode, responseRequestId, { reportedByServer: Boolean(result?.error_code) })
   }
-  if (!result?.image?.startsWith('data:image/jpeg;base64,')) throw new AiVisualizationError(result?.user_message || 'The AI service completed without returning a usable image.', result?.error_code || 'NO_GENERATED_IMAGE', responseRequestId)
+  if (typeof result?.image !== 'string' || !result.image.startsWith('data:image/jpeg;base64,')) throw new AiVisualizationError('We couldn’t create your visualization right now. Please try again.', 'AI_GENERATION_FAILED', responseRequestId)
   await validateVisualizationImage(result.image, input.signal, new AiVisualizationError('The visualization image could not be loaded. Please try again.', 'RESULT_IMAGE_FAILED', responseRequestId))
   return { image: result.image, requestId: responseRequestId }
 }

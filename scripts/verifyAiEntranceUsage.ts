@@ -25,10 +25,10 @@ let telemetryFailure = false
 const telemetryRows: Array<Record<string, unknown>> = []
 const workflowStarts: Array<Record<string, unknown>> = []
 const workflowOutcomes: Array<Record<string, unknown>> = []
-let upstreamFailure = false
+let upstreamFailure: string | null = null
 globalThis.fetch = (async (url, init) => {
   if (url === 'https://api.openai.com/v1/responses') {
-    if (upstreamFailure) return Response.json({ error: { code: 'rate_limit_exceeded' }, usage }, { status: 429, headers: { 'x-request-id': 'req_responses_failure' } })
+    if (upstreamFailure) return Response.json({ error: { code: upstreamFailure, message: 'SECRET BILLING CREDENTIAL DETAILS' }, usage }, { status: upstreamFailure === 'token_invalidated' ? 401 : 429, headers: { 'x-request-id': 'req_responses_failure' } })
     const detection = modelResults.shift()
     assert.ok(detection, 'Unexpected extra GPT-5.4-mini call')
     return Response.json({ output: [{ content: [{ text: JSON.stringify(detection) }] }], usage }, { headers: { 'x-request-id': `req_responses_test_${telemetryRows.length + 1}` } })
@@ -50,12 +50,14 @@ globalThis.fetch = (async (url, init) => {
 }) as typeof fetch
 
 async function detect(expectedStatus = 200) {
-  let status = 0, body: { detection?: unknown; workflow_completion_token?: string } = {}
+  let status = 0, body: { detection?: unknown; workflow_completion_token?: string; error_code?: string } = {}
   await handler({ method: 'POST', body: { photo: `data:image/webp;base64,${photo.toString('base64')}` }, headers: {} }, {
     status(code) { status = code; return this }, json(value) { body = value as typeof body }, setHeader() {},
   })
   assert.equal(status, expectedStatus)
   if (expectedStatus === 200) { assert.ok(body.detection); assert.match(body.workflow_completion_token ?? '', /^[0-9a-f-]{36}$/i) }
+  else assert.doesNotMatch(JSON.stringify(body), /SECRET|credit_balance|token_invalidated|spend_limit|Supabase|credential|billing/i)
+  return body
 }
 
 try {
@@ -81,11 +83,18 @@ try {
   await detect()
   assert.equal(telemetryRows.length, 3, 'A real call is attempted exactly once even when telemetry storage fails')
   telemetryFailure = false
-  upstreamFailure = true
+  upstreamFailure = 'rate_limit_exceeded'
   await detect(429)
   assert.equal(workflowOutcomes.at(-1)?.p_status, 'failed')
   assert.equal(workflowOutcomes.at(-1)?.p_failure_stage, 'entrance_analysis')
-  assert.equal(workflowOutcomes.at(-1)?.p_failure_category, 'OPENAI_REQUEST_REJECTED')
+  assert.equal(workflowOutcomes.at(-1)?.p_failure_category, 'rate_limit_exceeded')
+  for (const category of ['credit_balance_exhausted', 'project_spend_limit_exceeded', 'token_invalidated']) {
+    upstreamFailure = category
+    const body = await detect(503)
+    assert.equal(body.error_code, 'AI_TEMPORARILY_UNAVAILABLE')
+    assert.equal(workflowOutcomes.at(-1)?.p_failure_category, category)
+    assert.equal(telemetryRows.at(-1)?.error_code, category)
+  }
   console.log('AI entrance usage: workflow start, analysis failure, provider usage, pricing, request correlation, environment, and failure-isolation checks passed.')
 } finally {
   globalThis.fetch = originalFetch

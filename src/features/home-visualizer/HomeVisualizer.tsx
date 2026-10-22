@@ -157,7 +157,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
       setEntranceDetection(detected)
     } catch (reason) {
       if (controller.signal.aborted || detectionAbortRef.current !== controller) return
-      setEntranceDetectionError(reason instanceof AiVisualizationError ? reason : { userMessage: 'We could not detect the entrance. Please retry or identify the entrance structure below.', errorCode: 'ENTRANCE_DETECTION_FAILED', requestId: '' })
+      setEntranceDetectionError(reason instanceof AiVisualizationError ? reason : { userMessage: 'We couldn’t confidently visualize this entrance. Try another photo with the full doorway clearly visible.', errorCode: 'ENTRANCE_PHOTO_UNSUITABLE', requestId: '' })
     } finally {
       if (detectionAbortRef.current === controller) { detectionAbortRef.current = null; setEntranceDetectionLoading(false) }
     }
@@ -191,7 +191,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
       aiPendingRef.current = false
       setAiGenerating(false)
       setAiResult(null)
-      setAiError(new AiVisualizationError('The visualization took too long. Please try again.', 'VISUALIZATION_TIMEOUT', responseRequestId))
+      setAiError(new AiVisualizationError('Your visualization took too long to complete. Please try again.', 'AI_TIMEOUT', responseRequestId))
     }, 190_000)
     try {
       const result = await generateAiVisualization({
@@ -221,8 +221,8 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
       if (requestId === aiRequestIdRef.current) {
         const failure = reason instanceof AiVisualizationError
           ? reason
-          : new AiVisualizationError(reason instanceof Error ? reason.message : 'The AI visualization could not be created. Please try again.', 'UNKNOWN_ERROR', responseRequestId)
-        if (entranceDetection) void recordVisualizerApplicationFailure(entranceDetection, failure.errorCode)
+          : new AiVisualizationError('We couldn’t create your visualization right now. Please try again.', 'AI_GENERATION_FAILED', responseRequestId, { cause: reason })
+        if (entranceDetection && !failure.reportedByServer) void recordVisualizerApplicationFailure(entranceDetection, failure.errorCode)
         controller.abort()
         setAiResult(null)
         setShowResult(false)
@@ -439,11 +439,11 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
               </div>}
               {!entranceDetectionLoading&&!entranceCompatibility&&<section className="ai-fit-strategy" aria-labelledby="ai-fit-strategy-title">
                 <div className="ai-fit-strategy-heading"><div><span>Entrance compatibility</span><h3 id="ai-fit-strategy-title">Help us identify the opening</h3></div></div>
-                {entranceDetection&&!entranceCompatibility&&<p className="ai-detection-summary">We couldn't confidently identify the entrance structure. Please identify it below or retry the analysis.</p>}
-                {entranceDetectionError&&<div className="ai-detection-error" role="alert"><p>{entranceDetectionError.userMessage}</p>{import.meta.env.DEV&&<small>{entranceDetectionError.errorCode}{entranceDetectionError.requestId?` · Reference: ${entranceDetectionError.requestId.slice(0,8)}`:''}</small>}<button type="button" onClick={()=>void runEntranceDetection()}>Retry detection</button></div>}
+                {entranceDetection&&!entranceCompatibility&&<div className="ai-detection-summary" role="alert"><p>We couldn’t confidently visualize this entrance. Try another photo with the full doorway clearly visible.</p><button type="button" onClick={removePhoto}>Change Photo</button></div>}
+                {entranceDetectionError&&<div className="ai-detection-error" role="alert"><p>{entranceDetectionError.userMessage}</p>{import.meta.env.DEV&&<small>{entranceDetectionError.errorCode}</small>}<button type="button" onClick={()=>void runEntranceDetection()}>Try Again</button><button type="button" onClick={removePhoto}>Change Photo</button></div>}
                 {!entranceDetectionLoading&&!entranceCompatibility&&<label className="ai-manual-entrance"><span>What does the existing entrance have?</span><select value={manualEntranceStructure} onChange={event=>selectManualEntranceStructure(event.target.value as ExistingEntranceStructure)}><option value="unknown">Choose the existing structure</option>{MANUAL_ENTRANCE_OPTIONS.map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}
               </section>}
-              {aiError&&<div className="visualizer-error ai-visualizer-error" role="alert"><div><p>{aiError.userMessage}</p>{aiError.requestId&&<small title={aiError.requestId}>Reference: {aiError.requestId.slice(0,8)}</small>}{import.meta.env.DEV&&<small>Error code: {aiError.errorCode}</small>}</div><button type="button" disabled={aiGenerating} onClick={()=>void runAiVisualization()}>Try Again</button></div>}
+              {aiError&&<div className="visualizer-error ai-visualizer-error" role="alert"><div><p>{aiError.userMessage}</p>{import.meta.env.DEV&&<small>Error code: {aiError.errorCode}</small>}</div>{aiError.errorCode==='ENTRANCE_PHOTO_UNSUITABLE'?<button type="button" onClick={removePhoto}>Change Photo</button>:<button type="button" disabled={aiGenerating} onClick={()=>void runAiVisualization()}>Try Again</button>}</div>}
 </>}
             {aiResult&&<section className="visualizer-final-result" aria-labelledby="visualizer-final-title" hidden={!showResult}>
               <div className="visualizer-final-heading"><h2 id="visualizer-final-title">Your new entrance</h2></div>

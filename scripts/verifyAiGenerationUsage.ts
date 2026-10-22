@@ -20,13 +20,15 @@ const usage = { input_tokens: 5000, input_tokens_details: { text_tokens: 800, im
 const telemetryRows: Array<Record<string, unknown>> = []
 const workflowOutcomes: Array<Record<string, unknown>> = []
 let telemetryFailure = false
-let upstreamFailure = false
+let upstreamFailure: string | null = null
+let upstreamTimeout = false
 let providerSequence = 0
 
 globalThis.fetch = (async (url, init) => {
   if (url === 'https://api.openai.com/v1/images/edits') {
     providerSequence += 1
-    if (upstreamFailure) return Response.json({ error: { code: 'rate_limit_exceeded' }, usage }, { status: 429, headers: { 'x-request-id': `req_image_${providerSequence}` } })
+    if (upstreamTimeout) throw Object.assign(new Error('SECRET PROVIDER TIMEOUT DETAIL'), { name: 'TimeoutError' })
+    if (upstreamFailure) return Response.json({ error: { code: upstreamFailure, message: 'SECRET PROVIDER BILLING DETAIL' }, usage }, { status: upstreamFailure === 'invalid_api_key' ? 401 : 429, headers: { 'x-request-id': `req_image_${providerSequence}` } })
     return Response.json({ data: [{ b64_json: generated.toString('base64') }], usage }, { headers: { 'x-request-id': `req_image_${providerSequence}` } })
   }
   if (String(url).startsWith('https://telemetry-test.supabase.co/rest/v1/ai_generation_usage')) {
@@ -43,7 +45,7 @@ globalThis.fetch = (async (url, init) => {
 
 async function generate(marker: string) {
   let status = 0
-  let body: { image?: string; request_id?: string; completion_token?: string; error_code?: string } = {}
+  let body: { image?: string; request_id?: string; completion_token?: string; error_code?: string; user_message?: string } = {}
   await handler({ method: 'POST', headers: {}, body: {
     photo: `data:image/jpeg;base64,${house.toString('base64')}`,
     productReference: `data:image/png;base64,${product.toString('base64')}`,
@@ -76,17 +78,53 @@ try {
   assert.equal(workflowOutcomes[1].p_status, 'succeeded', 'Workflow completion remains best-effort and independent of provider-call telemetry')
 
   telemetryFailure = false
-  upstreamFailure = true
+  upstreamFailure = 'rate_limit_exceeded'
   const failed = await generate('provider-failure')
   assert.equal(failed.status, 429)
-  assert.equal(failed.body.error_code, 'OPENAI_RATE_LIMITED')
+  assert.equal(failed.body.error_code, 'AI_BUSY')
   assert.equal(telemetryRows[2].status, 'failed')
   assert.equal(telemetryRows[2].provider_request_id, 'req_image_3')
   assert.equal(telemetryRows[2].estimated_cost_usd, .1576)
   assert.equal(workflowOutcomes[2].p_status, 'failed')
   assert.equal(workflowOutcomes[2].p_failure_stage, 'image_generation')
-  assert.equal(workflowOutcomes[2].p_failure_category, 'OPENAI_RATE_LIMITED')
-  console.log('AI generation usage: workflow success/failure, provider failure, production environment, correlation, cost, and telemetry failure isolation checks passed.')
+  assert.equal(workflowOutcomes[2].p_failure_category, 'rate_limit_exceeded')
+  assert.doesNotMatch(JSON.stringify(failed.body), /rate_limit_exceeded|SECRET|provider|billing/i)
+
+  upstreamFailure = 'project_spend_limit_exceeded'
+  const spendFailure = await generate('spend-failure')
+  assert.equal(spendFailure.status, 503)
+  assert.equal(spendFailure.body.error_code, 'AI_TEMPORARILY_UNAVAILABLE')
+  assert.equal(telemetryRows[3].error_code, 'project_spend_limit_exceeded')
+  assert.equal(workflowOutcomes[3].p_failure_category, 'project_spend_limit_exceeded')
+  assert.doesNotMatch(JSON.stringify(spendFailure.body), /spend|credit|SECRET|provider|billing/i)
+
+  upstreamFailure = 'invalid_api_key'
+  const credentialFailure = await generate('credential-failure')
+  assert.equal(credentialFailure.status, 503)
+  assert.equal(credentialFailure.body.error_code, 'AI_TEMPORARILY_UNAVAILABLE')
+  assert.equal(telemetryRows[4].error_code, 'invalid_api_key')
+  assert.equal(workflowOutcomes[4].p_failure_category, 'invalid_api_key')
+  assert.doesNotMatch(JSON.stringify(credentialFailure.body), /api.key|invalid|SECRET|provider|credential/i)
+
+  upstreamFailure = 'invalid_image'
+  const genericFailure = await generate('generic-failure')
+  assert.equal(genericFailure.status, 422)
+  assert.equal(genericFailure.body.error_code, 'AI_GENERATION_FAILED')
+  assert.equal(genericFailure.body.user_message, 'We couldn’t create your visualization right now. Please try again.')
+  assert.equal(telemetryRows[5].error_code, 'invalid_image')
+  assert.equal(workflowOutcomes[5].p_failure_category, 'invalid_image')
+  assert.doesNotMatch(JSON.stringify(genericFailure.body), /invalid_image|SECRET|provider/i)
+
+  upstreamFailure = null
+  upstreamTimeout = true
+  const timeoutFailure = await generate('timeout-failure')
+  assert.equal(timeoutFailure.status, 504)
+  assert.equal(timeoutFailure.body.error_code, 'AI_TIMEOUT')
+  assert.equal(timeoutFailure.body.user_message, 'Your visualization took too long to complete. Please try again.')
+  assert.equal(telemetryRows[6].error_code, 'provider_timeout')
+  assert.equal(workflowOutcomes[6].p_failure_category, 'provider_timeout')
+  assert.doesNotMatch(JSON.stringify(timeoutFailure.body), /SECRET|provider/i)
+  console.log('AI generation usage: workflow success/failure, safe public failures, internal diagnostics, production environment, correlation, cost, and telemetry failure isolation checks passed.')
 } finally {
   globalThis.fetch = originalFetch
   if (originalKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = originalKey

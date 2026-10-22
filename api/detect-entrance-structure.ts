@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { AI_MAX_REQUEST_BYTES, AiInputError, objectValue, prepareHouseAndMask } from '../server/aiImagePreprocessing.js'
+import { publicAiErrorCode, publicAiFailure, safeProviderFailureCategory } from '../server/aiPublicErrors.js'
 import { aiUsageEnvironment, completeAiVisualizationWorkflow, estimateEntranceDetectionCost, normalizeResponseUsage, recordAiEntranceDetectionUsage, recordAiVisualizationWorkflowStarted } from '../server/aiUsage.js'
 import type { EntranceDetection } from '../src/features/home-visualizer/entranceFitStrategy.js'
 
@@ -10,7 +11,7 @@ const DETECTION_MODEL = process.env.OPENAI_ENTRANCE_DETECTION_MODEL || 'gpt-5.4-
 // Never echo upstream free text: even an error can contain a credential,
 // reflected image data, or customer content. Emit known categories only.
 const safeErrorTypes = new Set(['invalid_request_error', 'authentication_error', 'permission_error', 'rate_limit_error', 'server_error', 'insufficient_quota'])
-const safeErrorCodes = new Set(['invalid_api_key', 'token_invalidated', 'account_deactivated', 'organization_deactivated', 'insufficient_quota', 'rate_limit_exceeded', 'model_not_found', 'permission_denied', 'invalid_request_error', 'invalid_json_schema', 'unsupported_parameter', 'invalid_value', 'missing_required_parameter', 'unsupported_value', 'billing_hard_limit_reached', 'unsupported_country_region_territory', 'invalid_project', 'project_not_found'])
+const safeErrorCodes = new Set(['invalid_api_key', 'token_invalidated', 'account_deactivated', 'organization_deactivated', 'insufficient_quota', 'rate_limit_exceeded', 'model_not_found', 'permission_denied', 'invalid_request_error', 'invalid_json_schema', 'unsupported_parameter', 'invalid_value', 'missing_required_parameter', 'unsupported_value', 'billing_hard_limit_reached', 'credit_balance_exhausted', 'project_spend_limit_exceeded', 'unsupported_country_region_territory', 'invalid_project', 'project_not_found'])
 function safeCategory(value: unknown, allowed: Set<string>) {
   return typeof value === 'string' ? allowed.has(value) ? value : '[unrecognized]' : null
 }
@@ -62,7 +63,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   const modelRequestId = randomUUID()
   const workflowCompletionToken = randomUUID()
   response.setHeader('Content-Type', 'application/json'); response.setHeader('Cache-Control', 'no-store'); response.setHeader('X-Request-Id', requestId)
-  if (request.method !== 'POST') { response.setHeader('Allow', 'POST'); response.status(405).json({ error_code: 'INVALID_REQUEST', user_message: 'Method not allowed.', request_id: requestId }); return }
+  if (request.method !== 'POST') { response.setHeader('Allow', 'POST'); response.status(405).json(publicAiFailure('INVALID_REQUEST', 'application_infrastructure', requestId)); return }
   await recordAiVisualizationWorkflowStarted({
     workflowRequestId: requestId,
     environment: aiUsageEnvironment(),
@@ -95,9 +96,11 @@ export default async function handler(request: ApiRequest, response: ApiResponse
       })
     } catch (error) {
       openAiDurationMs = Math.round(performance.now() - openAiStartedAt)
+      const timedOut = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
+      const internalCategory = timedOut ? 'provider_timeout' : 'provider_network_failure'
       const usage = normalizeResponseUsage(null)
-      await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'failed', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType: 'primary', usage, estimatedCostUsd: null, detectionDurationMs: openAiDurationMs, requestId: modelRequestId, providerRequestId: null, workflowRequestId: requestId, errorCode: error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError') ? 'AI_GENERATION_TIMEOUT' : 'OPENAI_REQUEST_REJECTED' })
-      throw error
+      await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'failed', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType: 'primary', usage, estimatedCostUsd: null, detectionDurationMs: openAiDurationMs, requestId: modelRequestId, providerRequestId: null, workflowRequestId: requestId, errorCode: internalCategory })
+      throw new AiInputError(timedOut ? 'AI_GENERATION_TIMEOUT' : 'OPENAI_REQUEST_REJECTED', 'Entrance-analysis provider request failed.', timedOut ? 504 : 502, { cause: error, internalCategory })
     }
     openAiDurationMs = Math.round(performance.now() - openAiStartedAt)
     // Only the response's known request-ID header is eligible for logging.
@@ -120,8 +123,11 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     }
     if (!upstream.ok || !result) {
       logUpstreamFailure(!upstream.ok ? 'http_error' : !jsonValid ? 'invalid_json_response' : 'invalid_response_shape')
-      await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'failed', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType: 'primary', usage, estimatedCostUsd, detectionDurationMs: openAiDurationMs, requestId: modelRequestId, providerRequestId: upstreamRequestId, workflowRequestId: requestId, errorCode: upstream.status === 429 ? 'OPENAI_RATE_LIMITED' : 'OPENAI_REQUEST_REJECTED' })
-      throw new AiInputError('OPENAI_REQUEST_REJECTED', 'We could not analyze this entrance. Retry or choose the fit manually.', upstream.status === 429 ? 429 : 502)
+      const upstreamError = objectValue(resultObject?.error)
+      const internalCategory = safeProviderFailureCategory(upstreamError?.code, upstream.status, upstreamError?.type)
+      const publicCode = publicAiErrorCode(internalCategory, 'entrance_analysis')
+      await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'failed', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType: 'primary', usage, estimatedCostUsd, detectionDurationMs: openAiDurationMs, requestId: modelRequestId, providerRequestId: upstreamRequestId, workflowRequestId: requestId, errorCode: internalCategory })
+      throw new AiInputError(publicCode === 'AI_BUSY' ? 'OPENAI_RATE_LIMITED' : publicCode === 'AI_TEMPORARILY_UNAVAILABLE' ? 'SERVER_CONFIGURATION_ERROR' : 'OPENAI_REQUEST_REJECTED', 'Entrance-analysis provider rejected the request.', publicCode === 'AI_BUSY' ? 429 : publicCode === 'AI_TEMPORARILY_UNAVAILABLE' ? 503 : 502, { internalCategory })
     }
     if (!resultObject) logUpstreamFailure('invalid_response_shape')
     let detection: EntranceDetection
@@ -129,7 +135,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     catch (error) {
       logUpstreamFailure('invalid_detection_json')
       await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'failed', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType: 'primary', usage, estimatedCostUsd, detectionDurationMs: openAiDurationMs, requestId: modelRequestId, providerRequestId: upstreamRequestId, workflowRequestId: requestId, errorCode: 'INVALID_MODEL_RESPONSE' })
-      throw error
+      throw new AiInputError('OPENAI_REQUEST_REJECTED', 'Entrance-analysis response was unusable.', 502, { cause: error, internalCategory: 'invalid_model_response' })
     }
     await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'succeeded', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType: 'primary', usage, estimatedCostUsd, detectionDurationMs: openAiDurationMs, requestId: modelRequestId, providerRequestId: upstreamRequestId, workflowRequestId: requestId, errorCode: null })
     console.info('[ai-entrance-detection:success]', { request_id: requestId, model: DETECTION_MODEL, normalized_image: prepared.normalized, confidence: typeof detection.confidence === 'number' && Number.isFinite(detection.confidence) ? detection.confidence : null, durations_ms: { preprocessing: preprocessingDurationMs, openai: openAiDurationMs, total: Math.round(performance.now() - totalStartedAt) } })
@@ -139,16 +145,17 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     if (!openAiDurationMs && openAiStartedAt) openAiDurationMs = Math.round(performance.now() - openAiStartedAt)
     const status = error instanceof AiInputError ? error.status : error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError') ? 504 : 500
     const errorCode = error instanceof AiInputError ? error.code : status === 504 ? 'AI_GENERATION_TIMEOUT' : 'UNKNOWN_ERROR'
+    const internalCategory = error instanceof AiInputError ? error.internalCategory : status === 504 ? 'provider_timeout' : 'UNKNOWN_ERROR'
+    const failureStage = openAiStartedAt ? 'entrance_analysis' : 'application_infrastructure'
     await completeAiVisualizationWorkflow({
       workflowRequestId: requestId,
       status: 'failed',
-      failureStage: openAiStartedAt ? 'entrance_analysis' : 'application_infrastructure',
-      failureCategory: errorCode,
+      failureStage,
+      failureCategory: internalCategory,
     })
-    const message = error instanceof AiInputError ? error.message : status === 504 ? 'Entrance detection took too long. Retry or choose the fit manually.' : 'We could not detect the entrance. Retry or choose the fit manually.'
     // Native parse/fetch errors may quote response text. Do not log their raw
     // message, stack or cause; known input errors contain our static messages.
-    console.error('[ai-entrance-detection:failure]', { request_id: requestId, model: DETECTION_MODEL, error_code: errorCode, normalized_image: normalizedImage, durations_ms: { preprocessing: preprocessingDurationMs, openai: openAiDurationMs, total: Math.round(performance.now() - totalStartedAt) }, technical_error: { name: error instanceof AiInputError ? 'AiInputError' : status === 504 ? 'TimeoutError' : 'Error', message: error instanceof AiInputError ? error.message : 'Detection did not complete; technical content omitted.' } })
-    response.status(status).json({ error_code: errorCode, user_message: message, request_id: requestId })
+    console.error('[ai-entrance-detection:failure]', { request_id: requestId, model: DETECTION_MODEL, error_code: errorCode, internal_category: internalCategory, normalized_image: normalizedImage, durations_ms: { preprocessing: preprocessingDurationMs, openai: openAiDurationMs, total: Math.round(performance.now() - totalStartedAt) }, technical_error: { name: error instanceof AiInputError ? 'AiInputError' : status === 504 ? 'TimeoutError' : 'Error', message: error instanceof AiInputError ? error.message : 'Detection did not complete; technical content omitted.' } })
+    response.status(status).json(publicAiFailure(internalCategory, failureStage, requestId))
   }
 }

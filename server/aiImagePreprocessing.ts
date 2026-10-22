@@ -18,9 +18,12 @@ export type AiErrorCode =
   | 'UNKNOWN_ERROR'
 
 export class AiInputError extends Error {
-  constructor(public readonly code: AiErrorCode, message: string, public readonly status = 400, options?: ErrorOptions) {
+  public readonly internalCategory: string
+
+  constructor(public readonly code: AiErrorCode, message: string, public readonly status = 400, options?: ErrorOptions & { internalCategory?: string }) {
     super(message, options)
     this.name = 'AiInputError'
+    this.internalCategory = options?.internalCategory ?? code
   }
 }
 

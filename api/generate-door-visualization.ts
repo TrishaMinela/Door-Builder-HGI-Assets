@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { AI_MAX_REQUEST_BYTES, AI_MODEL, AI_QUALITY, AiGenerationError, AiInputError, aiPrompt, entranceFitContext, loadAiReference, objectValue, optionalCorners, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct, type AiErrorCode } from '../server/aiDoorVisualization.js'
+import { publicAiErrorCode, publicAiFailure, safeProviderFailureCategory } from '../server/aiPublicErrors.js'
 import { aiUsageEnvironment, completeAiVisualizationWorkflow, estimateImageGenerationCost, normalizeImageUsage, recordAiGenerationUsage, type OpenAiImageUsage } from '../server/aiUsage.js'
 
 type ApiRequest = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> }
@@ -9,8 +10,6 @@ type GeneratedVisualization = { image: string; requestId: string; completionToke
 const inFlight = new Map<string, Promise<GeneratedVisualization>>()
 const OPENAI_TIMEOUT_MS = 140_000
 const SERVERLESS_BUDGET_MS = 165_000
-
-const safeFailure = (errorCode: AiErrorCode, userMessage: string, requestId: string) => ({ error_code: errorCode, user_message: userMessage, request_id: requestId })
 
 function technicalError(error: unknown) {
   if (!(error instanceof Error)) return { value: String(error) }
@@ -100,7 +99,7 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
   const workflowRequestId = typeof objectValue(source.entranceDetection)?.telemetryRequestId === 'string'
     ? String(objectValue(source.entranceDetection)?.telemetryRequestId)
     : null
-  const writeUsage = async (status: 'succeeded' | 'failed', errorCode: AiErrorCode | null, usageValue: unknown, providerRequestId: string | null) => {
+  const writeUsage = async (status: 'succeeded' | 'failed', errorCode: string | null, usageValue: unknown, providerRequestId: string | null) => {
     const usage = normalizeImageUsage(usageValue)
     await recordAiGenerationUsage({
       completedAt: new Date().toISOString(), status, model: AI_MODEL, quality: AI_QUALITY,
@@ -116,26 +115,27 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
   try {
     upstream = await fetch('https://api.openai.com/v1/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${apiKey}` }, body: form, signal: AbortSignal.timeout(OPENAI_TIMEOUT_MS) })
   } catch (error) {
-    const errorCode: AiErrorCode = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError') ? 'AI_GENERATION_TIMEOUT' : 'OPENAI_REQUEST_REJECTED'
-    await writeUsage('failed', errorCode, null, null)
-    if (errorCode === 'AI_GENERATION_TIMEOUT') throw new AiGenerationError(errorCode, 'AI generation took too long. Please try again.', 504, { cause: error })
-    throw new AiGenerationError('OPENAI_REQUEST_REJECTED', 'The AI service could not be reached. Please try again.', 502, { cause: error })
+    const timedOut = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
+    const internalCategory = timedOut ? 'provider_timeout' : 'provider_network_failure'
+    await writeUsage('failed', internalCategory, null, null)
+    if (timedOut) throw new AiGenerationError('AI_GENERATION_TIMEOUT', 'AI generation timed out.', 504, { cause: error, internalCategory })
+    throw new AiGenerationError('OPENAI_REQUEST_REJECTED', 'AI generation provider request failed.', 502, { cause: error, internalCategory })
   }
   const upstreamRequestId = safeProviderRequestId(upstream.headers.get('x-request-id'))
   const result = await upstream.json().catch(() => null) as OpenAiResult | null
   const upstreamError = result?.error
   if (!upstream.ok) {
     console.error('[ai-visualizer:openai]', { request_id: requestId, openai_request_id: upstreamRequestId, status: upstream.status, code: upstreamError?.code, type: upstreamError?.type, message: upstreamError?.message, duration_ms: Date.now() - startedAt })
-    const errorCode: AiErrorCode = upstream.status === 429 ? 'OPENAI_RATE_LIMITED' : upstream.status === 401 || upstream.status === 403 ? 'SERVER_CONFIGURATION_ERROR' : 'OPENAI_REQUEST_REJECTED'
-    await writeUsage('failed', errorCode, result?.usage, upstreamRequestId)
-    if (errorCode === 'OPENAI_RATE_LIMITED') throw new AiGenerationError(errorCode, 'AI visualization is busy right now. Please wait a moment and try again.', 429)
-    if (errorCode === 'SERVER_CONFIGURATION_ERROR') throw new AiGenerationError(errorCode, 'AI visualization is temporarily unavailable. Manual mode is still available.', 503)
-    throw new AiGenerationError('OPENAI_REQUEST_REJECTED', 'OpenAI could not process this photo. Try another photo or use the doorway locator.', upstream.status >= 500 ? 502 : 422)
+    const internalCategory = safeProviderFailureCategory(upstreamError?.code, upstream.status, upstreamError?.type)
+    const publicCode = publicAiErrorCode(internalCategory, 'image_generation')
+    const errorCode: AiErrorCode = publicCode === 'AI_BUSY' ? 'OPENAI_RATE_LIMITED' : publicCode === 'AI_TEMPORARILY_UNAVAILABLE' ? 'SERVER_CONFIGURATION_ERROR' : 'OPENAI_REQUEST_REJECTED'
+    await writeUsage('failed', internalCategory, result?.usage, upstreamRequestId)
+    throw new AiGenerationError(errorCode, 'Provider rejected image generation.', publicCode === 'AI_BUSY' ? 429 : publicCode === 'AI_TEMPORARILY_UNAVAILABLE' ? 503 : upstream.status >= 500 ? 502 : 422, { internalCategory })
   }
   const image = result?.data?.[0]?.b64_json
   if (!image) { await writeUsage('failed', 'NO_GENERATED_IMAGE', result?.usage, upstreamRequestId); throw new AiGenerationError('NO_GENERATED_IMAGE', 'The AI service completed without returning an image. Please try again.', 502) }
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(image)) { await writeUsage('failed', 'NO_GENERATED_IMAGE', result?.usage, upstreamRequestId); throw new AiGenerationError('NO_GENERATED_IMAGE', 'The generated image could not be read. Please try again.', 502) }
-  if (image.length > 4 * 1024 * 1024) { await writeUsage('failed', 'PAYLOAD_TOO_LARGE', result?.usage, upstreamRequestId); throw new AiGenerationError('PAYLOAD_TOO_LARGE', 'The generated visualization was too large to deliver. Please try a less detailed photo.', 502) }
+  if (image.length > 4 * 1024 * 1024) { await writeUsage('failed', 'generated_payload_too_large', result?.usage, upstreamRequestId); throw new AiGenerationError('PAYLOAD_TOO_LARGE', 'Generated visualization exceeded the response budget.', 502, { internalCategory: 'generated_payload_too_large' }) }
   await writeUsage('succeeded', null, result?.usage, upstreamRequestId)
   console.info('[ai-visualizer:success]', { request_id: requestId, openai_request_id: upstreamRequestId, generation_duration_ms: Date.now() - startedAt, output_base64_bytes: image.length })
   return { image: `data:image/jpeg;base64,${image}`, requestId, completionToken }
@@ -150,7 +150,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   response.setHeader('X-Request-Id', requestId)
   if (request.method !== 'POST') {
     response.setHeader('Allow', 'POST')
-    response.status(405).json(safeFailure('INVALID_REQUEST', 'Method not allowed.', requestId))
+    response.status(405).json(publicAiFailure('INVALID_REQUEST', 'application_infrastructure', requestId))
     return
   }
   try {
@@ -196,22 +196,25 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   } catch (error) {
     const duration = Date.now() - startedAt
     const errorCode = error instanceof AiInputError || error instanceof AiGenerationError ? error.code : 'UNKNOWN_ERROR'
+    const internalCategory = error instanceof AiInputError || error instanceof AiGenerationError ? error.internalCategory : 'UNKNOWN_ERROR'
+    const failureStage = ['SERVER_CONFIGURATION_ERROR', 'REFERENCE_IMAGE_FAILED', 'INVALID_REQUEST', 'UNKNOWN_ERROR'].includes(errorCode)
+      ? 'application_infrastructure'
+      : errorCode === 'INVALID_IMAGE_INPUT' || errorCode === 'IMAGE_DECODE_FAILED' || (errorCode === 'PAYLOAD_TOO_LARGE' && internalCategory === 'PAYLOAD_TOO_LARGE')
+        ? 'entrance_analysis'
+        : 'image_generation'
     if (workflowRequestId) await completeAiVisualizationWorkflow({
       workflowRequestId,
       status: 'failed',
-      failureStage: ['SERVER_CONFIGURATION_ERROR', 'REFERENCE_IMAGE_FAILED', 'INVALID_REQUEST', 'INVALID_IMAGE_INPUT', 'PAYLOAD_TOO_LARGE', 'UNKNOWN_ERROR'].includes(errorCode)
-        ? 'application_infrastructure'
-        : 'image_generation',
-      failureCategory: errorCode,
+      failureStage,
+      failureCategory: internalCategory,
       generationRequestId: requestId,
     })
     if (error instanceof AiInputError || error instanceof AiGenerationError) {
-      console.error('[ai-visualizer:failure]', { request_id: requestId, error_code: error.code, duration_ms: duration, technical_error: technicalError(error) })
-      const publicMessage = error.code === 'REFERENCE_IMAGE_FAILED' ? 'A product reference image could not be loaded. Please try again.' : error.message
-      response.status(error.status).json(safeFailure(error.code, publicMessage, requestId))
+      console.error('[ai-visualizer:failure]', { request_id: requestId, error_code: error.code, internal_category: internalCategory, duration_ms: duration, technical_error: technicalError(error) })
+      response.status(error.status).json(publicAiFailure(internalCategory, failureStage, requestId))
       return
     }
     console.error('[ai-visualizer:failure]', { request_id: requestId, error_code: 'UNKNOWN_ERROR', duration_ms: duration, technical_error: technicalError(error) })
-    response.status(500).json(safeFailure('UNKNOWN_ERROR', 'The AI visualization could not be created. Please try again.', requestId))
+    response.status(500).json(publicAiFailure('UNKNOWN_ERROR', 'application_infrastructure', requestId))
   }
 }

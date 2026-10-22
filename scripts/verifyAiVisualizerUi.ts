@@ -28,7 +28,7 @@ try {
     await page.route('**/api/generate-door-visualization', async route => {
       requests++; payload = route.request().postDataJSON()
       await new Promise<void>(resolve => { releaseGeneration = resolve })
-      await route.fulfill({ status: fail ? 422 : 200, contentType: 'application/json', body: JSON.stringify(fail ? { error_code: 'OPENAI_REQUEST_REJECTED', user_message: 'Please try another photo.', request_id: 'safe-test-request' } : { image: generated }) })
+      await route.fulfill({ status: fail ? 422 : 200, contentType: 'application/json', body: JSON.stringify(fail ? { error_code: 'AI_GENERATION_FAILED', user_message: 'We couldn’t create your visualization right now. Please try again.', request_id: 'safe-test-request' } : { image: generated }) })
     })
     const waitFor = async (condition: () => boolean) => {
       const deadline = Date.now() + 30000
@@ -94,8 +94,8 @@ try {
     compatible = true; fail = true; releaseDetection = undefined; releaseGeneration = undefined
     await upload(); await waitFor(() => Boolean(releaseDetection)); releaseDetection!()
     await waitFor(() => Boolean(releaseGeneration)); releaseGeneration!()
-    await page.getByText('Please try another photo.', { exact: true }).waitFor()
-    await page.getByText('Reference: safe-tes', { exact: true }).waitFor()
+    await page.getByText('We couldn’t create your visualization right now. Please try again.', { exact: true }).waitFor()
+    assert.equal(await page.getByText(/Reference:/).count(), 0, 'Customer UI does not expose request diagnostics')
     fail = false; releaseGeneration = undefined
     await page.getByRole('button', { name: 'Try Again', exact: true }).click()
     await waitFor(() => Boolean(releaseGeneration))

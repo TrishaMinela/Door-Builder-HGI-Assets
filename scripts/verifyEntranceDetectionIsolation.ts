@@ -37,7 +37,7 @@ function inspect(file: string) {
 }
 inspect(resolve('api/detect-entrance-structure.ts'))
 assert.deepEqual([...packages].sort(), ['node:crypto', 'sharp'])
-assert.equal(visited.size, 3, 'Only endpoint, preprocessing and shared image constants are needed')
+assert.equal(visited.size, 6, 'Only endpoint, preprocessing, telemetry, public error mapping/messages and shared image constants are needed')
 const config = JSON.parse(readFileSync('vercel.json', 'utf8'))
 assert.equal(config.functions['api/detect-entrance-structure.ts'].includeFiles, undefined)
 assert.equal(config.functions['api/detect-entrance-structure.ts'].maxDuration, 60)
@@ -64,8 +64,8 @@ globalThis.fetch = (async (url, init) => {
   const image = await sharp(Buffer.from(content[1].image_url.split(',')[1], 'base64')).metadata()
   assert.equal(image.format, 'webp'); assert.equal(image.width, 1536); assert.equal(image.height, 922)
   if (mode === 'timeout') throw Object.assign(new Error('mock timeout'), { name: 'TimeoutError' })
-  if (mode === 'rate') return Response.json({}, { status: 429 })
-  if (mode === 'reject') return Response.json({}, { status: 400 })
+  if (mode === 'rate') return Response.json({ error: { code: 'rate_limit_exceeded' } }, { status: 429 })
+  if (mode === 'reject') return Response.json({ error: { code: 'invalid_image' } }, { status: 400 })
   return Response.json({ output: [{ content: [{ text: mode === 'malformed' ? 'not-json' : JSON.stringify(detection) }] }] })
 }) as typeof fetch
 async function request(body: unknown, status: number, code?: string, method = 'POST') {
@@ -80,21 +80,21 @@ async function request(body: unknown, status: number, code?: string, method = 'P
   else assert.deepEqual(result.detection, detection)
 }
 try {
-  await request(input, 405, 'INVALID_REQUEST', 'GET')
-  await request({}, 400, 'INVALID_IMAGE_INPUT')
-  await request({ photo: 'data:image/jpeg;base64,aW52YWxpZA==' }, 400, 'IMAGE_DECODE_FAILED')
-  await request(null, 400, 'INVALID_REQUEST')
-  await request('not-json', 500, 'UNKNOWN_ERROR')
-  await request('x'.repeat(preprocessing.AI_MAX_REQUEST_BYTES + 1), 413, 'PAYLOAD_TOO_LARGE')
+  await request(input, 405, 'AI_GENERATION_FAILED', 'GET')
+  await request({}, 400, 'ENTRANCE_PHOTO_UNSUITABLE')
+  await request({ photo: 'data:image/jpeg;base64,aW52YWxpZA==' }, 400, 'ENTRANCE_PHOTO_UNSUITABLE')
+  await request(null, 400, 'AI_GENERATION_FAILED')
+  await request('not-json', 500, 'AI_GENERATION_FAILED')
+  await request('x'.repeat(preprocessing.AI_MAX_REQUEST_BYTES + 1), 413, 'ENTRANCE_PHOTO_UNSUITABLE')
   delete process.env.OPENAI_API_KEY
-  await request(input, 503, 'SERVER_CONFIGURATION_ERROR')
+  await request(input, 503, 'AI_TEMPORARILY_UNAVAILABLE')
   assert.equal(calls, 0, 'Invalid requests never call upstream')
   process.env.OPENAI_API_KEY = 'mock-detection-key'
   await request(input, 200)
-  mode = 'rate'; await request(input, 429, 'OPENAI_REQUEST_REJECTED')
-  mode = 'reject'; await request(input, 502, 'OPENAI_REQUEST_REJECTED')
-  mode = 'timeout'; await request(input, 504, 'AI_GENERATION_TIMEOUT')
-  mode = 'malformed'; await request(input, 500, 'UNKNOWN_ERROR')
+  mode = 'rate'; await request(input, 429, 'AI_BUSY')
+  mode = 'reject'; await request(input, 502, 'ENTRANCE_PHOTO_UNSUITABLE')
+  mode = 'timeout'; await request(input, 504, 'AI_TIMEOUT')
+  mode = 'malformed'; await request(input, 502, 'AI_GENERATION_FAILED')
   assert.equal(calls, 5)
   // Exercise the generation endpoint through both reference paths after the
   // extraction. No network requests or paid model calls are made.
@@ -118,7 +118,7 @@ try {
     assert.equal(status, expectedStatus)
     assert.ok(result.request_id)
     if (expectedStatus === 200) assert.equal(result.image, 'data:image/jpeg;base64,bW9jay1pbWFnZQ==')
-    else assert.equal(result.error_code, 'OPENAI_RATE_LIMITED')
+    else assert.equal(result.error_code, 'AI_BUSY')
   }
   await generateRequest(true, 200)
   await generateRequest(false, 200)

@@ -22,9 +22,12 @@ import type { DoorConfiguration, SideliteConfiguration } from '../src/types.js'
 import type { EntranceDetection, EntranceFitStrategy } from '../src/features/home-visualizer/entranceFitStrategy.js'
 
 export class AiGenerationError extends Error {
-  constructor(public readonly code: AiErrorCode, message: string, public readonly status = 502, options?: ErrorOptions) {
+  public readonly internalCategory: string
+
+  constructor(public readonly code: AiErrorCode, message: string, public readonly status = 502, options?: ErrorOptions & { internalCategory?: string }) {
     super(message, options)
     this.name = 'AiGenerationError'
+    this.internalCategory = options?.internalCategory ?? code
   }
 }
 export const AI_MODEL = 'gpt-image-2.5-sunburst'
