@@ -8,7 +8,7 @@ import { ConfiguredDoorSource, type DoorSourceState } from './ConfiguredDoorSour
 import { CleanupComparisonSlider } from './CleanupComparisonSlider'
 import { AiVisualizationError, generateAiVisualization, type AiVisualizationFailure } from './aiVisualization'
 import { AiGenerationLoading, EntranceDetectionLoading, useAiGenerationLoading, useEntranceDetectionLoading } from './AiGenerationLoading'
-import { detectEntranceStructure } from './entranceDetection'
+import { detectEntranceStructure, recordVisualizerApplicationFailure } from './entranceDetection'
 import { boundedStage, validateVisualizationImage } from './visualizationLifecycle'
 import { detectionForManualStructure, evaluateEntranceCompatibility, MANUAL_ENTRANCE_OPTIONS, type EntranceDetection, type EntranceFitStrategy, type ExistingEntranceStructure } from './entranceFitStrategy'
 
@@ -185,6 +185,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
     // Also bounds normalization, response-body delivery and any browser stalls.
     const deadline = window.setTimeout(() => {
       if (requestId !== aiRequestIdRef.current) return
+      if (entranceDetection) void recordVisualizerApplicationFailure(entranceDetection, 'VISUALIZATION_TIMEOUT')
       aiRequestIdRef.current += 1
       controller.abort()
       aiPendingRef.current = false
@@ -218,10 +219,14 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
       }
     } catch (reason) {
       if (requestId === aiRequestIdRef.current) {
+        const failure = reason instanceof AiVisualizationError
+          ? reason
+          : new AiVisualizationError(reason instanceof Error ? reason.message : 'The AI visualization could not be created. Please try again.', 'UNKNOWN_ERROR', responseRequestId)
+        if (entranceDetection) void recordVisualizerApplicationFailure(entranceDetection, failure.errorCode)
         controller.abort()
         setAiResult(null)
         setShowResult(false)
-        setAiError(reason instanceof AiVisualizationError ? reason : { userMessage: reason instanceof Error ? reason.message : 'The AI visualization could not be created. Please try again.', errorCode: 'UNKNOWN_ERROR', requestId: responseRequestId })
+        setAiError(failure)
       }
     } finally {
       window.clearTimeout(deadline)
@@ -377,6 +382,10 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
   }
 
   const leaveVisualizer = () => onBack()
+  const abandonIncompatibleWorkflow = (next: () => void) => {
+    if (entranceDetection) void recordVisualizerApplicationFailure(entranceDetection, 'ENTRANCE_INCOMPATIBLE')
+    next()
+  }
   const returnFromFinal = () => setShowResult(false)
   const editToolbar = onEditConfiguration && <ConfigurationEditActions visualizer headingLevel={showResult ? 3 : 2} onEdit={onEditConfiguration} hasGlass={Boolean(configuredDoorPreview.glass || configuredDoorPreview.sideliteGlassSrc)} />
   if (!active) return null
@@ -456,7 +465,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
 
         <ConfiguredDoorSource key={configurationKey} configurationKey={configurationKey} previewProps={configuredDoorPreview} onStateChange={updateDoorSource} />
       </div>
-      {showIncompatibilityModal&&createPortal(<div className="builder-typography ai-incompatibility-backdrop"><div ref={incompatibilityDialogRef} className="ai-incompatibility-modal" role="dialog" aria-modal="true" aria-labelledby="ai-incompatibility-title" aria-describedby="ai-incompatibility-description"><h2 id="ai-incompatibility-title">This door configuration doesn’t match your entrance</h2><div id="ai-incompatibility-description"><p>{entranceCompatibility?.detectedSummary} {entranceCompatibility?.selectedSummary}</p><p>Choose a different photo or review your door configuration to continue.</p><p>If this seems wrong, the photo may be too far away, poorly lit, or unclear for accurate AI detection.</p></div><div className="ai-incompatibility-actions"><button type="button" className="ai-incompatibility-change-photo" onClick={removePhoto}>Change Photo</button><button type="button" className="ai-incompatibility-review" onClick={onReturnToReview??onBack}>Review Configuration</button></div></div></div>,document.body)}
+      {showIncompatibilityModal&&createPortal(<div className="builder-typography ai-incompatibility-backdrop"><div ref={incompatibilityDialogRef} className="ai-incompatibility-modal" role="dialog" aria-modal="true" aria-labelledby="ai-incompatibility-title" aria-describedby="ai-incompatibility-description"><h2 id="ai-incompatibility-title">This door configuration doesn’t match your entrance</h2><div id="ai-incompatibility-description"><p>{entranceCompatibility?.detectedSummary} {entranceCompatibility?.selectedSummary}</p><p>Choose a different photo or review your door configuration to continue.</p><p>If this seems wrong, the photo may be too far away, poorly lit, or unclear for accurate AI detection.</p></div><div className="ai-incompatibility-actions"><button type="button" className="ai-incompatibility-change-photo" onClick={() => abandonIncompatibleWorkflow(removePhoto)}>Change Photo</button><button type="button" className="ai-incompatibility-review" onClick={() => abandonIncompatibleWorkflow(onReturnToReview ?? onBack)}>Review Configuration</button></div></div></div>,document.body)}
     </main>
   )
 }

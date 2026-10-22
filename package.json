@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "test:ai-visualizer": "node --import tsx scripts/verifyAiVisualizer.ts",
     "test:ai-usage:live": "node --import tsx scripts/verifyAiUsageLive.ts",
-    "test:ai-usage": "node --import tsx scripts/verifyAiEntranceUsage.ts && node --import tsx scripts/verifyAiGenerationUsage.ts",
+    "test:ai-usage": "node --import tsx scripts/verifyAiWorkflowUsage.ts && node --import tsx scripts/verifyAiEntranceUsage.ts && node --import tsx scripts/verifyAiGenerationUsage.ts",
     "test:ai-visualizer:ui": "node --import tsx scripts/verifyAiVisualizerUi.ts",
     "test:entrance-compatibility": "node --import tsx scripts/verifyEntranceCompatibility.ts",
     "test:submission": "node --import tsx scripts/verifySubmissionPayload.ts",

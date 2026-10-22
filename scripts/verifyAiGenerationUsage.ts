@@ -18,6 +18,7 @@ const product = await sharp({ create: { width: 500, height: 1000, channels: 4, b
 const generated = await sharp({ create: { width: 1024, height: 1024, channels: 3, background: '#876543' } }).jpeg().toBuffer()
 const usage = { input_tokens: 5000, input_tokens_details: { text_tokens: 800, image_tokens: 4200 }, output_tokens: 4000, output_tokens_details: { image_tokens: 4000 }, total_tokens: 9000 }
 const telemetryRows: Array<Record<string, unknown>> = []
+const workflowOutcomes: Array<Record<string, unknown>> = []
 let telemetryFailure = false
 let upstreamFailure = false
 let providerSequence = 0
@@ -32,6 +33,10 @@ globalThis.fetch = (async (url, init) => {
     assert.equal(init?.method, 'POST')
     telemetryRows.push(JSON.parse(String(init.body)) as Record<string, unknown>)
     return telemetryFailure ? new Response(null, { status: 500 }) : Response.json([{ id: `generation-row-${telemetryRows.length}` }], { status: 201 })
+  }
+  if (url === 'https://telemetry-test.supabase.co/rest/v1/rpc/complete_ai_visualization_workflow') {
+    workflowOutcomes.push(JSON.parse(String(init?.body)) as Record<string, unknown>)
+    return Response.json(true)
   }
   throw new Error(`Unexpected fetch: ${url}`)
 }) as typeof fetch
@@ -62,11 +67,13 @@ try {
   assert.equal(telemetryRows[0].workflow_request_id, 'detection-workflow-success')
   assert.equal(telemetryRows[0].environment, 'production')
   assert.equal(telemetryRows[0].estimated_cost_usd, .1576)
+  assert.deepEqual({ status: workflowOutcomes[0].p_status, workflow: workflowOutcomes[0].p_workflow_request_id }, { status: 'succeeded', workflow: 'detection-workflow-success' })
 
   telemetryFailure = true
   const isolated = await generate('telemetry-failure')
   assert.equal(isolated.status, 200, 'Telemetry failure must not fail a successful generation')
   assert.equal(telemetryRows.length, 2)
+  assert.equal(workflowOutcomes[1].p_status, 'succeeded', 'Workflow completion remains best-effort and independent of provider-call telemetry')
 
   telemetryFailure = false
   upstreamFailure = true
@@ -76,7 +83,10 @@ try {
   assert.equal(telemetryRows[2].status, 'failed')
   assert.equal(telemetryRows[2].provider_request_id, 'req_image_3')
   assert.equal(telemetryRows[2].estimated_cost_usd, .1576)
-  console.log('AI generation usage: success, provider failure, production environment, correlation, cost, and telemetry failure isolation checks passed.')
+  assert.equal(workflowOutcomes[2].p_status, 'failed')
+  assert.equal(workflowOutcomes[2].p_failure_stage, 'image_generation')
+  assert.equal(workflowOutcomes[2].p_failure_category, 'OPENAI_RATE_LIMITED')
+  console.log('AI generation usage: workflow success/failure, provider failure, production environment, correlation, cost, and telemetry failure isolation checks passed.')
 } finally {
   globalThis.fetch = originalFetch
   if (originalKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = originalKey

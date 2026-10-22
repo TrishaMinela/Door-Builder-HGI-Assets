@@ -106,6 +106,91 @@ export function aiUsageEnvironment(value = process.env.VERCEL_ENV): AiUsageEnvir
   return 'development'
 }
 
+function telemetryConfiguration(label: string, requestId: string) {
+  const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, '')
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error(`[${label}:write-failed]`, { request_id: requestId, reason: 'supabase_not_configured' })
+    return null
+  }
+  return { supabaseUrl, serviceRoleKey }
+}
+
+export async function recordAiVisualizationWorkflowStarted(record: {
+  workflowRequestId: string
+  environment: AiUsageEnvironment
+  completionTokenHash: string
+}) {
+  const configuration = telemetryConfiguration('ai-workflow', record.workflowRequestId)
+  if (!configuration) return false
+  try {
+    const response = await fetch(`${configuration.supabaseUrl}/rest/v1/ai_visualization_workflows`, {
+      method: 'POST',
+      headers: {
+        apikey: configuration.serviceRoleKey,
+        Authorization: `Bearer ${configuration.serviceRoleKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        workflow_request_id: record.workflowRequestId,
+        environment: record.environment,
+        status: 'started',
+        completion_token_hash: record.completionTokenHash,
+      }),
+    })
+    if (!response.ok && response.status !== 409) {
+      console.error('[ai-workflow:write-failed]', { request_id: record.workflowRequestId, reason: 'supabase_http_error', status: response.status })
+      return false
+    }
+    console.info('[ai-workflow:started]', { request_id: record.workflowRequestId, duplicate: response.status === 409 })
+    return true
+  } catch (error) {
+    console.error('[ai-workflow:write-failed]', { request_id: record.workflowRequestId, reason: error instanceof Error ? error.name : 'unknown_error' })
+    return false
+  }
+}
+
+export async function completeAiVisualizationWorkflow(record: {
+  workflowRequestId: string
+  status: 'succeeded' | 'failed'
+  failureStage?: 'entrance_analysis' | 'image_generation' | 'application_infrastructure' | null
+  failureCategory?: string | null
+  generationRequestId?: string | null
+  completionTokenHash?: string | null
+}) {
+  const configuration = telemetryConfiguration('ai-workflow', record.workflowRequestId)
+  if (!configuration) return false
+  try {
+    const response = await fetch(`${configuration.supabaseUrl}/rest/v1/rpc/complete_ai_visualization_workflow`, {
+      method: 'POST',
+      headers: {
+        apikey: configuration.serviceRoleKey,
+        Authorization: `Bearer ${configuration.serviceRoleKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        p_workflow_request_id: record.workflowRequestId,
+        p_status: record.status,
+        p_failure_stage: record.failureStage ?? null,
+        p_failure_category: record.failureCategory ?? null,
+        p_generation_request_id: record.generationRequestId ?? null,
+        p_completion_token_hash: record.completionTokenHash ?? null,
+      }),
+    })
+    if (!response.ok) {
+      console.error('[ai-workflow:write-failed]', { request_id: record.workflowRequestId, reason: 'supabase_http_error', status: response.status })
+      return false
+    }
+    const changed = await response.json().catch(() => false) as boolean
+    console.info('[ai-workflow:completed]', { request_id: record.workflowRequestId, status: record.status, changed: changed === true })
+    return changed === true
+  } catch (error) {
+    console.error('[ai-workflow:write-failed]', { request_id: record.workflowRequestId, reason: error instanceof Error ? error.name : 'unknown_error' })
+    return false
+  }
+}
+
 export async function recordAiGenerationUsage(record: AiUsageRecord) {
   const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/+$/, '')
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY

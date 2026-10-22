@@ -9,7 +9,7 @@ export type EntranceFitStrategy = 'use-selected-product' | 'preserve-sidelites' 
 export type CompatibilityStatus = 'good-fit' | 'caution' | 'not-recommended' | 'unsupported'
 export type VisualizerOpeningFamily = 'A' | 'B' | 'C' | 'D' | 'E'
 
-export type EntranceDetection = { doorStructure: DetectedDoorStructure; sidelites: DetectedSidelites; transom: boolean | null; widthClass: EntranceWidthClass; approximateWidthRatio: number | null; structurallyWide: boolean; confidence: number; summary: string; telemetryRequestId?: string }
+export type EntranceDetection = { doorStructure: DetectedDoorStructure; sidelites: DetectedSidelites; transom: boolean | null; widthClass: EntranceWidthClass; approximateWidthRatio: number | null; structurallyWide: boolean; confidence: number; summary: string; telemetryRequestId?: string; telemetryCompletionToken?: string }
 export type EntranceCompatibility = { status: CompatibilityStatus; label: string; detectedSummary: string; selectedSummary: string; notes: string[] }
 
 export const MANUAL_ENTRANCE_OPTIONS: Array<{ value: Exclude<ExistingEntranceStructure, 'unknown'>; label: string }> = [

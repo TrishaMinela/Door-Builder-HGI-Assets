@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { AI_MAX_REQUEST_BYTES, AiInputError, objectValue, prepareHouseAndMask } from '../server/aiImagePreprocessing.js'
-import { aiUsageEnvironment, estimateEntranceDetectionCost, normalizeResponseUsage, recordAiEntranceDetectionUsage } from '../server/aiUsage.js'
+import { aiUsageEnvironment, completeAiVisualizationWorkflow, estimateEntranceDetectionCost, normalizeResponseUsage, recordAiEntranceDetectionUsage, recordAiVisualizationWorkflowStarted } from '../server/aiUsage.js'
 import type { EntranceDetection } from '../src/features/home-visualizer/entranceFitStrategy.js'
 
 type ApiRequest = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> }
@@ -60,8 +60,14 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   let normalizedImage: unknown = null
   const requestId = randomUUID()
   const modelRequestId = randomUUID()
+  const workflowCompletionToken = randomUUID()
   response.setHeader('Content-Type', 'application/json'); response.setHeader('Cache-Control', 'no-store'); response.setHeader('X-Request-Id', requestId)
   if (request.method !== 'POST') { response.setHeader('Allow', 'POST'); response.status(405).json({ error_code: 'INVALID_REQUEST', user_message: 'Method not allowed.', request_id: requestId }); return }
+  await recordAiVisualizationWorkflowStarted({
+    workflowRequestId: requestId,
+    environment: aiUsageEnvironment(),
+    completionTokenHash: createHash('sha256').update(workflowCompletionToken).digest('hex'),
+  })
   try {
     const serialized = typeof request.body === 'string' ? request.body : JSON.stringify(request.body ?? null)
     if (Buffer.byteLength(serialized) > AI_MAX_REQUEST_BYTES) throw new AiInputError('PAYLOAD_TOO_LARGE', 'The entrance photo is too large to analyze.', 413)
@@ -127,12 +133,18 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     }
     await recordAiEntranceDetectionUsage({ completedAt: new Date().toISOString(), status: 'succeeded', environment: aiUsageEnvironment(), model: DETECTION_MODEL, passType: 'primary', usage, estimatedCostUsd, detectionDurationMs: openAiDurationMs, requestId: modelRequestId, providerRequestId: upstreamRequestId, workflowRequestId: requestId, errorCode: null })
     console.info('[ai-entrance-detection:success]', { request_id: requestId, model: DETECTION_MODEL, normalized_image: prepared.normalized, confidence: typeof detection.confidence === 'number' && Number.isFinite(detection.confidence) ? detection.confidence : null, durations_ms: { preprocessing: preprocessingDurationMs, openai: openAiDurationMs, total: Math.round(performance.now() - totalStartedAt) } })
-    response.status(200).json({ detection, request_id: requestId })
+    response.status(200).json({ detection, request_id: requestId, workflow_completion_token: workflowCompletionToken })
   } catch (error) {
     if (!preprocessingDurationMs && preprocessingStartedAt) preprocessingDurationMs = Math.round(performance.now() - preprocessingStartedAt)
     if (!openAiDurationMs && openAiStartedAt) openAiDurationMs = Math.round(performance.now() - openAiStartedAt)
     const status = error instanceof AiInputError ? error.status : error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError') ? 504 : 500
     const errorCode = error instanceof AiInputError ? error.code : status === 504 ? 'AI_GENERATION_TIMEOUT' : 'UNKNOWN_ERROR'
+    await completeAiVisualizationWorkflow({
+      workflowRequestId: requestId,
+      status: 'failed',
+      failureStage: openAiStartedAt ? 'entrance_analysis' : 'application_infrastructure',
+      failureCategory: errorCode,
+    })
     const message = error instanceof AiInputError ? error.message : status === 504 ? 'Entrance detection took too long. Retry or choose the fit manually.' : 'We could not detect the entrance. Retry or choose the fit manually.'
     // Native parse/fetch errors may quote response text. Do not log their raw
     // message, stack or cause; known input errors contain our static messages.

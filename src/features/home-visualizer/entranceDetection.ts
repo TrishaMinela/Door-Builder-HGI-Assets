@@ -16,7 +16,7 @@ export async function detectEntranceStructure(photoUrl: string, signal?: AbortSi
     throw new AiVisualizationError('Entrance analysis could not reach the server. Check the local API runtime or your connection, then retry.', 'ENTRANCE_DETECTION_NETWORK_ERROR', '', { cause: error })
   }
   const rawBody = await response.text()
-  let body: { detection?: EntranceDetection; error_code?: string; user_message?: string; request_id?: string } | null = null
+  let body: { detection?: EntranceDetection; error_code?: string; user_message?: string; request_id?: string; workflow_completion_token?: string } | null = null
   try { body = JSON.parse(rawBody) } catch { body = null }
   const requestId = body?.request_id || response.headers.get('x-request-id') || ''
   const durationMs = Math.round(performance.now() - startedAt)
@@ -40,5 +40,23 @@ export async function detectEntranceStructure(photoUrl: string, signal?: AbortSi
     throw new AiVisualizationError(import.meta.env.DEV ? 'Entrance detection returned invalid JSON or omitted its detection result.' : 'Entrance analysis returned an unusable response. Please retry or identify the entrance manually.', 'INVALID_API_RESPONSE', requestId)
   }
   if (import.meta.env.DEV) console.debug('[ai-entrance-detection:response]', { duration_ms: durationMs, request_id: requestId, detection: body.detection, outcome: body.detection.confidence < .65 || body.detection.doorStructure === 'unknown' || body.detection.sidelites === 'unknown' ? 'low-confidence' : 'confident' })
-  return { ...body.detection, telemetryRequestId: requestId }
+  return { ...body.detection, telemetryRequestId: requestId, telemetryCompletionToken: body.workflow_completion_token }
+}
+
+export async function recordVisualizerApplicationFailure(detection: EntranceDetection, failureCategory: string) {
+  if (!detection.telemetryRequestId || !detection.telemetryCompletionToken) return false
+  try {
+    const response = await fetch('/api/fail-ai-visualization-workflow', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workflow_request_id: detection.telemetryRequestId,
+        workflow_completion_token: detection.telemetryCompletionToken,
+        failure_category: failureCategory,
+      }),
+    })
+    return response.ok
+  } catch {
+    return false
+  }
 }

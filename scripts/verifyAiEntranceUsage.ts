@@ -23,11 +23,23 @@ const modelDetection = (both = false): EntranceDetection => ({
 let modelResults: EntranceDetection[] = []
 let telemetryFailure = false
 const telemetryRows: Array<Record<string, unknown>> = []
+const workflowStarts: Array<Record<string, unknown>> = []
+const workflowOutcomes: Array<Record<string, unknown>> = []
+let upstreamFailure = false
 globalThis.fetch = (async (url, init) => {
   if (url === 'https://api.openai.com/v1/responses') {
+    if (upstreamFailure) return Response.json({ error: { code: 'rate_limit_exceeded' }, usage }, { status: 429, headers: { 'x-request-id': 'req_responses_failure' } })
     const detection = modelResults.shift()
     assert.ok(detection, 'Unexpected extra GPT-5.4-mini call')
     return Response.json({ output: [{ content: [{ text: JSON.stringify(detection) }] }], usage }, { headers: { 'x-request-id': `req_responses_test_${telemetryRows.length + 1}` } })
+  }
+  if (url === 'https://telemetry-test.supabase.co/rest/v1/ai_visualization_workflows') {
+    workflowStarts.push(JSON.parse(String(init?.body)) as Record<string, unknown>)
+    return new Response(null, { status: 201 })
+  }
+  if (url === 'https://telemetry-test.supabase.co/rest/v1/rpc/complete_ai_visualization_workflow') {
+    workflowOutcomes.push(JSON.parse(String(init?.body)) as Record<string, unknown>)
+    return Response.json(true)
   }
   if (String(url).startsWith('https://telemetry-test.supabase.co/rest/v1/ai_entrance_detection_usage')) {
     assert.equal(init?.method, 'POST')
@@ -37,13 +49,13 @@ globalThis.fetch = (async (url, init) => {
   throw new Error(`Unexpected fetch: ${url}`)
 }) as typeof fetch
 
-async function detect() {
-  let status = 0, body: { detection?: unknown } = {}
+async function detect(expectedStatus = 200) {
+  let status = 0, body: { detection?: unknown; workflow_completion_token?: string } = {}
   await handler({ method: 'POST', body: { photo: `data:image/webp;base64,${photo.toString('base64')}` }, headers: {} }, {
     status(code) { status = code; return this }, json(value) { body = value as typeof body }, setHeader() {},
   })
-  assert.equal(status, 200)
-  assert.ok(body.detection)
+  assert.equal(status, expectedStatus)
+  if (expectedStatus === 200) { assert.ok(body.detection); assert.match(body.workflow_completion_token ?? '', /^[0-9a-f-]{36}$/i) }
 }
 
 try {
@@ -53,6 +65,8 @@ try {
 
   modelResults = [modelDetection(false)]
   await detect()
+  assert.equal(workflowStarts.length, 1)
+  assert.equal(workflowStarts[0].status, 'started')
   assert.equal(telemetryRows.length, 1)
   assert.deepEqual({ pass_type: telemetryRows[0].pass_type, input_tokens: telemetryRows[0].input_tokens, cached_input_tokens: telemetryRows[0].cached_input_tokens, output_tokens: telemetryRows[0].output_tokens, reasoning_tokens: telemetryRows[0].reasoning_tokens, total_tokens: telemetryRows[0].total_tokens, estimated_cost_usd: telemetryRows[0].estimated_cost_usd }, { pass_type: 'primary', input_tokens: 2000, cached_input_tokens: 400, output_tokens: 300, reasoning_tokens: 120, total_tokens: 2300, estimated_cost_usd: .00258 })
 
@@ -66,7 +80,13 @@ try {
   modelResults = [modelDetection(false)]
   await detect()
   assert.equal(telemetryRows.length, 3, 'A real call is attempted exactly once even when telemetry storage fails')
-  console.log('AI entrance usage: provider usage, pricing, request correlation, environment, and failure-isolation checks passed.')
+  telemetryFailure = false
+  upstreamFailure = true
+  await detect(429)
+  assert.equal(workflowOutcomes.at(-1)?.p_status, 'failed')
+  assert.equal(workflowOutcomes.at(-1)?.p_failure_stage, 'entrance_analysis')
+  assert.equal(workflowOutcomes.at(-1)?.p_failure_category, 'OPENAI_REQUEST_REJECTED')
+  console.log('AI entrance usage: workflow start, analysis failure, provider usage, pricing, request correlation, environment, and failure-isolation checks passed.')
 } finally {
   globalThis.fetch = originalFetch
   if (originalKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = originalKey

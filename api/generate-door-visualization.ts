@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { AI_MAX_REQUEST_BYTES, AI_MODEL, AI_QUALITY, AiGenerationError, AiInputError, aiPrompt, entranceFitContext, loadAiReference, objectValue, optionalCorners, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct, type AiErrorCode } from '../server/aiDoorVisualization.js'
-import { aiUsageEnvironment, estimateImageGenerationCost, normalizeImageUsage, recordAiGenerationUsage, type OpenAiImageUsage } from '../server/aiUsage.js'
+import { aiUsageEnvironment, completeAiVisualizationWorkflow, estimateImageGenerationCost, normalizeImageUsage, recordAiGenerationUsage, type OpenAiImageUsage } from '../server/aiUsage.js'
 
 type ApiRequest = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> }
 type ApiResponse = { status: (code: number) => ApiResponse; json: (body: unknown) => void; setHeader: (name: string, value: string) => void }
@@ -144,6 +144,7 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
 export default async function handler(request: ApiRequest, response: ApiResponse) {
   const requestId = randomUUID()
   const startedAt = Date.now()
+  let workflowRequestId: string | null = null
   response.setHeader('Content-Type', 'application/json')
   response.setHeader('Cache-Control', 'no-store')
   response.setHeader('X-Request-Id', requestId)
@@ -169,6 +170,9 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     let source: Record<string, unknown> | null
     try { source = objectValue(JSON.parse(serialized)) } catch { source = null }
     if (!source) throw new AiInputError('INVALID_REQUEST', 'The visualization request is invalid.')
+    workflowRequestId = typeof objectValue(source.entranceDetection)?.telemetryRequestId === 'string'
+      ? String(objectValue(source.entranceDetection)?.telemetryRequestId)
+      : null
     const suppliedCorners = optionalCorners(source.corners)
     const product = resolveAiProduct(source.configuration, source.jambFinishId, source.glassFrameFinishId)
     console.info('[ai-visualizer:received]', { request_id: requestId, uploaded_image: uploadMetadata(source.uploadMetadata), placement_mode: suppliedCorners ? 'user-corners' : 'automatic', product_reference_count: product.references.length, browser_request_bytes: Buffer.byteLength(serialized) })
@@ -183,9 +187,24 @@ export default async function handler(request: ApiRequest, response: ApiResponse
       void pending.finally(() => { if (inFlight.get(key) === pending) inFlight.delete(key) }).catch(() => {})
     }
     const generated = await withServerlessDeadline(pending)
+    if (workflowRequestId) await completeAiVisualizationWorkflow({
+      workflowRequestId,
+      status: 'succeeded',
+      generationRequestId: generated.requestId,
+    })
     response.status(200).json({ image: generated.image, request_id: generated.requestId, completion_token: generated.completionToken })
   } catch (error) {
     const duration = Date.now() - startedAt
+    const errorCode = error instanceof AiInputError || error instanceof AiGenerationError ? error.code : 'UNKNOWN_ERROR'
+    if (workflowRequestId) await completeAiVisualizationWorkflow({
+      workflowRequestId,
+      status: 'failed',
+      failureStage: ['SERVER_CONFIGURATION_ERROR', 'REFERENCE_IMAGE_FAILED', 'INVALID_REQUEST', 'INVALID_IMAGE_INPUT', 'PAYLOAD_TOO_LARGE', 'UNKNOWN_ERROR'].includes(errorCode)
+        ? 'application_infrastructure'
+        : 'image_generation',
+      failureCategory: errorCode,
+      generationRequestId: requestId,
+    })
     if (error instanceof AiInputError || error instanceof AiGenerationError) {
       console.error('[ai-visualizer:failure]', { request_id: requestId, error_code: error.code, duration_ms: duration, technical_error: technicalError(error) })
       const publicMessage = error.code === 'REFERENCE_IMAGE_FAILED' ? 'A product reference image could not be loaded. Please try again.' : error.message
