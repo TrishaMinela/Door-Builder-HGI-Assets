@@ -62,7 +62,7 @@ try {
       return page.locator('.summary-row').filter({ hasText: labels[area] }).getByRole('button', { name: 'Edit', exact: true })
     }
     await page.goto('http://127.0.0.1:5194/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     await page.getByRole('button', { name: 'Next configuration step' }).waitFor()
     assert.equal(await page.getByRole('button', { name: /^(?:Done editing(?: · Back to photo)?|Back to summary)$/ }).count(), 0, 'Normal builder has no edit-only action')
     await walkToSummary()
@@ -128,7 +128,7 @@ try {
       if (area === 'Hardware') await page.locator('.hardware-card-main').first().click()
       if (area === 'Glass') { await next(); await card(/Clear Glass with No Grids/).first().click() }
       if (area === 'Door') {
-        await card(/^Half Lite$/).click()
+        await page.getByRole('button', { name: 'Select Half Lite', exact: true }).click()
         await page.getByRole('heading', { name: 'Choose a Door Style', exact: true }).waitFor()
         await page.waitForFunction(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration.glassId === 's-clear-no-grids')
         const invalidated = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
@@ -164,10 +164,10 @@ try {
         for (const field of ['styleId', 'doorLineId', 'selectedPaint', 'glassId']) assert.equal(saved[field], beforeEdit[field], `Hardware editing preserves ${field}`)
       }
     }
-    for (const label of [/^Flush$/, /^2P HD Flat Top$/]) {
+    for (const name of ['Flush No Glass', '2P HD Flat Top']) {
       const previous = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
       await page.getByRole('button', { name: 'Edit Door', exact: true }).click()
-      await card(label).click()
+      await page.getByRole('button', { name: `Select ${name}`, exact: true }).click()
       await page.getByRole('heading', { name: 'Choose a Door Style', exact: true }).waitFor()
       await page.getByRole('button', { name: /^(?:Done editing(?: · Back to photo)?|Back to summary)$/ }).click()
       await page.getByText('AI Result', { exact: true }).waitFor({ timeout: 30000 })
@@ -207,7 +207,7 @@ try {
     await summary()
     // A new style defaults its compatible material, preserving finish/hardware.
     await summaryEdit('Door').click()
-    await card(/^Full Lite$/).click()
+    await page.getByRole('button', { name: 'Select Full Lite', exact: true }).click()
     await page.getByRole('button', { name: /^(?:Done editing(?: · Back to photo)?|Back to summary)$/ }).click()
     await summary()
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
@@ -220,7 +220,7 @@ try {
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1))
     await page.screenshot({ path: `/tmp/configuration-edit-summary-${width}.png` })
     await page.reload()
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     assert.equal(await page.getByRole('button', { name: /^(?:Done editing(?: · Back to photo)?|Back to summary)$/ }).count(), 0, 'Refresh restores draft without a stale navigation mode')
     console.log(`${width}px: all edit areas, direct returns, photo preservation, current AI payload, dependency routing, incompatibility, normal flow, focus, wrapping and reload passed.`)
     await page.close()

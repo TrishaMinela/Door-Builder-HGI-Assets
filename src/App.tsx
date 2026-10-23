@@ -433,8 +433,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>('home')
   const [step, setStep] = useState(0)
   const [selectedDoorConfigurationType, setSelectedDoorConfigurationType] = useState<DoorConfigurationType | ''>(initialDraft?.selectedDoorConfigurationType ?? '')
-  const [showEntrywayGuidance, setShowEntrywayGuidance] = useState(false)
-  const [hasShownEntrywayGuidance, setHasShownEntrywayGuidance] = useState(false)
   const [styleId, setStyleId] = useState(initialDraft?.styleId || freshDoorStyleId)
   const [doorLineId, setDoorLineId] = useState(initialDraft?.doorLineId ?? '')
   const [grainId, setGrainId] = useState(initialDraft?.grainId ?? '')
@@ -488,10 +486,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const builderPanelRef = useRef<HTMLElement | null>(null)
   useProductCardLayout(builderPanelRef, screen === 'builder')
   const builderOptionsRef = useRef<HTMLDivElement | null>(null)
-  const entrywayDialogRef = useRef<HTMLDivElement | null>(null)
   const resetDialogRef = useRef<HTMLDialogElement | null>(null)
   const resetTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const entrywayStartButtonRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     const configuration: DoorBuilderDraftConfiguration = {
@@ -515,11 +511,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     glassFrameColorMode, glassFrameFinishId, glassFrameFinishType, gridPathId, gridStyle, gridPattern,
     gridColor, gridWidth, hardwareId, doubleDoorLockPrep, doorSwingId,
   ])
-
-  const closeEntrywayGuidance = () => {
-    setShowEntrywayGuidance(false)
-    requestAnimationFrame(() => builderOptionsRef.current?.querySelector<HTMLButtonElement>('.option-card')?.focus())
-  }
 
   // Styles are the first product choice. Material/grain constrain later
   // questions, never the catalog the customer can browse here.
@@ -1360,42 +1351,10 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     })
   }, [screen, currentPage])
 
-  useEffect(() => {
-    if (!showEntrywayGuidance) return
-    entrywayStartButtonRef.current?.focus()
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        closeEntrywayGuidance()
-        return
-      }
-      if (event.key !== 'Tab') return
-      const buttons = [...(entrywayDialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])]
-      if (!buttons.length) return
-      const first = buttons[0]
-      const last = buttons[buttons.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [showEntrywayGuidance])
-
   const goTo = (next: number) => {
     if (next < 0 || next >= pages.length) return
     setStep(next)
     if (editReturnTo) setEditPageId(pages[next])
-    if (pages[next] === 'door-style' && !hasShownEntrywayGuidance) {
-      setHasShownEntrywayGuidance(true)
-      setShowEntrywayGuidance(true)
-    }
   }
 
   const resetGridOptions = () => {
@@ -1543,7 +1502,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       setSubmitting(false)
       setSubmitError('')
     }
-    if (next !== 'builder') setShowEntrywayGuidance(false)
     setScreen(next)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -2082,19 +2040,6 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           <button type="button" className="reset-design-confirm" onClick={confirmResetDesign}>Start over</button>
         </div>
       </dialog>
-
-      {showEntrywayGuidance && <div className="entryway-guidance-backdrop" role="presentation">
-        <div ref={entrywayDialogRef} className="entryway-guidance-dialog" role="dialog" aria-modal="true" aria-labelledby="entryway-guidance-title" aria-describedby="entryway-guidance-description">
-          <span>Before you begin</span>
-          <h2 id="entryway-guidance-title">Match Your Current Entryway</h2>
-          <p id="entryway-guidance-description">You’re about to configure the door you want to view on your home. For the most accurate visualization, choose a door layout that matches the opening you plan to replace, including the number and placement of any sidelites.</p>
-          <p className="entryway-guidance-note">Transoms are not currently replaced in the visualizer and will remain visible in your uploaded photo.</p>
-          <div className="entryway-guidance-actions">
-            <button type="button" className="entryway-guidance-back" onClick={() => showScreen('home')}>Back</button>
-            <button ref={entrywayStartButtonRef} type="button" className="entryway-guidance-start" onClick={closeEntrywayGuidance}>Start Configuring <ArrowRight size={17} /></button>
-          </div>
-        </div>
-      </div>}
 
       {screen === 'home' ? <main className="home-page">
         <section className="home-hero">
