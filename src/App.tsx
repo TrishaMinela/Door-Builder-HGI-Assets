@@ -69,22 +69,23 @@ function doorCatalogModelName(name: string) {
   return doorStyleDisplayName({ name })
 }
 
-function FinishInfoTooltip({ title, body, ariaLabel, tooltipId }: { title: string; body: string; ariaLabel: string; tooltipId: string }) {
+function FinishInfoTooltip({ title, body, note, ariaLabel, tooltipId }: { title: string; body: string; note: string; ariaLabel: string; tooltipId: string }) {
   const [open, setOpen] = useState(false)
   const [position, setPosition] = useState({ left: 12, top: 12 })
   const wrapperRef = useRef<HTMLSpanElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const tooltipRef = useRef<HTMLSpanElement>(null)
 
   const updatePosition = () => {
     const button = buttonRef.current
     if (!button) return
     const rect = button.getBoundingClientRect()
     const tooltipWidth = Math.min(340, window.innerWidth - 24)
-    const estimatedHeight = 116
+    const tooltipHeight = tooltipRef.current?.getBoundingClientRect().height ?? 190
     const left = Math.max(12, Math.min(rect.right - tooltipWidth, window.innerWidth - tooltipWidth - 12))
-    const top = rect.bottom + 8 + estimatedHeight <= window.innerHeight
+    const top = rect.bottom + 8 + tooltipHeight <= window.innerHeight
       ? rect.bottom + 8
-      : Math.max(12, rect.top - estimatedHeight - 8)
+      : Math.max(12, rect.top - tooltipHeight - 8)
     setPosition({ left, top })
   }
 
@@ -101,15 +102,16 @@ function FinishInfoTooltip({ title, body, ariaLabel, tooltipId }: { title: strin
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setOpen(false)
-        buttonRef.current?.focus()
       }
     }
     const reposition = () => updatePosition()
+    const positionFrame = requestAnimationFrame(reposition)
     document.addEventListener('pointerdown', closeOnOutsidePress)
     document.addEventListener('keydown', closeOnEscape)
     window.addEventListener('resize', reposition)
     window.addEventListener('scroll', reposition, true)
     return () => {
+      cancelAnimationFrame(positionFrame)
       document.removeEventListener('pointerdown', closeOnOutsidePress)
       document.removeEventListener('keydown', closeOnEscape)
       window.removeEventListener('resize', reposition)
@@ -129,7 +131,7 @@ function FinishInfoTooltip({ title, body, ariaLabel, tooltipId }: { title: strin
       aria-label={ariaLabel}
       aria-expanded={open}
       aria-controls={tooltipId}
-      onClick={() => open ? setOpen(false) : showTooltip()}
+      onClick={showTooltip}
       onFocus={showTooltip}
       onBlur={(event) => {
         if (!wrapperRef.current?.contains(event.relatedTarget as Node | null)) setOpen(false)
@@ -138,6 +140,7 @@ function FinishInfoTooltip({ title, body, ariaLabel, tooltipId }: { title: strin
       <HelpCircle size={16} aria-hidden="true" />
     </button>
     {open && <span
+      ref={tooltipRef}
       id={tooltipId}
       className="promatch-tooltip"
       role="tooltip"
@@ -145,16 +148,17 @@ function FinishInfoTooltip({ title, body, ariaLabel, tooltipId }: { title: strin
     >
       <strong>{title}</strong>
       <span>{body}</span>
+      <span className="finish-tooltip-note">{note}</span>
     </span>}
   </span>
 }
 
 function ProMatchInfo() {
-  return <FinishInfoTooltip title={proMatchTooltipTitle} body={proMatchTooltipText} ariaLabel="What are ProMatch colors?" tooltipId="promatch-colors-tooltip" />
+  return <FinishInfoTooltip title={proMatchTooltipTitle} body={proMatchTooltipText} note={proMatchNote} ariaLabel="What are ProMatch colors?" tooltipId="promatch-colors-tooltip" />
 }
 
 function TimberStainInfo() {
-  return <FinishInfoTooltip title={timberStainTooltipTitle} body={timberStainTooltipText} ariaLabel="What are TimberStain finishes?" tooltipId="timberstain-finishes-tooltip" />
+  return <FinishInfoTooltip title={timberStainTooltipTitle} body={timberStainTooltipText} note={proMatchNote} ariaLabel="What are TimberStain finishes?" tooltipId="timberstain-finishes-tooltip" />
 }
 
 const sideliteStyleOptions = [
@@ -2142,9 +2146,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
                 <div className="finish-logo-slot">
                   {(jambType === 'clad' && currentPage === 'jamb-finish' || (currentPage === 'door-finish' ? activeFinishType : jambFinishType) === 'paint') && <div className="promatch-group">
                     <div className="promatch-brand"><img src="/assets/branding/pro-match-logo.webp" alt="ProMatch paint colors" loading="lazy" decoding="async" /><ProMatchInfo /></div>
-                    <p>{proMatchNote}</p>
                   </div>}
-                  {(currentPage === 'door-finish' ? activeFinishType : jambFinishType) === 'stain' && <div className="timberstain-group"><div className="timberstain-brand"><img src="/assets/branding/timberstain-logo.webp" alt="TimberStain®" loading="lazy" decoding="async" /><TimberStainInfo /></div><p>{proMatchNote}</p></div>}
+                  {(currentPage === 'door-finish' ? activeFinishType : jambFinishType) === 'stain' && <div className="timberstain-group"><div className="timberstain-brand"><img src="/assets/branding/timberstain-logo.webp" alt="TimberStain®" loading="lazy" decoding="async" /><TimberStainInfo /></div></div>}
                 </div>
               </div>}
               {currentPage === 'glass-frame-color' && <div className="finish-toolbar">
