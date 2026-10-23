@@ -11,6 +11,7 @@ import { AiGenerationLoading, EntranceDetectionLoading, useAiGenerationLoading, 
 import { detectEntranceStructure, recordVisualizerApplicationFailure } from './entranceDetection'
 import { boundedStage, validateVisualizationImage } from './visualizationLifecycle'
 import { detectionForManualStructure, evaluateEntranceCompatibility, MANUAL_ENTRANCE_OPTIONS, type EntranceDetection, type EntranceFitStrategy, type ExistingEntranceStructure } from './entranceFitStrategy'
+import { saveVisualizationImage } from './saveVisualizationImage'
 
 // Original uploads are decoded locally; only the budgeted normalized image is
 // sent to the API. Retain a resource guard without rejecting normal 48MP files.
@@ -95,6 +96,11 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
   const [showResult, setShowResult] = useState(false)
   const aiLoadingExperience = useAiGenerationLoading(aiGenerating, showResult ? aiResult?.image ?? '' : '', aiError?.userMessage ?? '')
   const [downloadError, setDownloadError] = useState('')
+  const [downloadStatus, setDownloadStatus] = useState('')
+  const [imageDownloadPreparing, setImageDownloadPreparing] = useState(false)
+  const [saveFallback, setSaveFallback] = useState<{ imageUrl: string } | null>(null)
+  const imageDownloadPendingRef = useRef(false)
+  const saveFallbackCleanupRef = useRef<(() => void) | null>(null)
   const [pdfDownloadPreparing, setPdfDownloadPreparing] = useState(false)
   const incompatibilityDialogRef = useRef<HTMLDivElement>(null)
   const [doorSource, setDoorSource] = useState<DoorSourceState>({ url: '', width: 0, height: 0, error: '', ready: false })
@@ -275,15 +281,45 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
     finally { setPdfDownloadPreparing(false) }
   }
 
-  const downloadAiVisualization = () => {
-    if (!aiResult) return
-    const link = document.createElement('a')
-    link.href = aiResult.image
-    link.download = `home-guard-ai-visualization-${new Date().toISOString().slice(0, 10)}.jpg`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
+  const clearSaveFallback = useCallback(() => {
+    saveFallbackCleanupRef.current?.()
+    saveFallbackCleanupRef.current = null
+    setSaveFallback(null)
+  }, [])
+
+  const downloadAiVisualization = async () => {
+    if (!aiResult || imageDownloadPendingRef.current) return
+    imageDownloadPendingRef.current = true
+    setImageDownloadPreparing(true)
+    setDownloadError('')
+    setDownloadStatus('Preparing your full-quality image…')
+    clearSaveFallback()
+    try {
+      const saved = await saveVisualizationImage(aiResult.image, {
+        filenameBase: `hgi-door-visualization-${new Date().toISOString().slice(0, 10)}`,
+      })
+      if (saved.method === 'download') setDownloadStatus('Your full-quality image download has started.')
+      else if (saved.method === 'share') setDownloadStatus('Your image is ready to save or share.')
+      else if (saved.method === 'cancelled') setDownloadStatus('Save cancelled. Your visualization is still available here.')
+      else {
+        saveFallbackCleanupRef.current = saved.revoke
+        setSaveFallback({ imageUrl: saved.imageUrl })
+        setDownloadStatus('Touch and hold the image below, then choose Save to Photos or Save Image.')
+      }
+    } catch (reason) {
+      setDownloadStatus('')
+      setDownloadError(reason instanceof Error ? reason.message : 'The visualization could not be saved. Please try again.')
+    } finally {
+      imageDownloadPendingRef.current = false
+      setImageDownloadPreparing(false)
+    }
   }
+
+  useEffect(() => {
+    clearSaveFallback()
+    setDownloadError('')
+    setDownloadStatus('')
+  }, [aiResult?.attemptId, clearSaveFallback])
 
   useEffect(() => {
     invalidateAiResult()
@@ -316,6 +352,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
     aiAbortRef.current?.abort()
     detectionAbortRef.current?.abort()
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    saveFallbackCleanupRef.current?.()
   }, [])
   const choosePhoto = async (file?: File) => {
     if (!file) return
@@ -449,8 +486,9 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
               <div className="visualizer-final-heading"><h2 id="visualizer-final-title">Your new entrance</h2></div>
               {editToolbar}
               <div className="ai-photo-result-area"><CleanupComparisonSlider key={aiResult.attemptId} originalSrc={photo.objectUrl} cleanupSrc={aiResult.image} imageAlt={'AI visualization: ' + photo.file.name} originalLabel="Original" resultLabel="AI Result" ariaLabel="Original photo and AI visualization comparison" onReady={comparisonReady} onError={comparisonFailed} visible={showResult}/><AiGenerationLoading state={aiLoadingExperience}/></div>
-              <div className="visualizer-final-actions"><button type="button" className="visualizer-download-button" aria-label="Download completed home visualization photo" disabled={!aiResult} onClick={downloadAiVisualization}><Download size={18}/>Download Photo</button>{onDownloadPdf&&<button type="button" className="visualizer-download-button" aria-label="Download configured door PDF" disabled={pdfDownloadPreparing} onClick={downloadConfigurationPdf}><FileText size={18}/>{pdfDownloadPreparing?'Preparing PDF…':'Download Configuration PDF'}</button>}<button type="button" className="visualizer-review-button" aria-label="Return to the previous visualizer step" onClick={returnFromFinal}>Return to Previous Step</button></div>
-              <span className="visualizer-download-status" role="status" aria-live="polite">{aiGenerating?'Creating your AI visualization. This may take a moment.':pdfDownloadPreparing?'Preparing your configuration PDF.':''}</span>{downloadError&&<p className="visualizer-error" role="alert">{downloadError}</p>}
+              <div className="visualizer-final-actions"><button type="button" className="visualizer-download-button" aria-label="Save completed home visualization image" disabled={!aiResult||imageDownloadPreparing} onClick={()=>void downloadAiVisualization()}><Download size={18}/>{imageDownloadPreparing?'Preparing Image…':'Save Image'}</button>{onDownloadPdf&&<button type="button" className="visualizer-download-button" aria-label="Download configured door PDF" disabled={pdfDownloadPreparing} onClick={downloadConfigurationPdf}><FileText size={18}/>{pdfDownloadPreparing?'Preparing PDF…':'Download Configuration PDF'}</button>}<button type="button" className="visualizer-review-button" aria-label="Return to the previous visualizer step" onClick={returnFromFinal}>Return to Previous Step</button></div>
+              <span className="visualizer-download-status" role="status" aria-live="polite">{aiGenerating?'Creating your AI visualization. This may take a moment.':pdfDownloadPreparing?'Preparing your configuration PDF.':downloadStatus}</span>{downloadError&&<p className="visualizer-error" role="alert">{downloadError}</p>}
+              {saveFallback&&<section className="visualizer-save-fallback" aria-labelledby="visualizer-save-fallback-title"><div><strong id="visualizer-save-fallback-title">Save your visualization</strong><p>Touch and hold the full-quality image, then choose <b>Save to Photos</b> or <b>Save Image</b>.</p></div><img src={saveFallback.imageUrl} alt="Completed HGI door visualization ready to save"/><button type="button" onClick={clearSaveFallback}>Close save instructions</button></section>}
             </section>}
           </>}
 

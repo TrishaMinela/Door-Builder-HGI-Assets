@@ -11,6 +11,7 @@
     "test:ai-usage:live": "node --import tsx scripts/verifyAiUsageLive.ts",
     "test:ai-usage": "node --import tsx scripts/verifyAiWorkflowUsage.ts && node --import tsx scripts/verifyAiEntranceUsage.ts && node --import tsx scripts/verifyAiGenerationUsage.ts",
     "test:ai-visualizer:ui": "node --import tsx scripts/verifyAiVisualizerUi.ts",
+    "test:visualization-download": "node --import tsx scripts/verifyVisualizationDownload.ts",
     "test:entrance-compatibility": "node --import tsx scripts/verifyEntranceCompatibility.ts",
     "test:submission": "node --import tsx scripts/verifySubmissionPayload.ts",
     "test:door-builder-draft": "node --import tsx scripts/verifyDoorBuilderDraft.ts",
