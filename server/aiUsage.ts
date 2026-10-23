@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 export type OpenAiImageUsage = {
   input_tokens?: number
   input_tokens_details?: {
@@ -114,6 +116,39 @@ function telemetryConfiguration(label: string, requestId: string) {
     return null
   }
   return { supabaseUrl, serviceRoleKey }
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+export async function validateAiVisualizationWorkflowCorrelation(workflowRequestId: string, completionToken: string) {
+  if (!UUID_PATTERN.test(workflowRequestId) || !UUID_PATTERN.test(completionToken)) return false
+  const configuration = telemetryConfiguration('ai-workflow-correlation', workflowRequestId)
+  if (!configuration) return false
+  const tokenHash = createHash('sha256').update(completionToken).digest('hex')
+  const query = new URLSearchParams({
+    workflow_request_id: `eq.${workflowRequestId}`,
+    completion_token_hash: `eq.${tokenHash}`,
+    status: 'in.(started,succeeded)',
+    select: 'workflow_request_id',
+    limit: '1',
+  })
+  try {
+    const response = await fetch(`${configuration.supabaseUrl}/rest/v1/ai_visualization_workflows?${query}`, {
+      headers: {
+        apikey: configuration.serviceRoleKey,
+        Authorization: `Bearer ${configuration.serviceRoleKey}`,
+      },
+    })
+    if (!response.ok) {
+      console.error('[ai-workflow-correlation:validation-failed]', { request_id: workflowRequestId, reason: 'supabase_http_error', status: response.status })
+      return false
+    }
+    const rows = await response.json().catch(() => []) as Array<{ workflow_request_id?: unknown }>
+    return rows.length === 1 && rows[0]?.workflow_request_id === workflowRequestId
+  } catch (error) {
+    console.error('[ai-workflow-correlation:validation-failed]', { request_id: workflowRequestId, reason: error instanceof Error ? error.name : 'unknown_error' })
+    return false
+  }
 }
 
 export async function recordAiVisualizationWorkflowStarted(record: {

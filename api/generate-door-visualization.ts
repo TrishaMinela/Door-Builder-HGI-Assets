@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { AI_MAX_REQUEST_BYTES, AI_MODEL, AI_QUALITY, AiGenerationError, AiInputError, aiPrompt, entranceFitContext, loadAiReference, objectValue, optionalCorners, prepareConfiguredProductReferences, prepareHouseAndMask, resolveAiProduct, type AiErrorCode } from '../server/aiDoorVisualization.js'
 import { publicAiErrorCode, publicAiFailure, safeProviderFailureCategory } from '../server/aiPublicErrors.js'
-import { aiUsageEnvironment, completeAiVisualizationWorkflow, estimateImageGenerationCost, normalizeImageUsage, recordAiGenerationUsage, type OpenAiImageUsage } from '../server/aiUsage.js'
+import { aiUsageEnvironment, completeAiVisualizationWorkflow, estimateImageGenerationCost, normalizeImageUsage, recordAiGenerationUsage, validateAiVisualizationWorkflowCorrelation, type OpenAiImageUsage } from '../server/aiUsage.js'
 
 type ApiRequest = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> }
 type ApiResponse = { status: (code: number) => ApiResponse; json: (body: unknown) => void; setHeader: (name: string, value: string) => void }
@@ -51,7 +51,7 @@ function withServerlessDeadline<T>(operation: Promise<T>) {
 
 const safeProviderRequestId = (value: string | null) => value && /^req_[a-zA-Z0-9_-]{1,120}$/.test(value) ? value : null
 
-async function generate(source: Record<string, unknown>, apiKey: string, requestId: string, completionToken: string, apiStartedAt: number): Promise<GeneratedVisualization> {
+async function generate(source: Record<string, unknown>, apiKey: string, requestId: string, completionToken: string, apiStartedAt: number, workflowRequestId: string | null): Promise<GeneratedVisualization> {
   const startedAt = Date.now()
   const corners = optionalCorners(source.corners)
   const fitContext = entranceFitContext(source.entranceDetection, source.fitStrategy)
@@ -96,9 +96,6 @@ async function generate(source: Record<string, unknown>, apiKey: string, request
 
   let upstream: Response
   const openAiStartedAt = Date.now()
-  const workflowRequestId = typeof objectValue(source.entranceDetection)?.telemetryRequestId === 'string'
-    ? String(objectValue(source.entranceDetection)?.telemetryRequestId)
-    : null
   const writeUsage = async (status: 'succeeded' | 'failed', errorCode: string | null, usageValue: unknown, providerRequestId: string | null) => {
     const usage = normalizeImageUsage(usageValue)
     await recordAiGenerationUsage({
@@ -170,9 +167,29 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     let source: Record<string, unknown> | null
     try { source = objectValue(JSON.parse(serialized)) } catch { source = null }
     if (!source) throw new AiInputError('INVALID_REQUEST', 'The visualization request is invalid.')
-    workflowRequestId = typeof objectValue(source.entranceDetection)?.telemetryRequestId === 'string'
+    const nestedWorkflowRequestId = typeof objectValue(source.entranceDetection)?.telemetryRequestId === 'string'
       ? String(objectValue(source.entranceDetection)?.telemetryRequestId)
       : null
+    const nestedCompletionToken = typeof objectValue(source.entranceDetection)?.telemetryCompletionToken === 'string'
+      ? String(objectValue(source.entranceDetection)?.telemetryCompletionToken)
+      : null
+    const explicitWorkflowRequestId = typeof source.workflow_request_id === 'string' ? source.workflow_request_id : null
+    const explicitCompletionToken = typeof source.workflow_completion_token === 'string' ? source.workflow_completion_token : null
+    const candidateWorkflowRequestId = explicitWorkflowRequestId ?? nestedWorkflowRequestId
+    const candidateCompletionToken = explicitCompletionToken ?? nestedCompletionToken
+    const correlationSourcesAgree = !explicitWorkflowRequestId || !nestedWorkflowRequestId || explicitWorkflowRequestId === nestedWorkflowRequestId
+    const tokensAgree = !explicitCompletionToken || !nestedCompletionToken || explicitCompletionToken === nestedCompletionToken
+    if (candidateWorkflowRequestId && candidateCompletionToken && correlationSourcesAgree && tokensAgree) {
+      workflowRequestId = await validateAiVisualizationWorkflowCorrelation(candidateWorkflowRequestId, candidateCompletionToken)
+        ? candidateWorkflowRequestId
+        : null
+    }
+    if (!workflowRequestId) {
+      console.warn('[ai-visualizer:workflow-correlation-missing]', {
+        request_id: requestId,
+        reason: !candidateWorkflowRequestId || !candidateCompletionToken ? 'metadata_missing' : !correlationSourcesAgree || !tokensAgree ? 'metadata_mismatch' : 'validation_rejected',
+      })
+    }
     const suppliedCorners = optionalCorners(source.corners)
     const product = resolveAiProduct(source.configuration, source.jambFinishId, source.glassFrameFinishId)
     console.info('[ai-visualizer:received]', { request_id: requestId, uploaded_image: uploadMetadata(source.uploadMetadata), placement_mode: suppliedCorners ? 'user-corners' : 'automatic', product_reference_count: product.references.length, browser_request_bytes: Buffer.byteLength(serialized) })
@@ -182,16 +199,19 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     const key = createHash('sha256').update(serialized).digest('hex')
     let pending = inFlight.get(key)
     if (!pending) {
-      pending = generate(source, apiKey, requestId, randomUUID(), startedAt)
+      pending = generate(source, apiKey, requestId, randomUUID(), startedAt, workflowRequestId)
       inFlight.set(key, pending)
       void pending.finally(() => { if (inFlight.get(key) === pending) inFlight.delete(key) }).catch(() => {})
     }
     const generated = await withServerlessDeadline(pending)
-    if (workflowRequestId) await completeAiVisualizationWorkflow({
-      workflowRequestId,
-      status: 'succeeded',
-      generationRequestId: generated.requestId,
-    })
+    if (workflowRequestId) {
+      const completed = await completeAiVisualizationWorkflow({
+        workflowRequestId,
+        status: 'succeeded',
+        generationRequestId: generated.requestId,
+      })
+      if (!completed) console.warn('[ai-visualizer:workflow-completion-rejected]', { request_id: generated.requestId, workflow_request_id: workflowRequestId, status: 'succeeded' })
+    }
     response.status(200).json({ image: generated.image, request_id: generated.requestId, completion_token: generated.completionToken })
   } catch (error) {
     const duration = Date.now() - startedAt

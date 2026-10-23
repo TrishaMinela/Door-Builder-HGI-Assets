@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import sharp from 'sharp'
 import handler from '../api/generate-door-visualization'
 import { aiTestConfiguration } from './aiVisualizerFixture'
@@ -23,6 +24,8 @@ let telemetryFailure = false
 let upstreamFailure: string | null = null
 let upstreamTimeout = false
 let providerSequence = 0
+let workflowCompletionAccepted = true
+let workflowValidationAccepted = true
 
 globalThis.fetch = (async (url, init) => {
   if (url === 'https://api.openai.com/v1/images/edits') {
@@ -36,26 +39,34 @@ globalThis.fetch = (async (url, init) => {
     telemetryRows.push(JSON.parse(String(init.body)) as Record<string, unknown>)
     return telemetryFailure ? new Response(null, { status: 500 }) : Response.json([{ id: `generation-row-${telemetryRows.length}` }], { status: 201 })
   }
+  if (String(url).startsWith('https://telemetry-test.supabase.co/rest/v1/ai_visualization_workflows?')) {
+    const workflowId = new URL(String(url)).searchParams.get('workflow_request_id')?.replace(/^eq\./, '') ?? ''
+    return Response.json(workflowValidationAccepted ? [{ workflow_request_id: workflowId }] : [])
+  }
   if (url === 'https://telemetry-test.supabase.co/rest/v1/rpc/complete_ai_visualization_workflow') {
     workflowOutcomes.push(JSON.parse(String(init?.body)) as Record<string, unknown>)
-    return Response.json(true)
+    return Response.json(workflowCompletionAccepted)
   }
   throw new Error(`Unexpected fetch: ${url}`)
 }) as typeof fetch
 
-async function generate(marker: string) {
+async function generate(marker: string, correlation = true) {
+  const suffix = createHash('sha256').update(marker).digest('hex').slice(0, 12)
+  const workflowId = `11111111-1111-4111-8111-${suffix}`
+  const workflowToken = `22222222-2222-4222-8222-${suffix}`
   let status = 0
   let body: { image?: string; request_id?: string; completion_token?: string; error_code?: string; user_message?: string } = {}
   await handler({ method: 'POST', headers: {}, body: {
     photo: `data:image/jpeg;base64,${house.toString('base64')}`,
     productReference: `data:image/png;base64,${product.toString('base64')}`,
     configuration: { ...aiTestConfiguration, telemetryTestMarker: marker },
-    entranceDetection: { doorStructure: 'single', sidelites: 'none', transom: false, widthClass: 'standard', approximateWidthRatio: .35, structurallyWide: false, confidence: .98, summary: 'Single door.', telemetryRequestId: `detection-workflow-${marker}` },
+    entranceDetection: { doorStructure: 'single', sidelites: 'none', transom: false, widthClass: 'standard', approximateWidthRatio: .35, structurallyWide: false, confidence: .98, summary: 'Single door.', ...(correlation ? { telemetryRequestId: workflowId, telemetryCompletionToken: workflowToken } : {}) },
+    ...(correlation ? { workflow_request_id: workflowId, workflow_completion_token: workflowToken } : {}),
     fitStrategy: 'use-selected-product',
   } }, {
     status(code) { status = code; return this }, json(value) { body = value as typeof body }, setHeader() {},
   })
-  return { status, body }
+  return { status, body, workflowId }
 }
 
 try {
@@ -66,10 +77,10 @@ try {
   assert.ok(success.body.completion_token)
   assert.equal(telemetryRows[0].status, 'succeeded')
   assert.equal(telemetryRows[0].provider_request_id, 'req_image_1')
-  assert.equal(telemetryRows[0].workflow_request_id, 'detection-workflow-success')
+  assert.equal(telemetryRows[0].workflow_request_id, success.workflowId)
   assert.equal(telemetryRows[0].environment, 'production')
   assert.equal(telemetryRows[0].estimated_cost_usd, .1576)
-  assert.deepEqual({ status: workflowOutcomes[0].p_status, workflow: workflowOutcomes[0].p_workflow_request_id }, { status: 'succeeded', workflow: 'detection-workflow-success' })
+  assert.deepEqual({ status: workflowOutcomes[0].p_status, workflow: workflowOutcomes[0].p_workflow_request_id }, { status: 'succeeded', workflow: success.workflowId })
 
   telemetryFailure = true
   const isolated = await generate('telemetry-failure')
@@ -124,6 +135,40 @@ try {
   assert.equal(telemetryRows[6].error_code, 'provider_timeout')
   assert.equal(workflowOutcomes[6].p_failure_category, 'provider_timeout')
   assert.doesNotMatch(JSON.stringify(timeoutFailure.body), /SECRET|provider/i)
+
+  upstreamTimeout = false
+  const workflowCountBeforeMissing = workflowOutcomes.length
+  const missingCorrelation = await generate('missing', false)
+  assert.equal(missingCorrelation.status, 200)
+  assert.equal(telemetryRows.at(-1)?.workflow_request_id, null)
+  assert.equal(workflowOutcomes.length, workflowCountBeforeMissing, 'Missing workflow metadata must not complete an unrelated workflow')
+
+  workflowValidationAccepted = false
+  const rejectedCorrelation = await generate('rejected')
+  assert.equal(rejectedCorrelation.status, 200, 'Correlation validation is best-effort and must not break generation')
+  assert.equal(telemetryRows.at(-1)?.workflow_request_id, null)
+  workflowValidationAccepted = true
+
+  workflowCompletionAccepted = false
+  const rejectedCompletion = await generate('completefail')
+  assert.equal(rejectedCompletion.status, 200, 'Workflow RPC rejection must not break generation')
+  assert.equal(telemetryRows.at(-1)?.workflow_request_id, rejectedCompletion.workflowId)
+  workflowCompletionAccepted = true
+
+  const [concurrentA, concurrentB] = await Promise.all([generate('concurrenta'), generate('concurrentb')])
+  assert.equal(concurrentA.status, 200)
+  assert.equal(concurrentB.status, 200)
+  const concurrentRows = telemetryRows.slice(-2)
+  assert.deepEqual(new Set(concurrentRows.map(row => row.workflow_request_id)), new Set([concurrentA.workflowId, concurrentB.workflowId]), 'Concurrent requests retain isolated workflow correlation')
+
+  const retryFirst = await generate('retry')
+  workflowCompletionAccepted = false
+  const retrySecond = await generate('retry')
+  workflowCompletionAccepted = true
+  assert.equal(retryFirst.status, 200)
+  assert.equal(retrySecond.status, 200)
+  assert.equal(telemetryRows.at(-2)?.workflow_request_id, retryFirst.workflowId)
+  assert.equal(telemetryRows.at(-1)?.workflow_request_id, retryFirst.workflowId)
   console.log('AI generation usage: workflow success/failure, safe public failures, internal diagnostics, production environment, correlation, cost, and telemetry failure isolation checks passed.')
 } finally {
   globalThis.fetch = originalFetch

@@ -26,7 +26,7 @@ let status = 0
 const stopwatchStartedAt = performance.now()
 const detectionStartedAt = performance.now()
 let detectionStatus = 0
-let detectionBody: { detection?: unknown; error_code?: string; user_message?: string; request_id?: string } = {}
+let detectionBody: { detection?: unknown; error_code?: string; user_message?: string; request_id?: string; workflow_completion_token?: string } = {}
 await detectHandler({ method: 'POST', body: { photo: `data:image/webp;base64,${house.toString('base64')}` }, headers: {} }, {
   status(code) { detectionStatus = code; return this },
   json(body) { detectionBody = body as typeof detectionBody },
@@ -35,6 +35,8 @@ await detectHandler({ method: 'POST', body: { photo: `data:image/webp;base64,${h
 const entranceDetectionDurationMs = Math.round(performance.now() - detectionStartedAt)
 assert.equal(detectionStatus, 200, detectionBody.user_message ?? detectionBody.error_code ?? 'Entrance detection failed.')
 assert.ok(detectionBody.detection)
+assert.ok(detectionBody.request_id)
+assert.ok(detectionBody.workflow_completion_token)
 const compatibility = evaluateEntranceCompatibility(detectionBody.detection as EntranceDetection, aiTestConfiguration)
 assert.equal(compatibility.status, 'good-fit', 'Controlled fixture must pass compatibility before Sunburst generation.')
 const entranceStageDurationMs = Math.round(performance.now() - detectionStartedAt)
@@ -45,7 +47,9 @@ await handler({
     photo: `data:image/webp;base64,${house.toString('base64')}`,
     productReference: `data:image/png;base64,${product.toString('base64')}`,
     configuration: aiTestConfiguration,
-    entranceDetection: detectionBody.detection,
+    entranceDetection: { ...(detectionBody.detection as Record<string, unknown>), telemetryRequestId: detectionBody.request_id, telemetryCompletionToken: detectionBody.workflow_completion_token },
+    workflow_request_id: detectionBody.request_id,
+    workflow_completion_token: detectionBody.workflow_completion_token,
     fitStrategy: 'use-selected-product',
     uploadMetadata: { mimeType: 'image/webp', format: 'webp', byteSize: house.length },
   },
@@ -83,6 +87,12 @@ if (process.env.AI_USAGE_EXPECT_FAILURE === '1') {
   assert.equal(stored[0].environment, 'development')
   assert.match(stored[0].provider_request_id, /^req_/)
   assert.equal(stored[0].workflow_request_id, detectionBody.request_id)
+  const workflowResponse = await fetch(`${supabaseUrl}/rest/v1/ai_visualization_workflows?workflow_request_id=eq.${detectionBody.request_id}&select=status,generation_request_id`, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } })
+  assert.equal(workflowResponse.status, 200)
+  const workflows = await workflowResponse.json() as Array<{ status: string; generation_request_id: string | null }>
+  assert.equal(workflows.length, 1)
+  assert.equal(workflows[0].status, 'succeeded')
+  assert.equal(workflows[0].generation_request_id, responseBody.request_id)
   assert.ok(Math.abs(stored[0].total_visualization_duration_ms - stopwatchDurationMs) < 1_500)
   assert.ok(Math.abs(stored[0].entrance_stage_duration_ms - entranceStageDurationMs) < 1_500)
   const detectionResponse = await fetch(`${supabaseUrl}/rest/v1/ai_entrance_detection_usage?workflow_request_id=eq.${detectionBody.request_id}&select=provider_request_id,pass_type,input_tokens,cached_input_tokens,output_tokens,reasoning_tokens,total_tokens,estimated_cost_usd,detection_duration_ms&order=created_at.asc`, { headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` } })

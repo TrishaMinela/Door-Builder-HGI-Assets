@@ -31,6 +31,11 @@ try {
   assert.equal(duplicate, true, 'Duplicate workflow IDs are idempotent')
   assert.equal(startCalls, 2)
 
+  const abandonedWorkflow = '33333333-3333-4333-8333-333333333333'
+  const abandoned = await recordAiVisualizationWorkflowStarted({ workflowRequestId: abandonedWorkflow, environment: 'production', completionTokenHash: 'abandoned-hash' })
+  assert.equal(abandoned, true)
+  assert.equal(requests.filter(request => request.body.workflow_request_id === abandonedWorkflow).length, 1, 'An abandoned workflow remains a single started record without a fabricated completion')
+
   let responseStatus = 0
   await failWorkflowHandler({ method: 'POST', body: { workflow_request_id: workflowRequestId, workflow_completion_token: completionToken, failure_category: 'ENTRANCE_INCOMPATIBLE' } }, {
     status(code) { responseStatus = code; return this },

@@ -113,6 +113,8 @@ export async function generateAiVisualization(input: {
   ]), input.signal, 30_000, new AiVisualizationError('Your visualization took too long to complete. Please try again.', 'AI_TIMEOUT'))
   const bodyFor = (photo: string) => JSON.stringify({ photo, productReference, corners: input.corners, configuration: input.configuration,
     entranceDetection: input.entranceDetection, fitStrategy: input.fitStrategy,
+    workflow_request_id: input.entranceDetection?.telemetryRequestId,
+    workflow_completion_token: input.entranceDetection?.telemetryCompletionToken,
     uploadMetadata: { ...input.uploadMetadata, width: prepared.naturalWidth, height: prepared.naturalHeight },
     jambFinishId: input.jambFinish?.id, glassFrameFinishId: input.glassFrameFinish?.id })
   let normalized = prepared
