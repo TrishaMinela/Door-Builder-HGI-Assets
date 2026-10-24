@@ -53,7 +53,7 @@ try {
   page.on('framenavigated', frame => { if (frame === page.mainFrame()) mainNavigations++ })
   await page.route('**/assets/pdf-*.js', route => { if (blockPdf) { missingRequests++; return route.fulfill({ status: 404, contentType: 'text/plain', body: 'Not Found' }) }; return route.continue() })
   const toReview = async () => {
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     await page.getByRole('button', { name: 'Next configuration step' }).waitFor()
     for (let i = 0; i < 20 && await page.getByRole('button', { name: 'Next configuration step' }).count(); i++) {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
@@ -67,7 +67,7 @@ try {
   const beforeRecovery = mainNavigations
   const saved = await page.evaluate(() => localStorage.getItem('hgi-door-builder-draft'))
   await download()
-  await page.getByRole('button', { name: 'Start Building', exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).waitFor()
   assert.equal(mainNavigations, beforeRecovery + 1, 'Missing chunk causes exactly one real reload')
   assert.equal(await page.evaluate(key => sessionStorage.getItem(key), STALE_CHUNK_RECOVERY_KEY), 'attempted')
   assert.equal(await page.evaluate(() => localStorage.getItem('hgi-door-builder-draft')), saved, 'Complete configured draft survives recovery')

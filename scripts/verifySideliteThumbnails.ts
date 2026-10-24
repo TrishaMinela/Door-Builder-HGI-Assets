@@ -25,7 +25,7 @@ try {
       sidelites: 'right', sideliteStyleId: 'ssl', selectedFinishType: 'paint', selectedPaint: 'paint-white', doorSwingId: 'LHI',
     } })), doorStyles.find(style => style.code === 'F1')!.id)
     await page.goto('http://127.0.0.1:5213/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     const next = () => page.getByRole('button', { name: 'Next configuration step' }).click()
     const back = () => page.getByRole('button', { name: 'Previous configuration step' }).click()
     const card = (label: string) => page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: new RegExp(`^${label}$`) }) })

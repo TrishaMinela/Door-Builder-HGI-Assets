@@ -23,7 +23,7 @@ try {
       selectedPaint: 'paint-clay', hardwareId: hardwareOptions[0].id, doorSwingId: 'RHI',
     })
     await page.goto('http://127.0.0.1:5220/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     await page.waitForTimeout(250)
     const state = () => page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
     const original = await state()

@@ -34,7 +34,7 @@ try {
       selectedFinishType: 'paint', selectedPaint: 'paint-white', hardwareId: hardwareOptions[0].id,
     })
     await page.goto('http://127.0.0.1:5215/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     const next = () => page.getByRole('button', { name: 'Next configuration step' }).click()
     for (let i = 0; i < 20 && !(await page.getByRole('heading', { name: 'Choose Your Door Line', exact: true }).isVisible()); i++) {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()

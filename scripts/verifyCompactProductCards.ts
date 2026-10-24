@@ -24,7 +24,7 @@ try {
       ;(window as unknown as { __name: (fn: unknown) => unknown }).__name = fn => fn
     }, { selectedDoorConfigurationType: 'single', styleId: doorStyles.find(style => style.code === 'F')!.id, doorLineId: '20-gauge-smooth-steel', sidelites: 'right', sideliteStyleId: 'ssl', doorSwingId: 'LHI' })
     await page.goto('http://127.0.0.1:5199/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     const next = page.getByRole('button', { name: 'Next configuration step' })
     for (let step = 0; step < 10; step++) {
       const heading = await page.locator('.step-heading h1').innerText()

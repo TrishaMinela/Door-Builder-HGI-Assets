@@ -29,7 +29,7 @@ try {
     const scenario = { ...draft, configuration: { ...draft.configuration, styleId: doorStyles.find(item => item.code === code)!.id } }
     await page.addInitScript(value => { localStorage.setItem('hgi-door-builder-draft', JSON.stringify(value)); (window as unknown as { __name: (fn: unknown) => unknown }).__name = fn => fn }, scenario)
     await page.goto('http://127.0.0.1:5195/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     await page.getByRole('button', { name: 'Next configuration step' }).waitFor()
     const restored = await page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
     assert.equal(restored.hardwareId, draft.configuration.hardwareId)

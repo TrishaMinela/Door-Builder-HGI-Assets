@@ -49,7 +49,7 @@ try {
     const draft={version:1,configuration:{selectedDoorConfigurationType:'french',doubleDoorLockPrep:'DDLLBO',styleId:doorStyles.find(s=>s.code==='F')!.id,doorLineId:'20-gauge-smooth-steel',sidelites:'both-sides',sideliteStyleId:'ssl',selectedFinishType:'paint',selectedPaint:'paint-black',jambType:'timber',jambFinishType:'paint',jambFinishColor:'paint-black',selectedGlassCategory:'clear',glassId:'f-clear-grids',selectedGlassGroupKey:'clear-glass-with-grids',glassVariantConfirmed:true,gridPathId:'internal',gridStyle:'Flat',gridPattern:'4 Lite',gridColor:'White',gridWidth:'5/8"',hardwareId:hardwareOptions[0].id,doorSwingId:'LHI'}}
     await page.addInitScript(value=>{localStorage.setItem('hgi-door-builder-draft',JSON.stringify(value));(window as unknown as {__name:(fn:unknown)=>unknown}).__name=fn=>fn},draft)
     await page.goto('http://127.0.0.1:5196/')
-    await page.getByRole('button',{name:'Start Building',exact:true}).click()
+    await page.getByRole('button',{name: 'Start Building Your Door', exact: true}).click()
     const next=page.getByRole('button',{name:'Next configuration step'})
     await next.waitFor()
     const visited=[]

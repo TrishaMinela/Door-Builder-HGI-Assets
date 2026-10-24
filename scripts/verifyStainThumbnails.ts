@@ -21,7 +21,7 @@ try {
       } }))
     }, doorStyles.find(style => style.code === 'F')!.id)
     await page.goto('http://127.0.0.1:5208/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     for (let i = 0; i < 15 && await page.locator('.step-heading h1').innerText() !== 'Choose Your Door Finish'; i++) {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
       await page.getByRole('button', { name: 'Next configuration step' }).click()

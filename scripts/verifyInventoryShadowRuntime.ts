@@ -15,7 +15,7 @@ for(const enabled of [false,true]){
     await page.addInitScript(value=>{localStorage.setItem('hgi-door-builder-draft',JSON.stringify(value));(window as unknown as {__name:(fn:unknown)=>unknown}).__name=fn=>fn},draft)
     await page.goto('http://127.0.0.1:5194/')
     const response=enabled?page.waitForResponse(r=>r.url().includes('/__dev/inventory-shadow/'),{timeout:25000}):null
-    await page.getByRole('button',{name:'Start Building',exact:true}).click()
+    await page.getByRole('button',{name: 'Start Building Your Door', exact: true}).click()
     await page.getByRole('button',{name:'Next configuration step'}).waitFor()
     await page.waitForTimeout(200)
     const before=await page.evaluate(()=>localStorage.getItem('hgi-door-builder-draft'))

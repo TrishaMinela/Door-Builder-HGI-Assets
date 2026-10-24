@@ -39,7 +39,7 @@ try {
     assert.equal(await savedStyle(), expectedStartingStyle, `${draftMode}: style is initialized before entering the builder`)
     await page.waitForTimeout(200)
     assert.equal(await savedStyle(), expectedStartingStyle, 'Mount effects do not replace the initialized style')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     for (let i = 0; i < 10 && await page.locator('.step-heading h1').innerText() !== 'Choose a Door Style'; i++) {
       if (await page.locator('.step-heading h1').innerText() === 'Choose Your Door Configuration') {
         await page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: /^Single Door$/ }) }).click()
@@ -99,7 +99,7 @@ try {
       assert.equal(state.hardwareId, hardwareOptions[0].id)
     }
     await page.goto('http://127.0.0.1:5197/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     for (let i = 0; i < 10 && await page.locator('.step-heading h1').innerText() !== 'Choose Your Door Line'; i++) {
       if (await page.locator('.step-heading h1').innerText() === 'Choose a Door Style') assert.equal(await page.locator('.builder-options-scroll .door-catalog-card').count(), 42, 'Style-first browsing includes the full inventory')
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
@@ -176,7 +176,7 @@ try {
       sideliteGlassCategory: 'clear', sideliteGlassId: scenario.grids ? 'clear-grids' : 'clear-no-grids', doorSwingId: 'LHI',
       ...(scenario.grids ? { sideliteGridLocation: 'internal', sideliteGridStyle: 'Flat', sideliteGridPattern: '3 Lite', sideliteGridColor: 'White', sideliteGridWidth: '5/8"' } : {}) })
     await page.goto('http://127.0.0.1:5197/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     for (let i = 0; i < 10 && await page.locator('.step-heading h1').innerText() !== 'Choose Your Door Line'; i++) {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
       await page.getByRole('button', { name: 'Next configuration step' }).click()

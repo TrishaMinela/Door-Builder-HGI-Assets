@@ -34,7 +34,7 @@ try {
     const page = await browser.newPage({ viewport: { width, height: 1000 } })
     await page.addInitScript(value => { localStorage.setItem('hgi-door-builder-draft', JSON.stringify(value)); (window as unknown as { __name: (fn: unknown) => unknown }).__name = fn => fn }, draft)
     await page.goto('http://127.0.0.1:5196/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     await page.getByRole('button', { name: 'Next configuration step' }).waitFor()
     for (let step = 0; step < 4; step++) {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()

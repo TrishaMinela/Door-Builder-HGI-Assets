@@ -41,7 +41,7 @@ try {
     await page.getByRole('heading', { name: heading, exact: true }).waitFor()
   }
   await page.goto('http://127.0.0.1:5216/')
-  await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+  await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
   assert.equal((await saved()).selectedPaint, '', 'No finish assigned at startup')
   assert.equal((await saved()).selectedStain, '')
   assert.equal((await saved()).styleId, doorStyles.find(style => style.code === 'F')!.id, 'Full Lite initial default unchanged')
@@ -67,7 +67,7 @@ try {
   await navigate('Configuration Summary')
   assert.match(await page.locator('.summary-row').filter({ hasText: 'Door finish color' }).innerText(), /Terratone/)
   await page.reload()
-  await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+  await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
   assert.equal((await saved()).selectedPaint, 'paint-terratone', 'Explicit saved finish survives reload')
   for (const [id, type, sourceLine, targetLine, retained] of [
     ['paint-terratone', 'paint', '20-gauge-smooth-steel', 'Brushed Smooth Fiberglass', true],
@@ -78,7 +78,7 @@ try {
       sidelites: 'none', doorSwingId: 'LHI', selectedFinishType: type, selectedPaint: type === 'paint' ? id : '', selectedStain: type === 'stain' ? id : '', hardwareId: hardwareOptions[0].id,
     })
     await page.reload()
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     await navigate('Choose Your Door Line')
     await page.locator('.builder-options-scroll .option-card').filter({ has: page.locator('strong').filter({ hasText: new RegExp(`^${targetLine}$`) }) }).click()
     await page.waitForTimeout(100)

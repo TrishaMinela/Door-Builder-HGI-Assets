@@ -39,7 +39,7 @@ try {
       selectedFinishType: 'paint', selectedPaint: 'paint-white', sideliteGlassCategory: 'clear', sideliteGlassId: 'clear-no-grids', hardwareId, doorSwingId: 'LHI',
     } })), { styleId: doorStyles.find(style => style.code === 'F1')!.id, hardwareId: hardwareOptions[0].id })
     await page.goto('http://127.0.0.1:5212/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     const next = () => page.getByRole('button', { name: 'Next configuration step' }).click()
     await next()
     assert.ok(await page.locator('.builder-options-scroll').getByText('Left', { exact: true }).count())

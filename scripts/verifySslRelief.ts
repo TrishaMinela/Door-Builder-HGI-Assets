@@ -71,7 +71,7 @@ try {
       sideliteGlassCategory: 'clear', sideliteGlassId: 'clear-no-grids',
     })
     await ui.goto('http://127.0.0.1:5221/')
-    await ui.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await ui.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     await ui.waitForFunction(() => [...document.querySelectorAll<HTMLElement>('.preview-scene')].some(el => el.getBoundingClientRect().width > 0 && el.dataset.renderSemanticallyReady === 'true'))
     await ui.screenshot({ path: `${output}/builder-${color}-${width}.png` })
     await ui.close()

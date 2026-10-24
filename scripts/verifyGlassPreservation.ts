@@ -64,7 +64,7 @@ try {
       sidelites: 'right', sideliteStyleId: scenario.side ?? 'fsl', sideliteGlassCategory: 'decorative',
       sideliteGlassId: scenario.sideGlass ?? 'par', doorSwingId: 'LHI' })
     await page.goto('http://127.0.0.1:5224/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     for (let i = 0; i < 10 && await page.locator('.step-heading h1').innerText() !== 'Choose Your Door Line'; i++) {
       if (await page.getByRole('button', { name: 'Start Configuring', exact: true }).isVisible()) await page.getByRole('button', { name: 'Start Configuring', exact: true }).click()
       await page.getByRole('button', { name: 'Next configuration step' }).click()

@@ -32,7 +32,7 @@ try {
       selectedFinishType: 'paint', selectedPaint: 'paint-white', selectedGlassCategory: 'decorative', glassId: family, selectedGlassGroupKey: family, glassVariantConfirmed: true,
     } })), { styleId: doorStyles.find(style => style.code === 'F')!.id, family })
     await page.goto('http://127.0.0.1:5211/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     const next = () => page.getByRole('button', { name: 'Next configuration step' }).click()
     const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)
     for (let i = 0; i < 12 && await page.locator('.step-heading h1').innerText() !== 'Choose Your Door Line'; i++) {

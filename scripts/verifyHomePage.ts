@@ -95,7 +95,7 @@ try {
     assert.equal(await page.locator('.builder-feedback-trigger').count(), 0)
     assert.equal(await page.locator('.shared-site-footer .site-feedback-trigger,.site-footer-logo').count(), 2)
     assert.deepEqual(errors, [])
-    console.log(`PASS ${width}x${height}: layout, complete door, animation, links, feedback/focus, Start Building and unchanged builder feedback`)
+    console.log(`PASS ${width}x${height}: layout, complete door, animation, links, feedback/focus, Start Building Your Door and unchanged builder feedback`)
     await page.close()
   }
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' })

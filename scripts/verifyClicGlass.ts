@@ -82,7 +82,7 @@ try {
       hardwareId: hardwareOptions[0].id, doorSwingId: 'LHI',
     })
     await page.goto('http://127.0.0.1:5229/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     const headings: string[] = []
     for (let i = 0; i < 25; i++) {
       const intro = page.getByRole('button', { name: 'Start Configuring', exact: true })

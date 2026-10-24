@@ -61,7 +61,7 @@ try {
       sideliteGlassCategory: 'decorative', sideliteGlassId: 'cou', hardwareId: hardwareOptions[0].id,
     })
     await page.goto('http://127.0.0.1:5214/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     const next = () => page.getByRole('button', { name: 'Next configuration step' }).click()
     const target = scope === 'FSL' ? 'Choose Sidelite Glass' : 'Choose Main Door Glass'
     for (let i = 0; i < 30 && !(await page.getByRole('heading', { name: target, exact: true }).isVisible()); i++) {

@@ -67,7 +67,7 @@ try {
     },draft)
     await page.goto('http://127.0.0.1:5196/')
     await verifyFooter(page,`${width}-home`)
-    await page.getByRole('button',{name:'Start Building',exact:true}).click()
+    await page.getByRole('button',{name: 'Start Building Your Door', exact: true}).click()
     const guidance=page.getByRole('button',{name:'Start Configuring',exact:true})
     if(await guidance.isVisible())await guidance.click()
     await page.locator('.builder-panel').waitFor()

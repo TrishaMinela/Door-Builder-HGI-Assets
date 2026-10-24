@@ -46,7 +46,7 @@ try{
     const page=await browser.newPage({viewport:{width,height}})
     await page.addInitScript('window.__name = fn => fn')
     await page.goto('http://127.0.0.1:5198/')
-    await page.getByRole('button',{name:'Start Building',exact:true}).click()
+    await page.getByRole('button',{name: 'Start Building Your Door', exact: true}).click()
     await page.locator('.door-configuration-grid').waitFor()
     await inspect(page,`${width}-enter`)
     await page.locator('.door-configuration-card').first().click()

@@ -32,7 +32,7 @@ try {
     const page = await browser.newPage({ viewport:{ width,height:1000 } })
     await page.addInitScript(value=>localStorage.setItem('hgi-door-builder-draft',JSON.stringify({version:1,configuration:value})), {selectedDoorConfigurationType:'single',styleId:slab.id,doorLineId:'20-gauge-smooth-steel',sidelites:'right',sideliteStyleId:'ssl',selectedFinishType:'paint',selectedPaint:'paint-white',doorSwingId:'LHI',hardwareId:hardwareOptions[0].id,sideliteGlassCategory:'clear',sideliteGlassId:'clear-no-grids'})
     await page.goto('http://127.0.0.1:5218/')
-    await page.getByRole('button',{name:'Start Building',exact:true}).click()
+    await page.getByRole('button',{name: 'Start Building Your Door', exact: true}).click()
     const next=async()=>{await page.getByRole('button',{name:'Next configuration step'}).click();await page.waitForTimeout(120)}
     const navigate=async(name:string)=>{for(let i=0;i<30 && !(await page.getByRole('heading',{name,exact:true}).isVisible());i++){if(await page.getByRole('button',{name:'Start Configuring',exact:true}).isVisible())await page.getByRole('button',{name:'Start Configuring',exact:true}).click();await next()} await page.getByRole('heading',{name,exact:true}).waitFor()}
     await navigate('Choose a Door Style')

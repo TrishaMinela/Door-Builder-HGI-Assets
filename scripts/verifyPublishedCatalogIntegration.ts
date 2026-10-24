@@ -64,7 +64,7 @@ try {
     if (outage) await page.route('**/__dev/published-catalog-shadow/compare', route => route.fulfill({ status: 503, body: '{}' }))
     const reportRequest: Promise<Response> = page.waitForResponse(response => response.url().includes('/__dev/published-catalog-shadow/compare'), { timeout: 30000 })
     await page.goto('http://127.0.0.1:5208/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     await page.getByRole('heading', { name: 'Choose Your Door Configuration', exact: true }).waitFor()
     await page.getByRole('button', { name: /Entry configuration Single Door/ }).click()
     const before: string | null = await page.evaluate(() => localStorage.getItem('hgi-door-builder-draft'))

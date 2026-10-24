@@ -20,7 +20,7 @@ try {
     page.setDefaultTimeout(10000)
     await page.addInitScript(value => { localStorage.setItem('hgi-door-builder-draft', JSON.stringify(value)); (window as unknown as { __name: (fn: unknown) => unknown }).__name = fn => fn }, draft)
     await page.goto('http://127.0.0.1:5197/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     const next = page.getByRole('button', { name: 'Next configuration step' })
     await next.waitFor()
     for (let step=0; step<20; step++) {

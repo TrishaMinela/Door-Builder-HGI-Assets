@@ -43,7 +43,7 @@ try {
       selectedFinishType: 'paint', selectedPaint: 'paint-white', doorSwingId: 'LHI', hardwareId: 'baldwin-adirondack-dark-bronze-right', doubleDoorLockPrep: 'DDLLKP',
     } })), doorStyles.find(style => style.code === '2PHD')!.id)
     await page.goto('http://127.0.0.1:5210/')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     const next = () => page.getByRole('button', { name: 'Next configuration step' }).click()
     const back = () => page.getByRole('button', { name: 'Previous configuration step' }).click()
     const saved = () => page.evaluate(() => JSON.parse(localStorage.getItem('hgi-door-builder-draft')!).configuration)

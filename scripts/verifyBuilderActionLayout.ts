@@ -85,7 +85,7 @@ try {
     }
     await page.goto('http://127.0.0.1:5225/')
     await assertBuilderTypography(page, 'home')
-    await page.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     assert.equal(await done().count(), 0, 'Normal configurations do not expose Done editing')
     const assertGroups = async (glass = true) => {
       const expected = glass ? ['Door', 'Finish', 'Glass', 'Hardware'] : ['Door', 'Finish', 'Hardware']
@@ -215,7 +215,7 @@ try {
     await page.close()
     const fresh = await browser.newPage({ viewport: { width, height } })
     await fresh.goto('http://127.0.0.1:5225/')
-    await fresh.getByRole('button', { name: 'Start Building', exact: true }).click()
+    await fresh.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
     assert.ok(await fresh.getByRole('button', { name: 'Next configuration step' }).isDisabled(), 'An unanswered entry question blocks Next')
     for (const label of ['Finish', 'Hardware']) assert.ok(await fresh.locator('.stepper button').filter({ hasText: label }).isDisabled(), 'Group navigation cannot bypass required Door questions')
     assert.equal(await fresh.getByRole('button', { name: 'Done editing', exact: true }).count(), 0)
