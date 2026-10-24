@@ -71,4 +71,7 @@ const f48slPrairieGridAssets: Partial<Record<GridColor, string>> = {
 }
 
 export const f48slPrairieGridAsset = (color: GridColor) => f48slPrairieGridAssets[color] ?? f48slPrairieGridAssets.White!
-export const f48slArtsAndCraftsGridAsset = (_color: GridColor) => '/assets/hgi-assets/Glass/Sidelites/F48SL SSL Arts Crafts White.webp'
+export const f48slArtsAndCraftsGridAsset = (_color: GridColor) => {
+  void _color
+  return '/assets/hgi-assets/Glass/Sidelites/F48SL SSL Arts Crafts White.webp'
+}

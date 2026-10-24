@@ -48,7 +48,6 @@ export function DoorFrame({
   sideliteGlassSrc,
   sideliteClearGlassBase = false,
   sideliteGlassIsGrid = false,
-  sideliteGridIsPrairie = false,
   sideliteGridMatchesFinish = false,
   sideliteGridFinishColor,
   sideliteFinishStyle,

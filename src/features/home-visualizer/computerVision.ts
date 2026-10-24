@@ -297,8 +297,8 @@ export async function autoFitEntrance(imageSrc: string, corners: EntranceCorners
     }
     const ids = Object.keys(proposed) as CornerId[]
     const cornerLimit = movementLimit*1.35
-    const area = Math.abs(points.reduce((sum, point, index) => sum + point.x * points[(index + 1) % 4].y - points[(index + 1) % 4].x * point.y, 0)) / 2
-    const manualPoints=[current.topLeft,current.topRight,current.bottomRight,current.bottomLeft],manualArea=Math.abs(manualPoints.reduce((sum,point,index)=>sum+point.x*manualPoints[(index+1)%4].y-manualPoints[(index+1)%4].x*point.y,0))/2,areaRatio=area/Math.max(1,manualArea)
+    const manualPoints=[current.topLeft,current.topRight,current.bottomRight,current.bottomLeft]
+    const manualArea=Math.abs(manualPoints.reduce((sum,point,index)=>sum+point.x*manualPoints[(index+1)%4].y-manualPoints[(index+1)%4].x*point.y,0))/2
     const unsafeCornerIndexes=ids.map((id,index)=>Math.hypot((proposed[id].x-corners[id].x)*canvas.width,(proposed[id].y-corners[id].y)*canvas.height)>cornerLimit?index:-1).filter(index=>index>=0)
     // Preserve partial improvements: if an intersection would move too far,
     // restore only its two adjacent customer-drawn sides and recompute.

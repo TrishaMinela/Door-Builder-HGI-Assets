@@ -21,4 +21,8 @@ const categories = [
 
 export const cr14slGlassCategories = categories.filter((category) => cr14slGlassOptions.some((option) => option.category === category.id))
 export const cr14slStyleRules = s2slStyleRules
-export const cr14slGridAsset = (_pattern: GridPattern, _color: GridColor) => ''
+export const cr14slGridAsset = (_pattern: GridPattern, _color: GridColor) => {
+  void _pattern
+  void _color
+  return ''
+}

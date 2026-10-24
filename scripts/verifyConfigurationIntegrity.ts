@@ -3,7 +3,7 @@ import { readdir, readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 import { doorStyles, finishes, glassOptions, hardwareOptions } from '../src/data/options'
 import { cladColors } from '../src/data/finishes'
-import { doorLineChoices, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, resolveDoorProduct } from '../src/data/productCatalog'
+import { doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, resolveDoorProduct } from '../src/data/productCatalog'
 import { resolveDoorPreviewCandidates } from '../src/data/doorPreviewAssets'
 import { resolveGlassMaskAsset } from '../src/data/glassMaskAssets'
 import { hardwareAssetUrl, hardwareCardAssetUrl, hardwarePreviewAssetUrl } from '../src/data/hardware'
@@ -15,7 +15,7 @@ import { sslGlassOptions, sslStandardStyleRules, sslLowEStyleRules, sslGridAsset
 import { s2slGlassOptions } from '../src/data/s2slGlass'
 import { cr14slGlassOptions } from '../src/data/cr14slGlass'
 import { loadAiReference, resolveAiProduct } from '../server/aiDoorVisualization'
-import type { DoorConfiguration, Finish, GlassOption, GridColor, GridPattern, GridStyle, GridWidth } from '../src/types'
+import type { DoorConfiguration, GlassOption, GridColor, GridPattern, GridStyle, GridWidth } from '../src/types'
 
 const root = process.cwd()
 const assetRoot = path.join(root, 'public', 'assets')
@@ -39,7 +39,6 @@ async function checkAsset(url: string | undefined, context: string) {
   } catch { failures.push(`${context}: missing asset ${url}`) }
 }
 
-const clearIds = new Set(['clear', 'f-clear-no-grids', 'f-clear-grids', 'clear-low-e', 'cr14-divided-lites', 'f-f10l', 'f-f15wh', 'f-prairie-internal', 'f-ten-lite', 'f-clear-f10', 'f-clear-f10l', 'f-clear-f15', 'f-clear-f15int', 'f-clear-f15intl', 'f-clear-fpraint', 'f-clear-ften', 'f-clear-nonstock', 'f48-clear-f1248', 'f48-clear-f1248l', 'f48-clear-f648l', 'f48-clear-nonstock', 'f48-clear-grids', 'f48-clear-no-grids', 'frt-clear-f17rt', 'hrt-clear-s11rt', 'n-clear-ncl', 'qa-clear-qacl', 'sat-clear-nonstock', 'so-clear-nonstock', 'so-clear-small-no-coating', 'so-clear-small-low-e', 's-clear-s5', 's-clear-s5l', 's-clear-s9', 's-clear-s9int', 's-clear-s9intl', 's-clear-sv6', 's-clear-nonstock', 's-clear-grids', 's-clear-no-grids', 'sw-clear-swg'])
 const legacyFullLite = new Set(['clear', 'f-f10l', 'f-f15wh', 'f-prairie-internal', 'f-ten-lite', 'f-clear-f10', 'f-clear-f10l', 'f-clear-nonstock', 'f-clear-f15', 'f-clear-f15int', 'f-clear-f15intl', 'f-clear-fpraint', 'f-clear-ften', 'f-blinds-15', 'blinds-espresso', 'blinds-gray', 'blinds-sand', 'blinds-silver', 'blinds-tan', 'blinds-white'])
 const legacyF48 = new Set(['clear-low-e', 'f48-clear-f1248', 'f48-clear-f1248l', 'f48-clear-f648l', 'f48-clear-nonstock'])
 const legacyS = new Set(['clear', 'clear-low-e', 's-clear-s5', 's-clear-s5l', 's-clear-s9', 's-clear-s9int', 's-clear-s9intl', 's-clear-sv6', 's-clear-nonstock'])

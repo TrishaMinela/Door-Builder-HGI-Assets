@@ -91,7 +91,7 @@ try {
       text = text.replaceAll(`/assets/${from}`, `/assets/${to}`)
     }
     for (const [from, to] of byBasename) {
-      if (to) text = text.replaceAll(`'${from}'`, `'${to}'`).replaceAll(`\"${from}\"`, `\"${to}\"`)
+      if (to) text = text.replaceAll(`'${from}'`, `'${to}'`).replaceAll(`"${from}"`, `"${to}"`)
     }
     if (text !== original) await writeFile(file, text)
   }

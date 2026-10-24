@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright-core'
 import { glassOptions, doorStyles, finishes, hardwareOptions } from '../src/data/options'

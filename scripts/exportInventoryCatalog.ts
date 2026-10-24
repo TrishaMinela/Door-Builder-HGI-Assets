@@ -22,7 +22,7 @@ import { doorConfigurationRules, doubleDoorLockPrepOptions } from '../src/data/d
 import { sideliteProductOptions, sideliteBuilderOptions } from '../src/data/sideliteConfigurations'
 import { builderUx } from '../src/config/builderUx'
 import { normalizeCleanupTables } from './inventory/normalizeCleanup'
-import type { DoorStyle, GridColor, GridPattern } from '../src/types'
+import type { DoorStyle } from '../src/types'
 
 export const FORMAT = 'hgi-inventory-prephase5-v2'
 export const TABLES = ['catalog_revisions','materials','series','grains','door_line_groups','door_lines','door_line_group_members','door_styles','door_variants','finishes','door_variant_finishes','frame_materials','frame_material_finishes','door_variant_frame_materials','glass_families','glass_designs','glass_options','door_variant_glass_options','sidelite_styles','sidelite_variants','door_variant_sidelites','sidelite_variant_glass_options','hardware_brands','hardware_styles','hardware_finishes','hardware_variants','grid_profiles','grid_patterns','grid_colors','grid_widths','glass_coatings','grid_locations','allowed_grid_combinations','grid_combination_locations','grid_combination_coatings','assets','door_variant_assets','glass_option_assets','sidelite_variant_assets','hardware_variant_assets','finish_assets','grid_combination_assets','catalog_change_log'] as const

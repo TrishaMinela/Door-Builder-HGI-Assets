@@ -5,7 +5,6 @@ import { usePhotoZoom } from './usePhotoZoom'
 import { emptySnapState, freeDragWithMagneticSnap, type SnapGuides, type SnapState } from './magneticSnap'
 import type { DoorConfigurationType } from '../../types'
 import { createCanonicalEntranceGeometry, ENTRANCE_GEOMETRY, STANDARD_SIDELITE_TO_SLAB_RATIO } from './entranceGeometry'
-import { doorConfigurationLeafCount } from '../../data/doorConfigurationRules'
 
 export type SideliteSide = 'left' | 'right'
 export type SideliteOpening = { innerTop: Point; innerBottom: Point; outerTop: Point; outerBottom: Point }

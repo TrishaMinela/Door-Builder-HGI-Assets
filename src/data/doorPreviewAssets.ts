@@ -274,6 +274,7 @@ export function finishTypesForPreviewAssets(style: DoorStyle, grain?: string | n
 }
 
 export function resolveAutomaticPreviewGrain(_style: DoorStyle) {
+  void _style
   return undefined
 }
 

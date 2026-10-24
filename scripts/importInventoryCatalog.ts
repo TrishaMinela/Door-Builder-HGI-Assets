@@ -53,7 +53,7 @@ export async function inventoryImport({apply=false,expectDigest='',verifyOnly=fa
   const credentials=devCredentials()
   async function request(path:string,init:RequestInit={}) {
     const response=await fetch(`${credentials.origin}/rest/v1/${path}`,{...init,redirect:'error',headers:{apikey:credentials.key,Authorization:`Bearer ${credentials.key}`,...init.headers},signal:AbortSignal.timeout(30000)})
-    if(!response.ok){let code='unknown';try{code=(await response.json()).code||'unknown'}catch{}throw new Error(`DEV inventory request ${path.split('?')[0]} failed: HTTP ${response.status}, code ${code}`)}
+    if(!response.ok){let code='unknown';try{code=(await response.json()).code||'unknown'}catch{/* Preserve the fallback error code when the response is not JSON. */}throw new Error(`DEV inventory request ${path.split('?')[0]} failed: HTTP ${response.status}, code ${code}`)}
     return response
   }
   const schema=await (await request('',{headers:{Accept:'application/openapi+json'}})).json()
