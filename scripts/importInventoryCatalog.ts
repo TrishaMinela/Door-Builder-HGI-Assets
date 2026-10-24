@@ -4,6 +4,8 @@ import { pathToFileURL } from 'node:url'
 import { exportInventoryCatalog, TABLES, FORMAT, canonical, type Row, type Catalog } from './exportInventoryCatalog'
 
 export const DEV_REF = 'udbcnpjtwhmjzpjjhoph'
+type ServiceRoleClaims = { role?: unknown; ref?: unknown; exp?: unknown }
+const isInventoryTable = (value: string): value is typeof TABLES[number] => (TABLES as readonly string[]).includes(value)
 export function devCredentials(file = '.env.local') {
   const env:Record<string,string>={}
   for(const line of readFileSync(file,'utf8').split(/\r?\n/)){
@@ -15,9 +17,9 @@ export function devCredentials(file = '.env.local') {
   if(url.origin!==`https://${DEV_REF}.supabase.co` || url.pathname!=='/' || url.search || url.hash || url.username || url.password)throw new Error('Refusing non-allowlisted DEV target')
   const key=env.SUPABASE_SERVICE_ROLE_KEY
   if(!key)throw new Error('Server-only DEV credential missing')
-  let claims:any
-  try{claims=JSON.parse(Buffer.from(key.split('.')[1],'base64url').toString())}catch{throw new Error('Expected a DEV service-role JWT; credential not printed')}
-  if(claims.role!=='service_role'||claims.ref!==DEV_REF || (claims.exp && claims.exp*1000<Date.now()))throw new Error('DEV credential claims invalid')
+  let claims:ServiceRoleClaims
+  try{claims=JSON.parse(Buffer.from(key.split('.')[1],'base64url').toString()) as ServiceRoleClaims}catch{throw new Error('Expected a DEV service-role JWT; credential not printed')}
+  if(claims.role!=='service_role'||claims.ref!==DEV_REF || (typeof claims.exp==='number' && claims.exp*1000<Date.now()))throw new Error('DEV credential claims invalid')
   return {origin:url.origin,key}
 }
 
@@ -59,7 +61,7 @@ export async function inventoryImport({apply=false,expectDigest='',verifyOnly=fa
   const schema=await (await request('',{headers:{Accept:'application/openapi+json'}})).json()
   for(const table of TABLES)if(!schema.definitions?.[table])throw new Error(`DEV inventory table unavailable: ${table}`)
   async function rows(table:string) {
-    if(!TABLES.includes(table as any))throw new Error('Non-inventory table forbidden')
+    if(!isInventoryTable(table))throw new Error('Non-inventory table forbidden')
     const countResponse=await request(`${table}?select=id`,{method:'HEAD',headers:{Prefer:'count=exact'}})
     const count=Number(countResponse.headers.get('content-range')?.split('/')[1]);if(!Number.isFinite(count))throw new Error(`Exact count unavailable: ${table}`)
     const result:Row[]=[]
@@ -79,7 +81,7 @@ export async function inventoryImport({apply=false,expectDigest='',verifyOnly=fa
     if(value===null)continue
     const description=schema.definitions[table].properties[column]?.description||''
     const parent=description.match(/<fk table='([^']+)' column='id'\/>/)?.[1]
-    if(parent && TABLES.includes(parent as any) && !catalog.tables[parent as typeof TABLES[number]].some(record=>record.id===value))throw new Error(`Foreign-key type mismatch ${table}.${column}`)
+    if(parent && isInventoryTable(parent) && !catalog.tables[parent].some(record=>record.id===value))throw new Error(`Foreign-key type mismatch ${table}.${column}`)
   }
   const beforeCounts=Object.fromEntries(TABLES.map(t=>[t,existing[t].length]))
   const resume=prior.length===1
@@ -104,7 +106,7 @@ export async function inventoryImport({apply=false,expectDigest='',verifyOnly=fa
     console.log(JSON.stringify({stage:'import',table,inserted:pending.length}))
   }
   await assertDraft()
-  const parity:Record<string,any>={}
+  const parity:Record<string,{expected:number;actual:number;missing:number;extra:number;changed:number}>={}
   for(let i=0;i<TABLES.length;i+=5)await Promise.all(TABLES.slice(i,i+5).map(async table=>{const actual=await rows(table);const differences=compareRows(catalog.tables[table],actual);parity[table]={expected:catalog.tables[table].length,actual:actual.length,missing:differences.missing.length,extra:differences.extra.length,changed:differences.changed.length}}))
   const matches=Object.values(parity).every(row=>row.missing===0&&row.extra===0&&row.changed===0)
   if(!matches)throw new Error(`DEV parity failed: ${canonical(parity)}`)

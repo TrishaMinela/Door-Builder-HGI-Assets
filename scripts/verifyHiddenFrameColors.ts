@@ -14,6 +14,12 @@ for (const finish of finishes) {
 }
 console.log(`Timber: all finish IDs match directly. Clad: ${clad.length} exact colors; other finishes use existing fallback ${clad[0].id}.`)
 const glass = glassOptions.find(item => item.id === 'f-clear-no-grids')!
+type VisualizationPayload = {
+  jambFinishId: string
+  glassFrameFinishId: string
+  productReference: string
+  configuration: { jambFinishColor: string; glassFrameFinishColor: string; jambType: string }
+}
 const draft = { version: 1, configuration: { selectedDoorConfigurationType: 'single', styleId: doorStyles.find(item => item.code === 'F')!.id, doorLineId: '20-gauge-smooth-steel', sidelites: 'none', selectedFinishType: 'paint', selectedPaint: 'paint-black', jambType: 'timber', jambFinishType: 'paint', jambFinishColor: 'paint-brown', jambFinishOverridden: true, selectedGlassCategory: 'clear', glassId: glass.id, selectedGlassGroupKey: glass.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), glassVariantConfirmed: true, glassFrameColorMode: 'custom', glassFrameFinishId: 'paint-brown', glassFrameFinishType: 'paint', hardwareId: hardwareOptions[0].id, doorSwingId: 'LHI' } }
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5197', '--strictPort'], { stdio: 'pipe' })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
@@ -24,7 +30,7 @@ try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } })
     await page.addInitScript(value => { localStorage.setItem('hgi-door-builder-draft', JSON.stringify(value)); (window as unknown as { __name: (fn: unknown) => unknown }).__name = fn => fn }, draft)
     await page.route('**/src/config/builderUx.ts*', async route => { const response = await route.fetch(); const source = (await response.text()).replace(/showJambColorSelection:\s*false/, `showJambColorSelection: ${jambEnabled}`).replace(/showGlassFrameColorSelection:\s*false/, `showGlassFrameColorSelection: ${glassEnabled}`).replace(/showJambMaterialSelection:\s*false/, `showJambMaterialSelection: ${materialEnabled}`); await route.fulfill({ response, body: source }) })
-    let payload: Record<string, any> | undefined
+    let payload: VisualizationPayload | undefined
     const image = await sharp({ create: { width: 800, height: 600, channels: 3, background: '#ccc' } }).jpeg().toBuffer()
     await page.route('**/api/detect-entrance-structure', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ detection: { doorStructure: 'single', sidelites: 'none', transom: false, confidence: .96, summary: 'Single door.' } }) }))
     await page.route('**/api/generate-door-visualization', async route => { payload = route.request().postDataJSON(); await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ image: `data:image/jpeg;base64,${image.toString('base64')}` }) }) })

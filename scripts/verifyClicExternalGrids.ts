@@ -26,6 +26,10 @@ assert.equal(externalGridArtwork('F48', '12 Lite'), '/assets/hgi-assets/Glass/F4
 assert.equal(glassOptions.find(item => item.id === 'f48-clear-grids')!.overlaysByDoorStyle.F48, externalGridArtwork('F48', '12 Lite'))
 assert.equal(glassOptions.find(item => item.id === 'f48-clear-grids')!.overlaysByDoorStyle.F482, externalGridArtwork('F482', '12 Lite'))
 const output = '/private/tmp/hgi-clic-external-grids'
+type ExternalGridResult = { assets: string[]; expectedOverlay: string; preview: string; pdf: string; ai: string }
+type ExternalGridHarness = Window & {
+  renderExternalGridCase: (code: string, lites: number, kind: 'clear' | 'clic' | 'approved-contoured', finish: string) => Promise<ExternalGridResult>
+}
 await mkdir(output, { recursive: true })
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '5231', '--strictPort'], { stdio: 'pipe' })
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined
@@ -39,7 +43,7 @@ try {
   const render = async (code: string, lites: number, kind: 'clear' | 'clic' | 'approved-contoured', finish: string) => {
     await page.goto('http://127.0.0.1:5231/scripts/clicExternalGridHarness.html')
     await page.waitForFunction(() => 'renderExternalGridCase' in window)
-    const result = await page.evaluate(async args => (window as any).renderExternalGridCase(...args), [code, lites, kind, finish])
+    const result = await page.evaluate(async args => (window as ExternalGridHarness).renderExternalGridCase(args.code, args.lites, args.kind, args.finish), { code, lites, kind, finish })
     assert.ok(result.assets.includes(result.expectedOverlay))
     return { ...result, preview: await page.locator('.pair-preview').screenshot({ animations: 'disabled' }) }
   }

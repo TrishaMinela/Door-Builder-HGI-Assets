@@ -29,7 +29,7 @@ assert.ok(schema.definitions.grid_combination_assets.required.includes('grid_loc
 const revisions=await read('catalog_revisions?select=id,status,published_at,published_by')
 assert.equal(revisions.length,1);assert.equal(revisions[0].id,EXPECTED_REVISION)
 const audit=await read(`catalog_change_log?catalog_revision_id=eq.${EXPECTED_REVISION}&select=id,action,change_summary,after_data`)
-assert.equal(audit.filter((r:any)=>r.action==='update'&&r.after_data?.cleanupChecksum===EXPECTED_CLEANUP_DIGEST).length,1)
+assert.equal((audit as {action?:unknown;after_data?:{cleanupChecksum?:unknown}}[]).filter(r=>r.action==='update'&&r.after_data?.cleanupChecksum===EXPECTED_CLEANUP_DIGEST).length,1)
 
 // Fresh working-tree manifest has new UUIDs/provenance, but identical product facts.
 // Reconcile using complete exported field values and remapped parent UUIDs, NOT labels.
@@ -41,13 +41,13 @@ let compared=0
 for(const table of TABLES.filter(t=>t!=='catalog_revisions'&&t!=='catalog_change_log')){
  const erows=expected.tables[table],arows=actual.tables[table]??[]
  const columns=[...new Set(erows.flatMap(r=>Object.keys(r)))].filter(k=>!ignored.has(k)&&!(table==='assets'&&k==='provenance')).sort()
- const values=(r:Record<string,any>,remap:boolean)=>canonical(Object.fromEntries(columns.map(k=>{
+ const values=(r:Record<string,unknown>,remap:boolean)=>canonical(Object.fromEntries(columns.map(k=>{
   let v=r[k]??null
   if(remap&&k.endsWith('_id')&&k!=='legacy_id'&&v!==null){assert.ok(ids.has(v),`Unresolved expected ${table}.${k}`);v=ids.get(v)}
   if(k==='notes')v=parseNotes(v)
   return [k,v]
  })))
- const index=new Map<string,Record<string,any>[]>()
+ const index=new Map<string,Record<string,unknown>[]>()
  for(const r of arows){const k=values(r,false);index.set(k,[...(index.get(k)||[]),r])}
  let missing=0
  for(const r of erows){const matches=index.get(values(r,true))??[];if(matches.length!==1){missing++;continue}ids.set(r.id,matches[0].id);index.delete(values(matches[0],false));compared++}
