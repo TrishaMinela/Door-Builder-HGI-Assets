@@ -5,7 +5,8 @@
 Production branch `hgi/visualizer`, committed baseline `df349d1`: 16 ESLint
 errors, zero warnings; no unrelated unpublished commits. Tests run from a
 clean archive, not the dirty application/catalog tree. The 357 original
-pending files are fingerprinted separately and excluded from this batch.
+pending files are fingerprinted separately and excluded from the initial batch;
+the explicitly approved binding follow-up below includes only its named file.
 
 No application, product, rendering, prompt, PDF layout, compatibility,
 credential, Supabase or inventory publication behavior changes.
@@ -44,18 +45,29 @@ existing browser-evaluation `__name` shim, not application changes.
 Result: 26 paints, 21 stains, all 21 thumbnails, missing-slab rejection and
 four exact reference-capture pairs pass; zero legacy paint-image requests.
 
-### Inventory VM binding — deferred pending approval of overlapping work
+### Inventory VM binding — approved follow-up
 
 Committed `scripts/inventory/source.ts` omits `doorStyleDisplayName` from
 the isolated VM even though selected App declarations call it. The exact
 two-line import/context correction already exists in the original pending
-tree. It is not duplicated, edited or silently included in this batch.
+tree. It was excluded from initial Phase 5 commit `4464c53`. The user then
+explicitly approved including those exact two lines in a follow-up; no other
+pending inventory changes are included.
 
 Baseline and proposed exports, both supplied the same test-process-only VM
 binding, are byte-identical: 4,565,054 bytes, SHA-256
 `0f6b77b7fbd86d10d291ca9f37a7a405dbf65bea5a181bd291d0384b0e7f3706`,
 using fixed source commit `df349d1`. This is export parity, not proof that
-unassisted committed export succeeds. No catalog data/normalization changed.
+unassisted export succeeded before the follow-up. No catalog data/normalization
+changed.
+
+With the approved binding, export completes without a VM monkey patch. Using
+fixed source commit `4464c53`, its output exactly matches the baseline with
+the former test shim: 4,565,054 bytes, SHA-256
+`ef39fe15b4f1267d3a458195f71241b74229334571dc3fdc544a1d1395b93663`.
+Strict TypeScript for the extractor and the production build pass; lint
+remains 16 errors. Of the original 357 pending files, only this explicitly
+approved file is committed; the other 356 retain their original bytes.
 
 ### Intermittent S/9 paint-clay mismatch — not fixed
 

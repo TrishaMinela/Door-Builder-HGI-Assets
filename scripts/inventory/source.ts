@@ -3,6 +3,7 @@ import vm from 'node:vm'
 import ts from 'typescript'
 import { approvedPrivacyGlassIds } from '../../src/data/privacyGlass'
 import { doorConfigurationLabel } from '../../src/data/doorConfigurationRules'
+import { doorStyleDisplayName } from '../../src/data/productDisplayNames'
 
 /** Read private, committed inventory constants without modifying/runtime-importing App. */
 export function appInventory() {
@@ -30,7 +31,7 @@ export function appInventory() {
     if (ts.isPropertyAccessExpression(call.expression) && call.expression.name.text === 'add' && selected.has(call.expression.expression.getText(ast))) chunks.push(statement.getText(ast))
   }
   const js = ts.transpileModule(`${chunks.join('\n')}\nresult={${roots.join(',')}}`, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText
-  const context = vm.createContext({ approvedPrivacyGlassIds, doorConfigurationLabel, result: null })
+  const context = vm.createContext({ approvedPrivacyGlassIds, doorConfigurationLabel, doorStyleDisplayName, result: null })
   vm.runInContext(js, context, { timeout: 2000 })
   return context.result as Record<string, any>
 }
