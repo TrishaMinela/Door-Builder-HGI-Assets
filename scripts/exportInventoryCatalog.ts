@@ -22,14 +22,28 @@ import { doorConfigurationRules, doubleDoorLockPrepOptions } from '../src/data/d
 import { sideliteProductOptions, sideliteBuilderOptions } from '../src/data/sideliteConfigurations'
 import { builderUx } from '../src/config/builderUx'
 import { normalizeCleanupTables } from './inventory/normalizeCleanup'
-import type { DoorStyle } from '../src/types'
+import type { DoorStyle, GridColor, GridPattern } from '../src/types'
+
+type GridRules = Record<string, Record<string, Record<string, readonly string[]>>>
+type SideliteCatalog = {
+  options: fsl.SideliteGlassOption[]
+  standard: GridRules
+  lowE: GridRules
+  grid?: typeof fsl.fslGridAsset
+  prairie?: typeof fsl.fslPrairieGridAsset
+  arts?: typeof fsl.fslArtsAndCraftsGridAsset
+  prairiePattern?: GridPattern
+  sdl: GridPattern[]
+}
+type GridContext = { location: string; path: string | null }
+type GridCombination = Row & { contexts: GridContext[] }
 
 export const FORMAT = 'hgi-inventory-prephase5-v2'
 export const TABLES = ['catalog_revisions','materials','series','grains','door_line_groups','door_lines','door_line_group_members','door_styles','door_variants','finishes','door_variant_finishes','frame_materials','frame_material_finishes','door_variant_frame_materials','glass_families','glass_designs','glass_options','door_variant_glass_options','sidelite_styles','sidelite_variants','door_variant_sidelites','sidelite_variant_glass_options','hardware_brands','hardware_styles','hardware_finishes','hardware_variants','grid_profiles','grid_patterns','grid_colors','grid_widths','glass_coatings','grid_locations','allowed_grid_combinations','grid_combination_locations','grid_combination_coatings','assets','door_variant_assets','glass_option_assets','sidelite_variant_assets','hardware_variant_assets','finish_assets','grid_combination_assets','catalog_change_log'] as const
 export type Row = Record<string, any>
 export type Catalog = Awaited<ReturnType<typeof exportInventoryCatalog>>
 export const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex')
-export function canonical(value: any): string { return JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item) ? Object.fromEntries(Object.entries(item).sort(([a],[b]) => a.localeCompare(b,'en'))) : item) }
+export function canonical(value: unknown): string { return JSON.stringify(value, (_key, item) => item && typeof item === 'object' && !Array.isArray(item) ? Object.fromEntries(Object.entries(item).sort(([a],[b]) => a.localeCompare(b,'en'))) : item) }
 export function uuid(key: string) { const h = hash(key); return `${h.slice(0,8)}-${h.slice(8,12)}-5${h.slice(13,16)}-a${h.slice(17,20)}-${h.slice(20,32)}` }
 
 export async function exportInventoryCatalog(commit = 'HEAD', { workingTree = false } = {}) {
@@ -56,7 +70,7 @@ export async function exportInventoryCatalog(commit = 'HEAD', { workingTree = fa
   }
   const get = (table: string,key: string) => { const id=ids.get(`${table}:${key}`); if(!id)throw new Error(`Missing ${table}:${key}`);return id }
   const fact = (table: typeof TABLES[number],key:string,name:string,extra:Row={}) => add(table,key,{legacy_id:key,display_name:name,status:'active',customer_selectable:true,display_order:tables[table].find(r=>r.id===ids.get(`${table}:${key}`))?.display_order??tables[table].length,...extra})
-  const note = (value:any) => canonical(jsonValue(value))
+  const note = (value:unknown) => canonical(jsonValue(value))
   function asset(path?:string|null) {
     if(!path)return null
     if(!path.startsWith('/assets/'))throw new Error('Unexpected inventory asset path')
@@ -119,16 +133,16 @@ export async function exportInventoryCatalog(commit = 'HEAD', { workingTree = fa
       if(opening){binding('glass_option_assets','glass_option_id',id,glass.overlaysByDoorStyle[opening],'glass_overlay',opening);binding('glass_option_assets','glass_option_id',id,resolveGlassMaskAsset(opening),'mask',opening)}
     }
   }
-  const sideCatalogs:any={fsl:{options:fsl.fslGlassOptions,standard:fsl.fslStandardStyleRules,lowE:fsl.fslLowEStyleRules,grid:fsl.fslGridAsset,prairie:fsl.fslPrairieGridAsset,arts:fsl.fslArtsAndCraftsGridAsset,prairiePattern:'5 Lite',sdl:['3 Lite','4 Lite','5 Lite']},f48sl:{options:f48sl.f48slGlassOptions,standard:f48sl.f48slStandardStyleRules,lowE:f48sl.f48slLowEStyleRules,grid:f48sl.f48slGridAsset,prairie:f48sl.f48slPrairieGridAsset,arts:f48sl.f48slArtsAndCraftsGridAsset,prairiePattern:'4 Lite',sdl:['2 Lite','3 Lite','4 Lite']},ssl:{options:ssl.sslGlassOptions,standard:ssl.sslStandardStyleRules,lowE:ssl.sslLowEStyleRules,grid:ssl.sslGridAsset,prairie:ssl.sslPrairieGridAsset,arts:ssl.sslArtsAndCraftsGridAsset,prairiePattern:'3 Lite',sdl:['3 Lite']},s2sl:{options:s2sl.s2slGlassOptions,standard:s2sl.s2slStyleRules,lowE:s2sl.s2slStyleRules,sdl:[]},cr14sl:{options:cr14sl.cr14slGlassOptions,standard:cr14sl.cr14slStyleRules,lowE:cr14sl.cr14slStyleRules,sdl:[]}}
+  const sideCatalogs:Record<string,SideliteCatalog>={fsl:{options:fsl.fslGlassOptions,standard:fsl.fslStandardStyleRules,lowE:fsl.fslLowEStyleRules,grid:fsl.fslGridAsset,prairie:fsl.fslPrairieGridAsset,arts:fsl.fslArtsAndCraftsGridAsset,prairiePattern:'5 Lite',sdl:['3 Lite','4 Lite','5 Lite']},f48sl:{options:f48sl.f48slGlassOptions,standard:f48sl.f48slStandardStyleRules,lowE:f48sl.f48slLowEStyleRules,grid:f48sl.f48slGridAsset,prairie:f48sl.f48slPrairieGridAsset,arts:f48sl.f48slArtsAndCraftsGridAsset,prairiePattern:'4 Lite',sdl:['2 Lite','3 Lite','4 Lite']},ssl:{options:ssl.sslGlassOptions,standard:ssl.sslStandardStyleRules,lowE:ssl.sslLowEStyleRules,grid:ssl.sslGridAsset,prairie:ssl.sslPrairieGridAsset,arts:ssl.sslArtsAndCraftsGridAsset,prairiePattern:'3 Lite',sdl:['3 Lite']},s2sl:{options:s2sl.s2slGlassOptions,standard:s2sl.s2slStyleRules,lowE:s2sl.s2slStyleRules,sdl:[]},cr14sl:{options:cr14sl.cr14slGlassOptions,standard:cr14sl.cr14slStyleRules,lowE:cr14sl.cr14slStyleRules,sdl:[]}}
   const sideGlassIds=new Map<string,string>()
   for(const style of app.sideliteStyleOptions) {
     fact('sidelite_styles',style.id,style.name,{internal_code:style.id.toUpperCase(),notes:note({source:style})})
-    const uniqueSide=new Map<string,any>()
+    const uniqueSide=new Map<string,fsl.SideliteGlassOption>()
     for(const option of sideCatalogs[style.id].options){if(uniqueSide.has(option.id)&&canonical(uniqueSide.get(option.id))!==canonical(option))throw new Error(`Non-identical duplicate sidelite glass ID ${style.id}:${option.id}`);uniqueSide.set(option.id,option)}
     for(const option of uniqueSide.values()) {
       const selectable=isCustomerSelectableGlass(option)
       const design=fact('glass_designs',`sidelite:${style.id}:${option.id}`,option.name,{glass_family_id:get('glass_families',option.category),status:selectable?'active':'legacy_only',customer_selectable:selectable,renderable:true})
-      const positions=sideCatalogs[style.id].options.map((o:any,i:number)=>o.id===option.id?i:-1).filter((i:number)=>i>=0)
+      const positions=sideCatalogs[style.id].options.map((o,i:number)=>o.id===option.id?i:-1).filter((i:number)=>i>=0)
       const id=add('glass_options',`sidelite:${style.id}:${option.id}`,{glass_design_id:design,legacy_id:option.id,scope:'sidelite',opening_code:style.id.toUpperCase(),display_name:option.name,status:selectable?'active':'legacy_only',customer_selectable:selectable,renderable:true,display_order:positions[0],notes:note({source:option,slab:style.id,sourceRowPositions:positions})})
       sideGlassIds.set(`${style.id}:${option.id}`,id)
       binding('glass_option_assets','glass_option_id',id,option.asset,'glass_overlay',style.id.toUpperCase())
@@ -153,11 +167,11 @@ export async function exportInventoryCatalog(commit = 'HEAD', { workingTree = fa
       }
       const family=familyFor(line.id,grain)
       for(const slab of sideliteStylesForFamily(family)) {
-        const side=fact('sidelite_variants',`${line.id}:${slab}`,app.sideliteStyleOptions.find((o:any)=>o.id===slab).name,{sidelite_style_id:get('sidelite_styles',slab),material_id:get('materials',materialFor(line.id)),grain_id:grain?get('grains',grain):null,internal_code:`${line.id}:${slab}`,product_code:slab.toUpperCase(),opening_code:slab.toUpperCase(),asset_family_alias:family,notes:note({doorLineId:line.id,assetFamilyAlias:family})})
+        const side=fact('sidelite_variants',`${line.id}:${slab}`,app.sideliteStyleOptions.find((o:{id:string})=>o.id===slab).name,{sidelite_style_id:get('sidelite_styles',slab),material_id:get('materials',materialFor(line.id)),grain_id:grain?get('grains',grain):null,internal_code:`${line.id}:${slab}`,product_code:slab.toUpperCase(),opening_code:slab.toUpperCase(),asset_family_alias:family,notes:note({doorLineId:line.id,assetFamilyAlias:family})})
         add('door_variant_sidelites',`${variantId}:${side}`,{door_variant_id:variantId,sidelite_variant_id:side,customer_selectable:true,display_order:sideliteStylesForFamily(family).indexOf(slab)})
         binding('sidelite_variant_assets','sidelite_variant_id',side,sideliteSlabAsset(family,slab),'slab_render')
         binding('sidelite_variant_assets','sidelite_variant_id',side,sideliteGlassMask(family,slab),'mask')
-        for(const option of sideCatalogs[slab].options)add('sidelite_variant_glass_options',`${side}:${option.id}`,{sidelite_variant_id:side,glass_option_id:sideGlassIds.get(`${slab}:${option.id}`)!,customer_selectable:isCustomerSelectableGlass(option),display_order:sideCatalogs[slab].options.findIndex((o:any)=>o.id===option.id)})
+        for(const option of sideCatalogs[slab].options)add('sidelite_variant_glass_options',`${side}:${option.id}`,{sidelite_variant_id:side,glass_option_id:sideGlassIds.get(`${slab}:${option.id}`)!,customer_selectable:isCustomerSelectableGlass(option),display_order:sideCatalogs[slab].options.findIndex((o)=>o.id===option.id)})
       }
     }
   }
@@ -175,15 +189,15 @@ export async function exportInventoryCatalog(commit = 'HEAD', { workingTree = fa
   profiles.forEach(v=>fact('grid_profiles',v,v));patterns.forEach(v=>fact('grid_patterns',v,v));
   fact('grid_patterns','__no_pattern_selection__','No pattern selection',{customer_selectable:false,notes:'Internal schema sentinel only: main-door Prairie has no selected numeric lite pattern. Never show this as a customer product option.'})
   colors.forEach(v=>fact('grid_colors',v,v,{hex_color:/^#[a-f0-9]{6}$/i.test(app.gridColorValues[v])?app.gridColorValues[v]:null,notes:note({appearance:app.gridColorValues[v]})}));widths.forEach(v=>{const [n,d]=v.replace('"','').split('/').map(Number);fact('grid_widths',v,v,{width_inches:n/d})});coatings.forEach(v=>fact('glass_coatings',v,v))
-  const combos=new Map<string,Row>()
+  const combos=new Map<string,GridCombination>()
   function gridCombo(glassId:string,profile:string,pattern:string,color:string,width:string|null,coating:string,location:string,path?:string|null) {
     const key=[glassId,profile,pattern,color,width||'',coating].join('|')
     if(!combos.has(key))combos.set(key,{glass_option_id:glassId,grid_profile_id:get('grid_profiles',profile),grid_pattern_id:get('grid_patterns',pattern),grid_color_id:get('grid_colors',color),grid_width_id:width?get('grid_widths',width):null,glass_coating_id:get('glass_coatings',coating),width_selection_mode:width?'specific':'none',customer_selectable:true,display_order:combos.size,contexts:[]})
-    const row=combos.get(key)!,context={location,path:path??null};if(!row.contexts.some((c:any)=>canonical(c)===canonical(context)))row.contexts.push(context)
+    const row=combos.get(key)!,context={location,path:path??null};if(!row.contexts.some((c)=>canonical(c)===canonical(context)))row.contexts.push(context)
   }
-  function ruleGrid(glass:string,standard:any,low:any,resolvePath:(profile:string,pattern:string,color:string)=>string|null) {
+  function ruleGrid(glass:string,standard:GridRules,low:GridRules,resolvePath:(profile:string,pattern:string,color:string)=>string|null) {
     const signatures=new Map<string,{profile:string,pattern:string,color:string,width:string|null,standard:boolean,low:boolean}>()
-    for(const [kind,rules] of [['standard',standard],['low',low]] as const)for(const [profile,byPattern] of Object.entries<any>(rules))for(const [pattern,byColor] of Object.entries<any>(byPattern))for(const [color,choices] of Object.entries<any>(byColor))for(const width of choices.length?choices:[null]){
+    for(const [kind,rules] of [['standard',standard],['low',low]] as const)for(const [profile,byPattern] of Object.entries(rules))for(const [pattern,byColor] of Object.entries(byPattern))for(const [color,choices] of Object.entries(byColor))for(const width of choices.length?choices:[null]){
       const key=[profile,pattern,color,width||''].join('|'),entry=signatures.get(key)||{profile,pattern,color,width,standard:false,low:false};entry[kind]=true;signatures.set(key,entry)
     }
     for(const e of signatures.values())gridCombo(glass,e.profile,e.pattern,e.color,e.width,e.standard&&e.low?'Standard / No Low-E or Low-E':e.low?'Low-E':'Standard / No Low-E','internal',resolvePath(e.profile,e.pattern,e.color))
@@ -200,11 +214,11 @@ export async function exportInventoryCatalog(commit = 'HEAD', { workingTree = fa
       for(const pattern of allowed)gridCombo(glass,'Flat',pattern,'White',null,location==='sdl'?'Low-E':code==='S'?pattern==='4 Lite'?'Standard / No Low-E or Low-E':'Low-E':pattern==='8 Lite'?'Standard / No Low-E, Low-E or Low-E Plus':'Low-E or Low-E Plus',location,path('Flat',pattern,'White'))
     }
   }
-  for(const [slab,catalog] of Object.entries<any>(sideCatalogs)) {
+  for(const [slab,catalog] of Object.entries(sideCatalogs)) {
     const glass=sideGlassIds.get(`${slab}:clear-grids`);if(!glass)continue
-    const path=(profile:string,pattern:string,color:string)=>profile==='Prairie'?catalog.prairie(color):profile==='Arts & Crafts'?catalog.arts(color):catalog.grid(pattern,color)
+    const path=(profile:string,pattern:string,color:string)=>profile==='Prairie'?catalog.prairie!(color as GridColor):profile==='Arts & Crafts'?catalog.arts!(color as GridColor):catalog.grid!(pattern as GridPattern,color as GridColor)
     ruleGrid(glass,catalog.standard,catalog.lowE,path)
-    for(const pattern of catalog.sdl)gridCombo(glass,'Flat',pattern,'Bronze',null,'Standard / No Low-E or Low-E','sdl',catalog.grid(pattern,'Bronze'))
+    for(const pattern of catalog.sdl)gridCombo(glass,'Flat',pattern,'Bronze',null,'Standard / No Low-E or Low-E','sdl',catalog.grid!(pattern,'Bronze'))
   }
   for(const [key,{contexts,...row}] of combos) {
     const id=add('allowed_grid_combinations',key,{...row,notes:note({contexts,widthSemantics:row.width_selection_mode==='none'?'Valid combination without width selection; absence of a row means unavailable.':'Specific supported bar width.'})})
@@ -212,8 +226,8 @@ export async function exportInventoryCatalog(commit = 'HEAD', { workingTree = fa
   }
   // Keep the source grid dictionaries and ancillary product metadata losslessly
   // in the export and revision provenance; no UI navigation is moved to SQL.
-  const sourceFacts=jsonValue({app,doorTypeOptions,doorConfigurationRules,doubleDoorLockPrepOptions,sideliteProductOptions,sideliteSingleOptions:sideliteBuilderOptions('single'),sideliteDoubleOptions:sideliteBuilderOptions('french'),builderUx,sideGridRules:Object.fromEntries(Object.entries(sideCatalogs).map(([key,c]:any)=>[key,{standard:c.standard,lowE:c.lowE,prairiePattern:c.prairiePattern,sdl:c.sdl}]))})
-  function collectAssets(value:any){if(typeof value==='string'&&value.startsWith('/assets/'))asset(value);else if(value&&typeof value==='object')Object.values(value).forEach(collectAssets)}
+  const sourceFacts=jsonValue({app,doorTypeOptions,doorConfigurationRules,doubleDoorLockPrepOptions,sideliteProductOptions,sideliteSingleOptions:sideliteBuilderOptions('single'),sideliteDoubleOptions:sideliteBuilderOptions('french'),builderUx,sideGridRules:Object.fromEntries(Object.entries(sideCatalogs).map(([key,c])=>[key,{standard:c.standard,lowE:c.lowE,prairiePattern:c.prairiePattern,sdl:c.sdl}]))})
+  function collectAssets(value:unknown){if(typeof value==='string'&&value.startsWith('/assets/'))asset(value);else if(value&&typeof value==='object')Object.values(value).forEach(collectAssets)}
   collectAssets(sourceFacts)
   for(const row of tables.assets) {
     const file=resolve('public',decodeURIComponent(row.current_path.split('?')[0]).slice(1))
@@ -230,7 +244,7 @@ export async function exportInventoryCatalog(commit = 'HEAD', { workingTree = fa
   tables.catalog_revisions=[{id:revisionId,status:'draft',source_commit:sourceCommit,published_at:null,published_by:null,notes:note({format:FORMAT,workingTree,sourceChecksum,catalogChecksum,sourceFacts,issues:[...new Set(issues)].sort()})}]
   tables.catalog_change_log=[{id:uuid(`${revisionId}:import-log`),catalog_revision_id:revisionId,entity_table:'catalog_revisions',entity_id:revisionId,action:'import',change_summary:`${FORMAT}: deterministic DEV import; unpublished`,after_data:{catalogChecksum,sourceCommit}}]
   for(const rows of Object.values(tables))rows.sort((a,b)=>a.id.localeCompare(b.id,'en'))
-  return {format:FORMAT,sourceCommit,sourceChecksum,catalogChecksum,revisionId,tables,counts:Object.fromEntries(TABLES.map(t=>[t,tables[t].length])),sourceCounts:{doorLines:productCatalog.length,doorStyles:catalogDoorStyles.length,doorVariants:catalogDoorStyles.flatMap(s=>s.variants).length,finishes:finishes.length,mainGlassRows:glassOptions.length,mainGlassUnique:uniqueGlass.size,reachableMainGlassIds:reachable.size,sideliteGlassRows:Object.values<any>(sideCatalogs).reduce((n,c)=>n+c.options.length,0),hardwareProducts:hardwareOptions.length,hardwareArtworkRows:allHardwareAssets.length},issues:[...new Set(issues)].sort()}
+  return {format:FORMAT,sourceCommit,sourceChecksum,catalogChecksum,revisionId,tables,counts:Object.fromEntries(TABLES.map(t=>[t,tables[t].length])),sourceCounts:{doorLines:productCatalog.length,doorStyles:catalogDoorStyles.length,doorVariants:catalogDoorStyles.flatMap(s=>s.variants).length,finishes:finishes.length,mainGlassRows:glassOptions.length,mainGlassUnique:uniqueGlass.size,reachableMainGlassIds:reachable.size,sideliteGlassRows:Object.values(sideCatalogs).reduce((n,c)=>n+c.options.length,0),hardwareProducts:hardwareOptions.length,hardwareArtworkRows:allHardwareAssets.length},issues:[...new Set(issues)].sort()}
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {

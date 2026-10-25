@@ -4,6 +4,7 @@ import { statSync, readdirSync } from 'node:fs'
 import { chromium } from 'playwright-core'
 import { finishes } from '../src/data/options'
 import { paintColors, stainColors } from '../src/data/finishes'
+import type { Finish } from '../src/types'
 
 assert.equal(finishes.length,47)
 for(const color of paintColors){const f=finishes.find(f=>f.id===`paint-${color.id}`)!;assert.equal(f.name,color.name);assert.equal(f.color,color.hex);assert.equal(f.image,'')}
@@ -19,10 +20,10 @@ try{
  await page.addInitScript('globalThis.__name = (target) => target')
  await page.goto('http://127.0.0.1:5197/scripts/pdfRendererHarness.html');await page.waitForFunction(()=> 'pdfFixtures' in window)
  const pdf=await page.evaluate(async()=>{
-  const load=(path:string)=>import(path)
-  const {finishes,doorStyles,glassOptions,hardwareOptions}=await load('/src/data/options.ts'),{resolveDoorProduct}=await load('/src/data/productCatalog.ts'),{renderPdfProduct}=await load('/src/utils/pdfProductRenderer.ts')
+  const load=<T,>(path:string)=>import(path) as Promise<T>
+  const {finishes,doorStyles,glassOptions,hardwareOptions}=await load<typeof import('../src/data/options')>('/src/data/options.ts'),{resolveDoorProduct}=await load<typeof import('../src/data/productCatalog')>('/src/data/productCatalog.ts'),{renderPdfProduct}=await load<typeof import('../src/utils/pdfProductRenderer')>('/src/utils/pdfProductRenderer.ts')
   const style=doorStyles.find(s=>s.code==='F')!,glass=glassOptions.find(g=>g.id==='f-clear-no-grids')!
-  const render=async(finish:any)=>renderPdfProduct({style,finish,product:resolveDoorProduct(style,finish,finish.finishType==='stain'?'Oak':undefined,'22-gauge-steel'),grain:finish.finishType==='stain'?'Oak':null,glass,hardware:hardwareOptions[0],doorSwing:{id:'LHI',name:'Left Hand Inswing',image:''},sidelites:'none',doorConfigurationType:'single'} as any,{glass,jambFinish:finish,glassFrameFinish:finish})
+  const render=async(finish:Finish)=>renderPdfProduct({style,finish,product:resolveDoorProduct(style,finish,finish.finishType==='stain'?'Oak':undefined,'22-gauge-steel'),grain:finish.finishType==='stain'?'Oak':null,glass,grid:null,hardware:hardwareOptions[0],doorSwing:{id:'LHI',name:'Left Hand Inswing',image:''},sidelites:'none',doorConfigurationType:'single'},{glass,jambFinish:finish,glassFrameFinish:finish})
   let paints=0,stains=0
   for(const f of finishes){const actual=await render(f);if(f.finishType==='paint'){const legacy=await render({...f,image:`/assets/finishes/paint/${f.id.slice(6)}.webp`});if(actual.dataUrl!==legacy.dataUrl||actual.assets.some(p=>p.includes('/finishes/paint/')))throw new Error(`Paint changed: ${f.id}`);paints++}else{if(!actual.assets.includes(f.image))throw new Error(`Stain texture missing: ${f.id}`);stains++}}
   let rejected=false;try{await render({...finishes.find(f=>f.id==='stain-nutmeg')!,image:'/assets/finish-regression-missing.webp'})}catch(e){rejected=/PDF asset could not be loaded/.test((e as Error).message)}
@@ -30,15 +31,15 @@ try{
  })
  assert.deepEqual(pdf,{paints:26,stains:21,missingStainRejected:true})
  const capture=await page.evaluate(async()=>{
-  const load=(path:string)=>import(path)
-  const rm=await load('/node_modules/.vite/deps/react.js'),React=rm.default??rm,dm=await load('/node_modules/.vite/deps/react-dom_client.js'),createRoot=dm.createRoot??dm.default.createRoot
-  const {DoorPreview}=await load('/src/components/DoorPreview.tsx'),{captureFinalDoorPreview}=await load('/src/features/home-visualizer/captureDoorPreview.ts'),{finishes,doorStyles,glassOptions,hardwareOptions}=await load('/src/data/options.ts'),{resolveDoorProduct}=await load('/src/data/productCatalog.ts')
+  const load=<T,>(path:string)=>import(path) as Promise<T>
+  const rm=await load<typeof import('react') & {default?:typeof import('react')}>('/node_modules/.vite/deps/react.js'),React=rm.default??rm,dm=await load<typeof import('react-dom/client') & {default:typeof import('react-dom/client')}>('/node_modules/.vite/deps/react-dom_client.js'),createRoot=dm.createRoot??dm.default.createRoot
+  const {DoorPreview}=await load<typeof import('../src/components/DoorPreview')>('/src/components/DoorPreview.tsx'),{captureFinalDoorPreview}=await load<typeof import('../src/features/home-visualizer/captureDoorPreview')>('/src/features/home-visualizer/captureDoorPreview.ts'),{finishes,doorStyles,glassOptions,hardwareOptions}=await load<typeof import('../src/data/options')>('/src/data/options.ts'),{resolveDoorProduct}=await load<typeof import('../src/data/productCatalog')>('/src/data/productCatalog.ts')
   const css=document.createElement('link');css.rel='stylesheet';css.href='/src/styles.css';document.head.appendChild(css);await new Promise(r=>css.onload=r)
-  const style=doorStyles.find(s=>s.code==='F')!,glass=glassOptions.find(g=>g.id==='f-clear-no-grids')!,result:any[]=[]
+  const style=doorStyles.find(s=>s.code==='F')!,glass=glassOptions.find(g=>g.id==='f-clear-no-grids')!,result:{id:string;variant:string;hash:string}[]=[]
   for(const id of ['paint-black','paint-white','paint-wineberry','stain-nutmeg'])for(const variant of ['current','legacy']){
    const original=finishes.find(f=>f.id===id)!,finish={...original,image:variant==='legacy'&&original.finishType==='paint'?`/assets/finishes/paint/${id.slice(6)}.webp`:original.image},key=id+variant
    const host=document.createElement('div');host.style.cssText='width:700px;height:900px';document.body.appendChild(host);const root=createRoot(host);let ready=false
-   root.render(React.createElement(DoorPreview,{style,glass,finish,hardware:hardwareOptions[0],product:resolveDoorProduct(style,finish,finish.finishType==='stain'?'Oak':undefined,'22-gauge-steel'),grain:finish.finishType==='stain'?'Oak':null,jambFinish:finish,glassFrameFinish:finish,applyFinish:true,view:'Exterior',showViewToggle:false,renderConfigurationKey:key,onRenderReadinessChange:(s:any)=>{ready=s.ready}}))
+   root.render(React.createElement(DoorPreview,{style,glass,finish,hardware:hardwareOptions[0],product:resolveDoorProduct(style,finish,finish.finishType==='stain'?'Oak':undefined,'22-gauge-steel'),grain:finish.finishType==='stain'?'Oak':null,jambFinish:finish,glassFrameFinish:finish,applyFinish:true,view:'Exterior',showViewToggle:false,renderConfigurationKey:key,onRenderReadinessChange:(s)=>{ready=s.ready}}))
    for(let i=0;i<100&&!ready;i++)await new Promise(r=>setTimeout(r,100))
    const cap=await captureFinalDoorPreview(host,{frameMode:'visible',preserveCanonicalFrameBounds:true,expectedConfigurationKey:key}),hash=await crypto.subtle.digest('SHA-256',await cap.blob.arrayBuffer())
    result.push({id,variant,hash:Array.from(new Uint8Array(hash)).map(n=>n.toString(16).padStart(2,'0')).join('')});root.unmount();host.remove()
