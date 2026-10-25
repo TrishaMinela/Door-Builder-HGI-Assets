@@ -17,7 +17,7 @@ export async function detectEntranceStructure(photoUrl: string, signal?: AbortSi
     throw new AiVisualizationError('AI visualization is temporarily unavailable. Please try again later.', 'AI_TEMPORARILY_UNAVAILABLE', '', { cause: error })
   }
   const rawBody = await response.text()
-  let body: { detection?: EntranceDetection; error_code?: string; user_message?: string; request_id?: string; workflow_completion_token?: string } | null = null
+  let body: { detection?: EntranceDetection; error_code?: string; user_message?: string; request_id?: string; workflow_completion_token?: string } | null
   try { body = JSON.parse(rawBody) } catch { body = null }
   const requestId = body?.request_id || response.headers.get('x-request-id') || ''
   const durationMs = Math.round(performance.now() - startedAt)

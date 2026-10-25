@@ -1,5 +1,19 @@
 # ESLint baseline
 
+## Phase 4 — October 25, 2026
+
+Clean committed `c13e3b8` reports **20 errors / 0 warnings**. The isolated
+Phase 4 source reports **16 errors / 0 warnings**: 13 explicit-any findings,
+two caught-error findings and one unused legacy PDF function. The unrelated
+dirty tree adds eight errors; no lint rules were weakened.
+
+Removed one redundant DEV-planner type assertion (emitted JavaScript is
+byte-identical) and three initial values overwritten on every continuing
+path. No parsing, normalization, error propagation, image-processing or
+workflow-correlation behavior changed. The detailed 20-finding audit,
+pending-file overlap and verification boundaries are recorded in
+`eslint-phase4-audit.md`.
+
 ## Phase 3 — October 25, 2026
 
 Reassessed production branch `hgi/visualizer` at `ff6a21e`, including the

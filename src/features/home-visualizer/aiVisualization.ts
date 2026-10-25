@@ -139,7 +139,7 @@ export async function generateAiVisualization(input: {
     throw new AiVisualizationError('AI visualization is temporarily unavailable. Please try again later.', 'AI_TEMPORARILY_UNAVAILABLE', '', { cause: error })
   }
   const rawBody = await response.text()
-  let result: { image?: string; error_code?: string; user_message?: string; request_id?: string } | null = null
+  let result: { image?: string; error_code?: string; user_message?: string; request_id?: string } | null
   try { result = JSON.parse(rawBody) } catch { result = null }
   const responseRequestId = result?.request_id || response.headers.get('x-request-id') || ''
   input.onResponseRequestId?.(responseRequestId)

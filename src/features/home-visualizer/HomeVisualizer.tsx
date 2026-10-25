@@ -369,7 +369,7 @@ export function HomeVisualizer({ active = true, onEditConfiguration, onBack, onR
     setShowResult(false)
     detectionAbortRef.current?.abort()
     let displayFile: File
-    let originalFormat = 'unknown'
+    let originalFormat: string
     try {
       originalFormat = await detectedImageFormat(file)
       displayFile = await normalizePhoto(file, originalFormat)

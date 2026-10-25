@@ -7,7 +7,7 @@ import { EXPECTED_REVISION, EXPECTED_DIGEST } from '../src/inventory-shadow/type
 // GET-only. Prints SQL for the user's verified DEV SQL Editor; never applies it.
 const catalog = await readDevShadowCatalog(30000)
 if(catalog.revision.published_at || catalog.revision.published_by)throw new Error('Refusing published revision')
-const before = catalog.tables as Record<string, {id:string;[key:string]:any}[]>
+const before = catalog.tables
 const after = normalizeCleanupTables(before, EXPECTED_REVISION)
 const digest = cleanupDigest(after), beforeDigest=cleanupDigest(before)
 const q = (value:string) => `'${value.replaceAll("'","''")}'`
