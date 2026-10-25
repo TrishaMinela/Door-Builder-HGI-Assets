@@ -54,6 +54,25 @@ try {
     for (const channel of ['preview', 'pdf', 'ai'] as const) {
       const a = await pixels(reference[channel]), b = await pixels(clic[channel])
       assert.deepEqual(b.info, a.info, `${code}/${lites}/${finish}/${channel} dimensions`)
+      // Preserve both originals before the strict assertion aborts. Earlier
+      // intermittent failures discarded the very pixels needed to diagnose them.
+      if (!b.data.equals(a.data)) {
+        const imageBytes = (image: string | Buffer) => typeof image === 'string' ? Buffer.from(image.split(',')[1], 'base64') : image
+        const prefix = `${output}/${code}-${lites}-${finish}-${channel}-failure`
+        let changedPixels = 0, maxChannelDelta = 0
+        for (let offset = 0; offset < a.data.length; offset += a.info.channels) {
+          let changed = false
+          for (let channelIndex = 0; channelIndex < a.info.channels; channelIndex++) {
+            const delta = Math.abs(a.data[offset + channelIndex] - b.data[offset + channelIndex])
+            if (delta) changed = true
+            maxChannelDelta = Math.max(maxChannelDelta, delta)
+          }
+          if (changed) changedPixels++
+        }
+        await writeFile(`${prefix}-expected.png`, imageBytes(reference[channel]))
+        await writeFile(`${prefix}-actual.png`, imageBytes(clic[channel]))
+        await writeFile(`${prefix}.json`, JSON.stringify({ code, lites, finish, channel, dimensions: a.info, changedPixels, maxChannelDelta, expectedOverlay: reference.expectedOverlay, actualOverlay: clic.expectedOverlay, expectedAssets: reference.assets, actualAssets: clic.assets }, null, 2))
+      }
       assert.ok(b.data.equals(a.data), `${code}/${lites}/${finish}/${channel} must match its approved artwork reference`)
       if (code.startsWith('F48')) assert.ok(!b.data.equals((await pixels(clear[channel])).data), 'Contoured CLiC must visibly differ from unchanged ordinary clear')
       const data = channel === 'preview' ? clic[channel] : Buffer.from(clic[channel].split(',')[1], 'base64')

@@ -6,6 +6,7 @@ import { createServer } from 'vite'
 import { chromium, type Page } from 'playwright-core'
 import sharp from 'sharp'
 import { boundedStage } from '../src/features/home-visualizer/visualizationLifecycle'
+import { CUSTOMER_AI_MESSAGES } from '../src/features/home-visualizer/publicAiErrors'
 
 // Observe already-canceled operations and late failures without unhandled
 // rejections. No browser globals are needed beyond the stage's timer API.
@@ -47,9 +48,9 @@ async function successful(page: Page) {
   assert.equal(await page.locator('.cleanup-comparison-proposed').evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0), true)
   await slider.focus(); await slider.press('ArrowRight')
   assert.equal(await slider.getAttribute('aria-valuenow'), '52')
-  assert.equal(await page.getByRole('button', { name: 'Download completed home visualization photo' }).isEnabled(), true)
+  assert.equal(await page.getByRole('button', { name: 'Save completed home visualization image' }).isEnabled(), true)
 }
-async function failed(page: Page, message: RegExp) {
+async function failed(page: Page, message: string | RegExp) {
   await page.getByRole('alert').filter({ hasText: message }).waitFor()
   assert.equal(await page.getByRole('slider').isVisible().catch(() => false), false)
   assert.equal(await page.locator('.ai-automatic-photo img').isVisible(), true)
@@ -171,7 +172,8 @@ try {
         await page.getByRole('button', { name: 'Retry configured door' }).click()
       }
       if (scenario === 'invalid-image' || scenario === 'missing-image' || scenario === 'api-error' || scenario === 'decode-timeout' || scenario === 'original-error' || scenario.startsWith('comparison-')) {
-        await failed(page, scenario === 'api-error' ? /Mock API failure/ : scenario === 'missing-image' ? /without returning a usable image/ : /could not be (loaded|displayed)/)
+        await failed(page, scenario === 'api-error' || scenario === 'missing-image' ? CUSTOMER_AI_MESSAGES.AI_GENERATION_FAILED : /could not be (loaded|displayed)/)
+        if (scenario === 'api-error') assert.equal(await page.getByRole('alert').filter({ hasText: 'Mock API failure' }).count(), 0, 'Provider text must not reach the customer')
         assert.equal(generations, 1)
         await page.waitForTimeout(200); assert.equal(generations, 1, 'Failure must not auto-retry')
         assert.equal(detections, 1)

@@ -21,15 +21,36 @@ try{
  await page.goto('http://127.0.0.1:5197/scripts/pdfRendererHarness.html');await page.waitForFunction(()=> 'pdfFixtures' in window)
  const pdf=await page.evaluate(async()=>{
   const load=<T,>(path:string)=>import(path) as Promise<T>
-  const {finishes,doorStyles,glassOptions,hardwareOptions}=await load<typeof import('../src/data/options')>('/src/data/options.ts'),{resolveDoorProduct}=await load<typeof import('../src/data/productCatalog')>('/src/data/productCatalog.ts'),{renderPdfProduct}=await load<typeof import('../src/utils/pdfProductRenderer')>('/src/utils/pdfProductRenderer.ts')
+  const {finishes,doorStyles,glassOptions,hardwareOptions}=await load<typeof import('../src/data/options')>('/src/data/options.ts'),{resolveDoorProduct}=await load<typeof import('../src/data/productCatalog')>('/src/data/productCatalog.ts'),{renderPdfProduct}=await load<typeof import('../src/utils/pdfProductRenderer')>('/src/utils/pdfProductRenderer.ts'),{resolveDoorPreviewCandidates}=await load<typeof import('../src/data/doorPreviewAssets')>('/src/data/doorPreviewAssets.ts')
   const style=doorStyles.find(s=>s.code==='F')!,glass=glassOptions.find(g=>g.id==='f-clear-no-grids')!
   const render=async(finish:Finish)=>renderPdfProduct({style,finish,product:resolveDoorProduct(style,finish,finish.finishType==='stain'?'Oak':undefined,'22-gauge-steel'),grain:finish.finishType==='stain'?'Oak':null,glass,grid:null,hardware:hardwareOptions[0],doorSwing:{id:'LHI',name:'Left Hand Inswing',image:''},sidelites:'none',doorConfigurationType:'single'},{glass,jambFinish:finish,glassFrameFinish:finish})
   let paints=0,stains=0
-  for(const f of finishes){const actual=await render(f);if(f.finishType==='paint'){const legacy=await render({...f,image:`/assets/finishes/paint/${f.id.slice(6)}.webp`});if(actual.dataUrl!==legacy.dataUrl||actual.assets.some(p=>p.includes('/finishes/paint/')))throw new Error(`Paint changed: ${f.id}`);paints++}else{if(!actual.assets.includes(f.image))throw new Error(`Stain texture missing: ${f.id}`);stains++}}
-  let rejected=false;try{await render({...finishes.find(f=>f.id==='stain-nutmeg')!,image:'/assets/finish-regression-missing.webp'})}catch(e){rejected=/PDF asset could not be loaded/.test((e as Error).message)}
-  return {paints,stains,missingStainRejected:rejected}
+  for(const f of finishes){const actual=await render(f);if(f.finishType==='paint'){const legacy=await render({...f,image:`/assets/finishes/paint/${f.id.slice(6)}.webp`});if(actual.dataUrl!==legacy.dataUrl||actual.assets.some(p=>p.includes('/finishes/paint/')))throw new Error(`Paint changed: ${f.id}`);paints++}else{
+   // Grain is authored in the resolved slab; finish.image is a card thumbnail.
+   const product=resolveDoorProduct(style,f,'Oak','22-gauge-steel'),slab=resolveDoorPreviewCandidates(style,'stain',product,'Oak')[0]
+   if(!product.matchingVariants.length||!slab||!actual.assets.some(path=>decodeURIComponent(new URL(path,location.href).pathname)===decodeURIComponent(slab)))throw new Error(`Stain slab missing: ${f.id}`)
+   if(actual.assets.some(p=>p.includes('/finishes/stain/')))throw new Error(`Card thumbnail used as slab texture: ${f.id}`)
+   const withoutThumbnail=await render({...f,image:'/assets/finish-regression-missing.webp'})
+   if(actual.dataUrl!==withoutThumbnail.dataUrl)throw new Error(`Stain depends on card thumbnail: ${f.id}`)
+   stains++
+  }}
+  return {paints,stains}
  })
- assert.deepEqual(pdf,{paints:26,stains:21,missingStainRejected:true})
+ assert.deepEqual(pdf,{paints:26,stains:21})
+ // A fresh page avoids the renderer's image cache. Missing required slab art
+ // must still fail, rather than accepting a preview with its texture absent.
+ const missing=await browser.newPage()
+ await missing.addInitScript('globalThis.__name = (target) => target')
+ let blockedAssets=0
+ await missing.route('**/assets/**',route=>{blockedAssets++;return route.abort()})
+ await missing.goto('http://127.0.0.1:5197/scripts/pdfRendererHarness.html');await missing.waitForFunction(()=> 'pdfFixtures' in window)
+ const missingSlabRejected=await missing.evaluate(async()=>{
+  const load=<T,>(path:string)=>import(path) as Promise<T>
+  const {finishes,doorStyles,glassOptions,hardwareOptions}=await load<typeof import('../src/data/options')>('/src/data/options.ts'),{resolveDoorProduct}=await load<typeof import('../src/data/productCatalog')>('/src/data/productCatalog.ts'),{renderPdfProduct}=await load<typeof import('../src/utils/pdfProductRenderer')>('/src/utils/pdfProductRenderer.ts')
+  const style=doorStyles.find(s=>s.code==='F')!,finish=finishes.find(f=>f.id==='stain-nutmeg')!,glass=glassOptions.find(g=>g.id==='f-clear-no-grids')!
+  try{await renderPdfProduct({style,finish,product:resolveDoorProduct(style,finish,'Oak','22-gauge-steel'),grain:'Oak',glass,grid:null,hardware:hardwareOptions[0],doorSwing:{id:'LHI',name:'Left Hand Inswing',image:''},sidelites:'none',doorConfigurationType:'single'},{glass,jambFinish:finish,glassFrameFinish:finish});return false}catch(e){return /PDF asset could not be loaded/.test((e as Error).message)}
+ })
+ assert.equal(missingSlabRejected,true);assert.ok(blockedAssets>0);await missing.close()
  const capture=await page.evaluate(async()=>{
   const load=<T,>(path:string)=>import(path) as Promise<T>
   const rm=await load<typeof import('react') & {default?:typeof import('react')}>('/node_modules/.vite/deps/react.js'),React=rm.default??rm,dm=await load<typeof import('react-dom/client') & {default:typeof import('react-dom/client')}>('/node_modules/.vite/deps/react-dom_client.js'),createRoot=dm.createRoot??dm.default.createRoot
@@ -47,5 +68,5 @@ try{
  })
  for(let i=0;i<capture.length;i+=2)assert.equal(capture[i].hash,capture[i+1].hash,`Reference pixels changed: ${capture[i].id}`)
  assert.equal(paintRequests.length,0)
- console.log(JSON.stringify({pdf,capturePairs:capture.length/2,paintRequests:paintRequests.length,stainFiles:21,paidAiRequests:0,passed:true},null,2))
+ console.log(JSON.stringify({pdf,missingSlabRejected,capturePairs:capture.length/2,paintRequests:paintRequests.length,stainFiles:21,paidAiRequests:0,passed:true},null,2))
 }finally{await browser?.close();server.kill('SIGTERM')}

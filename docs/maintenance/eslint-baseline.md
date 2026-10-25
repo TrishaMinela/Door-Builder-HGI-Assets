@@ -1,5 +1,15 @@
 # ESLint baseline
 
+## Phase 5 — October 25, 2026
+
+Clean `df349d1` and proposed Phase 5 source both report **16 errors / zero
+warnings**. This batch prioritizes verification reliability, not risky lint
+rewrites: lifecycle label/public-message expectations, actual stain-rendering
+dependencies, and retained evidence for strict CLiC pixel failures. Runtime
+files and lint rules are unchanged. See `eslint-phase5-verification.md` for
+the remaining-findings audit, baseline failures, export-parity boundary and
+deferred issues.
+
 ## Phase 4 — October 25, 2026
 
 Clean committed `c13e3b8` reports **20 errors / 0 warnings**. The isolated
