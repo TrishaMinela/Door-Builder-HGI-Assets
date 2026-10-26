@@ -15,6 +15,8 @@ try {
   const photo = await sharp({ create: { width: 800, height: 600, channels: 3, background: '#999999' } }).jpeg().toBuffer()
   for (const width of [1280, 390]) {
     const page = await browser.newPage({ viewport: { width, height: 1000 } })
+    // This regression covers authenticated dealer editing; customer gating has its own suite.
+    await page.route('**/api/dealer-session', route => route.fulfill({ json: { authenticated: true, expiresAt: Date.now() + 1800000 } }))
     await page.addInitScript(value => {
       if (window === window.top && !localStorage.getItem('hgi-door-builder-draft')) localStorage.setItem('hgi-door-builder-draft', JSON.stringify(value))
       ;(window as unknown as { __name: (fn: unknown) => unknown }).__name = fn => fn

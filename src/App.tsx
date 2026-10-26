@@ -7,6 +7,7 @@ import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
 import { SubmissionConfirmation } from './components/SubmissionConfirmation'
 import { SiteFooter } from './components/SiteFooter'
+import { DealerMode, useDealerSession } from './components/DealerMode'
 import { DealerContextGate } from './components/DealerContextGate'
 import { sortByDisplayLabel } from './utils/sortByDisplayLabel'
 import { validOptionId } from './utils/optionSelection'
@@ -483,7 +484,18 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [pendingCustomerAction, setPendingCustomerAction] = useState<null | 'download-pdf' | 'open-visualizer'>(null)
   const [completedCustomerAction, setCompletedCustomerAction] = useState<null | 'download-pdf' | 'open-visualizer'>(null)
   const [customerFormCompleted, setCustomerFormCompleted] = useState(false)
-  const [testMode, setTestMode] = useState(true)
+  const dealerSession = useDealerSession()
+  const dealerMode = dealerSession.active
+  const wasDealer = useRef(false)
+  useEffect(() => {
+    if (wasDealer.current && !dealerMode) {
+      setCustomerFormCompleted(false)
+      setSubmitted(false)
+      setCompletedCustomerAction(null)
+      setScreen(current => current === 'visualizer' ? 'builder' : current)
+    }
+    wasDealer.current = dealerMode
+  }, [dealerMode])
   const [builderPreviewView, setBuilderPreviewView] = useState<'Exterior' | 'Interior' | 'Both'>('Exterior')
   const [pdfProductRender, setPdfProductRender] = useState<{ configurationKey: string; dataUrl: string } | null>(null)
   const [pdfError, setPdfError] = useState('')
@@ -1480,8 +1492,8 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     return targetPage >= 0 && (targetPage <= currentPageIndex || pages.slice(0, targetPage).every(isBuilderPageComplete))
   }
 
-  const showScreen = (next: 'home' | 'builder' | 'customer-form' | 'visualizer') => {
-    if (next === 'visualizer' && !testMode && !customerFormCompleted && !(editReturnTo === 'visualizer' && visualizerSessionStarted)) {
+  const showScreen = async (next: 'home' | 'builder' | 'customer-form' | 'visualizer') => {
+    if (next === 'visualizer' && !customerFormCompleted && !(await dealerSession.verify())) {
       void (async () => {
         setPendingCustomerAction('open-visualizer')
         setSubmitted(false)
@@ -1569,10 +1581,10 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
     {editReturnError && <p role="status">{editReturnError}</p>}
   </div>
 
-  const requestCustomerAction = (action: 'download-pdf' | 'open-visualizer') => {
-    if (testMode || customerFormCompleted) {
-      if (action === 'download-pdf') void downloadPdf().catch(() => undefined)
-      else showScreen('visualizer')
+  const requestCustomerAction = async (action: 'download-pdf' | 'open-visualizer') => {
+    if (customerFormCompleted || await dealerSession.verify()) {
+      if (action === 'download-pdf') await downloadPdf().catch(() => undefined)
+      else await showScreen('visualizer')
       return
     }
     void (async () => {
@@ -2018,7 +2030,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
           {screen !== 'home' && <span className="app-name"><strong>Home Guard Door Builder</strong></span>}
         </div>
         <div className="header-actions">
-          {screen !== 'home' && <><button type="button" className={`test-flow-toggle ${testMode ? 'active' : ''}`} role="switch" aria-label="Test current review experience" aria-checked={testMode} onClick={() => { setTestMode((value) => !value); setCustomerFormCompleted(false); setPendingCustomerAction(null); setCompletedCustomerAction(null); setSubmitted(false); setSubmitError('') }}><span>Test</span><i aria-hidden="true"/></button>
+          {screen !== 'home' && <>
           <button className="home-return" aria-label="Home" onClick={() => showScreen('home')}><HomeIcon size={17} /><span>Home</span></button></>}
           <div className="header-dealer-cta"><span>Want this door? <strong>Connect with a Dealer</strong></span><a href="https://homeguardindustries.com/find-a-home-guard-dealer-hub/" target="_blank" rel="noreferrer">Find a Dealer <ExternalLink size={14} /></a></div>
         </div>
@@ -2202,7 +2214,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
           {currentPage === 'review' && !submitted && <>
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
-            {!testMode && <button className="mobile-quote-form-cta" type="button" onClick={() => { setPendingCustomerAction(null); setSubmitted(false); showScreen('customer-form') }}>Continue to Quote Form <ArrowRight size={17}/></button>}
+            {!dealerMode && <button className="mobile-quote-form-cta" type="button" onClick={() => { setPendingCustomerAction(null); setSubmitted(false); showScreen('customer-form') }}>Continue to Quote Form <ArrowRight size={17}/></button>}
             <button className="floating-visualizer-launch" type="button" onClick={() => requestCustomerAction('open-visualizer')} aria-label="Launch Door Visualizer"><Eye size={19} /><span>Launch Door Visualizer</span><ArrowRight size={16} /></button>
             <div className="mobile-review-preview">{renderConfiguredPreviewMode()}</div>
             <section className="visualizer-promo-card visualizer-promo-card-mobile" aria-labelledby="mobile-visualizer-promo-title">
@@ -2214,7 +2226,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
               {configurationSummaryRows.map(([label, value, target]) => <div className="summary-row" key={label}><span>{label}<strong>{value}</strong></span>{target >= 0 && <button onClick={() => editConfiguration(pages[target], 'summary')}>Edit</button>}</div>)}
             </div>
             <p className="availability-notice"><strong>Availability Notice:</strong> Some door styles, finishes, glass, hardware, and other options may not be available with every door configuration. Final availability depends on the selected door style and product specifications.</p>
-            <div className={`review-download-form ${testMode ? '' : 'form-only'}`}>
+            <div className={`review-download-form ${dealerMode ? '' : 'form-only'}`}>
               <div className="attachment-card">
                 <span className="attachment-icon"><FileText size={25} /></span>
                 <span className="attachment-copy"><strong>{configurationPdfName}</strong></span>
@@ -2268,12 +2280,12 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         onBack={() => showScreen('builder')}
         onEditConfiguration={page => editConfiguration(page === 'glass-type' && !supportsGlass ? 'sidelite-glass-type' : page, 'visualizer')}
         onReturnToReview={() => { setReturningFromVisualizer(true); goTo(pages.indexOf('review')); showScreen('builder') }}
-        onDownloadPdf={downloadPdf}
+        onDownloadPdf={() => requestCustomerAction('download-pdf')}
         configuredDoorPreview={configuredDoorPreview}
         configurationKey={configuredDoorKey}
         doorConfiguration={currentDoorConfiguration}
       />}
-      <SiteFooter currentStep={feedbackStep} configuration={feedbackConfiguration}/>
+      <SiteFooter currentStep={feedbackStep} configuration={feedbackConfiguration} dealerAccess={<DealerMode session={dealerSession} onExit={() => { setCustomerFormCompleted(false); setSubmitted(false); setCompletedCustomerAction(null); setPendingCustomerAction(null); void showScreen('builder') }}/>} />
     </div>
   )
 }

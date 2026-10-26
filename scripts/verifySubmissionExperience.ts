@@ -53,7 +53,7 @@ try {
     page.on('download', () => downloads++)
     await page.goto('http://127.0.0.1:5348/')
     await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
-    await page.getByRole('switch', { name: 'Test current review experience' }).click()
+    assert.equal(await page.getByRole('switch', { name: 'Test current review experience' }).count(), 0)
     for (let i = 0; i < 35 && await page.getByRole('button', { name: 'Next configuration step' }).count(); i++) {
       await page.getByRole('button', { name: 'Next configuration step' }).click()
     }

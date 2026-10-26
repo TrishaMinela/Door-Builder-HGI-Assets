@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { Globe, Mail, MapPin, Phone } from 'lucide-react'
 import { BetaFeedback } from './BetaFeedback'
 
-type Props = { currentStep: string; configuration: Record<string, string> }
+type Props = { currentStep: string; configuration: Record<string, string>; dealerAccess?: ReactNode }
 
-export function SiteFooter({ currentStep, configuration }: Props) {
+export function SiteFooter({ currentStep, configuration, dealerAccess }: Props) {
   const footerRef = useRef<HTMLElement>(null)
   useEffect(() => {
     const footer = footerRef.current
@@ -48,6 +48,7 @@ export function SiteFooter({ currentStep, configuration }: Props) {
     </div>
     <div className="site-footer-feedback">
       <BetaFeedback currentStep={currentStep} configuration={configuration}/>
+      {dealerAccess}
       <small>Built with <span aria-hidden="true">♥</span> by <a href="https://schoolradius.co/" target="_blank" rel="noreferrer">School Radius</a></small>
     </div>
   </footer>

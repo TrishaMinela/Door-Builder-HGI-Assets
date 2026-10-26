@@ -16,6 +16,8 @@ try {
   const generated = `data:image/jpeg;base64,${photo.toString('base64')}`
   for (const width of [1280, 390]) {
     const page = await browser.newPage({ viewport: { width, height: 900 } })
+    // Authenticated dealer fixture replaces the former default Test Mode bypass.
+    await page.route('**/api/dealer-session', route => route.fulfill({ json: { authenticated: true, expiresAt: Date.now() + 1800000 } }))
     await page.addInitScript('window.__name = (fn) => fn')
     let compatible = true, fail = false, requests = 0, detections = 0
     let releaseDetection: (() => void) | undefined, releaseGeneration: (() => void) | undefined
@@ -43,11 +45,11 @@ try {
     // A fresh customer session must reach the real app without any access flag.
     await page.goto('http://127.0.0.1:5189/')
     await page.locator('.home-app').waitFor()
-    assert.equal(await page.locator('input[type=password]').count(), 0)
+    assert.equal(await page.locator('input[type=password]:visible').count(), 0)
     assert.equal(await page.evaluate(() => sessionStorage.getItem('hgi-door-builder-beta-access')), null)
     await page.reload()
     await page.locator('.home-app').waitFor()
-    assert.equal(await page.locator('input[type=password]').count(), 0, 'Refresh does not restore a password gate')
+    assert.equal(await page.locator('input[type=password]:visible').count(), 0, 'Refresh does not restore a customer password gate')
     await page.goto('http://127.0.0.1:5189/scripts/aiVisualizerHarness.html')
     assert.equal(await page.getByRole('button', { name: 'Manual', exact: true }).count(), 0)
     assert.equal(await page.locator('.visualizer-mode-selector').count(), 0)
