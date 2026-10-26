@@ -47,8 +47,10 @@ export function SiteFooter({ currentStep, configuration, dealerAccess }: Props) 
       </div>
     </div>
     <div className="site-footer-feedback">
-      <BetaFeedback currentStep={currentStep} configuration={configuration}/>
-      {dealerAccess}
+      <div className="site-footer-actions">
+        <BetaFeedback currentStep={currentStep} configuration={configuration}/>
+        {dealerAccess}
+      </div>
       <small>Built with <span aria-hidden="true">♥</span> by <a href="https://schoolradius.co/" target="_blank" rel="noreferrer">School Radius</a></small>
     </div>
   </footer>
