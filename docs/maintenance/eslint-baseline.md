@@ -1,5 +1,17 @@
 # ESLint baseline
 
+## Phase 6 — October 26, 2026
+
+Clean committed `e84c48c` reports **16 errors / zero warnings**. Phase 6
+resolves two explicit-any dictionary boundary annotations in the pure inventory
+normalizer, without changing its internal row model or runtime operations.
+The proposed clean source reports **14 errors / zero warnings**: 11
+explicit-any findings, two caught-error findings and one unused legacy PDF
+function. The normalizer's emitted JavaScript and complete inventory export
+bytes are unchanged. No lint rules, CLiC rendering/capture, error propagation,
+OpenCV logic, inventory data or PDF behavior changes. See
+`eslint-phase6-audit.md` for all 16 baseline findings and verification evidence.
+
 ## Phase 5 — October 25, 2026
 
 Clean `df349d1` and proposed Phase 5 source both report **16 errors / zero

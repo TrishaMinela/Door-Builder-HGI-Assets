@@ -17,10 +17,10 @@ export const coatingMembers: Record<string, string[]> = {
 }
 
 /** Pure, deterministic draft/manifest transformation. Never makes database requests. */
-export function normalizeCleanupTables(input: Record<string, Record<string, any>[]>, revision: string) {
+export function normalizeCleanupTables(input: Record<string, Record<string, unknown>[]>, revision: string) {
   const t = structuredClone(input) as Record<string, Row[]>
   const byId = new Map(Object.values(t).flat().map(r => [r.id, r]))
-  const row = (table: string, key: string, fields: Record<string, any>): Row => ({ id: uuid(`${revision}:${table}:${key}`), catalog_revision_id: revision, ...fields })
+  const row = (table: string, key: string, fields: Record<string, unknown>): Row => ({ id: uuid(`${revision}:${table}:${key}`), catalog_revision_id: revision, ...fields })
   const paint = new Set(t.finishes.filter(r => r.finish_type === 'paint').map(r => r.id))
   const paintAssets = new Set(t.finish_assets.filter(r => paint.has(r.finish_id)).map(r => r.asset_id))
   t.finish_assets = t.finish_assets.filter(r => !paint.has(r.finish_id))
