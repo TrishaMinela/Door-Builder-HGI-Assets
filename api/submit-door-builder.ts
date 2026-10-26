@@ -1,7 +1,7 @@
-import { DealerResolutionError, resolveDealerId } from '../server/dealerResolution'
-import { isHiddenDecorativeGlass } from '../src/data/customerGlassAvailability'
-import { assertCustomerFinish } from '../src/utils/customerFinish'
-import type { Finish } from '../src/types'
+import { DealerResolutionError, resolveDealerId } from '../server/dealerResolution.js'
+import { isHiddenDecorativeGlass } from '../src/data/customerGlassAvailability.js'
+import { assertCustomerFinish } from '../src/utils/customerFinish.js'
+import type { Finish } from '../src/types.js'
 
 type ApiRequest = { method?: string; body?: unknown }
 declare const process: { env: Record<string, string | undefined> }

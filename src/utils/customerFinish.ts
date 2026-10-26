@@ -1,5 +1,5 @@
-import { paintColors, stainColors } from '../data/finishes'
-import type { Finish } from '../types'
+import { paintColors, stainColors } from '../data/finishes.js'
+import type { Finish } from '../types.js'
 
 // This neutral surface is for preview rendering only, never a product choice.
 export const UNSELECTED_FINISH: Finish = {

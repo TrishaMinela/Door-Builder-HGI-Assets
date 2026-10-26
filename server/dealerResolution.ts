@@ -1,4 +1,4 @@
-import { isValidDealerSlug, normalizeDealerSlug } from '../src/utils/dealerSlug'
+import { isValidDealerSlug, normalizeDealerSlug } from '../src/utils/dealerSlug.js'
 
 declare const process: { env: Record<string, string | undefined> }
 
