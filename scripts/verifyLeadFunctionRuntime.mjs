@@ -29,7 +29,7 @@ try {
   process.env.ZAPIER_DOOR_BUILDER_WEBHOOK_URL = 'https://zapier.example.invalid/hook'
   delete process.env.LEADS_DELIVERY_MODE
   const records = new Map()
-  let calls = [], supabaseStatus = 201, zapierStatus = 200, dealerActive = true, networkFailure = false
+  let calls = [], supabaseStatus = 201, zapierStatus = 200, dealerActive = true, networkFailure = false, zapierTimeout = false
   globalThis.fetch = async (url, options) => {
     const target = String(url)
     if (target.startsWith('https://supabase.example.invalid/rest/v1/dealers?')) {
@@ -46,6 +46,7 @@ try {
     }
     assert.equal(target, 'https://zapier.example.invalid/hook', 'Unexpected outbound destination')
     calls.push('zapier')
+    if (zapierTimeout) throw new DOMException('Mock webhook timeout', 'TimeoutError')
     return new Response(null, { status: zapierStatus })
   }
   const { default: handler } = await import(pathToFileURL(resolve(suppliedHandler ?? join(temporary, 'api/submit-door-builder.js'))).href)
@@ -82,6 +83,10 @@ try {
   assert.deepEqual((await invoke()).result.destinations, { supabase: 'succeeded', zapier: 'failed' })
   assert.equal(records.size, 1)
   assert.deepEqual(calls, ['supabase', 'zapier'])
+  zapierTimeout = true
+  assert.deepEqual(await invoke(), { status: 502, result: { error: 'Submission could not be completed. Please try again.', destinations: { supabase: 'succeeded', zapier: 'failed' } } })
+  assert.equal(records.size, 1)
+  zapierTimeout = false
   zapierStatus = 200
   assert.equal((await invoke()).status, 200)
   assert.equal(records.size, 1, 'Same submission ID preserves the existing lead on retry')
@@ -98,7 +103,7 @@ try {
   assert.equal((await invoke({ ...payload, submissionId: dealerId, dealerSlug: 'example-dealer' })).status, 200)
   assert.deepEqual(calls, ['dealer', 'supabase', 'zapier'])
   assert.equal(records.get(dealerId).dealer_id, '11111111-1111-4111-8111-111111111111')
-  console.log('PASS native Node ESM startup and 11 mocked legacy lead validation/persistence/dealer/delivery/retry scenarios')
+  console.log('PASS native Node ESM startup and 12 mocked legacy lead validation/persistence/dealer/delivery/retry scenarios')
   console.log('Legacy behavior retained: Zapier failure returns 502 after save; retries re-forward to Zapier. Exactly-once notifications are not claimed.')
 } finally {
   globalThis.fetch = originalFetch

@@ -5,6 +5,7 @@ import { DoorStyleCard } from './components/DoorStyleCard'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
 import { OptionCard } from './components/OptionCard'
 import { QuoteForm } from './components/QuoteForm'
+import { SubmissionConfirmation } from './components/SubmissionConfirmation'
 import { SiteFooter } from './components/SiteFooter'
 import { DealerContextGate } from './components/DealerContextGate'
 import { sortByDisplayLabel } from './utils/sortByDisplayLabel'
@@ -2090,7 +2091,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
               <div className="visualizer-confirmation-graphic"><img src="/assets/visualizer/view-on-your-home-tablet.webp" alt="A configured door visualized on a home entrance" /></div>
               <div className="visualizer-confirmation-action"><strong>See your configured door on your own entryway</strong><span>Have a clear photo of your entrance ready.</span><button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Continue to Home Visualizer <ArrowRight size={17} /></button></div>
             </div>
-          </div> : <div className="success visualizer-form-confirmation"><span><Check size={32} /></span><small>Configuration received</small><h1>Thanks, {contact.fullName}.</h1><p>Your configuration PDF has been prepared. You can now see the same configured door on a photo of your home.</p><div className="visualizer-confirmation-action"><strong>Next: View your door on your home</strong><span>Upload a clear entrance photo and follow the guided placement steps.</span><button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Continue to Home Visualizer <ArrowRight size={17} /></button></div><button type="button" onClick={() => { setSubmitted(false); setCompletedCustomerAction(null); goTo(pages.indexOf('review')); showScreen('builder') }}>Return to Review</button></div>}
+          </div> : <SubmissionConfirmation fullName={contact.fullName} onContinue={() => showScreen('visualizer')} onReview={() => { setSubmitted(false); setCompletedCustomerAction(null); goTo(pages.indexOf('review')); showScreen('builder') }} />}
         </section>
       </main> : screen === 'visualizer' ? null : <>
       {editModeControls}
