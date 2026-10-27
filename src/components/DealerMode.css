@@ -8,3 +8,24 @@
 .dealer-mode-actions button[type=submit]{background:var(--peacock);color:white}
 .dealer-mode-dialog [role=alert]{color:#9b2424}
 .dealer-mode-access button:focus-visible,.dealer-mode-dialog input:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+/* Like the existing editing bar, reserve layout space while keeping status
+   visible. Mobile fixed navigation is offset by the measured banner height. */
+.app>.dealer-mode-banner-slot{flex:none;width:100%;height:var(--dealer-banner-height,0px)}
+.app>.dealer-mode-banner-slot:empty{height:0}
+.dealer-mode-banner{position:fixed;top:0;left:0;right:0;z-index:1051;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px clamp(18px,3vw,52px);background:var(--peacock);color:#fff}
+.dealer-mode-banner-copy{min-width:0}
+.dealer-mode-banner-copy>strong{display:block;font-size:18px;font-weight:600;line-height:1.3}
+.dealer-mode-banner-copy>p{margin:4px 0 0;font-size:14px;line-height:1.5;color:#fff}
+.dealer-mode-banner>button{flex:none;min-height:44px;padding:10px 18px;border:1px solid #fff;border-radius:8px;background:#fff;color:var(--peacock);font:inherit;font-size:14px;font-weight:600;line-height:22px}
+.dealer-mode-banner>button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.app:has(>.dealer-mode-banner-slot:not(:empty))>.editing-bar{top:var(--dealer-banner-height,0px)}
+@media(max-width:900px){
+  .app:not(.home-app):has(>.dealer-mode-banner-slot:not(:empty))>header{top:var(--dealer-banner-height,0px)}
+  .app:has(>.dealer-mode-banner-slot:not(:empty))>.builder-toolbar{top:calc(var(--dealer-banner-height,0px) + var(--mobile-header-height))}
+  .app.visualizer-editing:has(>.dealer-mode-banner-slot:not(:empty))>.editing-bar{top:calc(var(--dealer-banner-height,0px) + var(--mobile-header-height))}
+  .app.visualizer-editing:has(>.dealer-mode-banner-slot:not(:empty))>.builder-toolbar{top:calc(var(--dealer-banner-height,0px) + var(--mobile-header-height) + var(--builder-editing-bar-height,64px))}
+}
+@media(max-width:600px){
+  .dealer-mode-banner{flex-wrap:wrap;gap:10px;padding:12px 18px}
+  .dealer-mode-banner>button{width:100%}
+}

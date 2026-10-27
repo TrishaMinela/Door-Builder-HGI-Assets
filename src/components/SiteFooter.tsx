@@ -17,13 +17,13 @@ export function SiteFooter({ currentStep, configuration, dealerAccess }: Props) 
       // would stop at its containing block. No footer-height guess is needed.
       app.style.setProperty('--footer-viewport-overlap', `${Math.max(0, window.innerHeight - footer.getBoundingClientRect().top)}px`)
       app.style.setProperty('--site-footer-height', `${footer.getBoundingClientRect().height}px`)
-      const chrome = [...app.children].filter(el => el.matches('header,.builder-toolbar,.editing-bar'))
+      const chrome = [...app.children].filter(el => el.matches('header,.builder-toolbar,.editing-bar,.dealer-mode-banner-slot'))
       app.style.setProperty('--builder-shell-top', `${chrome.reduce((sum, el) => sum + el.getBoundingClientRect().height, 0)}px`)
     }
     const schedule = () => { if (!frame) frame = requestAnimationFrame(measure) }
     const observer = new ResizeObserver(schedule)
     observer.observe(footer)
-    for (const child of app.children) if (child.matches('header,.builder-toolbar,.editing-bar,main')) observer.observe(child)
+    for (const child of app.children) if (child.matches('header,.builder-toolbar,.editing-bar,.dealer-mode-banner-slot,main')) observer.observe(child)
     measure()
     window.addEventListener('scroll', schedule, { passive: true })
     window.addEventListener('resize', schedule)

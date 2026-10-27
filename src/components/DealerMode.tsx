@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import './DealerMode.css'
 
 export function useDealerSession() {
@@ -41,8 +42,8 @@ export function useDealerSession() {
   return { active: expiresAt > Date.now(), verify: () => request(), login: (password: string) => request('POST', password), logout: () => request('DELETE') }
 }
 
-type Props = { session: ReturnType<typeof useDealerSession>; onExit: () => void }
-export function DealerMode({ session, onExit }: Props) {
+type Props = { session: ReturnType<typeof useDealerSession>; onExit: () => void; bannerTarget: HTMLElement | null }
+export function DealerMode({ session, onExit, bannerTarget }: Props) {
   const dialog = useRef<HTMLDialogElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const [password, setPassword] = useState('')
@@ -50,9 +51,18 @@ export function DealerMode({ session, onExit }: Props) {
   const [busy, setBusy] = useState(false)
   const [logoutFailed, setLogoutFailed] = useState(false)
   const pending = useRef(false)
+  const banner = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (!bannerTarget || !banner.current || !session.active) return
+    const app = bannerTarget.parentElement
+    const measure = () => app?.style.setProperty('--dealer-banner-height', `${banner.current?.getBoundingClientRect().height ?? 0}px`)
+    const observer = new ResizeObserver(measure)
+    observer.observe(banner.current)
+    measure()
+    return () => { observer.disconnect(); app?.style.removeProperty('--dealer-banner-height') }
+  }, [bannerTarget, session.active])
   const close = () => { dialog.current?.close(); setPassword(''); trigger.current?.focus() }
-  return <div className="dealer-mode-access">
-    <button ref={trigger} type="button" disabled={busy} onClick={async () => {
+  const accessButton = <button ref={trigger} type="button" disabled={busy} onClick={async () => {
       setError('')
       if (session.active) {
         setBusy(true); onExit()
@@ -60,6 +70,11 @@ export function DealerMode({ session, onExit }: Props) {
         finally { setBusy(false) }
       } else { setPassword(''); dialog.current?.showModal() }
     }}>{session.active ? 'Exit Dealer Mode' : 'Dealer Mode'}</button>
+  return <div className="dealer-mode-access">
+    {session.active && bannerTarget ? createPortal(<section ref={banner} className="dealer-mode-banner" aria-label="Dealer Mode status">
+      <div className="dealer-mode-banner-copy"><strong>Dealer Mode</strong><p>You’re using dealer convenience mode. Customer information requirements are bypassed.</p></div>
+      {accessButton}
+    </section>, bannerTarget) : accessButton}
     <dialog ref={dialog} className="dealer-mode-dialog" aria-labelledby="dealer-mode-title" aria-describedby="dealer-mode-description" onKeyDown={event => {
       if (event.key !== 'Tab') return
       const items = [...event.currentTarget.querySelectorAll<HTMLElement>('input:not(:disabled),button:not(:disabled)')]

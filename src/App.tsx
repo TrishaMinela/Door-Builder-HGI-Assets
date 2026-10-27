@@ -486,6 +486,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [customerFormCompleted, setCustomerFormCompleted] = useState(false)
   const dealerSession = useDealerSession()
   const dealerMode = dealerSession.active
+  const [dealerBannerTarget, setDealerBannerTarget] = useState<HTMLDivElement | null>(null)
   const wasDealer = useRef(false)
   useEffect(() => {
     if (wasDealer.current && !dealerMode) {
@@ -2022,6 +2023,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
 
   return (
     <div className={`app builder-typography ${screen === 'home' ? 'home-app' : screen === 'visualizer' ? 'visualizer-app' : screen === 'customer-form' ? 'customer-form-app' : ''} ${screen === 'builder' && isVisualizerEditing ? 'visualizer-editing' : ''} ${screen === 'builder' && currentPage === 'review' && submitted ? 'review-confirmation-centered' : ''}`}>
+      <div className="dealer-mode-banner-slot" ref={setDealerBannerTarget} />
       <header>
         <div className="brand">
           <button className="brand-home" type="button" aria-label="Go to home page" onClick={() => showScreen('home')}>
@@ -2285,7 +2287,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         configurationKey={configuredDoorKey}
         doorConfiguration={currentDoorConfiguration}
       />}
-      <SiteFooter currentStep={feedbackStep} configuration={feedbackConfiguration} dealerAccess={<DealerMode session={dealerSession} onExit={() => { setCustomerFormCompleted(false); setSubmitted(false); setCompletedCustomerAction(null); setPendingCustomerAction(null); void showScreen('builder') }}/>} />
+      <SiteFooter currentStep={feedbackStep} configuration={feedbackConfiguration} dealerAccess={<DealerMode session={dealerSession} bannerTarget={dealerBannerTarget} onExit={() => { setCustomerFormCompleted(false); setSubmitted(false); setCompletedCustomerAction(null); setPendingCustomerAction(null); void showScreen('builder') }}/>} />
     </div>
   )
 }

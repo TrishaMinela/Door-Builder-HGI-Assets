@@ -12,8 +12,41 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true })
 const draft = { version: 1, configuration: { selectedDoorConfigurationType: 'single', styleId: doorStyles.find(item => item.code === 'F')!.id, doorLineId: '20-gauge-smooth-steel', sidelites: 'none', selectedFinishType: 'paint', selectedPaint: 'paint-black', jambType: 'timber', jambFinishType: 'paint', jambFinishColor: 'paint-black', hardwareId: hardwareOptions[0].id, doorSwingId: 'LHI' } }
 async function review(page: Page) {
   await page.getByRole('button', { name: 'Start Building Your Door', exact: true }).click()
-  for (let i = 0; i < 35 && await page.getByRole('button', { name: 'Next configuration step' }).count(); i++) await page.getByRole('button', { name: 'Next configuration step' }).click()
+  for (let i = 0; i < 35 && await page.getByRole('button', { name: 'Next configuration step' }).count(); i++) {
+    if (await page.getByRole('button', { name: 'Exit Dealer Mode', exact: true }).count()) assert.ok(await page.getByRole('region', { name: 'Dealer Mode status' }).isVisible(), 'Authenticated banner persists through configuration steps')
+    await page.getByRole('button', { name: 'Next configuration step' }).click()
+  }
   await page.getByRole('heading', { name: 'Configuration Summary', exact: true }).waitFor()
+}
+async function verifyBanner(page: Page, width: number, screen: string) {
+  const banner = page.getByRole('region', { name: 'Dealer Mode status' })
+  await banner.waitFor()
+  assert.equal(await banner.getByText('Dealer Mode', { exact: true }).count(), 1)
+  assert.equal(await banner.getByText('You’re using dealer convenience mode. Customer information requirements are bypassed.', { exact: true }).count(), 1)
+  assert.equal(await page.getByRole('button', { name: 'Exit Dealer Mode', exact: true }).count(), 1)
+  assert.equal(await page.locator('.shared-site-footer').getByRole('button', { name: /Dealer Mode/ }).count(), 0, 'No redundant footer exit control')
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForFunction(() => {
+    const slot = document.querySelector('.dealer-mode-banner-slot')!
+    return Math.abs(parseFloat(getComputedStyle(slot.parentElement!).getPropertyValue('--dealer-banner-height')) - slot.getBoundingClientRect().height) < 1
+  })
+  const bounds = await banner.boundingBox()
+  const button = await banner.getByRole('button', { name: 'Exit Dealer Mode' }).boundingBox()
+  const header = await page.locator('.app>header').boundingBox()
+  assert.ok(bounds && button && header)
+  assert.equal(bounds.x, 0); assert.equal(bounds.width, width)
+  assert.ok(header.y >= bounds.y + bounds.height - 1, 'Banner does not cover header')
+  const toolbarLocator = page.locator('.app>.builder-toolbar')
+  const toolbar = await toolbarLocator.count() ? await toolbarLocator.boundingBox() : null
+  if (toolbar) assert.ok(toolbar.y >= header.y + header.height - 1, 'Banner does not displace navigation over the header')
+  assert.ok(button.height >= 44 && button.x >= 0 && button.x + button.width <= width)
+  if (width > 600) assert.ok(button.x > width / 2, 'Desktop/tablet exit button is right aligned')
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+  await page.screenshot({ path: `${output}/banner-${screen}-${width}.png` })
+  await page.evaluate(() => window.scrollTo(0, 250))
+  await page.waitForFunction(() => Math.abs(document.querySelector('.dealer-mode-banner')!.getBoundingClientRect().top) < 1, undefined, { timeout: 5000 })
+  assert.ok(await banner.isVisible(), 'Status remains visible while scrolling')
+  await page.evaluate(() => window.scrollTo(0, 0))
 }
 try {
   for (const width of [1440, 820, 390]) {
@@ -36,6 +69,7 @@ try {
       await route.fulfill({ status: 200, json: { authenticated: expiry > Date.now(), expiresAt: expiry } })
     })
     await page.goto('http://127.0.0.1:5351/?testMode=true&dealerMode=true')
+    assert.equal(await page.getByRole('region', { name: 'Dealer Mode status' }).count(), 0, 'URL/storage cannot show the authenticated banner')
     assert.equal(await page.getByRole('switch', { name: 'Test current review experience' }).count(), 0)
     await review(page)
     await page.getByRole('button', { name: /Download.*PDF/i }).first().click()
@@ -63,6 +97,7 @@ try {
     await page.screenshot({ path: `${output}/modal-${width}.png` })
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await page.getByRole('button', { name: 'Exit Dealer Mode', exact: true }).waitFor()
+    await verifyBanner(page, width, 'review')
     assert.equal(logins, 2)
     const downloadWait = page.waitForEvent('download')
     await page.getByRole('button', { name: /Download.*PDF/i }).first().click()
@@ -70,9 +105,11 @@ try {
     assert.equal((await readFile((await download.path())!)).subarray(0, 5).toString(), '%PDF-')
     await page.getByRole('button', { name: 'Launch Door Visualizer', exact: true }).click()
     await page.getByText('Upload a photo of your entrance', { exact: true }).waitFor()
+    await verifyBanner(page, width, 'visualizer')
     failLogout = true
     await page.getByRole('button', { name: 'Exit Dealer Mode', exact: true }).click()
     await page.getByRole('button', { name: 'Retry sign-out', exact: true }).waitFor()
+    assert.equal(await page.getByRole('region', { name: 'Dealer Mode status' }).count(), 0, 'Banner disappears immediately even when logout needs retry')
     await page.evaluate(() => window.dispatchEvent(new Event('focus')))
     assert.equal(await page.locator('.dealer-mode-access>button').textContent(), 'Dealer Mode', 'Failed logout cannot silently re-enable local bypass')
     failLogout = false
@@ -88,11 +125,14 @@ try {
     await page.clock.setFixedTime(new Date(Date.now() + 31 * 60 * 1000))
     await page.reload()
     await page.getByRole('button', { name: 'Exit Dealer Mode', exact: true }).waitFor()
+    await verifyBanner(page, width, 'refreshed-home')
     await review(page)
+    await verifyBanner(page, width, 'refreshed-review')
     await page.clock.setSystemTime(new Date())
     expiry = Date.now() + 600
     await page.evaluate(() => window.dispatchEvent(new Event('focus')))
     await trigger.waitFor()
+    assert.equal(await page.getByRole('region', { name: 'Dealer Mode status' }).count(), 0, 'Expired authentication removes banner')
     // Also verify the action itself checks server expiry, not just the local timer.
     expiry = Date.now() - 1
     await page.getByRole('button', { name: /Download.*PDF/i }).first().click()
