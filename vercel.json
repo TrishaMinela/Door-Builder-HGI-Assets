@@ -38,6 +38,12 @@
       ]
     }
   ],
+  "rewrites": [
+    {
+      "source": "/:dealerSlug([a-z0-9-]+)",
+      "destination": "/index.html"
+    }
+  ],
   "functions": {
     "api/generate-door-visualization.ts": {
       "maxDuration": 180

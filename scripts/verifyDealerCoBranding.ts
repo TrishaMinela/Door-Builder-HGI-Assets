@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import dealerContext from '../api/dealer-context'
 import { dealerBrandStyle, dealerInitials, dealerLogo, isLightBrandColor } from '../src/utils/dealerBranding'
 import { dealerSlugFromPath, isValidDealerSlug } from '../src/utils/dealerSlug'
@@ -90,5 +91,8 @@ assert.deepEqual(dealerBrandStyle({ ...publicBrand, primaryColor: 'url(javascrip
   '--peacock': '#0d666c',
 })
 assert.equal(dealerBrandStyle({ ...publicBrand, primaryColor: '#f7e56b' })['--dealer-primary-foreground' as keyof ReturnType<typeof dealerBrandStyle>], '#101417')
+
+const vercelConfiguration = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8')) as { rewrites: Array<{ source: string; destination: string }> }
+assert.deepEqual(vercelConfiguration.rewrites, [{ source: '/:dealerSlug([a-z0-9-]+)', destination: '/index.html' }])
 
 console.info('Verified public-safe dealer branding lookup, slug isolation, inactive/missing handling, reserved paths, and branding fallbacks.')
