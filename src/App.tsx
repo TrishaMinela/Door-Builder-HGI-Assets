@@ -9,6 +9,9 @@ import { SubmissionConfirmation } from './components/SubmissionConfirmation'
 import { SiteFooter } from './components/SiteFooter'
 import { DealerMode, useDealerSession } from './components/DealerMode'
 import { DealerContextGate } from './components/DealerContextGate'
+import { DealerBrandMark } from './components/DealerBrandMark'
+import type { PublicDealerBrand } from './types/dealerBranding'
+import { dealerBrandStyle, isLightBrandColor } from './utils/dealerBranding'
 import { sortByDisplayLabel } from './utils/sortByDisplayLabel'
 import { validOptionId } from './utils/optionSelection'
 import { builderGroupForPage, builderGroupStart, type BuilderGroup } from './utils/builderNavigation'
@@ -425,7 +428,7 @@ function EmptyDoorPreview() {
   )
 }
 
-function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
+function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null; dealerBrand: PublicDealerBrand | null }) {
   const freshDoorStyleId = doorStyles.find(item => item.code === 'F')?.id ?? ''
   const [initialDraft] = useState(loadDoorBuilderDraft)
   const restoredDoorFinishId = initialDraft?.selectedFinishType === 'stain' ? initialDraft.selectedStain : initialDraft?.selectedFinishType === 'paint' ? initialDraft.selectedPaint : ''
@@ -437,6 +440,30 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   const [editReturnError, setEditReturnError] = useState('')
   const [visualizerSessionStarted, setVisualizerSessionStarted] = useState(false)
   const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>('home')
+
+  useEffect(() => {
+    if (!dealerBrand) return
+    const previousTitle = document.title
+    const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+    const previousCanonical = canonical?.href
+    let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]')
+    const createdRobots = !robots
+    if (!robots) {
+      robots = document.createElement('meta')
+      robots.name = 'robots'
+      document.head.appendChild(robots)
+    }
+    const previousRobots = robots.content
+    document.title = `${dealerBrand.companyName} | Home Guard Door Builder`
+    if (canonical) canonical.href = 'https://www.hgidoorbuilder.com/'
+    robots.content = 'noindex,follow'
+    return () => {
+      document.title = previousTitle
+      if (canonical && previousCanonical) canonical.href = previousCanonical
+      if (createdRobots) robots?.remove()
+      else if (robots) robots.content = previousRobots
+    }
+  }, [dealerBrand])
   const [step, setStep] = useState(0)
   const [selectedDoorConfigurationType, setSelectedDoorConfigurationType] = useState<DoorConfigurationType | ''>(initialDraft?.selectedDoorConfigurationType ?? '')
   const [styleId, setStyleId] = useState(initialDraft?.styleId || freshDoorStyleId)
@@ -1930,7 +1957,7 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
       const exactPreview = pdfProductRender?.configurationKey === pdfProductKey
         ? pdfProductRender.dataUrl
         : await renderConfiguredPdfProduct()
-      await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }, selectedDoorConfigurationType || 'single', exactPreview, isSavannahDoor ? DEFAULT_FRENCH_LOCK_PREP : isFrenchDoor ? doubleDoorLockPrep || DEFAULT_FRENCH_LOCK_PREP : null)
+      await downloadSummary(contact, product, style, selectedGrain, finish, configuredGlass, gridConfiguration, selectedHardware, selectedDoorSwing, sidelites || 'none', selectedSideliteStyle?.name ?? null, sideliteGlassConfiguration, { jambType: jambType || 'timber', jambFinishType: jambType === 'clad' ? 'clad' : jambFinish?.finishType ?? 'paint', jambFinishColor: jambFinish?.name ?? '', jambFinishOverridden, glassFrameFinishColor: supportsGlassFrameColor && appliedGlassFrameFinish ? appliedGlassFrameFinish.name : undefined }, selectedDoorConfigurationType || 'single', exactPreview, isSavannahDoor ? DEFAULT_FRENCH_LOCK_PREP : isFrenchDoor ? doubleDoorLockPrep || DEFAULT_FRENCH_LOCK_PREP : null, dealerBrand?.companyName)
     } catch (error) {
       setPdfError(error instanceof Error ? error.message : 'The configuration PDF could not be downloaded. Please retry.')
       throw error
@@ -2022,13 +2049,17 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
   }
 
   return (
-    <div className={`app builder-typography ${screen === 'home' ? 'home-app' : screen === 'visualizer' ? 'visualizer-app' : screen === 'customer-form' ? 'customer-form-app' : ''} ${screen === 'builder' && isVisualizerEditing ? 'visualizer-editing' : ''} ${screen === 'builder' && currentPage === 'review' && submitted ? 'review-confirmation-centered' : ''}`}>
+    <div
+      className={`app builder-typography ${screen === 'home' ? 'home-app' : screen === 'visualizer' ? 'visualizer-app' : screen === 'customer-form' ? 'customer-form-app' : ''} ${screen === 'builder' && isVisualizerEditing ? 'visualizer-editing' : ''} ${screen === 'builder' && currentPage === 'review' && submitted ? 'review-confirmation-centered' : ''} ${dealerBrand ? 'dealer-cobranded' : ''} ${dealerBrand && isLightBrandColor(dealerBrand.secondaryColor) ? 'dealer-secondary-light' : ''}`}
+      style={dealerBrand ? dealerBrandStyle(dealerBrand) : undefined}
+    >
       <div className="dealer-mode-banner-slot" ref={setDealerBannerTarget} />
       <header>
         <div className="brand">
           <button className="brand-home" type="button" aria-label="Go to home page" onClick={() => showScreen('home')}>
             <img src="/assets/branding/hgi-logo-black.webp" alt="Home Guard Industries Doors and Windows" />
           </button>
+          {dealerBrand && <DealerBrandMark brand={dealerBrand} onDarkBackground={!isLightBrandColor(dealerBrand.secondaryColor)} />}
           {screen !== 'home' && <span className="app-name"><strong>Home Guard Door Builder</strong></span>}
         </div>
         <div className="header-actions">
@@ -2287,11 +2318,11 @@ function DoorBuilderApp({ dealerSlug }: { dealerSlug: string | null }) {
         configurationKey={configuredDoorKey}
         doorConfiguration={currentDoorConfiguration}
       />}
-      <SiteFooter currentStep={feedbackStep} configuration={feedbackConfiguration} dealerAccess={<DealerMode session={dealerSession} bannerTarget={dealerBannerTarget} onExit={() => { setCustomerFormCompleted(false); setSubmitted(false); setCompletedCustomerAction(null); setPendingCustomerAction(null); void showScreen('builder') }}/>} />
+      <SiteFooter currentStep={feedbackStep} configuration={feedbackConfiguration} dealerBrand={dealerBrand} dealerAccess={<DealerMode session={dealerSession} bannerTarget={dealerBannerTarget} onExit={() => { setCustomerFormCompleted(false); setSubmitted(false); setCompletedCustomerAction(null); setPendingCustomerAction(null); void showScreen('builder') }}/>} />
     </div>
   )
 }
 
 export default function App() {
-  return <DealerContextGate>{(dealerSlug) => <DoorBuilderApp dealerSlug={dealerSlug}/>}</DealerContextGate>
+  return <DealerContextGate>{(dealerSlug, dealerBrand) => <DoorBuilderApp dealerSlug={dealerSlug} dealerBrand={dealerBrand}/>}</DealerContextGate>
 }

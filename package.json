@@ -14,6 +14,8 @@
     "test:visualization-download": "node --import tsx scripts/verifyVisualizationDownload.ts",
     "test:entrance-compatibility": "node --import tsx scripts/verifyEntranceCompatibility.ts",
     "test:submission": "node --import tsx scripts/verifySubmissionPayload.ts",
+    "test:dealer-cobranding": "node --import tsx scripts/verifyDealerCoBranding.ts",
+    "test:dealer-cobranding:ui": "node --import tsx scripts/verifyDealerCoBrandingUi.ts",
     "test:door-builder-draft": "node --import tsx scripts/verifyDoorBuilderDraft.ts",
     "test:dependent-door-defaults": "node --import tsx scripts/verifyDependentDoorDefaults.ts",
     "test:french-active-door": "node --import tsx scripts/verifyFrenchActiveDoor.ts",

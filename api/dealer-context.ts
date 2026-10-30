@@ -1,4 +1,4 @@
-import { DealerResolutionError, resolveDealerId } from '../server/dealerResolution'
+import { DealerResolutionError, resolveDealerBrand } from '../server/dealerResolution'
 
 type ApiRequest = { method?: string; query?: Record<string, string | string[] | undefined> }
 type ApiResponse = { status: (code: number) => ApiResponse; json: (body: unknown) => void; setHeader: (name: string, value: string) => void }
@@ -13,8 +13,9 @@ export default async function handler(request: ApiRequest, response: ApiResponse
 
   const slug = Array.isArray(request.query?.slug) ? request.query?.slug[0] : request.query?.slug
   try {
-    await resolveDealerId(slug)
-    response.status(200).json({ available: true })
+    const dealer = await resolveDealerBrand(slug)
+    response.setHeader('Cache-Control', 'private, no-store')
+    response.status(200).json({ available: true, dealer })
   } catch (error) {
     const status = error instanceof DealerResolutionError ? error.status : 502
     response.status(status).json({ error: status === 502 ? 'Dealer lookup is unavailable.' : 'This dealer link is unavailable.' })

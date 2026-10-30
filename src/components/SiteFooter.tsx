@@ -1,10 +1,13 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Globe, Mail, MapPin, Phone } from 'lucide-react'
 import { BetaFeedback } from './BetaFeedback'
+import { DealerBrandMark } from './DealerBrandMark'
+import type { PublicDealerBrand } from '../types/dealerBranding'
+import { isLightBrandColor } from '../utils/dealerBranding'
 
-type Props = { currentStep: string; configuration: Record<string, string>; dealerAccess?: ReactNode }
+type Props = { currentStep: string; configuration: Record<string, string>; dealerAccess?: ReactNode; dealerBrand?: PublicDealerBrand | null }
 
-export function SiteFooter({ currentStep, configuration, dealerAccess }: Props) {
+export function SiteFooter({ currentStep, configuration, dealerAccess, dealerBrand }: Props) {
   const footerRef = useRef<HTMLElement>(null)
   useEffect(() => {
     const footer = footerRef.current
@@ -35,7 +38,10 @@ export function SiteFooter({ currentStep, configuration, dealerAccess }: Props) 
   }, [currentStep])
 
   return <footer className="site-footer shared-site-footer" ref={footerRef}>
-    <a className="site-footer-logo" href="https://homeguardindustries.com" target="_blank" rel="noreferrer" aria-label="Home Guard Industries website"><img src="/assets/branding/hgi-logo-white.png" alt="Home Guard Industries" /></a>
+    <div className="site-footer-branding">
+      <a className="site-footer-logo" href="https://homeguardindustries.com" target="_blank" rel="noreferrer" aria-label="Home Guard Industries website"><img src="/assets/branding/hgi-logo-white.png" alt="Home Guard Industries" /></a>
+      {dealerBrand && <DealerBrandMark brand={dealerBrand} onDarkBackground={!isLightBrandColor(dealerBrand.secondaryColor)} compact />}
+    </div>
     <div className="site-footer-contact">
       <div className="site-footer-direct">
         <a href="tel:+18005251885" aria-label="Call Home Guard Industries at 1-800-525-1885"><Phone size={17}/><span>1-800-525-1885</span></a>

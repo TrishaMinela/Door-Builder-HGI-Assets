@@ -376,6 +376,7 @@ export async function generateSummaryPdf(
   doorConfigurationType: DoorConfigurationType = 'single',
   previewDataUrl?: string,
   doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null,
+  dealerCompanyName?: string,
 ) {
   assertCustomerFinish(finish)
   if (!previewDataUrl) throw new Error('The completed configured-door preview is required for PDF export.')
@@ -404,6 +405,12 @@ export async function generateSummaryPdf(
   pdf.setFontSize(10)
   pdf.setTextColor(...COLORS.teal)
   pdf.text(generatedDate, 145, 169)
+  if (dealerCompanyName) {
+    pdf.setFont(font, 'bold')
+    pdf.setFontSize(8)
+    pdf.setTextColor(...COLORS.teal)
+    pdf.text(`Presented by ${dealerCompanyName}`, 350, 169, { maxWidth: 190 })
+  }
   // The entry configuration is already listed in the left specification
   // column. Keep the right side exclusively for the configured-door image.
 
@@ -461,9 +468,9 @@ export async function generateSummaryPdf(
   return pdf
 }
 
-export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary, doorConfigurationType: DoorConfigurationType = 'single', previewDataUrl?: string, doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null) {
+export async function downloadSummary(contact: ContactForm, product: ResolvedDoorProduct, style: DoorStyle, grain: string | null, finish: Finish, glass: GlassOption | null, grid: GridConfiguration | null, hardware: HardwareOption, doorSwing: DoorSwing, sidelites: SideliteConfiguration, sideliteStyle: string | null, sideliteGlass: SideliteGlassConfiguration | null = null, jamb?: FinishSummary, doorConfigurationType: DoorConfigurationType = 'single', previewDataUrl?: string, doubleDoorLockPrep: DoubleDoorLockPrepCode | null = null, dealerCompanyName?: string) {
   if (!previewDataUrl) throw new Error('The completed configured-door preview is required for PDF export.')
-  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb, doorConfigurationType, previewDataUrl, doubleDoorLockPrep)
+  const pdf = await generateSummaryPdf(contact, product, style, grain, finish, glass, grid, hardware, doorSwing, sidelites, sideliteStyle, sideliteGlass, jamb, doorConfigurationType, previewDataUrl, doubleDoorLockPrep, dealerCompanyName)
   const blob = pdf.output('blob')
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

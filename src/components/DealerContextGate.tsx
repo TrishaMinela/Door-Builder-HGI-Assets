@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { dealerSlugFromPath } from '../utils/dealerSlug'
 import { SiteFooter } from './SiteFooter'
+import type { PublicDealerBrand } from '../types/dealerBranding'
 
-type Props = { children: (dealerSlug: string | null) => ReactNode }
+type Props = { children: (dealerSlug: string | null, dealerBrand: PublicDealerBrand | null) => ReactNode }
 type DealerState = 'checking' | 'available' | 'unavailable'
 
 function isUnsupportedBuilderPath(pathname: string) {
@@ -16,13 +17,26 @@ export function DealerContextGate({ children }: Props) {
     if (isUnsupportedBuilderPath(window.location.pathname)) return 'unavailable'
     return dealerSlug ? 'checking' : 'available'
   })
+  const [dealerBrand, setDealerBrand] = useState<PublicDealerBrand | null>(null)
 
   useEffect(() => {
     if (!dealerSlug) return
     const controller = new AbortController()
 
     void fetch(`/api/dealer-context?slug=${encodeURIComponent(dealerSlug)}`, { signal: controller.signal })
-      .then((response) => setState(response.ok ? 'available' : 'unavailable'))
+      .then(async (response) => {
+        if (!response.ok) {
+          setState('unavailable')
+          return
+        }
+        const result = await response.json() as { dealer?: PublicDealerBrand }
+        if (!result.dealer || result.dealer.slug !== dealerSlug) {
+          setState('unavailable')
+          return
+        }
+        setDealerBrand(result.dealer)
+        setState('available')
+      })
       .catch((error) => {
         if (error instanceof DOMException && error.name === 'AbortError') return
         setState('unavailable')
@@ -39,5 +53,5 @@ export function DealerContextGate({ children }: Props) {
     return <div className="shared-footer-shell builder-typography"><main className="dealer-link-state"><section><span>Home Guard Door Builder</span><h1>This dealer link is unavailable.</h1><p>Please check the link or visit the main Door Builder.</p><a href="/">Open the Door Builder</a></section></main><SiteFooter currentStep="dealer-link-unavailable" configuration={{}}/></div>
   }
 
-  return children(dealerSlug)
+  return children(dealerSlug, dealerBrand)
 }
