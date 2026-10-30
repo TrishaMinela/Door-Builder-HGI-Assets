@@ -1,4 +1,4 @@
-import { DealerResolutionError, resolveDealerBrand } from '../server/dealerResolution'
+import { DealerResolutionError, resolveDealerBrand } from '../server/dealerResolution.js'
 
 type ApiRequest = { method?: string; query?: Record<string, string | string[] | undefined> }
 type ApiResponse = { status: (code: number) => ApiResponse; json: (body: unknown) => void; setHeader: (name: string, value: string) => void }

@@ -94,5 +94,7 @@ assert.equal(dealerBrandStyle({ ...publicBrand, primaryColor: '#f7e56b' })['--de
 
 const vercelConfiguration = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8')) as { rewrites: Array<{ source: string; destination: string }> }
 assert.deepEqual(vercelConfiguration.rewrites, [{ source: '/:dealerSlug([a-z0-9-]+)', destination: '/index.html' }])
+const dealerContextSource = await readFile(new URL('../api/dealer-context.ts', import.meta.url), 'utf8')
+assert.match(dealerContextSource, /from '\.\.\/server\/dealerResolution\.js'/)
 
 console.info('Verified public-safe dealer branding lookup, slug isolation, inactive/missing handling, reserved paths, and branding fallbacks.')
