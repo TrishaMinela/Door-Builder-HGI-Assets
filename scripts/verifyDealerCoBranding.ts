@@ -83,12 +83,18 @@ assert.deepEqual(dealerBrandStyle(publicBrand), {
   '--dealer-primary-foreground': '#ffffff',
   '--dealer-secondary': dealer.secondary_color,
   '--peacock': dealer.primary_color,
+  '--green': dealer.primary_color,
+  '--gold': dealer.primary_color,
+  '--lime': dealer.primary_color,
 })
 assert.deepEqual(dealerBrandStyle({ ...publicBrand, primaryColor: 'url(javascript:bad)', secondaryColor: 'red;display:none' }), {
   '--dealer-primary': '#0d666c',
   '--dealer-primary-foreground': '#ffffff',
   '--dealer-secondary': '#05040b',
   '--peacock': '#0d666c',
+  '--green': '#0d666c',
+  '--gold': '#0d666c',
+  '--lime': '#0d666c',
 })
 assert.equal(dealerBrandStyle({ ...publicBrand, primaryColor: '#f7e56b' })['--dealer-primary-foreground' as keyof ReturnType<typeof dealerBrandStyle>], '#101417')
 
