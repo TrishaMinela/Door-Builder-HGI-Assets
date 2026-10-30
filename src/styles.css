@@ -1974,6 +1974,10 @@ body{overflow:hidden}
 .dealer-secondary-light>header .home-return{border-color:#10141755}
 .dealer-secondary-light>header .header-dealer-cta span{color:#101417}
 .dealer-cobranded :is(.start-building,.next,.submit-button,.visualizer-promo-copy button,.visualizer-download-button,.visualizer-apply-button,.wizard-navigation .wizard-continue){background:var(--dealer-primary);color:var(--dealer-primary-foreground)}
+.dealer-cobranded .header-dealer-cta a{border-color:var(--dealer-primary);background:var(--dealer-primary);color:var(--dealer-primary-foreground)}
+.dealer-cobranded :is(.option-card.selected,.glass-choice-card.selected,.hardware-option-card.selected){border-color:var(--dealer-primary);outline-color:var(--dealer-primary)}
+.dealer-cobranded :is(.stepper .active span,.check){box-shadow:0 0 0 3px color-mix(in srgb,var(--dealer-primary) 35%,transparent)}
+.dealer-cobranded :is(.visualizer-progress li.active,.hardware-finish-options button.selected .hardware-finish-color){border-color:var(--dealer-primary);outline-color:var(--dealer-primary)}
 .dealer-cobranded :is(button,a,input,textarea):focus-visible{outline-color:var(--dealer-primary)}
 @media(max-width:900px){
   .dealer-brand-name{display:none}

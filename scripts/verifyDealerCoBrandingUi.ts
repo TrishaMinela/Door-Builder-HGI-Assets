@@ -50,6 +50,7 @@ try {
     assert.match(await page.locator('header .dealer-brand-mark').getAttribute('aria-label') ?? '', /TEST Dealer/)
     assert.equal(await page.locator('header').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(240, 180, 41)')
     assert.equal(await page.locator('.start-building').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(36, 86, 166)')
+    assert.equal(await page.locator('.header-dealer-cta a').evaluate(element => getComputedStyle(element).color), 'rgb(255, 255, 255)')
     assert.equal(await page.locator('.site-footer').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(240, 180, 41)')
     assert.equal(await page.locator('.site-footer .dealer-brand-mark').count(), 1)
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)

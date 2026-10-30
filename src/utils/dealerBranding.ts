@@ -15,8 +15,6 @@ export function dealerBrandStyle(brand: PublicDealerBrand): CSSProperties {
     '--dealer-secondary': safeColor(brand.secondaryColor, '#05040b'),
     '--peacock': primary,
     '--green': primary,
-    '--gold': primary,
-    '--lime': primary,
   } as CSSProperties
 }
 
