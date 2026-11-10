@@ -3,7 +3,7 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypt
 type Request = { method?: string; body?: unknown; headers?: Record<string, string | string[] | undefined> }
 type Response = { status: (code: number) => Response; json: (body: unknown) => void; setHeader: (name: string, value: string) => void }
 const cookieName = '__Host-hgi-dealer'
-const ttl = 30 * 24 * 60 * 60
+const ttl = 24 * 60 * 60
 const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 const header = (req: Request, name: string) => typeof req.headers?.[name] === 'string' ? req.headers[name] as string : ''
 const attempts = new Map<string, { count: number; until: number }>()
@@ -70,9 +70,8 @@ export default async function handler(req: Request, res: Response) {
     const expiresAt = Date.now() + ttl * 1000
     const payload = `v1.${expiresAt}.${randomBytes(16).toString('hex')}`
     const id = `${payload}.${sign(payload)}`
-    // Persistent device cookie. Closing the tab or browser keeps Dealer Mode
-    // until Exit Dealer Mode or this absolute expiry. GET checks do not renew it.
-    res.setHeader('Set-Cookie', `${cookieName}=${id}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${ttl}`)
+    // Browser-session cookie; absolute server expiry still bounds restored/copied tokens.
+    res.setHeader('Set-Cookie', `${cookieName}=${id}; Path=/; HttpOnly; Secure; SameSite=Strict`)
     res.status(200).json({ authenticated: true, expiresAt })
   } catch {
     res.status(503).json({ error: 'Dealer Mode is unavailable. Please try again later.' })

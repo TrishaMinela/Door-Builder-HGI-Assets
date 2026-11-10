@@ -31,13 +31,13 @@ Plain Vite does not serve this Vercel endpoint; local UI tests mock it.
 
 - HMAC-SHA256 signed token containing version, expiry and random nonce; no password
   or customer data. Signature/password comparisons are constant-time.
-- `__Host-hgi-dealer`: Secure, HttpOnly, SameSite=Strict, Path=/, Max-Age of 30
-  days. The password is checked only on the server. The cookie holds a signed
-  expiry, not the password, and JavaScript cannot read it. Closing the tab or
-  browser keeps Dealer Mode on that device until Exit Dealer Mode or the 30-day
-  expiry. There is no short inactivity timeout. GET checks do not renew that
-  maximum. Responses are no-store. After 30 days, enter the password again.
-- Refresh preserves authenticated access. Use Exit Dealer Mode on a shared machine.
+- `__Host-hgi-dealer`: Secure, HttpOnly, SameSite=Strict, Path=/; browser-session
+  cookie with no persistent Max-Age or Expires on login. Server validity lasts
+  24 hours from authentication, with no short inactivity timeout. GET checks do not
+  renew that maximum. Responses are no-store. After 24 hours, sign in again.
+- Refresh preserves authenticated access. Some browsers restore session cookies
+  after closing/reopening; browser closure is not a guarantee of logout. Use Exit
+  Dealer Mode on shared machines.
 - Signatures bind to the password, signing secret and allowed origin. Rotating
   either credential invalidates earlier sessions once deployment receives the new
   environment configuration.
