@@ -2172,7 +2172,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
           })}
         </nav>
         {!(currentPage === 'review' && submitted) && <div className="preview-toolbar">
-          {currentPage !== 'review' && <button type="button" className="preview-reset-design preview-toolbar-reset" aria-label="Reset Design" title="Reset Design" onClick={resetDesign}><RotateCcw size={19} /></button>}
+          {currentPage !== 'review' && <button type="button" className="preview-reset-design preview-toolbar-reset" aria-label="Restart Build" title="Restart Build" onClick={resetDesign}><RotateCcw size={19} /><span>Restart Build</span></button>}
           {selectedStyle && <div className="preview-view-toggle" role="group" aria-label="Preview view">
             {previewModes.map((view) => <button type="button" className={builderPreviewView === view ? 'active' : ''} aria-pressed={builderPreviewView === view} key={view} onClick={() => setBuilderPreviewView(view)}>{view}</button>)}
           </div>}
@@ -2180,7 +2180,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
       </div>
       <main>
         {currentStep !== 'Review & Quote' && <div className="mobile-live-preview">
-          <button type="button" className="preview-reset-design" aria-label="Reset Design" title="Reset Design" onClick={resetDesign}><RotateCcw size={19} /></button>
+          <button type="button" className="preview-reset-design" aria-label="Restart Build" title="Restart Build" onClick={resetDesign}><RotateCcw size={19} /><span>Restart Build</span></button>
           {selectedStyle && <div className="preview-view-toggle mobile-preview-view-toggle" role="group" aria-label="Preview view">
             {previewModes.map((view) => <button type="button" className={builderPreviewView === view ? 'active' : ''} aria-pressed={builderPreviewView === view} key={view} onClick={() => setBuilderPreviewView(view)}>{view}</button>)}
           </div>}

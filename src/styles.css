@@ -2988,21 +2988,29 @@ body,.home-page,.builder-panel,.visualizer-page{background:var(--page)}
 
 /* Reset replaces the preview label; mobile keeps it in the same preview corner. */
 .preview-reset-design{
-  width:34px;
+  width:auto;
   height:34px;
-  border:0;
-  border-radius:0;
-  padding:0;
-  display:grid;
-  place-items:center;
-  background:transparent;
+  border:1px solid #0d666c;
+  border-radius:4px;
+  padding:0 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  background:#fff;
   color:var(--peacock);
+  font-size:12px;
+  font-weight:700;
+  line-height:1;
+  white-space:nowrap;
   box-shadow:none;
 }
-.preview-reset-design svg{display:block;transition:transform .25s ease}
+.preview-reset-design span{display:inline}
+.preview-reset-design svg{display:block;flex:none;transition:transform .25s ease}
+.preview-reset-design:hover{background:#edf7f7}
 .preview-reset-design:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 @media(max-width:900px){
-  .mobile-live-preview>.preview-reset-design{position:absolute;top:9px;left:9px;z-index:30;width:34px;height:34px}
+  .mobile-live-preview>.preview-reset-design{position:absolute;top:auto;right:auto;bottom:8px;left:8px;z-index:30;width:auto;height:34px;padding:0 10px;background:#fff}
 }
 
 /* A single restrained segmented control for preview mode. */
