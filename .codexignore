@@ -1,0 +1,6 @@
+# Codex counterpart of .cursorignore.
+# Keep product photos in git. The site serves them.
+# Skip them, the build output, and the old glass-update note.
+public/assets
+dist
+.codex-glass-update-report.json
