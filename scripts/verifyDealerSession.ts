@@ -29,8 +29,8 @@ try {
   const login = await invoke('POST', { password: process.env.DEALER_MODE_PASSWORD })
   assert.equal(login.status, 200)
   const cookie = login.headers['Set-Cookie'].split(';')[0]
-  assert.match(login.headers['Set-Cookie'], /HttpOnly; Secure; SameSite=Strict/)
-  assert.doesNotMatch(login.headers['Set-Cookie'], /Max-Age|Expires/i, 'Login uses a nonpersistent browser-session cookie')
+  assert.match(login.headers['Set-Cookie'], /Path=\/; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000/, 'Persistent cookie survives closing the browser for 30 days')
+  assert.doesNotMatch(login.headers['Set-Cookie'], /Domain=/i, 'Host-only cookie has no Domain attribute')
   assert.equal((await invoke('GET', undefined, cookie)).status, 200)
   assert.deepEqual((await invoke('GET', undefined, cookie)).data, login.data)
   assert.equal((await invoke('GET', undefined, cookie)).headers['Set-Cookie'], undefined, 'Checks do not extend cookie lifetime')
@@ -51,8 +51,14 @@ try {
   process.env.DEALER_MODE_SESSION_SECRET = secret
   for (let i = 0; i < 5; i++) await invoke('POST', { password: 'wrong' })
   assert.equal((await invoke('POST', { password: process.env.DEALER_MODE_PASSWORD })).status, 429)
-  now += 24 * 60 * 60 * 1000
-  assert.deepEqual((await invoke('GET', undefined, cookie)).data, { authenticated: false }, 'Absolute expiry is enforced by server clock')
+  const expiresAt = (login.data as { expiresAt: number }).expiresAt
+  now = expiresAt - 24 * 60 * 60 * 1000
+  assert.deepEqual((await invoke('GET', undefined, cookie)).data, login.data, 'Session remains authenticated on day 29')
+  assert.equal((await invoke('GET', undefined, cookie)).headers['Set-Cookie'], undefined, 'A day-29 check does not renew the cookie')
+  now = expiresAt
+  assert.deepEqual((await invoke('GET', undefined, cookie)).data, { authenticated: false }, 'Session expires at 30 days')
+  now = expiresAt + 24 * 60 * 60 * 1000
+  assert.deepEqual((await invoke('GET', undefined, cookie)).data, { authenticated: false }, 'Session stays expired after 30 days')
   assert.equal((await invoke('POST', { password })).status, 200, 'Rate window expires')
   process.env.DEALER_MODE_SESSION_SECRET = 'weak'
   assert.equal((await invoke()).status, 503)
@@ -60,5 +66,5 @@ try {
   delete process.env.DEALER_MODE_PASSWORD
   assert.equal((await invoke()).status, 503)
   assert.equal(networkCalls, 0)
-  console.log('PASS stateless Dealer session: password rejection, CSRF, signed cookie, tamper rejection, expiry, logout, rotation, local rate limit, missing/weak secrets; zero external calls. Copied-token logout limitation explicitly verified.')
+  console.log('PASS stateless Dealer session: password rejection, CSRF, signed 30-day cookie, tamper rejection, day-29 persistence, 30-day expiry, logout, rotation, local rate limit, missing/weak secrets; zero external calls. Copied-token logout limitation explicitly verified.')
 } finally { globalThis.fetch = originalFetch; Date.now = originalNow; process.env = env }

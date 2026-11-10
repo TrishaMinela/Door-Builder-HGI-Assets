@@ -31,13 +31,15 @@ Plain Vite does not serve this Vercel endpoint; local UI tests mock it.
 
 - HMAC-SHA256 signed token containing version, expiry and random nonce; no password
   or customer data. Signature/password comparisons are constant-time.
-- `__Host-hgi-dealer`: Secure, HttpOnly, SameSite=Strict, Path=/; browser-session
-  cookie with no persistent Max-Age or Expires on login. Server validity lasts
-  24 hours from authentication, with no short inactivity timeout. GET checks do not
-  renew that maximum. Responses are no-store. After 24 hours, sign in again.
-- Refresh preserves authenticated access. Some browsers restore session cookies
-  after closing/reopening; browser closure is not a guarantee of logout. Use Exit
-  Dealer Mode on shared machines.
+- `__Host-hgi-dealer`: Secure, HttpOnly, SameSite=Strict, Path=/, Max-Age of 30
+  days, and no Domain attribute. The password is checked only on the server. The
+  cookie holds a signed expiry, not the password, and JavaScript cannot read it.
+  Closing the tab or browser keeps Dealer Mode on that device until Exit Dealer
+  Mode or the 30-day expiry. There is no short inactivity timeout. GET checks do
+  not renew that maximum. Responses are no-store. After 30 days, enter the
+  password again.
+- Refresh preserves authenticated access. The persistent cookie also preserves it
+  after the browser is closed and reopened. Use Exit Dealer Mode on a shared machine.
 - Signatures bind to the password, signing secret and allowed origin. Rotating
   either credential invalidates earlier sessions once deployment receives the new
   environment configuration.
@@ -68,10 +70,12 @@ Trusted IP behavior: [Vercel request headers](https://vercel.com/docs/headers/re
 
 Authentication tests use random test-only secrets and assert zero external calls.
 Coverage: wrong passwords, forged/tampered signatures, CSRF, cookie attributes,
-expiry, persistence beyond 30 minutes, credential rotation, logout, copied-token limitation, local limits and
+persistence beyond 30 minutes, authentication on day 29, expiry at 30 days and
+after that, credential rotation, logout, copied-token limitation, local limits and
 missing/weak secrets. Existing mocked customer/dealer UI tests cover responsive
-modal/focus, form gates, refresh, PDF downloads, Visualizer entry, logout, sign-out
-failure and expiry without creating leads or making paid AI calls.
+modal/focus, form gates, refresh, a 30-day session that stays visible past the
+next timer tick, PDF downloads, Visualizer entry, logout, sign-out failure and
+expiry without creating leads or making paid AI calls.
 
 Do not commit/push/deploy until secrets are securely configured and checks pass.
 After deployment, perform non-billable login/logout and customer-gate smoke checks;

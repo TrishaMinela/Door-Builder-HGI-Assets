@@ -30,8 +30,20 @@ export function useDealerSession() {
   useEffect(() => { void request() }, [request])
   useEffect(() => {
     if (!expiresAt) return
-    const timer = window.setTimeout(() => { ++epoch.current; setExpiresAt(0) }, Math.max(0, expiresAt - Date.now()))
-    return () => clearTimeout(timer)
+    // Delays above 2^31-1 do not fit in setTimeout and fire on the next tick.
+    const maxDelay = 2147483647
+    let timer = 0
+    const arm = () => {
+      const remaining = expiresAt - Date.now()
+      if (remaining <= 0) {
+        ++epoch.current
+        setExpiresAt(0)
+        return
+      }
+      timer = window.setTimeout(arm, Math.min(remaining, maxDelay))
+    }
+    arm()
+    return () => window.clearTimeout(timer)
   }, [expiresAt])
   useEffect(() => {
     const check = () => { if (document.visibilityState === 'visible') void request() }

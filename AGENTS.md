@@ -47,7 +47,7 @@ This is not only a static site. `api/` is a set of Vercel functions. The browser
 
 A **Dealer Mode** button at the bottom of the page asks for one shared password. The browser posts that password to `/api/dealer-session`. The function compares it with `DEALER_MODE_PASSWORD` and sets an HttpOnly cookie named `__Host-hgi-dealer`. The password is not in the JavaScript bundle and must not be written to localStorage. A localStorage or URL flag does not unlock the mode.
 
-On this branch the cookie is a browser-session cookie. The signed token lasts 24 hours and is not renewed by later page loads. Closing the browser often asks for the password again. **Exit Dealer Mode** clears the cookie. Details and the required secrets are in `docs/maintenance/dealer-mode-setup.md`.
+On this branch the cookie lasts 30 days on the device. The signed token is not renewed by later page loads. Closing the browser keeps Dealer Mode until Exit Dealer Mode or the 30-day expiry. **Exit Dealer Mode** clears the cookie. Details and the required secrets are in `docs/maintenance/dealer-mode-setup.md`.
 
 `DEALER_MODE_SESSION_SECRET` is a separate 64-character hex secret. Optional `DEALER_MODE_ORIGIN` defaults to `https://www.hgidoorbuilder.com`. Plain `npm run dev` does not serve this function.
 
