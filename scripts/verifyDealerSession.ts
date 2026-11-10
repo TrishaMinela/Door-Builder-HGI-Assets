@@ -30,7 +30,7 @@ try {
   assert.equal(login.status, 200)
   const cookie = login.headers['Set-Cookie'].split(';')[0]
   assert.match(login.headers['Set-Cookie'], /HttpOnly; Secure; SameSite=Strict/)
-  assert.match(login.headers['Set-Cookie'], /Max-Age=2592000/, 'Login persists on this device for 30 days')
+  assert.doesNotMatch(login.headers['Set-Cookie'], /Max-Age|Expires/i, 'Login uses a nonpersistent browser-session cookie')
   assert.equal((await invoke('GET', undefined, cookie)).status, 200)
   assert.deepEqual((await invoke('GET', undefined, cookie)).data, login.data)
   assert.equal((await invoke('GET', undefined, cookie)).headers['Set-Cookie'], undefined, 'Checks do not extend cookie lifetime')
@@ -51,9 +51,7 @@ try {
   process.env.DEALER_MODE_SESSION_SECRET = secret
   for (let i = 0; i < 5; i++) await invoke('POST', { password: 'wrong' })
   assert.equal((await invoke('POST', { password: process.env.DEALER_MODE_PASSWORD })).status, 429)
-  now += 29 * 24 * 60 * 60 * 1000
-  assert.deepEqual((await invoke('GET', undefined, cookie)).data, login.data, 'Session remains authenticated until the 30-day expiry')
-  now += 2 * 24 * 60 * 60 * 1000
+  now += 24 * 60 * 60 * 1000
   assert.deepEqual((await invoke('GET', undefined, cookie)).data, { authenticated: false }, 'Absolute expiry is enforced by server clock')
   assert.equal((await invoke('POST', { password })).status, 200, 'Rate window expires')
   process.env.DEALER_MODE_SESSION_SECRET = 'weak'
