@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, Download, ExternalLink, Eye, FileText, HelpCircle, Home as HomeIcon, RotateCcw, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview, type DoorPreviewProps } from './components/DoorPreview'
 import { DoorStyleCard } from './components/DoorStyleCard'
@@ -525,6 +525,12 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
     }
     wasDealer.current = dealerMode
   }, [dealerMode])
+  useLayoutEffect(() => {
+    if (screen !== 'customer-form' || !submitted || completedCustomerAction !== 'open-visualizer') return
+    window.scrollTo({ top: 0, behavior: 'instant' })
+    document.querySelector('.customer-form-page')?.scrollTo({ top: 0, behavior: 'instant' })
+    document.getElementById('customer-form-title')?.focus({ preventScroll: true })
+  }, [screen, submitted, completedCustomerAction])
   const [builderPreviewView, setBuilderPreviewView] = useState<'Exterior' | 'Interior' | 'Both'>('Exterior')
   const [pdfProductRender, setPdfProductRender] = useState<{ configurationKey: string; dataUrl: string } | null>(null)
   const [pdfError, setPdfError] = useState('')
@@ -2151,13 +2157,13 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
           </div> : completedCustomerAction === 'open-visualizer' ? <div className="success visualizer-form-confirmation visualizer-home-success-card">
             <div className="visualizer-confirmation-layout">
               <div className="visualizer-confirmation-intro">
-                <span className="visualizer-success-indicator"><Check size={32} /></span>
-                <small>Information received</small>
-                <h1 id="customer-form-title">Your door is ready to view on your home.</h1>
-                <p>Next, upload a photo of your entrance. We’ll guide you through positioning your configured door on the picture.</p>
+                <span className="visualizer-success-indicator" aria-hidden="true"><Check size={24} /></span>
+                <span className="form-screen-eyebrow">INFORMATION RECEIVED</span>
+                <h1 id="customer-form-title" tabIndex={-1}>Your Door Is Ready to Visualize</h1>
+                <p>Your door configuration has been received. Next, upload a photo of your entrance to see how your selected door could look on your home.</p>
+                <button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} aria-hidden="true" /> Continue to Home Visualizer <ArrowRight size={17} aria-hidden="true" /></button>
               </div>
               <div className="visualizer-confirmation-graphic"><img src="/assets/visualizer/view-on-your-home-tablet.webp" alt="A configured door visualized on a home entrance" /></div>
-              <div className="visualizer-confirmation-action"><strong>See your configured door on your own entryway</strong><span>Have a clear photo of your entrance ready.</span><button className="post-submit-visualizer-button" type="button" onClick={() => showScreen('visualizer')}><Eye size={19} /> Continue to Home Visualizer <ArrowRight size={17} /></button></div>
             </div>
           </div> : <SubmissionConfirmation fullName={contact.fullName} onContinue={() => showScreen('visualizer')} onReview={() => { setSubmitted(false); setCompletedCustomerAction(null); goTo(pages.indexOf('review')); showScreen('builder') }} />}
         </section>

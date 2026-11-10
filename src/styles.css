@@ -72,21 +72,22 @@
 .visualizer-confirmation-action>strong{color:var(--black);font-size:13px}
 .visualizer-confirmation-action>span{margin-top:5px;color:#667176;font-size:10px}
 .visualizer-form-confirmation .post-submit-visualizer-button{display:inline-flex;align-items:center;justify-content:center;gap:10px}
-.customer-form-screen.visualizer-success-screen{width:min(100%,1160px)}
-.visualizer-home-success-card{max-width:1160px;padding:clamp(26px,3vw,42px);text-align:left}
-.visualizer-confirmation-layout{min-height:clamp(430px,calc(100dvh - 290px),590px);display:grid;grid-template-columns:minmax(0,43fr) minmax(0,57fr);grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"graphic intro" "graphic action";column-gap:clamp(34px,5vw,72px);align-items:center}
-.visualizer-confirmation-intro{grid-area:intro;align-self:end;min-width:0;padding-top:8px}
-.visualizer-success-indicator{width:62px;height:62px;margin:0 0 18px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:var(--black)}
-.visualizer-confirmation-intro small{display:block;color:var(--peacock);font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
-.visualizer-home-success-card .visualizer-confirmation-intro h1{max-width:570px;margin:9px 0 12px;font-size:clamp(30px,3.2vw,46px);line-height:1.06}
-.visualizer-confirmation-intro>p{max-width:570px;margin:0;color:#59666a;font-size:13px;line-height:1.6}
-.visualizer-home-success-card .visualizer-confirmation-graphic{grid-area:graphic;width:100%;max-width:none;margin:0;padding:clamp(14px,2vw,24px);display:grid;place-items:center}
-.visualizer-home-success-card .visualizer-confirmation-graphic img{width:100%;max-height:min(52dvh,460px)}
-.visualizer-home-success-card .visualizer-confirmation-action{grid-area:action;align-self:start;width:100%;max-width:570px;margin:18px 0 0;padding:18px 0 0;text-align:left}
-.visualizer-home-success-card .post-submit-visualizer-button{margin:20px 0 0}
+.customer-form-screen.visualizer-success-screen{width:min(100%,1000px);margin:0 auto}
+.visualizer-home-success-card{max-width:1000px;padding:clamp(22px,2.6vw,32px);text-align:left}
+.visualizer-confirmation-layout{min-height:0;display:grid;grid-template-columns:minmax(220px,.9fr) minmax(0,1.1fr);grid-template-areas:"graphic copy";column-gap:clamp(24px,3.2vw,44px);align-items:center}
+.visualizer-confirmation-intro{grid-area:copy;align-self:center;min-width:0;display:flex;flex-direction:column;align-items:flex-start;padding-top:0}
+.visualizer-success-indicator{width:48px;height:48px;margin:0 0 12px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:var(--black)}
+.visualizer-confirmation-intro .form-screen-eyebrow{margin-bottom:6px}
+.visualizer-home-success-card .visualizer-confirmation-intro h1{max-width:16em;margin:0 0 10px;line-height:1.15}
+.visualizer-confirmation-intro>p{max-width:42em;margin:0;color:#536267;line-height:1.55}
+.visualizer-home-success-card .visualizer-confirmation-graphic{grid-area:graphic;width:100%;max-width:none;margin:0;padding:14px;display:grid;place-items:center;align-self:center;background:#f3f8f8;border:1px solid #d5e3e3}
+.visualizer-home-success-card .visualizer-confirmation-graphic img{width:100%;max-height:260px;object-fit:contain}
+.visualizer-home-success-card .visualizer-confirmation-intro .post-submit-visualizer-button{align-self:stretch;width:100%;min-width:0;margin:16px 0 0;padding:0 22px;border:1px solid var(--peacock);background:var(--peacock);color:#fff;opacity:1;animation:none;white-space:normal;text-align:center}
+.visualizer-home-success-card .post-submit-visualizer-button::after{animation:none;opacity:1;transform:none;inset:-3px;border-radius:6px}
 @media(min-width:701px){.customer-form-app>.customer-form-page{height:100%;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:thin;scrollbar-color:#0d666c55 transparent}.customer-form-app .customer-form-screen{padding-block:8px 24px}}
 @media(max-width:700px){.customer-form-page{min-height:calc(100dvh - 76px);padding:24px 16px calc(var(--mobile-footer-height,70px) + 28px + env(safe-area-inset-bottom))}.customer-form-screen{width:100%;margin:auto}.customer-form-screen>.back{margin-bottom:12px}}
-@media(max-width:760px){.visualizer-home-success-card{padding:24px 16px 30px;text-align:center}.visualizer-confirmation-layout{min-height:0;display:grid;grid-template-columns:1fr;grid-template-rows:auto auto auto;grid-template-areas:"intro" "graphic" "action";gap:0}.visualizer-confirmation-intro{align-self:auto;padding:0}.visualizer-success-indicator{margin:0 auto 16px}.visualizer-home-success-card .visualizer-confirmation-intro h1{margin:9px auto 11px;font-size:clamp(28px,9vw,38px)}.visualizer-confirmation-intro>p{margin:0 auto}.visualizer-home-success-card .visualizer-confirmation-graphic{margin:20px auto 0;padding:10px}.visualizer-home-success-card .visualizer-confirmation-graphic img{max-height:220px}.visualizer-home-success-card .visualizer-confirmation-action{margin:18px auto 0;padding:16px 0 0;text-align:center}.visualizer-home-success-card .post-submit-visualizer-button{width:100%;margin:20px 0 0}}
+@media(max-width:760px){.visualizer-home-success-card{padding:22px 16px 24px;text-align:center}.visualizer-confirmation-layout{min-height:0;grid-template-columns:1fr;grid-template-areas:"copy" "graphic";row-gap:18px;column-gap:0}.visualizer-confirmation-intro{align-items:center;padding:0}.visualizer-success-indicator{margin:0 auto 12px}.visualizer-home-success-card .visualizer-confirmation-intro h1{max-width:18em;margin:0 auto 10px}.visualizer-confirmation-intro>p{margin:0 auto}.visualizer-home-success-card .visualizer-confirmation-graphic{margin:0 auto;padding:10px}.visualizer-home-success-card .visualizer-confirmation-graphic img{max-height:180px}.visualizer-home-success-card .visualizer-confirmation-intro .post-submit-visualizer-button{align-self:stretch;width:100%;min-width:0;margin:16px 0 0}}
+@media(max-width:900px){.app.customer-form-app:has(.visualizer-home-success-card){display:flex;flex-direction:column;min-height:100dvh}.app.customer-form-app:has(.visualizer-home-success-card)>.customer-form-page{flex:1 0 auto;margin-top:var(--mobile-header-height);padding-top:16px;padding-bottom:28px;min-height:0}}
 @media(max-width:700px){.visualizer-form-guide{grid-template-columns:1fr;padding:14px}.visualizer-form-guide img{max-height:170px}.visualizer-form-confirmation{padding:24px 16px 30px}.visualizer-confirmation-graphic{padding:10px}.visualizer-confirmation-graphic img{max-height:220px}.visualizer-confirmation-action{padding:16px 0 0}.visualizer-form-confirmation .post-submit-visualizer-button{width:100%}}
 @media(min-width:901px){
   .app:not(.home-app) .builder-panel.review-step{min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding-bottom:40px;scrollbar-width:thin;scrollbar-color:#0d666c55 transparent}
