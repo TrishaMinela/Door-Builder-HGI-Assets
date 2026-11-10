@@ -1,0 +1,5 @@
+# Keep product photos in git. The site serves them.
+# Coding tools should not scan them when making a small edit.
+public/assets
+dist
+.codex-glass-update-report.json
