@@ -60,7 +60,7 @@ try {
       if (route.request().method() === 'POST') {
         logins++
         if (route.request().postDataJSON().password !== 'mock-only') { await route.fulfill({ status: 401, json: { error: 'Incorrect password' } }); return }
-        expiry = Date.now() + 24 * 60 * 60 * 1000
+        expiry = Date.now() + 30 * 24 * 60 * 60 * 1000
       }
       if (route.request().method() === 'DELETE') {
         if (failLogout) { await route.fulfill({ status: 503, json: { error: 'Mock store failure' } }); return }
@@ -97,6 +97,9 @@ try {
     await page.screenshot({ path: `${output}/modal-${width}.png` })
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await page.getByRole('button', { name: 'Exit Dealer Mode', exact: true }).waitFor()
+    assert.ok(expiry - Date.now() > 29 * 24 * 60 * 60 * 1000, 'Mock session lasts 30 days')
+    await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 100)))
+    assert.equal(await page.getByRole('region', { name: 'Dealer Mode status' }).count(), 1, 'A 30-day session is not cleared on the next timer tick')
     await verifyBanner(page, width, 'review')
     assert.equal(logins, 2)
     const downloadWait = page.waitForEvent('download')
@@ -138,7 +141,7 @@ try {
     await page.getByRole('button', { name: /Download.*PDF/i }).first().click()
     await page.getByRole('heading', { name: 'Complete Your Information', exact: true }).waitFor()
     assert.equal(submissions, 0, 'No dealer journey creates a lead')
-    console.log(`PASS ${width}: customer gates/reload, URL/storage ignored, cancel/Escape/focus, wrong/correct password, dealer PDF/Visualizer, logout, authenticated refresh, expired-session gate.`)
+    console.log(`PASS ${width}: customer gates/reload, URL/storage ignored, cancel/Escape/focus, wrong/correct password, dealer PDF/Visualizer, logout, 30-day session stays up, authenticated refresh, expired-session gate.`)
     await page.close()
   }
 } finally { await browser.close(); await server.close() }
