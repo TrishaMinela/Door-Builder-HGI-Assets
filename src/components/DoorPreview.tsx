@@ -12,6 +12,7 @@ import { resolveSidelitePosition } from '../data/sideliteConfigurations'
 import { doorHandingSides, oppositeDoorSide } from '../data/doorHanding'
 import { doorStyleDisplayName, glassDisplayName } from '../data/productDisplayNames'
 import { renderSslRelief } from '../utils/sideliteRelief'
+import { DIVIDED_LITE_GLASS_ID, dividedLiteMuntinArtwork } from '../utils/dividedLiteMuntins'
 import { FINISH_RENDERING, darkFinishStrength, renderDarkFinishSurface } from '../utils/finishDetail'
 export { FINISH_RENDERING } from '../utils/finishDetail'
 
@@ -311,10 +312,12 @@ export function buildPreviewMasks(mask: HTMLImageElement, slab: HTMLImageElement
   return { finishUrl, glassUrl, glassFrameUrl: vectorMasks?.frameUrl, glassBounds, glassRegions: frameRegions, maskWidth: canvas.width, maskHeight: canvas.height }
 }
 
-export function fitGlassOverlayToMask(overlay: HTMLImageElement, width: number, height: number, maskBounds: PixelBounds, offsetY = 0, maskRegions?: PixelBounds[], edgeOverlapPx = GLASS_EDGE_OVERLAP_PX, containWithinMask = false, stretchToMaskWidth = false, stretchToMaskHeight = false, alignmentReference?: HTMLImageElement) {
+export function fitGlassOverlayToMask(overlay: HTMLImageElement | HTMLCanvasElement, width: number, height: number, maskBounds: PixelBounds, offsetY = 0, maskRegions?: PixelBounds[], edgeOverlapPx = GLASS_EDGE_OVERLAP_PX, containWithinMask = false, stretchToMaskWidth = false, stretchToMaskHeight = false, alignmentReference?: HTMLImageElement) {
+  const sourceWidth = overlay instanceof HTMLCanvasElement ? overlay.width : overlay.naturalWidth
+  const sourceHeight = overlay instanceof HTMLCanvasElement ? overlay.height : overlay.naturalHeight
   const sourceCanvas = document.createElement('canvas')
-  sourceCanvas.width = overlay.naturalWidth
-  sourceCanvas.height = overlay.naturalHeight
+  sourceCanvas.width = sourceWidth
+  sourceCanvas.height = sourceHeight
   const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently: true })
   if (!sourceContext) return null
   sourceContext.imageSmoothingEnabled = true
@@ -518,6 +521,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const compatibleGlass = isGlassCapable ? glassOptions.filter((option) => styleCodes.some((code) => option.overlaysByDoorStyle[code])) : []
   const previewGlass = glass && compatibleGlass.some((option) => option.id === glass.id) ? glass : null
   const glassOverlay = previewGlass ? styleCodes.map((code) => previewGlass.overlaysByDoorStyle[code]).find(Boolean) : undefined
+  const dividedLiteMuntinColor = previewGlass?.id === DIVIDED_LITE_GLASS_ID && applyFinish ? finishColor : ''
   const isHrtClearGlass = isHrtDoor && previewGlass?.id === 'hrt-clear-s11rt'
   const gridGlassUsesClearBase = previewGlass?.id === 'f-clear-grids' || previewGlass?.id === 'f48-clear-grids' || previewGlass?.id === 's-clear-grids' || Boolean(previewGlass?.orderingCodes?.includes('EXTG'))
   const clearNoGridGlass = glassOptions.find((option) => option.id === (maskCode === 'S' ? 's-clear-no-grids' : maskCode === 'F48' || maskCode === 'F482' ? 'f48-clear-no-grids' : 'f-clear-no-grids'))
@@ -529,13 +533,13 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const alignF48Grid = maskCode === 'F48' && previewGlass?.id === 'f48-clear-grids' && /\/F48INT\d+L/.test(glassOverlay ?? '')
   const fitClearBase = maskCode === 'F482' || alignF48Grid
   const gridAlignmentReference = alignF48Grid ? clearNoGridOverlay : undefined
-  const [fittedGlassOverlay, setFittedGlassOverlay] = useState<{ source: string; maskSource: string; url: string } | null>(null)
+  const [fittedGlassOverlay, setFittedGlassOverlay] = useState<{ source: string; maskSource: string; muntinColor?: string; url: string } | null>(null)
   const [fittedClearBase, setFittedClearBase] = useState<{ source: string; maskSource: string; url: string } | null>(null)
   const [fittedSideliteGlass, setFittedSideliteGlass] = useState<{ source: string; slab: string; mask: string; url: string } | null>(null)
   const [tintedPrairieGrid, setTintedPrairieGrid] = useState<{ source: string; color: string; url: string } | null>(null)
   const [hrtClearTrimMask, setHrtClearTrimMask] = useState<{ source: string; url: string } | null>(null)
   const [satGlassFrameMask, setSatGlassFrameMask] = useState<string | null>(null)
-  const renderedGlassOverlay = glassOverlay && fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage ? fittedGlassOverlay.url : glassOverlay
+  const renderedGlassOverlay = glassOverlay && fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage && (fittedGlassOverlay.muntinColor ?? '') === dividedLiteMuntinColor ? fittedGlassOverlay.url : glassOverlay
   const fittedOrSourceSideliteGlass = sideliteGlassSrc && fittedSideliteGlass?.source === sideliteGlassSrc && fittedSideliteGlass.slab === sideliteAssetSrc && fittedSideliteGlass.mask === sideliteMaskSrc
     ? fittedSideliteGlass.url
     : sideliteGlassSrc
@@ -575,7 +579,7 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
   const usesAuthoredSidelitePrairieColor = /\/(?:FSL|F48SL|SSL)(?:%20| )Prairie(?:%20| )/i.test(sideliteGlassSrc ?? '')
   const mainMaskReady = Boolean(surfaceDetailReady && previewImage && previewCandidates.includes(previewImage) && processedMask?.source === previewImage && processedMask.finishUrl)
   const mainGlassReady = !glassOverlay || isHrtDoor || isSatDoor
-    || Boolean(fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage)
+    || Boolean(fittedGlassOverlay?.source === glassOverlay && fittedGlassOverlay.maskSource === previewImage && (fittedGlassOverlay.muntinColor ?? '') === dividedLiteMuntinColor)
   // Capture must wait for the same fitted base that the live preview uses.
   const clearBaseReady = !clearNoGridOverlay || !fitClearBase || Boolean(fittedClearBase?.source === clearNoGridOverlay && fittedClearBase.maskSource === previewImage)
   const sideliteMaskReady = frameSidelites === 'none' || Boolean(sslReliefReady && sideliteFinishMask && sideliteFinishMask.slab === sideliteAssetSrc && sideliteFinishMask.mask === sideliteMaskSrc && sideliteFinishMask.url)
@@ -897,13 +901,14 @@ export function DoorPreview({ style, finish, glass, hardware, showHardware = tru
         try { await alignmentReference.decode() } catch { if (!cancelled) setFittedGlassOverlay(null); return }
         if (cancelled) return
       }
-      const url = fitGlassOverlayToMask(overlay, processedMask.maskWidth!, processedMask.maskHeight!, processedMask.glassBounds!, offsetY, maskRegions, GLASS_EDGE_OVERLAP_PX, fitPrairieInsideMask, stretchPrairieToMaskWidth, stretchPrairieToMaskHeight, alignmentReference)
-      setFittedGlassOverlay(url ? { source: glassOverlay, maskSource: previewImage, url } : null)
+      const muntinArtwork = dividedLiteMuntinColor ? dividedLiteMuntinArtwork(overlay, dividedLiteMuntinColor) : null
+      const url = fitGlassOverlayToMask(muntinArtwork ?? overlay, processedMask.maskWidth!, processedMask.maskHeight!, processedMask.glassBounds!, offsetY, maskRegions, GLASS_EDGE_OVERLAP_PX, fitPrairieInsideMask, stretchPrairieToMaskWidth, stretchPrairieToMaskHeight, alignmentReference)
+      setFittedGlassOverlay(url ? { source: glassOverlay, maskSource: previewImage, muntinColor: dividedLiteMuntinColor, url } : null)
     }
     overlay.onerror = () => { if (!cancelled) setFittedGlassOverlay(null) }
     overlay.src = glassOverlay
     return () => { cancelled = true }
-  }, [glassOverlay, gridAlignmentReference, isHrtDoor, isSatDoor, maskCode, previewGlass?.id, previewImage, processedMask])
+  }, [dividedLiteMuntinColor, glassOverlay, gridAlignmentReference, isHrtDoor, isSatDoor, maskCode, previewGlass?.id, previewImage, processedMask])
 
   useEffect(() => {
     let cancelled = false

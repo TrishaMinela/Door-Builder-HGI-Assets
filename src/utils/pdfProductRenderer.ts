@@ -11,6 +11,7 @@ import { sidelitePlacement } from '../data/sideliteConfigurations'
 import { doorHandingSides } from '../data/doorHanding'
 import { createCanonicalEntranceGeometry, ENTRANCE_GEOMETRY } from '../features/home-visualizer/entranceGeometry'
 import { renderSslRelief } from './sideliteRelief'
+import { DIVIDED_LITE_GLASS_ID, dividedLiteMuntinArtwork } from './dividedLiteMuntins'
 import { darkFinishStrength, renderDarkFinishSurface, frameFinishLighting } from './finishDetail'
 
 // Resolved asset selection is shared with the builder, not re-guessed from
@@ -96,7 +97,7 @@ async function prepareSurface(slab: HTMLImageElement, mask: HTMLImageElement | u
   return { image: result, masks, glass: masks?.glassUrl ? await loadPdfImage(masks.glassUrl) : undefined, frame: masks?.glassFrameUrl ? await loadPdfImage(masks.glassFrameUrl) : undefined, reliefSource }
 }
 
-async function fittedGlass(overlay: HTMLImageElement, surface: PreparedSurface, code: string, id?: string, sidelite = false, grid = false, prairie = false, alignmentReference?: HTMLImageElement) {
+async function fittedGlass(overlay: HTMLImageElement, surface: PreparedSurface, code: string, id?: string, sidelite = false, grid = false, prairie = false, alignmentReference?: HTMLImageElement, muntinColor?: string) {
   const mask = surface.masks
   if (!mask?.glassBounds) throw new Error(`PDF glass opening is missing for ${code}.`)
   const arts = overlay.src.includes('/FART')
@@ -104,7 +105,8 @@ async function fittedGlass(overlay: HTMLImageElement, surface: PreparedSurface, 
   const fullSidelite = sidelite && code === 'fsl'
   const mainPrairie = !sidelite && ['S', 'F48', 'F482'].includes(code) && overlay.src.includes('/FPRA')
   const offset = !sidelite && arts && ['S', 'F48', 'F482'].includes(code) ? mask.glassBounds.height * (code === 'S' ? .4 : .2) : id === 'f48-clear-f648l' ? mask.glassBounds.height * .08 : 0
-  const result = fitGlassOverlayToMask(overlay, mask.maskWidth, mask.maskHeight, mask.glassBounds, offset, sidelite || glassFrameMaskForOpening(code).separateOpenings ? mask.glassRegions : undefined, 1.5, mainPrairie, fullSidelite || mainPrairie, fullSidelite || (mainPrairie && code === 'S'), alignmentReference)
+  const artwork = muntinColor ? dividedLiteMuntinArtwork(overlay, muntinColor) ?? overlay : overlay
+  const result = fitGlassOverlayToMask(artwork, mask.maskWidth, mask.maskHeight, mask.glassBounds, offset, sidelite || glassFrameMaskForOpening(code).separateOpenings ? mask.glassRegions : undefined, 1.5, mainPrairie, fullSidelite || mainPrairie, fullSidelite || (mainPrairie && code === 'S'), alignmentReference)
   if (!result) throw new Error(`PDF glass artwork has no visible pixels: ${overlay.src}`)
   return loadPdfImage(result)
 }
@@ -182,7 +184,7 @@ export async function renderPdfProduct(configuration: DoorConfiguration, appeara
   const side = placement !== 'none' ? await prepareSurface(get(assets.sideliteAssetSrc)!, get(assets.sideliteMaskSrc), config.finish, config.sideliteSlab ?? '', undefined, true) : undefined
   const alignF48Grid = code === 'F48' && selectedGlass?.id === 'f48-clear-grids' && /\/F48INT\d+L/.test(glassUrl ?? '')
   const alignmentReference = alignF48Grid ? get(clearUrl) : undefined
-  const glass = glassUrl ? code === 'SAT' || code === 'HRT' ? get(glassUrl)! : await fittedGlass(get(glassUrl)!, main, code, selectedGlass?.id, false, false, false, alignmentReference) : undefined
+  const glass = glassUrl ? code === 'SAT' || code === 'HRT' ? get(glassUrl)! : await fittedGlass(get(glassUrl)!, main, code, selectedGlass?.id, false, false, false, alignmentReference, selectedGlass?.id === DIVIDED_LITE_GLASS_ID ? config.finish.color : undefined) : undefined
   const fitClearBase = code === 'F482' || alignF48Grid
   const clear = clearUrl ? fitClearBase ? await fittedGlass(get(clearUrl)!, main, code) : get(clearUrl) : undefined
   const sideGlass = side && assets.sideliteGlassSrc ? await fittedGlass(get(assets.sideliteGlassSrc)!, side, config.sideliteSlab ?? '', undefined, true, assets.sideliteGlassIsGrid, assets.sideliteGridIsPrairie) : undefined
