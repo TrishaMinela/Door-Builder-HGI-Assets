@@ -1,0 +1,126 @@
+.popular-styles {
+  width: 100%;
+  min-width: 0;
+  margin: 4px 0 8px;
+}
+
+.popular-styles h2 {
+  margin: 0 0 14px;
+  color: var(--black);
+  font-size: clamp(22px, 2.2vw, 30px);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+
+.popular-styles h2:after {
+  content: "";
+  display: block;
+  width: 58px;
+  height: 4px;
+  margin-top: 12px;
+  background: var(--gold);
+}
+
+.popular-styles-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.popular-styles-row button {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid #d7dee1;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--black);
+  text-align: left;
+  overflow: hidden;
+  box-shadow: 0 8px 20px #05040b0d;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.popular-styles-row button:hover {
+  border-color: var(--peacock);
+}
+
+.popular-styles-row button:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.popular-styles-row button.selected {
+  border-color: var(--peacock);
+  box-shadow: 0 0 0 2px var(--peacock);
+}
+
+.popular-styles-visual {
+  display: grid;
+  place-items: center;
+  height: 148px;
+  background: #eef3f4;
+  border-bottom: 3px solid var(--gold);
+}
+
+.popular-styles-visual img {
+  display: block;
+  width: auto;
+  height: 132px;
+  max-width: 92%;
+  object-fit: contain;
+}
+
+.popular-styles-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 8px 10px;
+}
+
+.popular-styles-copy strong {
+  color: var(--black);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.popular-styles-copy span {
+  color: #596166;
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.popular-styles-or {
+  margin: 12px 0 2px;
+  color: var(--peacock);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+@media (max-width: 1100px) {
+  .popular-styles-row {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    gap: 10px;
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+  }
+
+  .popular-styles-row button {
+    flex: 0 0 168px;
+    scroll-snap-align: start;
+  }
+
+  .popular-styles-visual {
+    height: 156px;
+  }
+}
