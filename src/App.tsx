@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { ArrowLeft, ArrowRight, Check, Download, ExternalLink, Eye, FileText, HelpCircle, Home as HomeIcon, RotateCcw, Send, ShieldCheck } from 'lucide-react'
 import { DoorPreview, type DoorPreviewProps } from './components/DoorPreview'
 import { DoorStyleCard } from './components/DoorStyleCard'
+import { PopularStyles } from './components/PopularStyles'
 import { sidelitePreviewLabel } from './utils/sidelitePreviewLabel'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
 import { OptionCard } from './components/OptionCard'
@@ -22,6 +23,7 @@ import { usePublishedCatalogShadow } from './published-catalog/usePublishedCatal
 import { useProductCardLayout } from './utils/useProductCardLayout'
 import { safeDynamicImport } from './utils/staleChunkRecovery'
 import { doorStyles, finishes, glassOptions } from './data/options'
+import { POPULAR_STYLES, popularStyleIdMatching } from './data/popularStyles'
 import { hardwareDisplayName, hardwareOptions } from './data/hardware'
 import { autoGrainForDoorLine, doorLineChoicesForStyle, doorStyleSupportsGlass, finishesForStyle, finishTypesForDoorLine, glassDoorCodes, resolveDoorProduct } from './data/productCatalog'
 import { approvedPrivacyGlassIds } from './data/privacyGlass'
@@ -1472,6 +1474,13 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
     setGrainId('')
     setSidelites('')
     setSideliteStyleId('')
+    setSideliteGlassCategory('')
+    setSideliteGlassId('')
+    setSideliteGridLocation('')
+    setSideliteGridStyle('')
+    setSideliteGridPattern('')
+    setSideliteGridColor('')
+    setSideliteGridWidth('')
     setSelectedFinishType('')
     setSelectedPaint('')
     setSelectedStain('')
@@ -1492,6 +1501,9 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
     setHardwareId('')
     setDoubleDoorLockPrep('')
     setDoorSwingId('')
+    lastGlassParent.current = ''
+    lastJambDoorFinishId.current = ''
+    lastGlassFrameDoorFinishId.current = ''
     setContact(initialContact)
     setErrors({})
     setSubmitted(false)
@@ -1518,6 +1530,61 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
     closeResetDialog()
     setBuilderPreviewView('Exterior')
     startOver()
+  }
+
+  const applyPopularStyle = (popularStyleId: string) => {
+    const preset = POPULAR_STYLES.find((item) => item.id === popularStyleId)
+    if (!preset) return
+    const config = preset.configuration
+    const finishId = config.selectedFinishType === 'stain' ? config.selectedStain : config.selectedPaint
+    setReturningFromVisualizer(false)
+    setEditReturnTo(null)
+    setEditPageId(null)
+    setEditReturnError('')
+    setSubmitted(false)
+    setBuilderPreviewView('Exterior')
+    setSelectedDoorConfigurationType(config.selectedDoorConfigurationType)
+    setStyleId(config.styleId)
+    setDoorLineId(config.doorLineId)
+    setGrainId(config.grainId)
+    setSidelites(config.sidelites)
+    setSideliteStyleId(config.sideliteStyleId)
+    setSideliteGlassCategory(config.sideliteGlassCategory)
+    setSideliteGlassId(config.sideliteGlassId)
+    setSideliteGlassGroupKey(config.sideliteGlassGroupKey)
+    setSideliteGlassVariantConfirmed(config.sideliteGlassVariantConfirmed)
+    setSideliteGridLocation(config.sideliteGridLocation)
+    setSideliteGridStyle(config.sideliteGridStyle)
+    setSideliteGridPattern(config.sideliteGridPattern)
+    setSideliteGridColor(config.sideliteGridColor)
+    setSideliteGridWidth(config.sideliteGridWidth)
+    setSelectedFinishType(config.selectedFinishType)
+    setSelectedPaint(config.selectedPaint)
+    setSelectedStain(config.selectedStain)
+    setJambType(config.jambType || 'timber')
+    setJambFinishType(config.jambFinishType)
+    setJambFinishColor(config.jambFinishColor)
+    setJambFinishOverridden(false)
+    setSelectedGlassCategory(config.selectedGlassCategory)
+    setGlassId(config.glassId)
+    setSelectedGlassGroupKey(config.selectedGlassGroupKey)
+    setGlassVariantConfirmed(config.glassVariantConfirmed)
+    setGlassFrameColorMode(config.glassFrameColorMode)
+    setGlassFrameFinishId(config.glassFrameFinishId)
+    setGlassFrameFinishType(config.glassFrameFinishType)
+    setGridPathId(config.gridPathId)
+    setGridStyle(config.gridStyle)
+    setGridPattern(config.gridPattern)
+    setGridColor(config.gridColor)
+    setGridWidth(config.gridWidth)
+    setHardwareId(config.hardwareId)
+    setDoubleDoorLockPrep(config.doubleDoorLockPrep)
+    setDoorSwingId(config.doorSwingId)
+    lastGlassParent.current = `${config.styleId}|${config.doorLineId}|${config.grainId}`
+    lastJambDoorFinishId.current = finishId
+    lastGlassFrameDoorFinishId.current = finishId
+    setScreen('builder')
+    setStep(99)
   }
 
   const canVisitStep = (target: number) => {
@@ -2055,6 +2122,15 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
     />
   }
 
+  const activePopularStyleId = popularStyleIdMatching({
+    selectedDoorConfigurationType, styleId, doorLineId, grainId, sidelites, sideliteStyleId,
+    sideliteGlassCategory, sideliteGlassId, sideliteGlassGroupKey, sideliteGlassVariantConfirmed,
+    sideliteGridLocation, sideliteGridStyle, sideliteGridPattern, sideliteGridColor, sideliteGridWidth,
+    selectedFinishType, selectedPaint, selectedStain, jambType, jambFinishType, jambFinishColor,
+    jambFinishOverridden, selectedGlassCategory, glassId, selectedGlassGroupKey, glassVariantConfirmed,
+    glassFrameColorMode, glassFrameFinishId, glassFrameFinishType, gridPathId, gridStyle, gridPattern,
+    gridColor, gridWidth, hardwareId, doubleDoorLockPrep, doorSwingId,
+  })
   const dealerLogoLayout = dealerBrand ? dealerLogoPlacement(dealerBrand) : null
   const dealerHeaderLogo = dealerLogoLayout
     ? screen === 'home'
@@ -2203,6 +2279,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
                 <div className="step-label-row">
                   <span>Step {activeMainStepIndex + 1} of {steps.length} · {currentStep}</span>
                 </div>
+                {currentPage === 'door-configuration' && <PopularStyles selectedId={activePopularStyleId} onSelect={applyPopularStyle} />}
                 <div className="step-title-row">
                   <h1>{currentPage === 'door-configuration' ? 'Choose Your Door Configuration' : currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'sidelites' ? 'Choose Your Sidelites' : currentPage === 'sidelite-style' ? 'Choose Your Sidelite Slab' : currentPage === 'door-finish' ? 'Choose Your Door Finish' : currentPage === 'jamb-type' ? 'Choose Your Jamb Type' : currentPage === 'jamb-finish' ? 'Choose Your Jamb Finish' : currentPage === 'glass-type' ? 'Choose Main Door Glass Type' : currentPage === 'glass' ? 'Choose Main Door Glass' : currentPage === 'glass-variant' ? `Choose ${selectedGlassGroup?.title ?? 'Glass'} Finish` : currentPage === 'glass-frame-color' ? 'Choose Glass Frame Color' : currentPage === 'grid-location' ? 'Choose Main Door Grid Location' : currentPage === 'grid-style' ? 'Choose Main Door Grid Style' : currentPage === 'grid-pattern' ? 'Choose Main Door Grid Pattern' : currentPage === 'grid-color' ? 'Choose Main Door Grid Color' : currentPage === 'grid-width' ? 'Choose Main Door Grid Width' : currentPage === 'sidelite-glass-type' ? 'Choose Sidelite Glass Type' : currentPage === 'sidelite-glass' ? 'Choose Sidelite Glass' : currentPage === 'sidelite-glass-variant' ? `Choose ${selectedSideliteGlassGroup?.title ?? 'Sidelite Glass'} Finish` : currentPage === 'sidelite-grid-location' ? 'Choose Sidelite Grid Location' : currentPage === 'sidelite-grid-style' ? 'Choose Sidelite Grid Style' : currentPage === 'sidelite-grid-pattern' ? 'Choose Sidelite Grid Pattern' : currentPage === 'sidelite-grid-color' ? 'Choose Sidelite Grid Color' : currentPage === 'sidelite-grid-width' ? 'Choose Sidelite Grid Width' : currentPage === 'lock-setup' ? 'Lock Setup' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>
                 </div>
