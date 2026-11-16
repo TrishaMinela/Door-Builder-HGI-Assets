@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import dealerContext from '../api/dealer-context'
-import { dealerLogo, dealerSurfaceLogo, resolvedDealerLightLogo } from '../src/utils/dealerBranding'
+import { dealerLogo, dealerSurfaceLogo, explicitLightLogoUrl, resolvedDealerLightLogo } from '../src/utils/dealerBranding'
 import type { DealerLogoVariant, PublicDealerBrand } from '../src/types/dealerBranding'
 
 process.env.SUPABASE_URL = 'https://hgi-portal-dev.supabase.invalid'
@@ -256,5 +256,86 @@ assert.deepEqual(dealerSurfaceLogo(legacyDarkOriginalOnly, 'page-header'), {
   needsContrastContainer: false,
   usesDarkSurface: false,
 })
+
+const portalLight = brand({ logoLightUrl: null, logoGeneratedLightUrl: generatedLight })
+assert.equal(explicitLightLogoUrl({ ...portalLight, logoGeneratedLightUsable: true }), generatedLight)
+assert.equal(explicitLightLogoUrl({ ...portalLight, logoGeneratedLightUsable: false }), null)
+assert.equal(explicitLightLogoUrl({ ...portalLight, logoGeneratedLightUsable: null }), null)
+assert.equal(explicitLightLogoUrl({ ...portalLight, logoLightUrl: ` ${customLight} `, logoGeneratedLightUsable: false }), customLight)
+assert.equal(resolvedDealerLightLogo({ ...portalLight, logoGeneratedLightUsable: null }), generatedLight)
+assert.equal(resolvedDealerLightLogo({ ...portalLight, logoGeneratedLightUsable: false }), null)
+assert.equal(resolvedDealerLightLogo({ ...portalLight, logoGeneratedLightUsable: true }), generatedLight)
+
+const combinations = [
+  [null, null],
+  ['original', 'original'],
+  ['light', 'light'],
+  ['original', 'light'],
+  ['light', 'original'],
+] as const
+for (const [headerVariant, pagesVariant] of combinations) {
+  for (const usable of [true, false, null] as const) {
+    for (const custom of [customLight, null] as const) {
+      const sample = brand({
+        logoPlacement: 'hero',
+        logoUrl: originalLogo,
+        logoLightUrl: custom,
+        logoGeneratedLightUrl: generatedLight,
+        logoGeneratedLightUsable: usable,
+        logoHeaderVariant: headerVariant,
+        logoPagesVariant: pagesVariant,
+        secondaryColor: '#40454C',
+      })
+      const home = dealerSurfaceLogo(sample, 'home-hero')
+      const page = dealerSurfaceLogo(sample, 'page-header')
+      assert.equal(dealerSurfaceLogo(sample, 'home-header'), null)
+      const offeredLight = custom ?? (usable === true ? generatedLight : null)
+      const legacyLight = custom ?? (usable === false ? null : generatedLight)
+      const expectChoice = (variant: typeof headerVariant, legacy: boolean) => {
+        if (!variant) return { logoUrl: legacy ? (sample.logoUrl || legacyLight) : (legacyLight || sample.logoUrl), plate: false }
+        if (variant === 'original') return { logoUrl: originalLogo, plate: false }
+        if (offeredLight) return { logoUrl: offeredLight, plate: false }
+        return { logoUrl: originalLogo, plate: true }
+      }
+      const homeExpected = headerVariant
+        ? (headerVariant === 'original'
+          ? { logoUrl: originalLogo, plate: false, dark: false }
+          : offeredLight
+            ? { logoUrl: offeredLight, plate: false, dark: true }
+            : { logoUrl: originalLogo, plate: false, dark: false })
+        : { logoUrl: originalLogo || legacyLight, plate: false, dark: !originalLogo && Boolean(legacyLight) }
+      const pageExpected = pagesVariant
+        ? (pagesVariant === 'original'
+          ? { logoUrl: originalLogo, plate: true }
+          : offeredLight
+            ? { logoUrl: offeredLight, plate: false }
+            : { logoUrl: originalLogo, plate: true })
+        : { logoUrl: legacyLight || originalLogo, plate: false }
+      assert.equal(home?.logoUrl, homeExpected.logoUrl, `home ${headerVariant}/${pagesVariant} usable=${usable} custom=${Boolean(custom)}`)
+      assert.equal(home?.needsContrastContainer, homeExpected.plate)
+      assert.equal(home?.usesDarkSurface, homeExpected.dark)
+      assert.equal(page?.logoUrl, pageExpected.logoUrl, `page ${headerVariant}/${pagesVariant} usable=${usable} custom=${Boolean(custom)}`)
+      assert.equal(page?.needsContrastContainer, pageExpected.plate)
+      assert.equal(expectChoice(null, true).logoUrl, originalLogo || legacyLight)
+    }
+  }
+}
+
+const untouched = brand({ logoPlacement: 'header', logoHeaderVariant: null, logoPagesVariant: null, logoGeneratedLightUsable: null, logoLightUrl: null, secondaryColor: '#40454C' })
+assert.deepEqual(dealerSurfaceLogo(untouched, 'home-header'), {
+  logoUrl: generatedLight,
+  needsContrastContainer: false,
+  usesDarkSurface: false,
+})
+assert.deepEqual(dealerSurfaceLogo(untouched, 'page-header'), {
+  logoUrl: generatedLight,
+  needsContrastContainer: false,
+  usesDarkSurface: false,
+})
+const uncheckedLightChoice = brand({ logoPlacement: 'header', logoHeaderVariant: 'light', logoPagesVariant: 'original', logoGeneratedLightUsable: null, logoLightUrl: null, secondaryColor: '#40454C' })
+assert.equal(dealerSurfaceLogo(uncheckedLightChoice, 'home-header')?.logoUrl, originalLogo)
+assert.equal(dealerSurfaceLogo(uncheckedLightChoice, 'home-header')?.needsContrastContainer, true)
+assert.equal(dealerSurfaceLogo(uncheckedLightChoice, 'page-header')?.logoUrl, originalLogo)
+assert.equal(dealerSurfaceLogo(uncheckedLightChoice, 'page-header')?.needsContrastContainer, true)
 
 console.info('Verified separate dealer logos, missing-column fallback, and logo variant resolution.')

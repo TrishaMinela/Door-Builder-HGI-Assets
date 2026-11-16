@@ -43,11 +43,25 @@ export function dealerInitials(companyName: string) {
   return words.slice(0, 2).map((word) => word[0]?.toUpperCase()).join('') || 'D'
 }
 
-/** Custom light logo, otherwise the generated light logo when it is allowed. A null usable flag keeps the legacy merge. */
+function cleanLogoUrl(value: string | null | undefined) {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : null
+}
+
+/** Automatic logo choice. A null usable flag keeps today's custom-or-generated merge. An explicit false does not use the generated file. */
 export function resolvedDealerLightLogo(brand: PublicDealerBrand) {
-  if (brand.logoLightUrl) return brand.logoLightUrl
+  const custom = cleanLogoUrl(brand.logoLightUrl)
+  if (custom) return custom
   if (brand.logoGeneratedLightUsable === false) return null
-  return brand.logoGeneratedLightUrl || null
+  return cleanLogoUrl(brand.logoGeneratedLightUrl)
+}
+
+/** White/Light choice from the portal: custom upload, otherwise the generated file only when it is marked usable. */
+export function explicitLightLogoUrl(brand: PublicDealerBrand) {
+  const custom = cleanLogoUrl(brand.logoLightUrl)
+  if (custom) return custom
+  if (brand.logoGeneratedLightUsable === true) return cleanLogoUrl(brand.logoGeneratedLightUrl)
+  return null
 }
 
 export function dealerLogo(brand: PublicDealerBrand, onDarkBackground = false) {
@@ -116,14 +130,15 @@ export function dealerSurfaceLogo(brand: PublicDealerBrand, surface: DealerLogoS
   if (surface === 'home-hero' && placement !== 'hero') return null
 
   const headerIsDark = !isLightBrandColor(safeColor(brand.secondaryColor, '#05040b'))
-  const light = resolvedDealerLightLogo(brand)
+  const legacyLight = resolvedDealerLightLogo(brand)
   const variant = explicitLogoVariant(surface === 'page-header' ? brand.logoPagesVariant : brand.logoHeaderVariant)
   const backgroundIsDark = surface === 'home-hero' ? false : headerIsDark
   const legacy = surface === 'home-hero'
-    ? { logoUrl: brand.logoUrl || light, needsContrastContainer: false, usesDarkSurface: !brand.logoUrl && Boolean(light) }
-    : { logoUrl: headerIsDark ? light || brand.logoUrl : brand.logoUrl || light, needsContrastContainer: false, usesDarkSurface: false }
+    ? { logoUrl: brand.logoUrl || legacyLight, needsContrastContainer: false, usesDarkSurface: !brand.logoUrl && Boolean(legacyLight) }
+    : { logoUrl: headerIsDark ? legacyLight || brand.logoUrl : brand.logoUrl || legacyLight, needsContrastContainer: false, usesDarkSurface: false }
   if (!variant) return legacy
 
+  const light = explicitLightLogoUrl(brand)
   const original: DealerSurfaceLogo = {
     logoUrl: brand.logoUrl,
     needsContrastContainer: Boolean(brand.logoUrl) && backgroundIsDark,
