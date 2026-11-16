@@ -11,6 +11,9 @@ type DealerRow = {
   logo_url: string | null
   logo_light_url: string | null
   logo_generated_light_url: string | null
+  logo_header_variant?: string | null
+  logo_pages_variant?: string | null
+  logo_generated_light_usable?: boolean | null
   logo_placement: string | null
   primary_color: string | null
   secondary_color: string | null
@@ -49,14 +52,7 @@ async function resolveDealer(dealerSlug: unknown): Promise<DealerRow | null> {
   const slug = normalizeDealerSlug(dealerSlug)
   if (!isValidDealerSlug(slug)) throw new DealerResolutionError(400, 'This dealer link is unavailable.')
 
-  const { supabaseUrl, serviceRoleKey } = supabaseCredentials()
-  const query = new URLSearchParams({ select: 'id,is_active,slug,company_name,logo_url,logo_light_url,logo_generated_light_url,logo_placement,primary_color,secondary_color,website,heading_font_family,heading_font_weight,heading_font_size,body_font_family,body_font_weight,body_font_size,custom_heading_font_url,custom_heading_font_name,custom_heading_font_weight,custom_body_font_url,custom_body_font_name,custom_body_font_weight', slug: `eq.${slug}`, limit: '2' })
-  const result = await fetch(`${supabaseUrl}/rest/v1/dealers?${query}`, {
-    headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
-  })
-  if (!result.ok) throw new DealerResolutionError(502, 'Dealer lookup is unavailable.')
-
-  const dealers = await result.json() as DealerRow[]
+  const dealers = await fetchDealerRows(slug)
   if (dealers.length !== 1) throw new DealerResolutionError(404, 'This dealer link is unavailable.')
   if (!dealers[0].is_active) throw new DealerResolutionError(403, 'This dealer link is unavailable.')
   return dealers[0]
@@ -79,7 +75,11 @@ export async function resolveDealerBrand(dealerSlug: unknown): Promise<PublicDea
     slug: dealer.slug,
     companyName: dealer.company_name,
     logoUrl: dealer.logo_url,
-    logoLightUrl: dealer.logo_light_url || dealer.logo_generated_light_url,
+    logoLightUrl: dealer.logo_light_url,
+    logoGeneratedLightUrl: dealer.logo_generated_light_url,
+    logoGeneratedLightUsable: safeUsableFlag(dealer.logo_generated_light_usable),
+    logoHeaderVariant: safeLogoVariant(dealer.logo_header_variant),
+    logoPagesVariant: safeLogoVariant(dealer.logo_pages_variant),
     logoPlacement: dealer.logo_placement === 'header' ? 'header' : 'hero',
     primaryColor: dealer.primary_color,
     secondaryColor: dealer.secondary_color,
@@ -97,6 +97,39 @@ export async function resolveDealerBrand(dealerSlug: unknown): Promise<PublicDea
     customBodyFontName: safeFontName(dealer.custom_body_font_name),
     customBodyFontWeight: safeFontWeight(dealer.custom_body_font_weight),
   }
+}
+
+const dealerBrandColumns = 'id,is_active,slug,company_name,logo_url,logo_light_url,logo_generated_light_url,logo_placement,primary_color,secondary_color,website,heading_font_family,heading_font_weight,heading_font_size,body_font_family,body_font_weight,body_font_size,custom_heading_font_url,custom_heading_font_name,custom_heading_font_weight,custom_body_font_url,custom_body_font_name,custom_body_font_weight'
+const logoVariantColumns = 'logo_header_variant,logo_pages_variant,logo_generated_light_usable'
+
+function missingLogoVariantColumns(status: number, body: string) {
+  return status === 400 && /logo_header_variant|logo_pages_variant|logo_generated_light_usable/.test(body)
+}
+
+async function fetchDealerRows(slug: string): Promise<DealerRow[]> {
+  const extended = await queryDealers(slug, `${dealerBrandColumns},${logoVariantColumns}`)
+  if (extended.ok) return await extended.json() as DealerRow[]
+  const body = await extended.text()
+  if (!missingLogoVariantColumns(extended.status, body)) throw new DealerResolutionError(502, 'Dealer lookup is unavailable.')
+  const fallback = await queryDealers(slug, dealerBrandColumns)
+  if (!fallback.ok) throw new DealerResolutionError(502, 'Dealer lookup is unavailable.')
+  return await fallback.json() as DealerRow[]
+}
+
+async function queryDealers(slug: string, select: string) {
+  const { supabaseUrl, serviceRoleKey } = supabaseCredentials()
+  const query = new URLSearchParams({ select, slug: `eq.${slug}`, limit: '2' })
+  return fetch(`${supabaseUrl}/rest/v1/dealers?${query}`, {
+    headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
+  })
+}
+
+function safeLogoVariant(value: string | null | undefined): 'original' | 'light' | null {
+  return value === 'original' || value === 'light' ? value : null
+}
+
+function safeUsableFlag(value: boolean | null | undefined): boolean | null {
+  return value === true || value === false ? value : null
 }
 
 const fontFamilies=new Set(['system','arial','helvetica','verdana','tahoma','trebuchet','georgia','times','courier','montserrat','caladea','custom'])

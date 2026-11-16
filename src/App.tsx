@@ -13,7 +13,7 @@ import { DealerMode, useDealerSession } from './components/DealerMode'
 import { DealerContextGate } from './components/DealerContextGate'
 import { DealerBrandMark } from './components/DealerBrandMark'
 import type { PublicDealerBrand } from './types/dealerBranding'
-import { dealerBrandStyle, dealerCustomFontCss, dealerLogoPlacement, isLightBrandColor } from './utils/dealerBranding'
+import { dealerBrandStyle, dealerCustomFontCss, dealerLogoPlacement, dealerSurfaceLogo, isLightBrandColor } from './utils/dealerBranding'
 import { sortByDisplayLabel } from './utils/sortByDisplayLabel'
 import { validOptionId } from './utils/optionSelection'
 import { builderGroupForPage, builderGroupStart, type BuilderGroup } from './utils/builderNavigation'
@@ -2132,11 +2132,8 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
     gridColor, gridWidth, hardwareId, doubleDoorLockPrep, doorSwingId,
   })
   const dealerLogoLayout = dealerBrand ? dealerLogoPlacement(dealerBrand) : null
-  const dealerHeaderLogo = dealerLogoLayout
-    ? screen === 'home'
-      ? dealerLogoLayout.placement === 'header' ? dealerLogoLayout.logoUrl : null
-      : dealerLogoLayout.headerIsDark ? dealerBrand?.logoLightUrl || dealerBrand?.logoUrl || null : dealerBrand?.logoUrl || dealerBrand?.logoLightUrl || null
-    : null
+  const dealerHeaderChoice = dealerBrand ? dealerSurfaceLogo(dealerBrand, screen === 'home' ? 'home-header' : 'page-header') : null
+  const dealerHeroChoice = dealerBrand && screen === 'home' ? dealerSurfaceLogo(dealerBrand, 'home-hero') : null
 
   return (
     <div
@@ -2150,7 +2147,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
           <div className="dealer-header-spacer" aria-hidden="true" />
           <div className="dealer-header-brand">
             {(screen !== 'home' || dealerLogoLayout?.placement === 'header') && <button className="dealer-brand-home" type="button" aria-label={`Go to ${dealerBrand.companyName} Door Builder home`} onClick={() => showScreen('home')}>
-              <DealerBrandMark brand={dealerBrand} onDarkBackground={dealerLogoLayout?.headerIsDark ?? false} logoUrl={dealerHeaderLogo} />
+              <DealerBrandMark brand={dealerBrand} onDarkBackground={dealerLogoLayout?.headerIsDark ?? false} logoUrl={dealerHeaderChoice?.logoUrl ?? null} contrastContainer={dealerHeaderChoice?.needsContrastContainer ?? false} />
             </button>}
           </div>
           <div className="dealer-header-actions">
@@ -2196,8 +2193,8 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
       {screen === 'home' ? <main className="home-page">
         <section className="home-hero">
           <div className="home-hero-copy">
-            {dealerBrand && dealerLogoLayout?.placement === 'hero' && <div className={`dealer-hero-logo ${dealerLogoLayout.heroUsesDarkSurface ? 'dealer-hero-logo-dark' : ''}`}>
-              <DealerBrandMark brand={dealerBrand} onDarkBackground={dealerLogoLayout.heroUsesDarkSurface} logoUrl={dealerLogoLayout.logoUrl} />
+            {dealerBrand && dealerHeroChoice && <div className={`dealer-hero-logo ${dealerHeroChoice.usesDarkSurface ? 'dealer-hero-logo-dark' : ''}`}>
+              <DealerBrandMark brand={dealerBrand} onDarkBackground={dealerHeroChoice.usesDarkSurface} logoUrl={dealerHeroChoice.logoUrl} contrastContainer={dealerHeroChoice.needsContrastContainer} />
             </div>}
             <h1>Build a Door Made for <em>Your Home.</em></h1>
             <p>Choose your door style, finish, glass, and hardware, then bring your vision to life by seeing how your custom door looks on your own home.</p>

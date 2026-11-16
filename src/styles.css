@@ -1969,6 +1969,8 @@ body{overflow:hidden}
 .dealer-brand-home:focus-visible{border-radius:4px;outline:3px solid var(--dealer-primary);outline-offset:4px}
 .dealer-brand-mark{min-width:0;display:flex;align-items:center;gap:10px;color:inherit;line-height:1.15}
 .dealer-brand-mark>img{display:block;width:auto!important;height:auto!important;max-width:min(330px,34vw);max-height:72px;object-fit:contain;filter:none!important}
+.dealer-logo-contrast{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;max-width:min(330px,34vw);max-height:72px;padding:4px 8px;border-radius:8px;background:#f7f8f9;box-shadow:inset 0 0 0 1px #11182714;line-height:0}
+.dealer-logo-contrast>img{display:block;width:auto!important;height:auto!important;max-width:100%;max-height:64px;object-fit:contain;filter:none!important}
 .dealer-brand-fallback{width:46px;height:46px;flex:none;border:1px solid currentColor;border-radius:50%;display:grid;place-items:center;background:#ffffff18;font-size:13px;font-weight:850;letter-spacing:.05em}
 .dealer-brand-fallback-name{max-width:min(280px,30vw);overflow:hidden;font-size:13px;line-height:1.25;text-align:left;text-overflow:ellipsis;white-space:nowrap}
 .dealer-website-link{display:inline-flex;min-height:44px;align-items:center;justify-content:center;gap:8px;border:1px solid currentColor;border-radius:6px;padding:10px 16px;background:var(--dealer-secondary-foreground);color:var(--dealer-secondary);box-shadow:none;font-size:10px;font-weight:800;letter-spacing:.08em;line-height:1.2;text-align:center;text-transform:uppercase;white-space:nowrap;transition:background-color .2s,color .2s}
@@ -2011,6 +2013,8 @@ body{overflow:hidden}
 @media(max-width:900px){
   .dealer-cobranded>header{gap:14px}
   .dealer-brand-mark>img{max-width:220px;max-height:58px}
+  .dealer-logo-contrast{max-width:220px;max-height:58px;padding:3px 7px}
+  .dealer-logo-contrast>img{max-height:52px}
   .dealer-brand-fallback-name{max-width:180px}
   .hgi-attribution>span{display:none}
   .hgi-attribution{padding-left:12px}
@@ -2023,6 +2027,8 @@ body{overflow:hidden}
   .dealer-header-actions{grid-area:action}
   .dealer-brand-mark{gap:8px}
   .dealer-brand-mark>img{max-width:min(155px,42vw);max-height:46px}
+  .dealer-logo-contrast{max-width:min(155px,42vw);max-height:46px;padding:3px 6px}
+  .dealer-logo-contrast>img{max-height:40px}
   .dealer-brand-fallback-name{max-width:135px;font-size:10px;white-space:normal}
   .dealer-brand-fallback{width:32px;height:32px;font-size:10px}
   .dealer-website-link{min-height:40px;max-width:142px;padding:8px 10px;font-size:8px;letter-spacing:.06em;white-space:normal}

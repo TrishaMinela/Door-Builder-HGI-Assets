@@ -59,6 +59,10 @@ assert.deepEqual(available.body, {
     companyName: dealer.company_name,
     logoUrl: dealer.logo_url,
     logoLightUrl: dealer.logo_light_url,
+    logoGeneratedLightUrl: dealer.logo_generated_light_url,
+    logoGeneratedLightUsable: null,
+    logoHeaderVariant: null,
+    logoPagesVariant: null,
     logoPlacement: 'hero',
     primaryColor: dealer.primary_color,
     secondaryColor: dealer.secondary_color,
@@ -91,7 +95,10 @@ assert.equal(dealerLogo(publicBrand, true), dealer.logo_light_url)
 assert.equal(dealerLogo(publicBrand, false), dealer.logo_light_url)
 
 const generatedFallback = await invoke(dealer.slug, [{ ...dealer, logo_light_url: null }])
-assert.equal((generatedFallback.body as { dealer: PublicDealerBrand }).dealer.logoLightUrl, dealer.logo_generated_light_url)
+const generatedBrand = (generatedFallback.body as { dealer: PublicDealerBrand }).dealer
+assert.equal(generatedBrand.logoLightUrl, null)
+assert.equal(generatedBrand.logoGeneratedLightUrl, dealer.logo_generated_light_url)
+assert.equal(generatedBrand.logoGeneratedLightUsable, null)
 assert.equal(dealerInitials(dealer.company_name), 'TD')
 assert.equal(isLightBrandColor(dealer.secondary_color), true)
 assert.deepEqual(dealerBrandStyle(publicBrand), {
@@ -120,7 +127,7 @@ assert.deepEqual(dealerLogoPlacement(publicBrand), {
   logoUrl: dealer.logo_light_url,
   heroUsesDarkSurface: true,
 })
-assert.deepEqual(dealerLogoPlacement({ ...publicBrand, logoPlacement: 'header', logoUrl: 'https://cdn.example.invalid/normal.png', logoLightUrl: null, primaryColor: '#111827', secondaryColor: '#111827' }), {
+assert.deepEqual(dealerLogoPlacement({ ...publicBrand, logoPlacement: 'header', logoUrl: 'https://cdn.example.invalid/normal.png', logoLightUrl: null, logoGeneratedLightUrl: null, primaryColor: '#111827', secondaryColor: '#111827' }), {
   placement: 'header',
   headerIsDark: true,
   logoUrl: 'https://cdn.example.invalid/normal.png',
