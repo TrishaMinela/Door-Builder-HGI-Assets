@@ -11,6 +11,9 @@ type DealerRow = {
   logo_url: string | null
   logo_light_url: string | null
   logo_generated_light_url: string | null
+  logo_black_url?: string | null
+  logo_generated_black_url?: string | null
+  logo_generated_black_usable?: boolean | null
   logo_header_variant?: string | null
   logo_pages_variant?: string | null
   logo_generated_light_usable?: boolean | null
@@ -78,6 +81,9 @@ export async function resolveDealerBrand(dealerSlug: unknown): Promise<PublicDea
     logoLightUrl: dealer.logo_light_url,
     logoGeneratedLightUrl: dealer.logo_generated_light_url,
     logoGeneratedLightUsable: safeUsableFlag(dealer.logo_generated_light_usable),
+    logoBlackUrl: dealer.logo_black_url ?? null,
+    logoGeneratedBlackUrl: dealer.logo_generated_black_url ?? null,
+    logoGeneratedBlackUsable: safeUsableFlag(dealer.logo_generated_black_usable),
     logoHeaderVariant: safeLogoVariant(dealer.logo_header_variant),
     logoPagesVariant: safeLogoVariant(dealer.logo_pages_variant),
     logoPlacement: dealer.logo_placement === 'header' ? 'header' : 'hero',
@@ -100,10 +106,10 @@ export async function resolveDealerBrand(dealerSlug: unknown): Promise<PublicDea
 }
 
 const dealerBrandColumns = 'id,is_active,slug,company_name,logo_url,logo_light_url,logo_generated_light_url,logo_placement,primary_color,secondary_color,website,heading_font_family,heading_font_weight,heading_font_size,body_font_family,body_font_weight,body_font_size,custom_heading_font_url,custom_heading_font_name,custom_heading_font_weight,custom_body_font_url,custom_body_font_name,custom_body_font_weight'
-const logoVariantColumns = 'logo_header_variant,logo_pages_variant,logo_generated_light_usable'
+const logoVariantColumns = 'logo_black_url,logo_generated_black_url,logo_generated_black_usable,logo_header_variant,logo_pages_variant,logo_generated_light_usable'
 
 function missingLogoVariantColumns(status: number, body: string) {
-  return status === 400 && /logo_header_variant|logo_pages_variant|logo_generated_light_usable/.test(body)
+  return status === 400 && /logo_black_url|logo_generated_black_url|logo_generated_black_usable|logo_header_variant|logo_pages_variant|logo_generated_light_usable/.test(body)
 }
 
 async function fetchDealerRows(slug: string): Promise<DealerRow[]> {
@@ -124,8 +130,8 @@ async function queryDealers(slug: string, select: string) {
   })
 }
 
-function safeLogoVariant(value: string | null | undefined): 'original' | 'light' | null {
-  return value === 'original' || value === 'light' ? value : null
+function safeLogoVariant(value: string | null | undefined): 'original' | 'black' | 'white' | null {
+  return value === 'original' || value === 'black' || value === 'white' ? value : null
 }
 
 function safeUsableFlag(value: boolean | null | undefined): boolean | null {

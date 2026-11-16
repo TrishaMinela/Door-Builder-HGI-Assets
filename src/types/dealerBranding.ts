@@ -1,4 +1,4 @@
-export type DealerLogoVariant = 'original' | 'light'
+export type DealerLogoVariant = 'original' | 'black' | 'white'
 
 export type PublicDealerBrand = {
   slug: string
@@ -7,6 +7,9 @@ export type PublicDealerBrand = {
   logoLightUrl: string | null
   logoGeneratedLightUrl: string | null
   logoGeneratedLightUsable: boolean | null
+  logoBlackUrl: string | null
+  logoGeneratedBlackUrl: string | null
+  logoGeneratedBlackUsable: boolean | null
   logoHeaderVariant: DealerLogoVariant | null
   logoPagesVariant: DealerLogoVariant | null
   logoPlacement: 'header' | 'hero'

@@ -48,7 +48,7 @@ function cleanLogoUrl(value: string | null | undefined) {
   return trimmed ? trimmed : null
 }
 
-/** Null-variant logo choice only. A null usable flag keeps today's custom-or-generated merge. An explicit light choice uses explicitLightLogoUrl instead. */
+/** Null-variant logo choice only. A null usable flag keeps today's custom-or-generated light merge. */
 export function resolvedDealerLightLogo(brand: PublicDealerBrand) {
   const custom = cleanLogoUrl(brand.logoLightUrl)
   if (custom) return custom
@@ -56,11 +56,19 @@ export function resolvedDealerLightLogo(brand: PublicDealerBrand) {
   return cleanLogoUrl(brand.logoGeneratedLightUrl)
 }
 
-/** White/Light choice from the portal: custom upload, otherwise the generated file only when it is marked usable. */
-export function explicitLightLogoUrl(brand: PublicDealerBrand) {
+/** Explicit white: custom upload, otherwise the generated file only when it is marked usable. */
+export function explicitWhiteLogoUrl(brand: PublicDealerBrand) {
   const custom = cleanLogoUrl(brand.logoLightUrl)
   if (custom) return custom
   if (brand.logoGeneratedLightUsable === true) return cleanLogoUrl(brand.logoGeneratedLightUrl)
+  return null
+}
+
+/** Explicit black: custom upload, otherwise the generated file only when it is marked usable. */
+export function explicitBlackLogoUrl(brand: PublicDealerBrand) {
+  const custom = cleanLogoUrl(brand.logoBlackUrl)
+  if (custom) return custom
+  if (brand.logoGeneratedBlackUsable === true) return cleanLogoUrl(brand.logoGeneratedBlackUrl)
   return null
 }
 
@@ -121,7 +129,11 @@ export type DealerSurfaceLogo = {
 }
 
 function explicitLogoVariant(value: PublicDealerBrand['logoHeaderVariant'] | undefined) {
-  return value === 'original' || value === 'light' ? value : null
+  return value === 'original' || value === 'black' || value === 'white' ? value : null
+}
+
+function monochromeNeedsPlate(variant: 'original' | 'black' | 'white', backgroundIsDark: boolean) {
+  return backgroundIsDark && variant !== 'white'
 }
 
 export function dealerSurfaceLogo(brand: PublicDealerBrand, surface: DealerLogoSurface): DealerSurfaceLogo | null {
@@ -138,24 +150,22 @@ export function dealerSurfaceLogo(brand: PublicDealerBrand, surface: DealerLogoS
     : { logoUrl: headerIsDark ? legacyLight || brand.logoUrl : brand.logoUrl || legacyLight, needsContrastContainer: false, usesDarkSurface: false }
   if (!variant) return legacy
 
-  const light = explicitLightLogoUrl(brand)
-  const original: DealerSurfaceLogo = {
-    logoUrl: brand.logoUrl,
-    needsContrastContainer: Boolean(brand.logoUrl) && backgroundIsDark,
-    usesDarkSurface: false,
+  const selected = variant === 'white'
+    ? explicitWhiteLogoUrl(brand)
+    : variant === 'black'
+      ? explicitBlackLogoUrl(brand)
+      : cleanLogoUrl(brand.logoUrl)
+  if (selected) {
+    return {
+      logoUrl: selected,
+      needsContrastContainer: monochromeNeedsPlate(variant, backgroundIsDark),
+      usesDarkSurface: variant === 'white' && surface === 'home-hero',
+    }
   }
-  const lightChoice: DealerSurfaceLogo = {
-    logoUrl: light,
-    needsContrastContainer: false,
-    usesDarkSurface: surface === 'home-hero',
+  const original = cleanLogoUrl(brand.logoUrl)
+  if (original && variant !== 'original') {
+    return { logoUrl: original, needsContrastContainer: backgroundIsDark, usesDarkSurface: false }
   }
-  if (variant === 'original') {
-    if (brand.logoUrl) return original
-    if (light) return lightChoice
-    return { logoUrl: null, needsContrastContainer: false, usesDarkSurface: false }
-  }
-  if (light) return lightChoice
-  if (brand.logoUrl) return original
   return { logoUrl: null, needsContrastContainer: false, usesDarkSurface: false }
 }
 
