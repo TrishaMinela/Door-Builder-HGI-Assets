@@ -48,7 +48,7 @@ function cleanLogoUrl(value: string | null | undefined) {
   return trimmed ? trimmed : null
 }
 
-/** Automatic logo choice. A null usable flag keeps today's custom-or-generated merge. An explicit false does not use the generated file. */
+/** Null-variant logo choice only. A null usable flag keeps today's custom-or-generated merge. An explicit light choice uses explicitLightLogoUrl instead. */
 export function resolvedDealerLightLogo(brand: PublicDealerBrand) {
   const custom = cleanLogoUrl(brand.logoLightUrl)
   if (custom) return custom

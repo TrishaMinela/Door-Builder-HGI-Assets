@@ -321,21 +321,46 @@ for (const [headerVariant, pagesVariant] of combinations) {
   }
 }
 
-const untouched = brand({ logoPlacement: 'header', logoHeaderVariant: null, logoPagesVariant: null, logoGeneratedLightUsable: null, logoLightUrl: null, secondaryColor: '#40454C' })
-assert.deepEqual(dealerSurfaceLogo(untouched, 'home-header'), {
+const nullVariantUnchecked = brand({
+  logoPlacement: 'header',
+  logoHeaderVariant: null,
+  logoPagesVariant: null,
+  logoGeneratedLightUsable: null,
+  logoLightUrl: null,
+  logoGeneratedLightUrl: generatedLight,
+  secondaryColor: '#40454C',
+})
+assert.deepEqual(dealerSurfaceLogo(nullVariantUnchecked, 'home-header'), {
   logoUrl: generatedLight,
   needsContrastContainer: false,
   usesDarkSurface: false,
-})
-assert.deepEqual(dealerSurfaceLogo(untouched, 'page-header'), {
+}, 'null variant + null usable flag keeps the legacy generated light logo')
+assert.deepEqual(dealerSurfaceLogo(nullVariantUnchecked, 'page-header'), {
   logoUrl: generatedLight,
   needsContrastContainer: false,
   usesDarkSurface: false,
+}, 'null pages variant + null usable flag keeps the legacy generated light logo')
+
+const explicitLightUnchecked = brand({
+  logoPlacement: 'header',
+  logoHeaderVariant: 'light',
+  logoPagesVariant: 'light',
+  logoGeneratedLightUsable: null,
+  logoLightUrl: null,
+  logoGeneratedLightUrl: generatedLight,
+  secondaryColor: '#40454C',
 })
-const uncheckedLightChoice = brand({ logoPlacement: 'header', logoHeaderVariant: 'light', logoPagesVariant: 'original', logoGeneratedLightUsable: null, logoLightUrl: null, secondaryColor: '#40454C' })
-assert.equal(dealerSurfaceLogo(uncheckedLightChoice, 'home-header')?.logoUrl, originalLogo)
-assert.equal(dealerSurfaceLogo(uncheckedLightChoice, 'home-header')?.needsContrastContainer, true)
-assert.equal(dealerSurfaceLogo(uncheckedLightChoice, 'page-header')?.logoUrl, originalLogo)
-assert.equal(dealerSurfaceLogo(uncheckedLightChoice, 'page-header')?.needsContrastContainer, true)
+assert.equal(explicitLightLogoUrl(explicitLightUnchecked), null)
+assert.deepEqual(dealerSurfaceLogo(explicitLightUnchecked, 'home-header'), {
+  logoUrl: originalLogo,
+  needsContrastContainer: true,
+  usesDarkSurface: false,
+}, 'explicit light + null usable flag falls back to the original on a plate')
+assert.deepEqual(dealerSurfaceLogo(explicitLightUnchecked, 'page-header'), {
+  logoUrl: originalLogo,
+  needsContrastContainer: true,
+  usesDarkSurface: false,
+}, 'explicit pages light + null usable flag falls back to the original on a plate')
+assert.equal(dealerSurfaceLogo({ ...explicitLightUnchecked, logoUrl: null }, 'page-header')?.logoUrl, null, 'explicit light with no usable logo and no original falls through to initials')
 
 console.info('Verified separate dealer logos, missing-column fallback, and logo variant resolution.')
