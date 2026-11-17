@@ -1,4 +1,5 @@
 import { DealerResolutionError, resolveDealerIdentity } from '../server/dealerResolution.js'
+import { normalizeUsZip } from '../src/utils/usZip.js'
 import { isHiddenDecorativeGlass } from '../src/data/customerGlassAvailability.js'
 import { assertCustomerFinish } from '../src/utils/customerFinish.js'
 import type { Finish } from '../src/types.js'
@@ -48,6 +49,13 @@ function splitName(fullName: string) {
 const DEALER_LEAD_SOURCES: Record<string, string> = {
   'americas-best-windows-and-doors': 'AB',
   wdm: 'WDM',
+}
+
+function withNormalizedMainZip(payload: ZapierPayload): ZapierPayload | null {
+  const zip = normalizeUsZip(payload.postal_code)
+  if (!zip) return null
+  if (zip === payload.postal_code) return payload
+  return { ...payload, postal_code: zip }
 }
 
 function leadAttribution(dealer: Awaited<ReturnType<typeof resolveDealerIdentity>>) {
@@ -152,15 +160,20 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   }
   const attributedPayload = { ...payload, ...leadAttribution(dealer) }
   const dealerId = dealer?.id ?? null
+  const routedPayload = dealer ? attributedPayload : withNormalizedMainZip(attributedPayload)
+  if (!routedPayload) {
+    response.status(400).json({ error: 'Enter a valid ZIP code.' })
+    return
+  }
   let webhookDestinations: string[]
-  try { webhookDestinations = zapierDestinations(attributedPayload.dealer_slug) }
+  try { webhookDestinations = zapierDestinations(routedPayload.dealer_slug) }
   catch {
     response.status(502).json({ error: 'Submission could not be completed. Please try again.', destinations: { supabase: 'skipped', zapier: 'failed' } })
     return
   }
 
   try {
-    await submitToSupabase(submissionId, attributedPayload, doorConfiguration, dealerId)
+    await submitToSupabase(submissionId, routedPayload, doorConfiguration, dealerId)
   } catch (reason) {
     console.error('Door Builder supabase submission failed.', errorMessage(reason))
     response.status(502).json({
@@ -171,7 +184,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   }
 
   try {
-    await submitToZapier(attributedPayload, webhookDestinations)
+    await submitToZapier(routedPayload, webhookDestinations)
   } catch (reason) {
     console.error('Door Builder zapier submission failed.', errorMessage(reason))
     response.status(502).json({
