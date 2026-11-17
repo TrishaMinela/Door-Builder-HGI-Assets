@@ -79,9 +79,11 @@ Set these in Vercel. Never prefix a secret with `VITE_`.
 | `DEALER_MODE_ORIGIN` | Optional. Defaults to `https://www.hgidoorbuilder.com` |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Dealer Portal project. Leads and dealer lookup |
 | `ZAPIER_DOOR_BUILDER_WEBHOOK_URL` | Lead forward after Supabase saves |
-| `ZAPIER_AB_DOOR_BUILDER_WEBHOOK_URL`, `ZAPIER_WDM_DOOR_BUILDER_WEBHOOK_URL` | Dealer-specific lead webhooks |
+| `ZAPIER_AB_DOOR_BUILDER_WEBHOOK_URL`, `ZAPIER_WDM_DOOR_BUILDER_WEBHOOK_URL`, `ZAPIER_UHR_DOOR_BUILDER_WEBHOOK_URL` | Extra lead webhooks for those dealers. The master hook still fires. |
 | `ZAPIER_FEEDBACK_WEBHOOK_URL` | Feedback form |
 | `OPENAI_API_KEY` | AI visualizer. Optional model override: `OPENAI_ENTRANCE_DETECTION_MODEL` |
+
+`uhr` is not in `DEALER_LEAD_SOURCES`, so its lead source stays `uhr-door-builder-lead`. A missing, invalid, or duplicate dealer webhook URL returns 502 before the Supabase write, same as AB and WDM.
 
 `VITE_PUBLISHED_CATALOG_SHADOW` and `VITE_INVENTORY_SHADOW` are development switches. They do not change the customer catalog.
 

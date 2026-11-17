@@ -24,7 +24,7 @@ Server-only Vercel environment variables:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `ZAPIER_DOOR_BUILDER_WEBHOOK_URL`
-- `ZAPIER_AB_DOOR_BUILDER_WEBHOOK_URL` and `ZAPIER_WDM_DOOR_BUILDER_WEBHOOK_URL` for dealer-specific leads
+- `ZAPIER_AB_DOOR_BUILDER_WEBHOOK_URL`, `ZAPIER_WDM_DOOR_BUILDER_WEBHOOK_URL`, and `ZAPIER_UHR_DOOR_BUILDER_WEBHOOK_URL` for dealer-specific leads. The master hook still receives every accepted lead. A missing, invalid, or duplicate dealer hook returns 502 before the Supabase write for that dealer only.
 - `ZAPIER_FEEDBACK_WEBHOOK_URL` for `/api/submit-feedback`
 - `OPENAI_API_KEY` for the AI visualizer
 

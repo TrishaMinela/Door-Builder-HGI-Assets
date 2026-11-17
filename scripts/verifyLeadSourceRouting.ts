@@ -9,14 +9,17 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
 const masterWebhook = 'https://hooks.zapier.com/hooks/catch/test/master/'
 const abWebhook = 'https://hooks.zapier.com/hooks/catch/test/ab/'
 const wdmWebhook = 'https://hooks.zapier.com/hooks/catch/test/wdm/'
+const uhrWebhook = 'https://hooks.zapier.com/hooks/catch/test/uhr/'
 process.env.ZAPIER_DOOR_BUILDER_WEBHOOK_URL = masterWebhook
 process.env.ZAPIER_AB_DOOR_BUILDER_WEBHOOK_URL = abWebhook
 process.env.ZAPIER_WDM_DOOR_BUILDER_WEBHOOK_URL = wdmWebhook
+process.env.ZAPIER_UHR_DOOR_BUILDER_WEBHOOK_URL = uhrWebhook
 
 const dealers = new Map([
   ['americas-best-windows-and-doors', { id: '11111111-1111-4111-8111-111111111111', company_name: "America's Best Windows and Doors" }],
   ['wdm', { id: '22222222-2222-4222-8222-222222222222', company_name: 'Windows Doors & More' }],
   ['future-dealer', { id: '33333333-3333-4333-8333-333333333333', company_name: 'Future Dealer' }],
+  ['uhr', { id: '44444444-4444-4444-8444-444444444444', company_name: 'Unified Home Remodeling' }],
 ])
 let webhookRequests: Array<{ url: string; body: Record<string, unknown> }> = []
 let supabaseWrites = 0
@@ -73,6 +76,14 @@ assert.ok(wdm.requests.every(request => request.body.lead_source === 'WDM'))
 assert.ok(wdm.requests.every(request => request.body.lead_source !== 'HGI'))
 assert.ok(wdm.requests.every(request => request.body.dealer_slug === 'wdm'))
 
+const uhr = await invoke('uhr')
+assert.equal(uhr.status, 200)
+assert.deepEqual(uhr.requests.map(request => request.url), [masterWebhook, uhrWebhook])
+assert.ok(uhr.requests.every(request => request.body.lead_source === 'uhr-door-builder-lead'))
+assert.ok(uhr.requests.every(request => request.body.lead_source !== 'HGI'))
+assert.ok(uhr.requests.every(request => request.body.dealer_slug === 'uhr'))
+assert.equal(uhr.supabaseWrites, 1)
+
 const future = await invoke('future-dealer')
 assert.equal(future.status, 200)
 assert.deepEqual(future.requests.map(request => request.url), [masterWebhook])
@@ -94,5 +105,21 @@ await expectConfigurationFailure()
 process.env.ZAPIER_DOOR_BUILDER_WEBHOOK_URL = masterWebhook
 process.env.ZAPIER_AB_DOOR_BUILDER_WEBHOOK_URL = masterWebhook
 await expectConfigurationFailure('americas-best-windows-and-doors')
+process.env.ZAPIER_AB_DOOR_BUILDER_WEBHOOK_URL = abWebhook
 
-console.log('PASS main/AB/WDM webhook routing, trusted lead sources, invalid configuration rejection, and unique requests')
+delete process.env.ZAPIER_UHR_DOOR_BUILDER_WEBHOOK_URL
+await expectConfigurationFailure('uhr')
+const futureWithoutUhr = await invoke('future-dealer')
+assert.equal(futureWithoutUhr.status, 200)
+assert.deepEqual(futureWithoutUhr.requests.map(request => request.url), [masterWebhook])
+process.env.ZAPIER_UHR_DOOR_BUILDER_WEBHOOK_URL = 'http://hooks.zapier.com/hooks/catch/test/uhr-insecure/'
+await expectConfigurationFailure('uhr')
+process.env.ZAPIER_UHR_DOOR_BUILDER_WEBHOOK_URL = masterWebhook
+await expectConfigurationFailure('uhr')
+process.env.ZAPIER_UHR_DOOR_BUILDER_WEBHOOK_URL = uhrWebhook
+
+const futureAfterUhrConfig = await invoke('future-dealer')
+assert.equal(futureAfterUhrConfig.status, 200)
+assert.deepEqual(futureAfterUhrConfig.requests.map(request => request.url), [masterWebhook])
+
+console.log('PASS main/AB/WDM/uhr webhook routing, trusted lead sources, invalid configuration rejection, and unique requests')
