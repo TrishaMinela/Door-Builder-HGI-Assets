@@ -132,10 +132,6 @@ function explicitLogoVariant(value: PublicDealerBrand['logoHeaderVariant'] | und
   return value === 'original' || value === 'black' || value === 'white' ? value : null
 }
 
-function monochromeNeedsPlate(variant: 'original' | 'black' | 'white', backgroundIsDark: boolean) {
-  return backgroundIsDark && variant !== 'white'
-}
-
 export function dealerSurfaceLogo(brand: PublicDealerBrand, surface: DealerLogoSurface): DealerSurfaceLogo | null {
   const placement = brand.logoPlacement === 'header' ? 'header' : 'hero'
   if (surface === 'home-header' && placement !== 'header') return null
@@ -144,7 +140,6 @@ export function dealerSurfaceLogo(brand: PublicDealerBrand, surface: DealerLogoS
   const headerIsDark = !isLightBrandColor(safeColor(brand.secondaryColor, '#05040b'))
   const legacyLight = resolvedDealerLightLogo(brand)
   const variant = explicitLogoVariant(surface === 'page-header' ? brand.logoPagesVariant : brand.logoHeaderVariant)
-  const backgroundIsDark = surface === 'home-hero' ? false : headerIsDark
   const legacy = surface === 'home-hero'
     ? { logoUrl: brand.logoUrl || legacyLight, needsContrastContainer: false, usesDarkSurface: !brand.logoUrl && Boolean(legacyLight) }
     : { logoUrl: headerIsDark ? legacyLight || brand.logoUrl : brand.logoUrl || legacyLight, needsContrastContainer: false, usesDarkSurface: false }
@@ -158,13 +153,13 @@ export function dealerSurfaceLogo(brand: PublicDealerBrand, surface: DealerLogoS
   if (selected) {
     return {
       logoUrl: selected,
-      needsContrastContainer: monochromeNeedsPlate(variant, backgroundIsDark),
+      needsContrastContainer: false,
       usesDarkSurface: variant === 'white' && surface === 'home-hero',
     }
   }
   const original = cleanLogoUrl(brand.logoUrl)
   if (original && variant !== 'original') {
-    return { logoUrl: original, needsContrastContainer: backgroundIsDark, usesDarkSurface: false }
+    return { logoUrl: original, needsContrastContainer: false, usesDarkSurface: false }
   }
   return { logoUrl: null, needsContrastContainer: false, usesDarkSurface: false }
 }
