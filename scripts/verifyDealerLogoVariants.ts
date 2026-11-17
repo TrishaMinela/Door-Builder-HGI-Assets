@@ -184,7 +184,6 @@ for (const headerVariant of choices) {
           const offeredBlack = custom ? customBlack : blackUsable === true ? generatedBlack : null
           const legacyChoice = custom ? customWhite : whiteUsable === false ? null : generatedWhite
           const expectSurface = (variant: DealerLogoVariant | null, surface: 'home-hero' | 'page-header') => {
-            const dark = surface === 'page-header'
             if (!variant) {
               return surface === 'home-hero'
                 ? { logoUrl: originalLogo, plate: false, darkHero: false }
@@ -194,11 +193,11 @@ for (const headerVariant of choices) {
             if (selected) {
               return {
                 logoUrl: selected,
-                plate: dark && variant !== 'white',
+                plate: false,
                 darkHero: variant === 'white' && surface === 'home-hero',
               }
             }
-            return { logoUrl: originalLogo, plate: dark, darkHero: false }
+            return { logoUrl: originalLogo, plate: false, darkHero: false }
           }
           const home = dealerSurfaceLogo(sample, 'home-hero')
           const page = dealerSurfaceLogo(sample, 'page-header')
@@ -220,14 +219,14 @@ const explicitWhiteUnchecked = brand({ logoHeaderVariant: 'white', logoPagesVari
 assert.equal(explicitWhiteLogoUrl(explicitWhiteUnchecked), null)
 assert.deepEqual(dealerSurfaceLogo(explicitWhiteUnchecked, 'page-header'), {
   logoUrl: originalLogo,
-  needsContrastContainer: true,
+  needsContrastContainer: false,
   usesDarkSurface: false,
 })
 const explicitBlackUnchecked = brand({ logoHeaderVariant: 'black', logoPagesVariant: 'black', logoGeneratedBlackUsable: null, logoBlackUrl: null })
 assert.equal(explicitBlackLogoUrl(explicitBlackUnchecked), null)
 assert.deepEqual(dealerSurfaceLogo(explicitBlackUnchecked, 'home-header'), {
   logoUrl: originalLogo,
-  needsContrastContainer: true,
+  needsContrastContainer: false,
   usesDarkSurface: false,
 })
 assert.equal(explicitWhiteLogoUrl(brand({ logoLightUrl: customWhite, logoGeneratedLightUsable: false })), customWhite)
@@ -249,4 +248,4 @@ assert.deepEqual(dealerSurfaceLogo(brand({ logoHeaderVariant: 'original', second
   usesDarkSurface: false,
 })
 
-console.info('Verified original, black, and white dealer logos, missing-column fallback, and null-variant legacy behavior.')
+console.info('Verified original, black, and white dealer logos render without a contrast plate, fallbacks stay on the original, and null variants keep the legacy logo.')
