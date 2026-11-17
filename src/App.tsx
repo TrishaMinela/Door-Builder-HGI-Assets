@@ -1402,6 +1402,8 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
       window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
       builderPanelRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
       builderOptionsRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      const stepBody = builderOptionsRef.current?.parentElement
+      if (stepBody?.classList.contains('builder-step-body')) stepBody.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     })
   }, [screen, currentPage])
 
@@ -2266,7 +2268,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
           {selectedStyle ? renderConfiguredPreviewMode() : <EmptyDoorPreview />}
         </div>}
         <section ref={builderPanelRef} className={`builder-panel ${currentStep !== 'Review & Quote' ? 'configuration-step' : 'review-step'}`}>
-          {currentStep !== 'Review & Quote' && <>
+          {currentStep !== 'Review & Quote' && <div className="builder-step-body">
             <div className="builder-step-intro">
               {returningFromVisualizer && !editReturnTo && <div className="saved-door-visualizer-action">
                 <button type="button" disabled={!visualizerConfigurationReady} onClick={() => requestCustomerAction('open-visualizer')}><Eye size={16} /> Return to Visualizer <ArrowRight size={15} /></button>
@@ -2346,7 +2348,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
                 {currentPage === 'door-swing' && swingSelectionOptions.map((item) => <OptionCard key={item.id} title={`${item.id} – ${item.name}`} eyebrow="Door swing" selected={doorSwingId === item.id} onClick={() => selectDoorSwing(item.id)} visual={<img className="door-swing-image" src={item.image} alt="" loading="lazy" decoding="async" />} />)}
               </div>
             </div>
-          </>}
+          </div>}
 
           {currentPage === 'review' && !submitted && <>
             <div className="section-heading review-heading"><span>Final step</span><h1>Find a Home Guard Dealer</h1><p>Submit your contact information and door configuration. A Home Guard dealer or team member will follow up with next steps.</p></div>
