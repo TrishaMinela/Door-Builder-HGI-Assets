@@ -85,6 +85,7 @@ function zapierDestinations(dealerSlug: string) {
   const destinations = [validatedZapierUrl(process.env.ZAPIER_DOOR_BUILDER_WEBHOOK_URL)]
   if (dealerSlug === 'americas-best-windows-and-doors') destinations.push(validatedZapierUrl(process.env.ZAPIER_AB_DOOR_BUILDER_WEBHOOK_URL))
   if (dealerSlug === 'wdm') destinations.push(validatedZapierUrl(process.env.ZAPIER_WDM_DOOR_BUILDER_WEBHOOK_URL))
+  if (dealerSlug === 'uhr') destinations.push(validatedZapierUrl(process.env.ZAPIER_UHR_DOOR_BUILDER_WEBHOOK_URL))
   if (new Set(destinations).size !== destinations.length) throw new Error('Zapier destinations must be unique.')
   return destinations
 }
