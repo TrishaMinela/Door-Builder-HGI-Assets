@@ -17,6 +17,12 @@ for (const recipe of RECIPES) {
       failures.push(`${recipe.id} ${finishId} did not resolve`)
       continue
     }
+    assert.ok(resolved.title.toLowerCase().includes(resolved.finishName.toLowerCase()), `${recipe.id} title "${resolved.title}" does not include finish ${resolved.finishName}`)
+    assert.ok(resolved.summary.startsWith(`${resolved.finishName} ·`), `${recipe.id} summary "${resolved.summary}"`)
+    const otherFinish = resolved.finishName === 'Navy' ? 'Coastal Plain' : 'Navy'
+    if (resolved.reason.toLowerCase().includes(otherFinish.toLowerCase()) && !`${house.siding} ${house.trim} ${house.architecture}`.toLowerCase().includes(otherFinish.toLowerCase())) {
+      failures.push(`${recipe.id} reason names ${otherFinish} but the finish is ${resolved.finishName}`)
+    }
     if (finishId === recipe.defaultFinishId) {
       try {
         resolveAiProduct(resolved.configuration, resolved.finish.id, resolved.preview.glass ? resolved.finish.id : undefined)
@@ -37,6 +43,25 @@ for (const style of STYLE_CHOICES) {
   }
 }
 
+const navy = RECIPES.find((recipe) => recipe.id === 'bold-navy-full')
+const french = RECIPES.find((recipe) => recipe.id === 'bold-black-french')
+const whiteLite = RECIPES.find((recipe) => recipe.id === 'coastal-white-full')
+assert.ok(navy && french && whiteLite)
+const coastalOnNavyRecipe = resolveRecommendation(navy, 'paint-coastal-plain', 'A deep navy slab would stand out, but a lighter coastal-plain finish would complement the pale siding.', house, 'bold')
+assert.ok(coastalOnNavyRecipe)
+assert.equal(coastalOnNavyRecipe.title, 'Coastal Plain full lite')
+assert.equal(coastalOnNavyRecipe.finishName, 'Coastal Plain')
+assert.match(coastalOnNavyRecipe.summary, /^Coastal Plain · Full Lite ·/)
+assert.doesNotMatch(coastalOnNavyRecipe.title, /navy/i)
+assert.doesNotMatch(coastalOnNavyRecipe.reason, /navy/i)
+assert.match(coastalOnNavyRecipe.reason, /Coastal Plain/)
+const whiteFrench = resolveRecommendation(french, 'paint-white', 'Black French doors make a stronger statement.', house, 'bold')
+assert.equal(whiteFrench?.title, 'White French doors')
+assert.equal(whiteFrench?.finishName, 'White')
+const eggshellLite = resolveRecommendation(whiteLite, 'paint-eggshell', 'A white full lite keeps the entry bright against the pale siding.', house, 'coastal')
+assert.equal(eggshellLite?.title, 'Eggshell full lite')
+assert.match(eggshellLite?.reason ?? '', /Eggshell/)
+assert.doesNotMatch(eggshellLite?.reason ?? '', /white full lite/i)
 const sample = resolveRecommendation(RECIPES[0], RECIPES[0].defaultFinishId, '', house, 'timeless')
 assert.ok(sample)
 const lead = buildDoorBuilderSubmissionPayload({
