@@ -10,8 +10,10 @@
 .dealer-mode-access button:focus-visible,.dealer-mode-dialog input:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 /* Like the existing editing bar, reserve layout space while keeping status
    visible. Mobile fixed navigation is offset by the measured banner height. */
-.app>.dealer-mode-banner-slot{flex:none;width:100%;height:var(--dealer-banner-height,0px)}
-.app>.dealer-mode-banner-slot:empty{height:0}
+.app>.dealer-mode-banner-slot,
+.shared-footer-shell>.dealer-mode-banner-slot{flex:none;width:100%;height:var(--dealer-banner-height,0px)}
+.app>.dealer-mode-banner-slot:empty,
+.shared-footer-shell>.dealer-mode-banner-slot:empty{height:0}
 .dealer-mode-banner{position:fixed;top:0;left:0;right:0;z-index:1051;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px clamp(18px,3vw,52px);background:var(--peacock);color:#fff}
 .dealer-mode-banner-copy{min-width:0}
 .dealer-mode-banner-copy>strong{display:block;font-size:18px;font-weight:600;line-height:1.3}
