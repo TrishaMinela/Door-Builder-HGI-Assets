@@ -85,7 +85,6 @@ export function FindMyDoorPage() {
   const [pageError, setPageError] = useState('')
   const [reading, setReading] = useState(false)
   const [photoRead, setPhotoRead] = useState(true)
-  const [house, setHouse] = useState<HouseReading>(emptyHouse)
   const [recommendations, setRecommendations] = useState<ResolvedRecommendation[]>([])
   const [selected, setSelected] = useState(0)
   const [inspirationId, setInspirationId] = useState('')
@@ -174,7 +173,6 @@ export function FindMyDoorPage() {
       })
       const next = [...resolved, ...fallback].slice(0, 3)
       if (next.length < 2) throw new Error('unavailable')
-      setHouse(nextHouse)
       setPhotoRead(result.photoRead !== false)
       setRecommendations(next.map((item) => item.reason ? item : { ...item, reason: fallbackReason(item.finishName, item.styleName, nextHouse, mood) }))
       setSelected(0)
@@ -193,7 +191,6 @@ export function FindMyDoorPage() {
           setPageError('We couldn’t match a door just now. Please try again.')
         } else {
           setPhotoRead(false)
-          setHouse(emptyHouse)
           setRecommendations(local)
           setSelected(0)
         }
@@ -281,16 +278,16 @@ export function FindMyDoorPage() {
             </div>
           </div>
           <figure className="find-door-feature">
-            <img src={FEATURED_DOOR.src} width={FEATURED_DOOR.width} height={FEATURED_DOOR.height} alt="" />
-            <figcaption>{FEATURED_DOOR.detail} {FEATURED_DOOR.name}</figcaption>
+            <img src={FEATURED_DOOR.src} width={FEATURED_DOOR.width} height={FEATURED_DOOR.height} alt={FEATURED_DOOR.alt} />
+            <figcaption>{FEATURED_DOOR.name}</figcaption>
           </figure>
         </div>
         <section className="find-door-gallery" aria-labelledby="find-door-gallery-title">
-          <h2 id="find-door-gallery-title">From the Home Guard line</h2>
-          <p>Product photos, not installed houses. Tap one to start from that direction.</p>
+          <h2 id="find-door-gallery-title">Popular right now</h2>
+          <p>Tap one to start there.</p>
           <div className="find-door-gallery-row">
             {INSPIRATION.map((door) => <button type="button" key={door.id} className={inspirationId === door.id ? 'selected' : undefined} aria-pressed={inspirationId === door.id} onClick={() => { setInspirationId(door.id); setMood(door.mood) }}>
-              <img src={door.src} width={door.width} height={door.height} alt="" loading="lazy" decoding="async" />
+              <img src={door.src} width={door.width} height={door.height} alt={door.alt} loading="lazy" decoding="async" />
               <span><strong>{door.name}</strong><em>{door.detail}</em></span>
             </button>)}
           </div>
@@ -341,24 +338,35 @@ export function FindMyDoorPage() {
         {pageError && <button type="button" className="next" onClick={() => void readHouse()}>Try again</button>}
       </section>}
       {step === 'results' && current && photoUrl && <div className="find-door-results">
-        <div className="find-door-options">
-          <div className="find-door-picks" role="group" aria-label="Recommended doors">
-            {recommendations.map((item, index) => <OptionCard key={item.cacheKey} title={item.title} selected={index === selected} onClick={() => setSelected(index)} visual={<span className="find-door-mini"><DoorPreview {...item.preview} view="Exterior" showViewToggle={false} /></span>} />)}
-          </div>
-        </div>
         <aside className="find-door-stage">
           <h1>{current.title}</h1>
-          <p className="find-door-reason">{oneLine(current.reason)}</p>
-          {(house.architecture || house.siding) && <p className="find-door-read">{house.architecture || 'Entry'}{house.siding ? `, ${house.siding}` : ''}.</p>}
-          {!photoRead && <p className="find-door-read">The photo was unclear, so these follow your style and glass choices.</p>}
-          <div className="preview-view-toggle" role="group" aria-label="Preview">
-            <button type="button" className={previewMode === 'door' ? 'active' : ''} aria-pressed={previewMode === 'door'} onClick={() => setPreviewMode('door')}>Door</button>
-            <button type="button" className={previewMode === 'house' ? 'active' : ''} aria-pressed={previewMode === 'house'} onClick={seeHouse}>On my house</button>
-          </div>
           <div className="aside-preview-area">
             {!houseReady && <DoorPreview {...current.preview} view="Exterior" showViewToggle={false} />}
             <HouseRender ref={houseRef} photoUrl={photoUrl} resolved={current} showHouse={previewMode === 'house'} onProgress={setRenderStatus} />
           </div>
+          <div className="preview-view-toggle" role="group" aria-label="Preview">
+            <button type="button" className={previewMode === 'door' ? 'active' : ''} aria-pressed={previewMode === 'door'} onClick={() => setPreviewMode('door')}>Door</button>
+            <button type="button" className={previewMode === 'house' ? 'active' : ''} aria-pressed={previewMode === 'house'} onClick={seeHouse}>On my house</button>
+          </div>
+        </aside>
+        <div className="find-door-options">
+          {!photoRead && <p className="find-door-read">These follow your style and glass choices.</p>}
+          <div className="find-door-picks" role="group" aria-label="Recommended doors">
+            {recommendations.map((item, index) => <div className="find-door-pick" key={item.cacheKey}>
+              <OptionCard title={item.title} description={`${item.finishName} · ${item.glassName}`} selected={index === selected} onClick={() => setSelected(index)} visual={<span className="find-door-mini"><DoorPreview {...item.preview} view="Exterior" showViewToggle={false} /></span>} />
+              {index === selected && <p className="find-door-reason">{oneLine(item.reason)}</p>}
+            </div>)}
+          </div>
+        </div>
+        <div className="builder-actions find-door-actions">
+          <button type="button" className="next" onClick={seeHouse} disabled={renderStatus === 'working'}>See this on my house</button>
+          <button type="button" className="find-door-quiet" onClick={customize}>Customize this door <ArrowRight size={16} /></button>
+          <button type="button" className="find-door-text" onClick={() => { setStep('photo'); setPageError('') }}>Try another photo</button>
+          {sent && !dealerMode && <p className="find-door-sent">Your details were sent.</p>}
+          {dealerMode && <p className="find-door-sent">Dealer Mode skips the contact form.</p>}
+          {dealerBrand && <p className="find-door-sent">Shared with {dealerBrand.companyName}</p>}
+        </div>
+        <section className="find-door-details" aria-label="Door details">
           <div className="mini-summary">
             <span><b>Door</b><strong>{current.styleName}</strong></span>
             <span><b>Finish</b><strong>{current.finishName}</strong></span>
@@ -366,15 +374,7 @@ export function FindMyDoorPage() {
             <span><b>Hardware</b><strong>{current.hardwareName}</strong></span>
             <span><b>Opening</b><strong>{current.openingLabel}</strong></span>
           </div>
-          {sent && !dealerMode && <p className="find-door-note">Your details were sent. Customize opens this door in the builder.</p>}
-          {dealerMode && <p className="find-door-note">Dealer Mode skips the contact form.</p>}
-          {dealerBrand && <p className="find-door-note">Shared with {dealerBrand.companyName}</p>}
-        </aside>
-        <div className="builder-actions find-door-actions">
-          <button type="button" className={houseReady ? 'find-door-quiet' : 'next'} onClick={seeHouse} disabled={renderStatus === 'working'}>See this on my house</button>
-          <button type="button" className={houseReady ? 'next' : 'find-door-quiet'} onClick={customize}>Customize this door <ArrowRight size={16} /></button>
-          <button type="button" className="find-door-text" onClick={() => { setStep('photo'); setPageError('') }}>Try another photo</button>
-        </div>
+        </section>
       </div>}
     </main>
     <SiteFooter currentStep="find-my-door" configuration={{ 'Find My Door': current?.title ?? '' }} dealerBrand={dealerBrand} dealerAccess={<DealerMode session={dealerSession} bannerTarget={bannerTarget} onExit={() => undefined} />} />

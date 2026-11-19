@@ -15,7 +15,7 @@ Checked the whole flow at 390px and 1440px, homeowner and Dealer Mode. Fixes are
 | Errors | Photo, match, send, and render failures were easy to miss. | Each keeps a short message and a recovery action: change the photo, try again, or view the door first. | Yes |
 | Progress | No sense of where you were. | A step row. Completed steps are buttons. Dealer Mode omits Details. | Yes |
 | Dealer Mode | Contact form still had to be skipped by hand in the new steps. | Glass goes straight to the door. Signing in on the form still jumps to the door. | Yes |
-| Density | Desktop results ran past 900px before the actions. | Preview is capped so the door, summary, and both actions sit in the first screen. The site footer is the remaining scroll. | Yes |
+| Density | The phone results overflowed sideways, and the desktop door was a small box in a text-heavy panel. | Phone order is title, a door about 55% of the screen, the toggle, a snap row of doors, then the actions, then details. Desktop gives the door most of the right panel. The reason sits under the selected door. Checked that scroll width matches the screen at 360px and 390px. | Yes |
 | Tap targets | Some text links were under 44px. | Buttons and step controls are at least 44px. Inputs are 48px. | Yes |
 | Contrast | Gold text and gray hints were the weak spots. | Body copy is #243034 or #3a4448 on white. Primary buttons are white on peacock. Errors are #9d3f31. | Yes |
 | Focus | Inconsistent outlines. | Visible peacock focus ring on the Find My Door controls. | Yes |
@@ -26,34 +26,19 @@ Checked the whole flow at 390px and 1440px, homeowner and Dealer Mode. Fixes are
 
 ## Photos used
 
-These are catalog renders already in the repo, recompressed into `public/assets/find-my-door/`. They are not photographs of installed doors.
+Exterior photos from homeguardindustries.com, saved as WebP in `public/assets/find-my-door/`. Names follow the source filenames.
 
 | File | Source | Label |
 | --- | --- | --- |
-| full-lite-white.webp | `public/assets/hero/ai-doors/hero-ai-02-f-paint-white-lhi-exterior-v1.webp` | Full Lite, White |
-| two-panel-navy.webp | `hero-ai-01-2phd-paint-navy-lhi-exterior-v1.webp` | 2 Panel, Navy |
-| stacked-three-black.webp | `hero-ai-06-3lt-paint-black-lhi-exterior-v1.webp` | Stacked 3 Lite, Black |
-| two-panel-natural.webp | `hero-ai-03-2pngss-stain-natural-gold-lhi-exterior-v1.webp` | 2 Panel, Natural Gold |
-| shaker-forest.webp | `hero-ai-13-shak3-paint-forest-lhi-exterior-v1.webp` | 3-Panel Shaker, Forest |
-| craftsman-harvest.webp | `hero-ai-05-cr14-stain-harvest-wheat-lhi-exterior-v1.webp` | Craftsman, Harvest Wheat |
-| french-black.webp | `public/popular-styles/04-french-double.png` | French doors, Black |
-| sidelites-forest.webp | `public/popular-styles/03-farmhouse-sidelites.png` | 3/4 Lite with sidelites, Forest |
-
-`public/assets/hero/hero-entryway.webp` is a generated porch with an empty door opening. It is not an HGI door on a house, so it is not in the gallery.
-
-## Photos still needed
-
-There is no real install or lifestyle photography in the repo. Brian would need to supply photos of HGI or ProVia doors on houses for:
-
-- Modern farmhouse
-- Craftsman
-- Colonial
-- Contemporary / modern
-- Transitional
-- A black or other dark door on a house
-- A natural wood-look stain on a house
-- A full-lite door on a house
-- Double doors on a house
-- A door with sidelites on a house
-- Forest (deep green) on a house
-- Navy on a house
+| hero-craftsman-full-lite.webp | Entry-Doors-20-Gauge-Gallery-F.jpg | 20 Gauge full lite, Craftsman. Hero. |
+| round-top-brick.webp | Entry-Doors-20-Gauge-Round-Top-1.jpg | 20 Gauge round top, Brick |
+| signature-f482-sidelites.webp | Entry-Doors-Signature-Series-Gallery-F482-2.png | Signature Series F482, Farmhouse |
+| gauge-22-cr14.webp | Entry-Doors-Popular-Entry-Doors-CR14.jpg | 22 Gauge CR14, Craftsman |
+| brushed-smooth-full-lite.webp | Entry-Doors-Brushed-Smooth-Gallery-F-1.jpg | Brushed Smooth, Traditional |
+| round-top-modern.webp | Entry-Doors-20-Gauge-Round-Top-2.jpg | 20 Gauge round top, Modern |
+| signature-two-panel.webp | Entry-Doors-Signature-Series-Gallery-2PPLSS.jpg | Signature Series, Modern |
+| shaker-cottage.webp | Entry-Doors-22-Gauge-Gallery-SHAK3.png | 22 Gauge shaker, Cottage |
+| brushed-smooth-3-lite.webp | Entry-Doors-Brushed-Smooth-Gallery-3LT.jpg | Brushed Smooth 3 lite, Modern |
+| six-panel-colonial.webp | Entry-Doors-20-Gauge-Gallery-S1.png | 20 Gauge 6 panel, Colonial |
+| textured-half-lite.webp | Entry-Doors-Textured-Gallery-S.jpg | Textured half lite, Modern |
+| farmhouse-f482.webp | Entry-Doors-Popular-Doors-F482.webp | Popular F482, Farmhouse |
