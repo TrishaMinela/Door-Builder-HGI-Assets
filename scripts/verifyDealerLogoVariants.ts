@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import dealerContext from '../api/dealer-context'
-import { dealerLogo, dealerSurfaceLogo, dealerSurfaceLogos, explicitBlackLogoUrl, explicitWhiteLogoUrl, resolvedDealerLightLogo } from '../src/utils/dealerBranding'
+import { dealerLogo, dealerSurfaceLogo, dealerSurfaceLogos, secondaryLogoUrlForSurface, explicitBlackLogoUrl, explicitWhiteLogoUrl, resolvedDealerLightLogo } from '../src/utils/dealerBranding'
 import type { DealerLogoVariant, PublicDealerBrand } from '../src/types/dealerBranding'
 
 process.env.SUPABASE_URL = 'https://hgi-portal-dev.supabase.invalid'
@@ -250,15 +250,62 @@ assert.deepEqual(dealerSurfaceLogo(brand({ logoHeaderVariant: 'original', second
 })
 
 const secondLogo = 'https://cdn.example.invalid/second.png'
-const dual = dealerSurfaceLogos(brand({ logoDisplay: 'dual', logoPlacement: 'header', logoHeaderVariant: 'original', logoSecondaryUrl: secondLogo }), 'home-header')
+const secondWhite = 'https://cdn.example.invalid/second-white.png'
+const secondBlack = 'https://cdn.example.invalid/second-black.png'
+const dual = dealerSurfaceLogos(brand({ logoDisplay: 'dual', logoPlacement: 'header', logoHeaderVariant: 'original', secondaryColor: '#05040b', logoSecondaryUrl: secondLogo }), 'home-header')
 assert.equal(dual.showPair, true)
 assert.equal(dual.primary?.logoUrl, originalLogo)
 assert.equal(dual.secondary?.logoUrl, secondLogo)
+const missingWhite = dealerSurfaceLogos(brand({
+  logoDisplay: 'dual', logoPlacement: 'header', logoHeaderVariant: 'white', secondaryColor: '#05040b',
+  logoLightUrl: customWhite, logoSecondaryUrl: secondLogo, logoSecondaryLightUrl: null, logoSecondaryGeneratedLightUsable: false,
+}), 'home-header')
+assert.equal(missingWhite.showPair, false)
+assert.equal(missingWhite.primary?.logoUrl, customWhite)
+const readableWhite = dealerSurfaceLogos(brand({
+  logoDisplay: 'dual', logoPlacement: 'header', logoHeaderVariant: 'white', secondaryColor: '#05040b',
+  logoLightUrl: customWhite, logoSecondaryLightUrl: secondWhite,
+}), 'home-header')
+assert.equal(readableWhite.showPair, true)
+assert.equal(readableWhite.secondary?.logoUrl, secondWhite)
+const whiteOnLightHero = dealerSurfaceLogos(brand({
+  logoDisplay: 'dual', logoPlacement: 'hero', logoHeaderVariant: null, secondaryColor: '#f7f8f9',
+  logoSecondaryUrl: null, logoSecondaryLightUrl: secondWhite,
+}), 'home-hero')
+assert.equal(whiteOnLightHero.showPair, false)
+assert.equal(whiteOnLightHero.primary?.logoUrl, originalLogo)
+const blackOnDark = dealerSurfaceLogos(brand({
+  logoDisplay: 'dual', logoPlacement: 'header', logoHeaderVariant: 'black', secondaryColor: '#05040b',
+  logoBlackUrl: customBlack, logoSecondaryBlackUrl: secondBlack,
+}), 'home-header')
+assert.equal(blackOnDark.showPair, false)
+assert.equal(blackOnDark.primary?.logoUrl, customBlack)
+const blackOnLightPage = dealerSurfaceLogos(brand({
+  logoDisplay: 'dual', logoPlacement: 'hero', logoPagesVariant: 'black', secondaryColor: '#f7f8f9',
+  logoSecondaryBlackUrl: secondBlack,
+}), 'page-header')
+assert.equal(blackOnLightPage.showPair, true)
+assert.equal(blackOnLightPage.secondary?.logoUrl, secondBlack)
+const unreadableGenerated = dealerSurfaceLogos(brand({
+  logoDisplay: 'dual', logoPlacement: 'header', logoHeaderVariant: 'white', secondaryColor: '#05040b',
+  logoLightUrl: customWhite, logoSecondaryGeneratedLightUrl: secondWhite, logoSecondaryGeneratedLightUsable: false,
+}), 'home-header')
+assert.equal(unreadableGenerated.showPair, false)
+assert.equal(dealerSurfaceLogo(brand({ logoHeaderVariant: 'white', logoLightUrl: null, logoGeneratedLightUsable: false }), 'page-header')?.logoUrl, originalLogo)
+assert.equal(secondaryLogoUrlForSurface({ variant: 'white', surfaceIsDark: false, originalUrl: secondLogo, whiteUrl: secondWhite, blackUrl: secondBlack }), null)
+assert.equal(secondaryLogoUrlForSurface({ variant: null, surfaceIsDark: true, originalUrl: secondLogo, whiteUrl: null, blackUrl: secondBlack }), null)
 const missingSecond = dealerSurfaceLogos(brand({ logoDisplay: 'dual', logoPlacement: 'header', logoHeaderVariant: 'original' }), 'home-header')
 assert.equal(missingSecond.showPair, false)
 assert.equal(missingSecond.primary?.logoUrl, originalLogo)
 const stillSingle = dealerSurfaceLogos(brand({ logoPlacement: 'header', logoHeaderVariant: 'original', logoSecondaryUrl: secondLogo }), 'home-header')
 assert.equal(stillSingle.showPair, false)
+const homeCss = readFileSync(new URL('../src/home.css', import.meta.url), 'utf8')
+const below700 = homeCss.slice(homeCss.indexOf('@media(max-width:700px)'), homeCss.indexOf('@media(max-width:560px)'))
+assert.match(below700, /\.builder-typography\.home-app\.dealer-logo-in-hero \.home-hero h1\{margin-bottom:12px\}/)
+assert.match(below700, /\.home-app\.dealer-logo-in-hero \.home-hero-copy>p\{margin-bottom:18px\}/)
+assert.match(below700, /\.home-app\.dealer-cobranded \.home-preview-caption\{padding:18px 0 34px\}/)
+assert.doesNotMatch(homeCss.slice(homeCss.indexOf('@media(max-width:560px)')), /margin-bottom:12px|margin-bottom:18px|padding:18px 0 34px/)
+assert.match(readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8'), /dealer-brand-mark\.dealer-brand-mark--pair>img/)
 const resolution = readFileSync(new URL('../server/dealerResolution.ts', import.meta.url), 'utf8')
 assert.match(resolution, /missingDualLogoColumns/)
 assert.match(resolution, /logo_display,logo_secondary_url/)

@@ -25,7 +25,7 @@ export function DealerBrandMark({ brand, onDarkBackground = false, logoUrl, seco
         ? <>
             <img src={logo ?? ''} alt={`${brand.companyName} logo`} onError={() => setFailedLogo(logo ?? '')} />
             <span className="dealer-logo-divider" aria-hidden="true" />
-            <img src={secondaryLogoUrl} alt="" onError={() => setFailedSecondary(secondaryLogoUrl)} />
+            <img src={secondaryLogoUrl} alt={`${brand.companyName} partner logo`} onError={() => setFailedSecondary(secondaryLogoUrl)} />
           </>
         : contrastContainer ? <span className="dealer-logo-contrast">{image}</span> : image}
     {showFallback && <strong className="dealer-brand-fallback-name">{brand.companyName}</strong>}
