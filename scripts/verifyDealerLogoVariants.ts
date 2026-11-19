@@ -311,6 +311,44 @@ assert.match(readFileSync(new URL('../src/styles.css', import.meta.url), 'utf8')
 const resolution = readFileSync(new URL('../server/dealerResolution.ts', import.meta.url), 'utf8')
 assert.match(resolution, /missingDualLogoColumns/)
 assert.match(resolution, /logo_display,logo_secondary_url/)
+assert.match(resolution, /logo_secondary_header_variant,logo_secondary_pages_variant/)
+assert.match(resolution, /missingSecondaryVariantColumns/)
+const mixed = dealerSurfaceLogos(brand({
+  logoDisplay: 'dual', logoPlacement: 'header', logoHeaderVariant: 'original', logoPagesVariant: 'black',
+  logoSecondaryHeaderVariant: 'white', logoSecondaryPagesVariant: 'original',
+  logoLightUrl: customWhite, logoBlackUrl: customBlack,
+  logoSecondaryUrl: secondLogo, logoSecondaryLightUrl: secondWhite, logoSecondaryBlackUrl: secondBlack,
+}), 'home-header')
+assert.equal(mixed.primary?.logoUrl, originalLogo)
+assert.equal(mixed.secondary?.logoUrl, secondWhite)
+const mixedPages = dealerSurfaceLogos(brand({
+  logoDisplay: 'dual', logoPlacement: 'hero', logoHeaderVariant: 'original', logoPagesVariant: 'black',
+  logoSecondaryHeaderVariant: 'white', logoSecondaryPagesVariant: 'original',
+  logoLightUrl: customWhite, logoBlackUrl: customBlack,
+  logoSecondaryUrl: secondLogo, logoSecondaryLightUrl: secondWhite, logoSecondaryBlackUrl: secondBlack,
+}), 'page-header')
+assert.equal(mixedPages.primary?.logoUrl, customBlack)
+assert.equal(mixedPages.secondary?.logoUrl, secondLogo)
+const followLogoOne = dealerSurfaceLogos(brand({
+  logoDisplay: 'dual', logoPlacement: 'hero', logoHeaderVariant: 'white', logoSecondaryHeaderVariant: null,
+  logoLightUrl: customWhite, logoSecondaryLightUrl: secondWhite,
+}), 'home-hero')
+assert.equal(followLogoOne.primary?.usesDarkSurface, false)
+assert.equal(followLogoOne.primary?.logoUrl, customWhite)
+assert.equal(followLogoOne.secondary?.logoUrl, secondWhite)
+const missingSecondaryVariant = await invoke(
+  { status: 400, body: JSON.stringify({ message: 'column dealers.logo_secondary_header_variant does not exist' }) },
+  { then: [{ ...dealerRow, logo_display: 'dual', logo_secondary_url: secondLogo }] },
+)
+assert.equal(missingSecondaryVariant.status, 200)
+assert.equal(missingSecondaryVariant.requests.length, 2)
+assert.match(selectOf(missingSecondaryVariant.requests[0]), /logo_secondary_header_variant/)
+assert.match(selectOf(missingSecondaryVariant.requests[1]), /logo_display/)
+assert.doesNotMatch(selectOf(missingSecondaryVariant.requests[1]), /logo_secondary_header_variant|logo_secondary_pages_variant/)
+const narrowed = (missingSecondaryVariant.body as { dealer: PublicDealerBrand }).dealer
+assert.equal(narrowed.logoDisplay, 'dual')
+assert.equal(narrowed.logoSecondaryHeaderVariant ?? null, null)
+assert.equal(narrowed.logoSecondaryUrl, secondLogo)
 assert.match(readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8'), /secondaryLogoUrl=\{dealerHeaderLogos\?\.showPair/)
 assert.match(readFileSync(new URL('../src/features/find-my-door/FindMyDoorPage.tsx', import.meta.url), 'utf8'), /secondaryLogoUrl=\{pageLogos\?\.showPair/)
 

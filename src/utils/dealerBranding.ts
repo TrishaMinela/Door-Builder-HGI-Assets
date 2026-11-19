@@ -183,10 +183,17 @@ function secondaryBrand(brand: PublicDealerBrand): PublicDealerBrand {
   }
 }
 
+/** NULL follows Logo 1. A missing selected file does not switch to another color. */
+export function secondaryVariantForSurface(brand: PublicDealerBrand, surface: DealerLogoSurface) {
+  const primary = explicitLogoVariant(surface === 'page-header' ? brand.logoPagesVariant : brand.logoHeaderVariant)
+  const own = explicitLogoVariant(surface === 'page-header' ? brand.logoSecondaryPagesVariant : brand.logoSecondaryHeaderVariant)
+  return own ?? primary
+}
+
 /** Selected file only. A missing white or black file does not switch to another color. */
 export function selectedSecondaryLogoUrl(brand: PublicDealerBrand, surface: DealerLogoSurface): string | null {
   const second = secondaryBrand(brand)
-  const variant = explicitLogoVariant(surface === 'page-header' ? brand.logoPagesVariant : brand.logoHeaderVariant)
+  const variant = secondaryVariantForSurface(brand, surface)
   if (variant === 'white') return explicitWhiteLogoUrl(second)
   if (variant === 'black') return explicitBlackLogoUrl(second)
   if (variant === 'original') return cleanLogoUrl(second.logoUrl)
