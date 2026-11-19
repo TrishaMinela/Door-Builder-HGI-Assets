@@ -164,6 +164,34 @@ export function dealerSurfaceLogo(brand: PublicDealerBrand, surface: DealerLogoS
   return { logoUrl: null, needsContrastContainer: false, usesDarkSurface: false }
 }
 
+export type DealerSurfaceLogos = {
+  primary: DealerSurfaceLogo | null
+  secondary: DealerSurfaceLogo | null
+  showPair: boolean
+}
+
+function secondaryBrand(brand: PublicDealerBrand): PublicDealerBrand {
+  return {
+    ...brand,
+    logoUrl: brand.logoSecondaryUrl ?? null,
+    logoLightUrl: brand.logoSecondaryLightUrl ?? null,
+    logoGeneratedLightUrl: brand.logoSecondaryGeneratedLightUrl ?? null,
+    logoGeneratedLightUsable: brand.logoSecondaryGeneratedLightUsable ?? null,
+    logoBlackUrl: brand.logoSecondaryBlackUrl ?? null,
+    logoGeneratedBlackUrl: brand.logoSecondaryGeneratedBlackUrl ?? null,
+    logoGeneratedBlackUsable: brand.logoSecondaryGeneratedBlackUsable ?? null,
+  }
+}
+
+/** One logo unless display is dual and the second logo has a usable file for this surface. */
+export function dealerSurfaceLogos(brand: PublicDealerBrand, surface: DealerLogoSurface): DealerSurfaceLogos {
+  const primary = dealerSurfaceLogo(brand, surface)
+  if (brand.logoDisplay !== 'dual' || !primary?.logoUrl) return { primary, secondary: null, showPair: false }
+  const secondary = dealerSurfaceLogo(secondaryBrand(brand), surface)
+  if (!secondary?.logoUrl) return { primary, secondary: null, showPair: false }
+  return { primary, secondary, showPair: true }
+}
+
 export function isLightBrandColor(value: string | null) {
   if (!value || !HEX_COLOR.test(value)) return false
   const channel = (start: number) => {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import dealerContext from '../api/dealer-context'
-import { dealerLogo, dealerSurfaceLogo, explicitBlackLogoUrl, explicitWhiteLogoUrl, resolvedDealerLightLogo } from '../src/utils/dealerBranding'
+import { dealerLogo, dealerSurfaceLogo, dealerSurfaceLogos, explicitBlackLogoUrl, explicitWhiteLogoUrl, resolvedDealerLightLogo } from '../src/utils/dealerBranding'
 import type { DealerLogoVariant, PublicDealerBrand } from '../src/types/dealerBranding'
 
 process.env.SUPABASE_URL = 'https://hgi-portal-dev.supabase.invalid'
@@ -247,5 +248,21 @@ assert.deepEqual(dealerSurfaceLogo(brand({ logoHeaderVariant: 'original', second
   needsContrastContainer: false,
   usesDarkSurface: false,
 })
+
+const secondLogo = 'https://cdn.example.invalid/second.png'
+const dual = dealerSurfaceLogos(brand({ logoDisplay: 'dual', logoPlacement: 'header', logoHeaderVariant: 'original', logoSecondaryUrl: secondLogo }), 'home-header')
+assert.equal(dual.showPair, true)
+assert.equal(dual.primary?.logoUrl, originalLogo)
+assert.equal(dual.secondary?.logoUrl, secondLogo)
+const missingSecond = dealerSurfaceLogos(brand({ logoDisplay: 'dual', logoPlacement: 'header', logoHeaderVariant: 'original' }), 'home-header')
+assert.equal(missingSecond.showPair, false)
+assert.equal(missingSecond.primary?.logoUrl, originalLogo)
+const stillSingle = dealerSurfaceLogos(brand({ logoPlacement: 'header', logoHeaderVariant: 'original', logoSecondaryUrl: secondLogo }), 'home-header')
+assert.equal(stillSingle.showPair, false)
+const resolution = readFileSync(new URL('../server/dealerResolution.ts', import.meta.url), 'utf8')
+assert.match(resolution, /missingDualLogoColumns/)
+assert.match(resolution, /logo_display,logo_secondary_url/)
+assert.match(readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8'), /secondaryLogoUrl=\{dealerHeaderLogos\?\.showPair/)
+assert.match(readFileSync(new URL('../src/features/find-my-door/FindMyDoorPage.tsx', import.meta.url), 'utf8'), /secondaryLogoUrl=\{pageLogos\?\.showPair/)
 
 console.info('Verified original, black, and white dealer logos render without a contrast plate, fallbacks stay on the original, and null variants keep the legacy logo.')

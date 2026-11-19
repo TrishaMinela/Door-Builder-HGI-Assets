@@ -67,6 +67,14 @@ assert.deepEqual(available.body, {
     logoHeaderVariant: null,
     logoPagesVariant: null,
     logoPlacement: 'hero',
+    logoDisplay: 'single',
+    logoSecondaryUrl: null,
+    logoSecondaryLightUrl: null,
+    logoSecondaryGeneratedLightUrl: null,
+    logoSecondaryGeneratedLightUsable: null,
+    logoSecondaryBlackUrl: null,
+    logoSecondaryGeneratedBlackUrl: null,
+    logoSecondaryGeneratedBlackUsable: null,
     primaryColor: dealer.primary_color,
     secondaryColor: dealer.secondary_color,
     websiteUrl: 'https://dealer.example.com/home',
@@ -163,7 +171,10 @@ assert.match(attributionSource, /hgi-logo-white\.png/)
 assert.match(attributionSource, /hgi-logo-black\.webp/)
 
 const vercelConfiguration = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8')) as { rewrites: Array<{ source: string; destination: string }> }
-assert.deepEqual(vercelConfiguration.rewrites, [{ source: '/:dealerSlug([a-z0-9-]+)', destination: '/index.html' }])
+assert.deepEqual(vercelConfiguration.rewrites, [
+  { source: '/findmydoor', destination: '/index.html' },
+  { source: '/:dealerSlug([a-z0-9-]+)', destination: '/index.html' },
+])
 const dealerContextSource = await readFile(new URL('../api/dealer-context.ts', import.meta.url), 'utf8')
 assert.match(dealerContextSource, /from '\.\.\/server\/dealerResolution\.js'/)
 
