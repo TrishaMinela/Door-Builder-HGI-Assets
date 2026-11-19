@@ -141,7 +141,7 @@ export function dealerSurfaceLogo(brand: PublicDealerBrand, surface: DealerLogoS
   const legacyLight = resolvedDealerLightLogo(brand)
   const variant = explicitLogoVariant(surface === 'page-header' ? brand.logoPagesVariant : brand.logoHeaderVariant)
   const legacy = surface === 'home-hero'
-    ? { logoUrl: brand.logoUrl || legacyLight, needsContrastContainer: false, usesDarkSurface: !brand.logoUrl && Boolean(legacyLight) }
+    ? { logoUrl: brand.logoUrl || legacyLight, needsContrastContainer: false, usesDarkSurface: false }
     : { logoUrl: headerIsDark ? legacyLight || brand.logoUrl : brand.logoUrl || legacyLight, needsContrastContainer: false, usesDarkSurface: false }
   if (!variant) return legacy
 
@@ -154,7 +154,7 @@ export function dealerSurfaceLogo(brand: PublicDealerBrand, surface: DealerLogoS
     return {
       logoUrl: selected,
       needsContrastContainer: false,
-      usesDarkSurface: variant === 'white' && surface === 'home-hero',
+      usesDarkSurface: false,
     }
   }
   const original = cleanLogoUrl(brand.logoUrl)
@@ -183,43 +183,25 @@ function secondaryBrand(brand: PublicDealerBrand): PublicDealerBrand {
   }
 }
 
-/**
- * Second logo only. A missing or unreadable selected file does not fall back to another color.
- * White is used on a dark surface. Black is used on a light surface. Original is used only when it is the selected or legacy light-surface file.
- */
-export function secondaryLogoUrlForSurface(input: {
-  variant: 'original' | 'white' | 'black' | null
-  surfaceIsDark: boolean
-  originalUrl: string | null
-  whiteUrl: string | null
-  blackUrl: string | null
-}): string | null {
-  if (input.variant === 'white') return input.surfaceIsDark ? input.whiteUrl : null
-  if (input.variant === 'black') return input.surfaceIsDark ? null : input.blackUrl
-  if (input.variant === 'original') return input.originalUrl
-  return input.surfaceIsDark ? input.whiteUrl : input.originalUrl
+/** Selected file only. A missing white or black file does not switch to another color. */
+export function selectedSecondaryLogoUrl(brand: PublicDealerBrand, surface: DealerLogoSurface): string | null {
+  const second = secondaryBrand(brand)
+  const variant = explicitLogoVariant(surface === 'page-header' ? brand.logoPagesVariant : brand.logoHeaderVariant)
+  if (variant === 'white') return explicitWhiteLogoUrl(second)
+  if (variant === 'black') return explicitBlackLogoUrl(second)
+  if (variant === 'original') return cleanLogoUrl(second.logoUrl)
+  return dealerSurfaceLogo(second, surface)?.logoUrl ?? null
 }
 
-/** One logo unless display is dual and the second logo's own file suits this surface. */
+/** Two logos when the second file exists. A missing second file leaves the first logo alone. */
 export function dealerSurfaceLogos(brand: PublicDealerBrand, surface: DealerLogoSurface): DealerSurfaceLogos {
   const primary = dealerSurfaceLogo(brand, surface)
   if (brand.logoDisplay !== 'dual' || !primary?.logoUrl) return { primary, secondary: null, showPair: false }
-  const second = secondaryBrand(brand)
-  const variant = explicitLogoVariant(surface === 'page-header' ? brand.logoPagesVariant : brand.logoHeaderVariant)
-  const surfaceIsDark = surface === 'home-hero'
-    ? primary.usesDarkSurface
-    : !isLightBrandColor(safeColor(brand.secondaryColor, '#05040b'))
-  const logoUrl = secondaryLogoUrlForSurface({
-    variant,
-    surfaceIsDark,
-    originalUrl: cleanLogoUrl(second.logoUrl),
-    whiteUrl: explicitWhiteLogoUrl(second),
-    blackUrl: explicitBlackLogoUrl(second),
-  })
+  const logoUrl = selectedSecondaryLogoUrl(brand, surface)
   if (!logoUrl) return { primary, secondary: null, showPair: false }
   return {
     primary,
-    secondary: { logoUrl, needsContrastContainer: false, usesDarkSurface: surface === 'home-hero' && surfaceIsDark },
+    secondary: { logoUrl, needsContrastContainer: false, usesDarkSurface: false },
     showPair: true,
   }
 }

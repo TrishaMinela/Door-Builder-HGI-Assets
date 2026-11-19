@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import dealerContext from '../api/dealer-context'
-import { dealerLogo, dealerSurfaceLogo, dealerSurfaceLogos, secondaryLogoUrlForSurface, explicitBlackLogoUrl, explicitWhiteLogoUrl, resolvedDealerLightLogo } from '../src/utils/dealerBranding'
+import { dealerLogo, dealerSurfaceLogo, dealerSurfaceLogos, selectedSecondaryLogoUrl, explicitBlackLogoUrl, explicitWhiteLogoUrl, resolvedDealerLightLogo } from '../src/utils/dealerBranding'
 import type { DealerLogoVariant, PublicDealerBrand } from '../src/types/dealerBranding'
 
 process.env.SUPABASE_URL = 'https://hgi-portal-dev.supabase.invalid'
@@ -195,7 +195,7 @@ for (const headerVariant of choices) {
               return {
                 logoUrl: selected,
                 plate: false,
-                darkHero: variant === 'white' && surface === 'home-hero',
+                darkHero: false,
               }
             }
             return { logoUrl: originalLogo, plate: false, darkHero: false }
@@ -241,7 +241,7 @@ assert.equal(dealerSurfaceLogo(brand({ logoHeaderVariant: 'black', logoUrl: null
 assert.deepEqual(dealerSurfaceLogo(brand({ logoPlacement: 'hero', logoHeaderVariant: 'white', logoGeneratedLightUsable: true }), 'home-hero'), {
   logoUrl: generatedWhite,
   needsContrastContainer: false,
-  usesDarkSurface: true,
+  usesDarkSurface: false,
 })
 assert.deepEqual(dealerSurfaceLogo(brand({ logoHeaderVariant: 'original', secondaryColor: '#f0b429' }), 'home-header'), {
   logoUrl: originalLogo,
@@ -269,17 +269,18 @@ const readableWhite = dealerSurfaceLogos(brand({
 assert.equal(readableWhite.showPair, true)
 assert.equal(readableWhite.secondary?.logoUrl, secondWhite)
 const whiteOnLightHero = dealerSurfaceLogos(brand({
-  logoDisplay: 'dual', logoPlacement: 'hero', logoHeaderVariant: null, secondaryColor: '#f7f8f9',
-  logoSecondaryUrl: null, logoSecondaryLightUrl: secondWhite,
+  logoDisplay: 'dual', logoPlacement: 'hero', logoHeaderVariant: 'white', secondaryColor: '#f7f8f9',
+  logoLightUrl: customWhite, logoSecondaryLightUrl: secondWhite,
 }), 'home-hero')
-assert.equal(whiteOnLightHero.showPair, false)
-assert.equal(whiteOnLightHero.primary?.logoUrl, originalLogo)
+assert.equal(whiteOnLightHero.showPair, true)
+assert.equal(whiteOnLightHero.primary?.usesDarkSurface, false)
+assert.equal(whiteOnLightHero.secondary?.logoUrl, secondWhite)
 const blackOnDark = dealerSurfaceLogos(brand({
   logoDisplay: 'dual', logoPlacement: 'header', logoHeaderVariant: 'black', secondaryColor: '#05040b',
   logoBlackUrl: customBlack, logoSecondaryBlackUrl: secondBlack,
 }), 'home-header')
-assert.equal(blackOnDark.showPair, false)
-assert.equal(blackOnDark.primary?.logoUrl, customBlack)
+assert.equal(blackOnDark.showPair, true)
+assert.equal(blackOnDark.secondary?.logoUrl, secondBlack)
 const blackOnLightPage = dealerSurfaceLogos(brand({
   logoDisplay: 'dual', logoPlacement: 'hero', logoPagesVariant: 'black', secondaryColor: '#f7f8f9',
   logoSecondaryBlackUrl: secondBlack,
@@ -292,8 +293,9 @@ const unreadableGenerated = dealerSurfaceLogos(brand({
 }), 'home-header')
 assert.equal(unreadableGenerated.showPair, false)
 assert.equal(dealerSurfaceLogo(brand({ logoHeaderVariant: 'white', logoLightUrl: null, logoGeneratedLightUsable: false }), 'page-header')?.logoUrl, originalLogo)
-assert.equal(secondaryLogoUrlForSurface({ variant: 'white', surfaceIsDark: false, originalUrl: secondLogo, whiteUrl: secondWhite, blackUrl: secondBlack }), null)
-assert.equal(secondaryLogoUrlForSurface({ variant: null, surfaceIsDark: true, originalUrl: secondLogo, whiteUrl: null, blackUrl: secondBlack }), null)
+assert.equal(selectedSecondaryLogoUrl(brand({
+  logoPlacement: 'hero', logoHeaderVariant: 'white', logoSecondaryUrl: secondLogo, logoSecondaryLightUrl: null, logoSecondaryGeneratedLightUsable: false,
+}), 'home-hero'), null)
 const missingSecond = dealerSurfaceLogos(brand({ logoDisplay: 'dual', logoPlacement: 'header', logoHeaderVariant: 'original' }), 'home-header')
 assert.equal(missingSecond.showPair, false)
 assert.equal(missingSecond.primary?.logoUrl, originalLogo)
