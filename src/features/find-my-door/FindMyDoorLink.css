@@ -1,0 +1,6 @@
+a.find-my-door-home{display:inline-flex;align-items:center;justify-content:center;min-height:50px;margin-top:12px;padding:14px 28px;border:1px solid var(--black);border-radius:999px;background:#fff;color:var(--black);font-size:16px;font-weight:600;text-decoration:none}
+a.find-my-door-home:focus-visible{outline:3px solid var(--peacock);outline-offset:4px}
+.find-my-door-step{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 14px}
+.find-my-door-step a{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:999px;background:var(--peacock);color:#fff;font-size:13px;font-weight:700;text-decoration:none}
+.find-my-door-step a:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.find-my-door-step span{color:#535860;font-size:13px;line-height:1.4}
