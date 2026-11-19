@@ -3,6 +3,8 @@ import { ArrowLeft, ArrowRight, Check, Download, ExternalLink, Eye, FileText, He
 import { DoorPreview, type DoorPreviewProps } from './components/DoorPreview'
 import { DoorStyleCard } from './components/DoorStyleCard'
 import { PopularStyles } from './components/PopularStyles'
+import { FindMyDoorLink } from './features/find-my-door/FindMyDoorLink'
+import { clearFindMyDoorLaunch, readFindMyDoorLaunch } from './features/find-my-door/launch'
 import { sidelitePreviewLabel } from './utils/sidelitePreviewLabel'
 import { HardwareOptionCard } from './components/HardwareOptionCard'
 import { OptionCard } from './components/OptionCard'
@@ -434,6 +436,8 @@ function EmptyDoorPreview() {
 function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null; dealerBrand: PublicDealerBrand | null }) {
   const freshDoorStyleId = doorStyles.find(item => item.code === 'F')?.id ?? ''
   const [initialDraft] = useState(loadDoorBuilderDraft)
+  const [findMyDoorLaunch] = useState(readFindMyDoorLaunch)
+  useEffect(() => { if (findMyDoorLaunch) clearFindMyDoorLaunch() }, [findMyDoorLaunch])
   const restoredDoorFinishId = initialDraft?.selectedFinishType === 'stain' ? initialDraft.selectedStain : initialDraft?.selectedFinishType === 'paint' ? initialDraft.selectedPaint : ''
   const lastJambDoorFinishId = useRef(restoredDoorFinishId)
   const lastGlassFrameDoorFinishId = useRef(restoredDoorFinishId)
@@ -442,7 +446,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
   const [editPageId, setEditPageId] = useState<BuilderPage | null>(null)
   const [editReturnError, setEditReturnError] = useState('')
   const [visualizerSessionStarted, setVisualizerSessionStarted] = useState(false)
-  const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>('home')
+  const [screen, setScreen] = useState<'home' | 'builder' | 'customer-form' | 'visualizer'>(findMyDoorLaunch ? 'builder' : 'home')
 
   useEffect(() => {
     if (!dealerBrand) return
@@ -467,7 +471,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
       else if (robots) robots.content = previousRobots
     }
   }, [dealerBrand])
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(findMyDoorLaunch ? 99 : 0)
   const [selectedDoorConfigurationType, setSelectedDoorConfigurationType] = useState<DoorConfigurationType | ''>(initialDraft?.selectedDoorConfigurationType ?? '')
   const [styleId, setStyleId] = useState(initialDraft?.styleId || freshDoorStyleId)
   const [doorLineId, setDoorLineId] = useState(initialDraft?.doorLineId ?? '')
@@ -505,7 +509,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
   const [hardwareId, setHardwareId] = useState(initialDraft?.hardwareId ?? '')
   const [doubleDoorLockPrep, setDoubleDoorLockPrep] = useState<DoubleDoorLockPrepCode | ''>(initialDraft?.doubleDoorLockPrep || (initialDraft?.selectedDoorConfigurationType === 'french' ? DEFAULT_FRENCH_LOCK_PREP : ''))
   const [doorSwingId, setDoorSwingId] = useState(initialDraft?.doorSwingId ?? '')
-  const [contact, setContact] = useState(initialContact)
+  const [contact, setContact] = useState(findMyDoorLaunch?.contact ?? initialContact)
   const [errors, setErrors] = useState<Partial<Record<keyof ContactForm, string>>>({})
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -2201,6 +2205,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
             <h1>Build a Door Made for <em>Your Home.</em></h1>
             <p>Choose your door style, finish, glass, and hardware, then bring your vision to life by seeing how your custom door looks on your own home.</p>
             <button className="start-building" onClick={() => showScreen('builder')}>Start Building Your Door</button>
+            <FindMyDoorLink dealerSlug={dealerSlug} variant="home" />
           </div>
           <div className="home-hero-visual">
             <div className="home-entryway-demo hero-composite" aria-label="Animated examples of configurable entry doors">
@@ -2278,6 +2283,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
                 <div className="step-label-row">
                   <span>Step {activeMainStepIndex + 1} of {steps.length} · {currentStep}</span>
                 </div>
+                {currentPage === 'door-configuration' && <FindMyDoorLink dealerSlug={dealerSlug} variant="step" />}
                 {currentPage === 'door-configuration' && <PopularStyles selectedId={activePopularStyleId} onSelect={applyPopularStyle} />}
                 <div className="step-title-row">
                   <h1>{currentPage === 'door-configuration' ? 'Choose Your Door Configuration' : currentPage === 'door-style' ? 'Choose a Door Style' : currentPage === 'door-line' ? 'Choose Your Door Line' : currentPage === 'door-grain' ? 'Choose Your Door Grain' : currentPage === 'sidelites' ? 'Choose Your Sidelites' : currentPage === 'sidelite-style' ? 'Choose Your Sidelite Slab' : currentPage === 'door-finish' ? 'Choose Your Door Finish' : currentPage === 'jamb-type' ? 'Choose Your Jamb Type' : currentPage === 'jamb-finish' ? 'Choose Your Jamb Finish' : currentPage === 'glass-type' ? 'Choose Main Door Glass Type' : currentPage === 'glass' ? 'Choose Main Door Glass' : currentPage === 'glass-variant' ? `Choose ${selectedGlassGroup?.title ?? 'Glass'} Finish` : currentPage === 'glass-frame-color' ? 'Choose Glass Frame Color' : currentPage === 'grid-location' ? 'Choose Main Door Grid Location' : currentPage === 'grid-style' ? 'Choose Main Door Grid Style' : currentPage === 'grid-pattern' ? 'Choose Main Door Grid Pattern' : currentPage === 'grid-color' ? 'Choose Main Door Grid Color' : currentPage === 'grid-width' ? 'Choose Main Door Grid Width' : currentPage === 'sidelite-glass-type' ? 'Choose Sidelite Glass Type' : currentPage === 'sidelite-glass' ? 'Choose Sidelite Glass' : currentPage === 'sidelite-glass-variant' ? `Choose ${selectedSideliteGlassGroup?.title ?? 'Sidelite Glass'} Finish` : currentPage === 'sidelite-grid-location' ? 'Choose Sidelite Grid Location' : currentPage === 'sidelite-grid-style' ? 'Choose Sidelite Grid Style' : currentPage === 'sidelite-grid-pattern' ? 'Choose Sidelite Grid Pattern' : currentPage === 'sidelite-grid-color' ? 'Choose Sidelite Grid Color' : currentPage === 'sidelite-grid-width' ? 'Choose Sidelite Grid Width' : currentPage === 'lock-setup' ? 'Lock Setup' : currentPage === 'hardware' ? 'Choose Your Hardware' : 'Choose Your Door Swing'}</h1>

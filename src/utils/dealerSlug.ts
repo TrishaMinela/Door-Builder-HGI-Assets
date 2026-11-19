@@ -7,6 +7,7 @@ export const RESERVED_DEALER_SLUGS = new Set([
   'builder',
   'dealer',
   'dealers',
+  'findmydoor',
   'favicon.ico',
   'favicon.svg',
   'login',
