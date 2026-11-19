@@ -18,6 +18,6 @@ const findMyDoor = window.location.pathname.replace(/\/+$/, '') === '/findmydoor
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {findMyDoor ? <Suspense fallback={<main className="find-my-door-main"><p className="find-door-lead">Loading Find My Door…</p></main>}><FindMyDoorPage /></Suspense> : <App />}
+    {findMyDoor ? <Suspense fallback={<main className="find-my-door-main"><p className="find-door-lead">Loading HGI Door Finder…</p></main>}><FindMyDoorPage /></Suspense> : <App />}
   </StrictMode>,
 )

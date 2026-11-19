@@ -99,7 +99,7 @@ export function FindMyDoorPage() {
 
   useEffect(() => {
     const previous = document.title
-    document.title = 'Find My Door | Home Guard Door Builder'
+    document.title = 'HGI Door Finder | Home Guard Door Builder'
     return () => { document.title = previous }
   }, [])
 
@@ -208,7 +208,7 @@ export function FindMyDoorPage() {
     if (Object.keys(nextErrors).length) return
     setSending(true)
     setPageError('')
-    const notes = `Find My Door: ${current.title}. ${current.reason}`
+    const notes = `HGI Door Finder: ${current.title}. ${current.reason}`
     const lead = { ...contact, notes }
     try {
       const payload = buildDoorBuilderSubmissionPayload({ contact: lead, configuration: current.configuration })
@@ -225,7 +225,7 @@ export function FindMyDoorPage() {
 
   const customize = () => {
     if (!current) return
-    const notes = `Find My Door: ${current.title}. ${current.reason}`
+    const notes = `HGI Door Finder: ${current.title}. ${current.reason}`
     // Dealers skip contact capture, the same way the builder skips the quote form.
     launchBuilder(current.draft, dealerMode ? { ...emptyContact, notes } : { ...contact, notes }, dealerSlug)
   }
@@ -244,7 +244,7 @@ export function FindMyDoorPage() {
   const stepIndex = Math.max(0, flow.indexOf(step))
   const houseReady = previewMode === 'house' && renderStatus === 'ready'
   const upload = (primary: boolean) => <label className={primary ? 'next find-door-upload' : 'back find-door-upload'}>
-    {photoUrl ? 'Change photo' : 'Upload a photo'}
+    {photoUrl ? 'Change photo' : 'Upload a photo of your home'}
     <input className="find-door-file" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void onPhoto(event)} />
   </label>
 
@@ -267,15 +267,16 @@ export function FindMyDoorPage() {
       {step === 'photo' && <>
         <div className="find-door-open">
           <div>
-            <h1>Show us the entry.</h1>
-            <p className="find-door-lead">A daylight photo of the front door. We’ll match it to a door Home Guard makes.</p>
+            <p className="find-door-name">HGI Door Finder</p>
+            <h1>Find the right front door for your home.</h1>
+            <p className="find-door-lead">{dealerMode ? 'Upload a photo of the customer’s house. We’ll suggest Home Guard doors that fit its style, then show you one on their home.' : 'Upload a photo of your house. We’ll suggest Home Guard doors that fit its style, then show you one on your home.'}</p>
             {photoUrl && <img className="find-door-photo" src={photoUrl} alt={photoName ? `Uploaded photo ${photoName}` : 'Uploaded entry'} />}
-            <p className="find-door-hint">Straight on, in daylight, with the whole entry in frame.</p>
             {pageError && <p className="find-door-note find-door-note-error" role="alert">{pageError}</p>}
             <div className="find-door-actions builder-actions">
               {upload(!photoUrl)}
               {photoUrl && <button type="button" className="next" onClick={() => { setPageError(''); setStep('style') }}>Continue <ArrowRight size={16} /></button>}
             </div>
+            <p className="find-door-hint">Best results: daylight, straight on, whole entry in frame.</p>
           </div>
           <figure className="find-door-feature">
             <img src={FEATURED_DOOR.src} width={FEATURED_DOOR.width} height={FEATURED_DOOR.height} alt={FEATURED_DOOR.alt} />
@@ -377,6 +378,6 @@ export function FindMyDoorPage() {
         </section>
       </div>}
     </main>
-    <SiteFooter currentStep="find-my-door" configuration={{ 'Find My Door': current?.title ?? '' }} dealerBrand={dealerBrand} dealerAccess={<DealerMode session={dealerSession} bannerTarget={bannerTarget} onExit={() => undefined} />} />
+    <SiteFooter currentStep="find-my-door" configuration={{ 'HGI Door Finder': current?.title ?? '' }} dealerBrand={dealerBrand} dealerAccess={<DealerMode session={dealerSession} bannerTarget={bannerTarget} onExit={() => undefined} />} />
   </div>
 }
