@@ -63,6 +63,7 @@ async function requestRecommendations(photoUrl: string, mood: StyleMood, light: 
 export function FindMyDoorPage() {
   const dealerSlug = useMemo(dealerFromLocation, [])
   const dealerSession = useDealerSession()
+  const dealerMode = dealerSession.active
   const [dealerBrand, setDealerBrand] = useState<PublicDealerBrand | null>(null)
   const [bannerTarget, setBannerTarget] = useState<HTMLDivElement | null>(null)
   const [step, setStep] = useState<Step>('photo')
@@ -101,6 +102,12 @@ export function FindMyDoorPage() {
   }, [dealerSlug])
 
   useEffect(() => () => { if (photoUrl) URL.revokeObjectURL(photoUrl) }, [photoUrl])
+
+  useEffect(() => {
+    if (!dealerMode || step !== 'details') return
+    setStep('results')
+    window.scrollTo({ top: 0 })
+  }, [dealerMode, step])
 
   const onPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -207,7 +214,9 @@ export function FindMyDoorPage() {
 
   const customize = () => {
     if (!current) return
-    launchBuilder(current.draft, { ...contact, notes: `Find My Door: ${current.title}. ${current.reason}` }, dealerSlug)
+    const notes = `Find My Door: ${current.title}. ${current.reason}`
+    // Dealers skip contact capture, the same way the builder skips the quote form.
+    launchBuilder(current.draft, dealerMode ? { ...emptyContact, notes } : { ...contact, notes }, dealerSlug)
   }
 
   return <div className={`shared-footer-shell find-my-door-app builder-typography${dealerBrand ? ' dealer-cobranded' : ''}`} style={dealerBrand ? dealerBrandStyle(dealerBrand) : undefined}>
@@ -260,7 +269,7 @@ export function FindMyDoorPage() {
           </div>
           <div className="find-door-actions">
             <button type="button" className="find-door-secondary" onClick={() => setStep('photo')}><ArrowLeft size={16} /> Back</button>
-            <button type="button" className="find-door-primary" disabled={!mood || !light} onClick={() => { setStep('details'); void readHouse() }}>See my door <ArrowRight size={16} /></button>
+            <button type="button" className="find-door-primary" disabled={!mood || !light} onClick={() => { setPageError(''); setStep(dealerMode ? 'results' : 'details'); void readHouse() }}>See my door <ArrowRight size={16} /></button>
           </div>
         </section>
       </>}
@@ -284,6 +293,11 @@ export function FindMyDoorPage() {
           </div>
         </form>
       </>}
+      {step === 'results' && !current && <section className="find-door-card" aria-live="polite">
+        <h1>Matching a door to this photo.</h1>
+        <p className="find-door-lead">{pageError || (reading ? 'Choosing doors from the HGI catalog…' : 'This is taking longer than usual.')}</p>
+        {pageError && <button type="button" className="find-door-secondary" onClick={() => void readHouse()}>Try again</button>}
+      </section>}
       {step === 'results' && current && <>
         <h1>A door for this house.</h1>
         <p className="find-door-lead">{photoRead ? 'Built from your photo, your style, and doors HGI actually makes.' : 'We couldn’t read the photo clearly, so these follow your style and glass choices. You can go back and try another photo.'}</p>
@@ -307,7 +321,8 @@ export function FindMyDoorPage() {
             <button type="button" className="find-door-primary" onClick={customize}>Customize this door <ArrowRight size={16} /></button>
             <button type="button" className="find-door-secondary" onClick={() => { setStep('photo'); setPageError('') }}>Try another photo</button>
           </div>
-          {sent && <p className="find-door-note">Your details were sent. Customizing opens the door builder with this door already selected.</p>}
+          {sent && !dealerMode && <p className="find-door-note">Your details were sent. Customizing opens the door builder with this door already selected.</p>}
+          {dealerMode && <p className="find-door-note">Dealer Mode skips the contact form. Customize this door to keep going in the builder.</p>}
           {dealerBrand && <p className="find-door-dealer">Shared with {dealerBrand.companyName}</p>}
           {!photoRead && mood && light && <p className="find-door-note">Style: {styleChoice(mood).name}. Glass: {lightChoice(light).name}.</p>}
         </>}
