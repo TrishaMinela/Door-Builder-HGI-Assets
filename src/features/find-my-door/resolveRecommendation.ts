@@ -101,6 +101,39 @@ export function fallbackReason(finishName: string, styleName: string, house: Hou
   return `${finishName} ${styleName} brings a ${moodName} feel${where}.`.replace(/\s+/g, ' ').slice(0, 280)
 }
 
+function normalizedLabel(value: string) {
+  return value.toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+/** Title from the finish that will actually be built, not the recipe's default name. */
+export function recommendationTitle(finishName: string, styleName: string, openingLabel: string) {
+  const style = styleName.trim().toLowerCase()
+  if (/french/i.test(openingLabel)) return `${finishName} French doors`
+  if (/sidelite/i.test(openingLabel)) return `${finishName} ${style} with sidelites`
+  return `${finishName} ${style}`
+}
+
+/** Keep a model sentence only when it does not name a different catalog finish. */
+export function consistentReason(reason: string, finishName: string, styleName: string, house: HouseReading, mood: StyleMood) {
+  const clean = reason.replace(/\s+/g, ' ').trim().slice(0, 280)
+  const text = normalizedLabel(clean)
+  const selected = normalizedLabel(finishName)
+  const houseText = normalizedLabel(`${house.siding} ${house.trim} ${house.architecture}`)
+  const namesAnotherDoorFinish = finishes.some((item) => {
+    const name = normalizedLabel(item.name)
+    if (!name || name === selected) return false
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const mentioned = new RegExp(`\\b${escaped}\\b`, 'i')
+    if (!mentioned.test(text)) return false
+    if (!houseText.includes(name)) return true
+    // "white siding" can describe the house. "white full lite" is a different door color.
+    const withoutHouseUse = text.replace(new RegExp(`\\b${escaped}\\b(?=\\s+(?:siding|trim|exterior|wall|walls|clapboard|brick|shutters?))`, 'gi'), '')
+    return mentioned.test(withoutHouseUse)
+  })
+  if (clean.length >= 40 && !namesAnotherDoorFinish) return clean
+  return fallbackReason(finishName, styleName, house, mood)
+}
+
 export function resolveRecommendation(recipe: Recipe, finishId: string, reason: string, house: HouseReading, mood: StyleMood): ResolvedRecommendation | null {
   if (!recipe.allowedFinishIds.includes(finishId)) return null
   const line = doorLineChoices.find((item) => item.id === recipe.draft.doorLineId)
@@ -220,13 +253,12 @@ export function resolveRecommendation(recipe: Recipe, finishId: string, reason: 
   const hardwareName = hardwareDisplayName(hardware)
   const openingLabel = configurationType === 'french' ? 'French double doors' : wantsSidelites ? 'Single door with sidelites' : 'Single door'
   const summary = [finish.name, styleName, glassName !== 'No glass' ? glassName : '', openingLabel].filter(Boolean).join(' · ')
-  const cleanReason = reason.replace(/\s+/g, ' ').trim()
   return {
     id: recipe.id,
     cacheKey: `${recipe.id}:${finish.id}`,
-    title: recipe.title,
+    title: recommendationTitle(finish.name, styleName, openingLabel),
     summary,
-    reason: cleanReason.length >= 40 ? cleanReason.slice(0, 280) : fallbackReason(finish.name, styleName, house, mood),
+    reason: consistentReason(reason, finish.name, styleName, house, mood),
     finishName: finish.name,
     styleName,
     glassName,
