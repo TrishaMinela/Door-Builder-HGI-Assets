@@ -286,7 +286,7 @@ export function FindMyDoorPage() {
           <h2 id="find-door-gallery-title">Popular right now</h2>
           <p>Tap one to start there.</p>
           <div className="find-door-gallery-row">
-            {INSPIRATION.map((door) => <button type="button" key={door.id} className={inspirationId === door.id ? 'selected' : undefined} aria-pressed={inspirationId === door.id} onClick={() => { setInspirationId(door.id); setMood(door.mood) }}>
+            {INSPIRATION.filter((door) => door.id !== FEATURED_DOOR.id).map((door) => <button type="button" key={door.id} className={inspirationId === door.id ? 'selected' : undefined} aria-pressed={inspirationId === door.id} onClick={() => { setInspirationId(door.id); setMood(door.mood) }}>
               <img src={door.src} width={door.width} height={door.height} alt={door.alt} loading="lazy" decoding="async" />
               <span><strong>{door.name}</strong><em>{door.detail}</em></span>
             </button>)}
@@ -352,7 +352,7 @@ export function FindMyDoorPage() {
         <div className="find-door-options">
           {!photoRead && <p className="find-door-read">These follow your style and glass choices.</p>}
           <div className="find-door-picks" role="group" aria-label="Recommended doors">
-            {recommendations.map((item, index) => <div className="find-door-pick" key={item.cacheKey}>
+            {recommendations.map((item, index) => <div className={index === selected ? 'find-door-pick selected' : 'find-door-pick'} key={item.cacheKey}>
               <OptionCard title={item.title} description={`${item.finishName} · ${item.glassName}`} selected={index === selected} onClick={() => setSelected(index)} visual={<span className="find-door-mini"><DoorPreview {...item.preview} view="Exterior" showViewToggle={false} /></span>} />
               {index === selected && <p className="find-door-reason">{oneLine(item.reason)}</p>}
             </div>)}
