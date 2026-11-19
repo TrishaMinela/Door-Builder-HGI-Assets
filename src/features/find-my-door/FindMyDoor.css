@@ -47,6 +47,12 @@
 .find-door-result-visual{display:grid;gap:12px;margin-top:16px}
 .find-door-result-visual>img{width:100%;height:auto;border-radius:12px;background:#e9f0f1}
 .find-door-result-visual .preview-scene{height:360px;width:100%}
+.find-door-house-button{width:100%;min-height:64px;padding:16px 22px;border:0;border-radius:999px;background:var(--gold);color:var(--black);font-size:20px;font-weight:800;line-height:1.2;box-shadow:0 10px 28px #f8d30e88}
+.find-door-house-button:disabled{cursor:wait;opacity:.72}
+.find-door-house-button:focus-visible{outline:3px solid var(--peacock);outline-offset:3px}
+.find-door-house-loading{display:flex;align-items:center;justify-content:center;gap:12px;min-height:72px;padding:16px;border:3px solid var(--gold);border-radius:14px;background:#fff4b3;color:var(--black);font-size:16px;font-weight:800;text-align:center}
+.find-door-spin{flex:none;animation:find-door-spin .8s linear infinite}
+@keyframes find-door-spin{to{transform:rotate(360deg)}}
 .find-door-spec{display:grid;gap:6px;margin:12px 0 0;padding:0;list-style:none}
 .find-door-spec li{display:flex;justify-content:space-between;gap:12px;padding-top:8px;border-top:1px solid #e6ecee;font-size:14px}
 .find-door-spec span{color:#657176}
