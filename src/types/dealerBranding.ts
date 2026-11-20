@@ -23,6 +23,8 @@ export type PublicDealerBrand = {
   logoSecondaryGeneratedBlackUsable?: boolean | null
   logoSecondaryHeaderVariant?: DealerLogoVariant | null
   logoSecondaryPagesVariant?: DealerLogoVariant | null
+  logoWebsiteUrl?: string | null
+  logoSecondaryWebsiteUrl?: string | null
   primaryColor: string | null
   secondaryColor: string | null
   websiteUrl: string | null

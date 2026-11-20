@@ -15,7 +15,7 @@ import { DealerMode, useDealerSession } from './components/DealerMode'
 import { DealerContextGate } from './components/DealerContextGate'
 import { DealerBrandMark } from './components/DealerBrandMark'
 import type { PublicDealerBrand } from './types/dealerBranding'
-import { dealerBrandStyle, dealerCustomFontCss, dealerLogoPlacement, dealerSurfaceLogos, isLightBrandColor } from './utils/dealerBranding'
+import { dealerBrandStyle, dealerCustomFontCss, dealerLogoAnchor, dealerLogoPlacement, dealerSurfaceLogos, isLightBrandColor } from './utils/dealerBranding'
 import { sortByDisplayLabel } from './utils/sortByDisplayLabel'
 import { validOptionId } from './utils/optionSelection'
 import { builderGroupForPage, builderGroupStart, type BuilderGroup } from './utils/builderNavigation'
@@ -2142,6 +2142,9 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
   const dealerHeroLogos = dealerBrand && screen === 'home' ? dealerSurfaceLogos(dealerBrand, 'home-hero') : null
   const dealerHeaderChoice = dealerHeaderLogos?.primary ?? null
   const dealerHeroChoice = dealerHeroLogos?.primary ?? null
+  const headerPrimaryLink = dealerBrand && dealerHeaderChoice?.logoUrl ? dealerLogoAnchor(dealerBrand, 'primary') : null
+  const headerSecondaryLink = dealerBrand && dealerHeaderLogos?.showPair && dealerHeaderLogos.secondary?.logoUrl ? dealerLogoAnchor(dealerBrand, 'secondary') : null
+  const headerLogosLinked = Boolean(headerPrimaryLink || headerSecondaryLink)
 
   return (
     <div
@@ -2154,11 +2157,20 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
         {dealerBrand ? <>
           <div className="dealer-header-spacer" aria-hidden="true" />
           <div className="dealer-header-brand">
-            {(screen !== 'home' || dealerLogoLayout?.placement === 'header') && <button className="dealer-brand-home" type="button" aria-label={`Go to ${dealerBrand.companyName} Door Builder home`} onClick={() => showScreen('home')}>
-              <DealerBrandMark brand={dealerBrand} onDarkBackground={dealerLogoLayout?.headerIsDark ?? false} logoUrl={dealerHeaderChoice?.logoUrl ?? null} secondaryLogoUrl={dealerHeaderLogos?.showPair ? dealerHeaderLogos.secondary?.logoUrl : null} contrastContainer={dealerHeaderChoice?.needsContrastContainer ?? false} />
-            </button>}
+            {(screen !== 'home' || dealerLogoLayout?.placement === 'header') && (
+              headerLogosLinked ? (
+                <div className="dealer-brand-home">
+                  <DealerBrandMark brand={dealerBrand} onDarkBackground={dealerLogoLayout?.headerIsDark ?? false} logoUrl={dealerHeaderChoice?.logoUrl ?? null} secondaryLogoUrl={dealerHeaderLogos?.showPair ? dealerHeaderLogos.secondary?.logoUrl : null} contrastContainer={dealerHeaderChoice?.needsContrastContainer ?? false} primaryLink={headerPrimaryLink} secondaryLink={headerSecondaryLink} />
+                </div>
+              ) : (
+                <button className="dealer-brand-home" type="button" aria-label={`Go to ${dealerBrand.companyName} Door Builder home`} onClick={() => showScreen('home')}>
+                  <DealerBrandMark brand={dealerBrand} onDarkBackground={dealerLogoLayout?.headerIsDark ?? false} logoUrl={dealerHeaderChoice?.logoUrl ?? null} secondaryLogoUrl={dealerHeaderLogos?.showPair ? dealerHeaderLogos.secondary?.logoUrl : null} contrastContainer={dealerHeaderChoice?.needsContrastContainer ?? false} />
+                </button>
+              )
+            )}
           </div>
           <div className="dealer-header-actions">
+            {headerLogosLinked && screen !== 'home' && <button className="home-return" type="button" aria-label={`Go to ${dealerBrand.companyName} Door Builder home`} onClick={() => showScreen('home')}><HomeIcon size={17} /><span>Home</span></button>}
             {dealerBrand.websiteUrl && <a className="dealer-website-link" href={dealerBrand.websiteUrl} target="_blank" rel="noopener noreferrer">Visit Our Website <ExternalLink size={15} /></a>}
           </div>
         </> : <>

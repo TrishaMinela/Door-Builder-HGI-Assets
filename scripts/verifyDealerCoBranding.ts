@@ -77,6 +77,8 @@ assert.deepEqual(available.body, {
     logoSecondaryGeneratedBlackUsable: null,
     logoSecondaryHeaderVariant: null,
     logoSecondaryPagesVariant: null,
+    logoWebsiteUrl: null,
+    logoSecondaryWebsiteUrl: null,
     primaryColor: dealer.primary_color,
     secondaryColor: dealer.secondary_color,
     websiteUrl: 'https://dealer.example.com/home',
