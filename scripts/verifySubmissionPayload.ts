@@ -72,6 +72,7 @@ async function invoke(body: unknown, outcome: Outcome, seenIds = new Set<string>
   globalThis.fetch = async (url, options) => {
     fetchCount += 1
     const target = String(url)
+    if (target.includes('/dealer_door_builder_webhooks')) return Response.json([])
     if (target.includes('.supabase.invalid/rest/v1/dealers')) {
       captures.callOrder.push('dealer-lookup')
       captures.dealerUrls.push(target)

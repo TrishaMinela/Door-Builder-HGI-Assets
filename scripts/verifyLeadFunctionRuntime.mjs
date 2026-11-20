@@ -32,6 +32,7 @@ try {
   let calls = [], supabaseStatus = 201, zapierStatus = 200, dealerActive = true, networkFailure = false, zapierTimeout = false
   globalThis.fetch = async (url, options) => {
     const target = String(url)
+    if (target.includes('/dealer_door_builder_webhooks')) return Response.json([])
     if (target.startsWith('https://supabase.example.invalid/rest/v1/dealers?')) {
       calls.push('dealer')
       const requestedSlug = new URL(target).searchParams.get('slug')?.replace(/^eq\./, '') ?? 'example-dealer'

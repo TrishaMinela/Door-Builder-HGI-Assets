@@ -31,6 +31,7 @@ globalThis.fetch = async (input, options) => {
     const dealer = dealers.get(slug)
     return Response.json(dealer ? [{ ...dealer, slug, is_active: true }] : [])
   }
+  if (url.pathname.endsWith('/dealer_door_builder_webhooks')) return Response.json([])
   const body = JSON.parse(String(options?.body ?? '{}')) as Record<string, unknown>
   if (url.pathname.endsWith('/leads')) {
     supabaseWrites++
