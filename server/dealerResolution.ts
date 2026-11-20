@@ -27,6 +27,8 @@ type DealerRow = {
   logo_secondary_generated_black_usable?: boolean | null
   logo_secondary_header_variant?: string | null
   logo_secondary_pages_variant?: string | null
+  logo_website_url?: string | null
+  logo_secondary_website_url?: string | null
   logo_placement: string | null
   primary_color: string | null
   secondary_color: string | null
@@ -107,6 +109,8 @@ export async function resolveDealerBrand(dealerSlug: unknown): Promise<PublicDea
     logoSecondaryGeneratedBlackUsable: safeUsableFlag(dealer.logo_secondary_generated_black_usable),
     logoSecondaryHeaderVariant: safeLogoVariant(dealer.logo_secondary_header_variant),
     logoSecondaryPagesVariant: safeLogoVariant(dealer.logo_secondary_pages_variant),
+    logoWebsiteUrl: safePublicWebsite(dealer.logo_website_url),
+    logoSecondaryWebsiteUrl: safePublicWebsite(dealer.logo_secondary_website_url),
     primaryColor: dealer.primary_color,
     secondaryColor: dealer.secondary_color,
     websiteUrl: safePublicWebsite(dealer.website),
@@ -129,6 +133,7 @@ const dealerBrandColumns = 'id,is_active,slug,company_name,logo_url,logo_light_u
 const logoVariantColumns = 'logo_black_url,logo_generated_black_url,logo_generated_black_usable,logo_header_variant,logo_pages_variant,logo_generated_light_usable'
 const logoDualColumns = 'logo_display,logo_secondary_url,logo_secondary_light_url,logo_secondary_generated_light_url,logo_secondary_generated_light_usable,logo_secondary_black_url,logo_secondary_generated_black_url,logo_secondary_generated_black_usable'
 const logoSecondaryVariantColumns = 'logo_secondary_header_variant,logo_secondary_pages_variant'
+const logoWebsiteColumns = 'logo_website_url,logo_secondary_website_url'
 
 function missingLogoVariantColumns(status: number, body: string) {
   return status === 400 && /logo_black_url|logo_generated_black_url|logo_generated_black_usable|logo_header_variant|logo_pages_variant|logo_generated_light_usable/.test(body)
@@ -142,17 +147,37 @@ function missingSecondaryVariantColumns(status: number, body: string) {
   return status === 400 && /logo_secondary_header_variant|logo_secondary_pages_variant/.test(body)
 }
 
+function missingLogoWebsiteColumns(status: number, body: string) {
+  if (status !== 400 || !/logo_website_url|logo_secondary_website_url/.test(body)) return false
+  const rest = body.replaceAll('logo_secondary_website_url', '').replaceAll('logo_website_url', '')
+  return !/logo_display|logo_secondary_/.test(rest)
+}
+
 async function fetchDealerRows(slug: string): Promise<DealerRow[]> {
-  const full = await queryDealers(slug, `${dealerBrandColumns},${logoVariantColumns},${logoDualColumns},${logoSecondaryVariantColumns}`)
+  const full = await queryDealers(slug, `${dealerBrandColumns},${logoVariantColumns},${logoDualColumns},${logoSecondaryVariantColumns},${logoWebsiteColumns}`)
   if (full.ok) return await full.json() as DealerRow[]
   const fullBody = await full.text()
-  if (missingSecondaryVariantColumns(full.status, fullBody) && !/logo_display/.test(fullBody)) {
+  if (missingLogoWebsiteColumns(full.status, fullBody)) {
+    return fetchWithoutWebsiteColumns(slug)
+  }
+  return fetchFromLegacyColumns(slug, full.status, fullBody)
+}
+
+async function fetchWithoutWebsiteColumns(slug: string): Promise<DealerRow[]> {
+  const next = await queryDealers(slug, `${dealerBrandColumns},${logoVariantColumns},${logoDualColumns},${logoSecondaryVariantColumns}`)
+  if (next.ok) return await next.json() as DealerRow[]
+  const body = await next.text()
+  return fetchFromLegacyColumns(slug, next.status, body)
+}
+
+async function fetchFromLegacyColumns(slug: string, status: number, fullBody: string): Promise<DealerRow[]> {
+  if (missingSecondaryVariantColumns(status, fullBody) && !/logo_display/.test(fullBody)) {
     const withoutSecondaryVariants = await queryDealers(slug, `${dealerBrandColumns},${logoVariantColumns},${logoDualColumns}`)
     if (withoutSecondaryVariants.ok) return await withoutSecondaryVariants.json() as DealerRow[]
     const narrowedBody = await withoutSecondaryVariants.text()
     return fetchWithoutDualColumns(slug, withoutSecondaryVariants.status, narrowedBody)
   }
-  return fetchWithoutDualColumns(slug, full.status, fullBody)
+  return fetchWithoutDualColumns(slug, status, fullBody)
 }
 
 async function fetchWithoutDualColumns(slug: string, status: number, body: string): Promise<DealerRow[]> {
@@ -198,10 +223,20 @@ function safeFontUrl(value:string|null){
   return url&&/\/storage\/v1\/object\/public\/dealer-fonts\//.test(url)&&/\.(woff2?|WOFF2?)(\?|$)/.test(url)?url:null
 }
 
-function safePublicWebsite(value: string | null) {
+function hasControlCharacter(value: string) {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index)
+    if (code <= 31 || code === 127) return true
+  }
+  return false
+}
+
+function safePublicWebsite(value: string | null | undefined) {
   if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed || trimmed.length > 2000 || hasControlCharacter(trimmed) || /\s/.test(trimmed) || !/^https?:\/\//i.test(trimmed)) return null
   try {
-    const url = new URL(value)
+    const url = new URL(trimmed)
     return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : null
   } catch {
     return null

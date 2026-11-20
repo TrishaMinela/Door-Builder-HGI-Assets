@@ -213,6 +213,43 @@ export function dealerSurfaceLogos(brand: PublicDealerBrand, surface: DealerLogo
   }
 }
 
+export type DealerLogoAnchor = { href: string; label: string }
+
+/** Accept only http(s). Reject javascript:, data:, and other schemes before a logo becomes a link. */
+function hasControlCharacter(value: string) {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index)
+    if (code <= 31 || code === 127) return true
+  }
+  return false
+}
+
+export function safeLogoWebsite(value: string | null | undefined): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed || trimmed.length > 2000 || hasControlCharacter(trimmed) || /\s/.test(trimmed) || !/^https?:\/\//i.test(trimmed)) return null
+  try {
+    const url = new URL(trimmed)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null
+  } catch {
+    return null
+  }
+}
+
+/** Logo 1 uses its address, then the company website. Logo 2 never borrows either address. */
+export function dealerLogoAnchor(brand: PublicDealerBrand, slot: 'primary' | 'secondary'): DealerLogoAnchor | null {
+  const href = slot === 'secondary'
+    ? safeLogoWebsite(brand.logoSecondaryWebsiteUrl)
+    : safeLogoWebsite(brand.logoWebsiteUrl) ?? safeLogoWebsite(brand.websiteUrl)
+  if (!href) return null
+  return {
+    href,
+    label: slot === 'secondary'
+      ? `${brand.companyName} partner website (opens in new tab)`
+      : `${brand.companyName} website (opens in new tab)`,
+  }
+}
+
 export function isLightBrandColor(value: string | null) {
   if (!value || !HEX_COLOR.test(value)) return false
   const channel = (start: number) => {

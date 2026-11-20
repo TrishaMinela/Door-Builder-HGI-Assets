@@ -16,6 +16,8 @@
     "test:submission": "node --import tsx scripts/verifySubmissionPayload.ts",
     "test:dealer-cobranding": "node --import tsx scripts/verifyDealerCoBranding.ts",
     "test:dealer-logo-variants": "node --import tsx scripts/verifyDealerLogoVariants.ts",
+    "test:dealer-logo-links": "node --import tsx scripts/verifyDealerLogoLinks.ts",
+    "test:dealer-logo-links:ui": "node --import tsx scripts/verifyDealerLogoLinksUi.ts",
     "test:dealer-cobranding:ui": "node --import tsx scripts/verifyDealerCoBrandingUi.ts",
     "test:door-builder-draft": "node --import tsx scripts/verifyDoorBuilderDraft.ts",
     "test:dependent-door-defaults": "node --import tsx scripts/verifyDependentDoorDefaults.ts",
