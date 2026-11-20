@@ -1,5 +1,6 @@
 import { isValidDealerSlug, normalizeDealerSlug } from '../src/utils/dealerSlug.js'
 import type { PublicDealerBrand } from '../src/types/dealerBranding.js'
+import { appearanceFromStorage } from '../src/utils/doorBuilderAppearance.js'
 
 declare const process: { env: Record<string, string | undefined> }
 
@@ -45,6 +46,7 @@ type DealerRow = {
   custom_body_font_url: string | null
   custom_body_font_name: string | null
   custom_body_font_weight: number | null
+  door_builder_appearance?: unknown
 }
 
 export class DealerResolutionError extends Error {
@@ -126,6 +128,7 @@ export async function resolveDealerBrand(dealerSlug: unknown): Promise<PublicDea
     customBodyFontUrl: safeFontUrl(dealer.custom_body_font_url),
     customBodyFontName: safeFontName(dealer.custom_body_font_name),
     customBodyFontWeight: safeFontWeight(dealer.custom_body_font_weight),
+    appearance: appearanceFromStorage(dealer.door_builder_appearance),
   }
 }
 
@@ -153,14 +156,30 @@ function missingLogoWebsiteColumns(status: number, body: string) {
   return !/logo_display|logo_secondary_/.test(rest)
 }
 
+function missingAppearanceColumn(status: number, body: string) {
+  return status === 400 && /door_builder_appearance/.test(body)
+}
+
 async function fetchDealerRows(slug: string): Promise<DealerRow[]> {
+  const full = await queryDealers(slug, `${dealerBrandColumns},${logoVariantColumns},${logoDualColumns},${logoSecondaryVariantColumns},${logoWebsiteColumns},door_builder_appearance`)
+  if (full.ok) return await full.json() as DealerRow[]
+  const fullBody = await full.text()
+  if (missingAppearanceColumn(full.status, fullBody)) return fetchDealerRowsWithoutAppearance(slug)
+  return continueDealerLookup(slug, full.status, fullBody)
+}
+
+async function fetchDealerRowsWithoutAppearance(slug: string): Promise<DealerRow[]> {
   const full = await queryDealers(slug, `${dealerBrandColumns},${logoVariantColumns},${logoDualColumns},${logoSecondaryVariantColumns},${logoWebsiteColumns}`)
   if (full.ok) return await full.json() as DealerRow[]
   const fullBody = await full.text()
-  if (missingLogoWebsiteColumns(full.status, fullBody)) {
+  return continueDealerLookup(slug, full.status, fullBody)
+}
+
+async function continueDealerLookup(slug: string, status: number, fullBody: string): Promise<DealerRow[]> {
+  if (missingLogoWebsiteColumns(status, fullBody)) {
     return fetchWithoutWebsiteColumns(slug)
   }
-  return fetchFromLegacyColumns(slug, full.status, fullBody)
+  return fetchFromLegacyColumns(slug, status, fullBody)
 }
 
 async function fetchWithoutWebsiteColumns(slug: string): Promise<DealerRow[]> {

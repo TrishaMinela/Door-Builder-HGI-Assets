@@ -1,3 +1,5 @@
+import type { DoorBuilderAppearance } from '../utils/doorBuilderAppearance'
+
 export type DealerLogoVariant = 'original' | 'black' | 'white'
 
 export type PublicDealerBrand = {
@@ -40,4 +42,5 @@ export type PublicDealerBrand = {
   customBodyFontUrl: string | null
   customBodyFontName: string | null
   customBodyFontWeight: number | null
+  appearance?: DoorBuilderAppearance | null
 }
