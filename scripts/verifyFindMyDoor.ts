@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { builderUx } from '../src/config/builderUx.ts'
+import { hasHouseImage, houseImageGeneration, houseImages, modeAfterOptionChange, resetHouseImages } from '../src/features/find-my-door/houseImageCache.ts'
+import { FEATURED_DOOR, INSPIRATION } from '../src/features/find-my-door/inspiration.ts'
 import { RECIPES } from '../src/features/find-my-door/recipes.ts'
 import { resolveRecommendation } from '../src/features/find-my-door/resolveRecommendation.ts'
 import { chooseFinish, selectRecipes } from '../src/features/find-my-door/selectRecipes.ts'
@@ -71,5 +75,79 @@ const lead = buildDoorBuilderSubmissionPayload({
 assert.equal(lead.postal_code, '46741')
 assert.match(lead.door_style, /3\/4|F48/i)
 assert.equal(dealerSlugFromPath('/findmydoor'), null)
+assert.equal(builderUx.showFindMyDoorEntry, false)
+assert.equal(FEATURED_DOOR, INSPIRATION[0])
+const jargon = /\b(?:20|22)[ -]?gauge\b|fiberglass/i
+for (const door of INSPIRATION) {
+  assert.equal(jargon.test(door.alt), false, door.alt)
+  assert.equal('name' in door || 'detail' in door || 'mood' in door, false, door.id)
+}
+const page = readFileSync(new URL('../src/features/find-my-door/FindMyDoorPage.tsx', import.meta.url), 'utf8')
+const css = readFileSync(new URL('../src/features/find-my-door/FindMyDoor.css', import.meta.url), 'utf8')
+const gallery = page.slice(page.indexOf('className="find-door-gallery"'), page.indexOf("step === 'style'"))
+const hero = page.slice(page.indexOf('className="find-door-feature"'), page.indexOf('className="find-door-gallery"'))
+assert.equal(gallery.includes('Tap one'), false)
+assert.equal(/<button|onClick|door\.name|door\.detail|cursor:\s*pointer/.test(gallery), false)
+assert.match(gallery, /Popular right now/)
+assert.match(gallery, /aria-hidden="true"/)
+assert.match(gallery, /alt=""/)
+assert.equal(hero.includes('figcaption'), false)
+assert.equal(jargon.test(hero + gallery), false)
+assert.match(css, /@keyframes find-door-marquee\{from\{transform:translate3d\(0,0,0\)\}to\{transform:translate3d\(-50%,0,0\)\}/)
+assert.match(css, /\.find-door-marquee:hover \.find-door-marquee-track\{animation-play-state:paused\}/)
+assert.match(css, /@media \(prefers-reduced-motion:reduce\)\{[\s\S]*\.find-door-marquee-track\{animation:none\}/)
+assert.match(css, /@media \(prefers-reduced-motion:reduce\)\{[\s\S]*overflow-x:auto/)
+assert.equal(css.includes('find-door-gallery-row'), false)
+assert.equal(page.includes('See this on my house'), false)
+assert.match(page, /modeAfterOptionChange/)
+const render = readFileSync(new URL('../src/features/find-my-door/HouseRender.tsx', import.meta.url), 'utf8')
+assert.match(render, /CleanupComparisonSlider/)
+assert.match(render, /originalLabel="Before"/)
+assert.match(render, /resultLabel="After"/)
+assert.match(render, /\.begin\(/)
+resetHouseImages()
+const photoA = 'blob:house-a'
+const photoB = 'blob:house-b'
+const images = houseImages(photoA)
+let starts = 0
+const generate = (door: string) => {
+  const decision = images.begin(door)
+  if (decision === 'start') {
+    starts += 1
+    images.fulfill(door, `image-${door}`)
+  }
+  return decision
+}
+let mode: 'door' | 'house' = 'house'
+assert.equal(mode, 'house')
+assert.equal(generate('option-a'), 'start')
+mode = 'door'
+assert.equal(mode, 'door')
+mode = 'house'
+assert.equal(generate('option-a'), 'cached')
+mode = modeAfterOptionChange(mode === 'house', hasHouseImage(photoA, 'option-b'))
+assert.equal(mode, 'door')
+assert.equal(starts, 1)
+mode = 'house'
+assert.equal(mode, 'house')
+assert.equal(generate('option-b'), 'start')
+mode = modeAfterOptionChange(true, hasHouseImage(photoA, 'option-a'))
+assert.equal(mode, 'house')
+assert.equal(generate('option-a'), 'cached')
+assert.equal(images.get('option-a'), 'image-option-a')
+mode = modeAfterOptionChange(mode === 'house', hasHouseImage(photoA, 'option-b'))
+assert.equal(mode, 'house')
+assert.equal(generate('option-b'), 'cached')
+assert.equal(images.get('option-b'), 'image-option-b')
+assert.equal(starts, 2)
+const generationBeforePhotoChange = houseImageGeneration()
+assert.equal(houseImages(photoB).has('option-a'), false)
+assert.notEqual(houseImageGeneration(), generationBeforePhotoChange)
+const third = houseImages('blob:house-c')
+assert.equal(third.begin('option-a'), 'start')
+assert.equal(third.begin('option-a'), 'inflight')
+third.fail('option-a')
+assert.equal(third.begin('option-a'), 'start')
+resetHouseImages()
 assert.equal(failures.length, 0, failures.join('\n'))
 console.log(`Find My Door catalog: ${RECIPES.length} recipes resolve and the visualizer accepts them.`)

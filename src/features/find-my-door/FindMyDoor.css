@@ -1,26 +1,28 @@
 .find-my-door-app{background:#f7faff;color:var(--black)}
-.find-my-door-app>header.find-my-door-header{position:relative;height:auto;min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px;background:var(--black);color:#fff;border-bottom:4px solid var(--gold)}
-.find-my-door-header .brand{min-width:0}
-.find-my-door-header .brand img{width:150px;height:auto}
-.find-my-door-builder-link{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:1px solid #ffffff55;border-radius:4px;color:#fff;font-size:14px;font-weight:700;text-decoration:none;white-space:nowrap}
+.find-my-door-app>header.find-my-door-header{position:relative;height:94px;min-height:94px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 4vw;background:var(--black);color:#fff;border-bottom:4px solid var(--gold)}
+.find-my-door-header .brand{display:flex;align-items:center;gap:20px;min-width:0;color:#fff;text-decoration:none}
+.find-my-door-header .brand img{display:block;width:190px;height:62px;object-fit:contain;filter:invert(1);flex:none}
+.find-my-door-header .app-name{border-left:1px solid #ffffff35;padding-left:20px;min-width:0}
+.find-my-door-header .app-name strong{display:block;color:#fff;font-size:15px;font-weight:700;letter-spacing:.01em}
+.find-my-door-builder-link{display:inline-flex;align-items:center;flex:none;height:34px;min-height:34px;min-width:max-content;padding:0 13px;border:1px solid #ffffff50;border-radius:3px;background:transparent;color:#fff;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
 .find-my-door-app :focus-visible{outline:3px solid var(--peacock);outline-offset:3px}
 .find-my-door-app main.find-my-door-main{display:block;width:min(1120px,100%);margin:0 auto;padding:20px 20px 48px;min-height:0;height:auto;overflow:visible;background:transparent}
-.find-my-door-main:has(.find-door-results){padding-top:12px;padding-bottom:16px}
-.find-my-door-main h1{margin:0 0 8px;font-size:clamp(28px,4vw,40px);line-height:1.12;letter-spacing:-.03em;font-weight:700}
-.find-my-door-main h1:after{content:none}
-.find-door-name{margin:0 0 8px;color:var(--peacock);font-size:14px;font-weight:700}
-.find-door-lead{margin:0 0 18px;max-width:38rem;color:#243034;font-size:16px;line-height:1.45}
-.find-door-steps{display:flex;flex-wrap:nowrap;gap:2px 10px;width:100%;max-width:100%;min-width:0;margin:0 0 16px;padding:0 0 4px;list-style:none;overflow-x:auto}
+.find-my-door-main:has(.find-door-results){width:100%;max-width:none;padding:0}
+.find-my-door-main h1:after{content:"";display:block;width:54px;height:4px;margin-top:12px;background:var(--gold)}
+.find-door-name{margin:0 0 8px;color:var(--peacock);font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+.find-door-lead{margin:0 0 18px;max-width:38rem;color:#535860;font-size:16px;line-height:1.5}
+.find-door-steps{display:flex;align-items:center;flex-wrap:nowrap;gap:0;width:100%;max-width:100%;min-width:0;height:70px;margin:0;padding:0 4vw;list-style:none;background:#fff;box-shadow:0 5px 22px #05040b0d;overflow-x:auto;scrollbar-width:none}
+.find-door-steps::-webkit-scrollbar{display:none}
 .find-door-steps li{display:flex}
-.find-door-steps button,.find-door-steps span{min-height:44px;display:inline-flex;align-items:center;gap:4px;border:0;background:transparent;padding:0;color:#3a4448;font-size:13px;font-weight:700;white-space:nowrap}
-.find-door-steps .current{color:var(--peacock)}
-.find-door-steps .upcoming{color:#5c676c;font-weight:600}
-.find-door-steps i{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#e4ebed;color:#243034;font-style:normal;font-size:12px}
-.find-door-steps .current i{background:var(--peacock);color:#fff}
+.find-door-steps button,.find-door-steps span{min-height:70px;display:inline-flex;align-items:center;gap:8px;border:0;background:transparent;padding:0 22px 0 0;color:#929a95;font-size:11px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.find-door-steps .current,.find-door-steps .done{color:var(--peacock)}
+.find-door-steps .upcoming{color:#929a95;font-weight:700}
+.find-door-steps i{display:grid;place-items:center;width:28px;height:28px;border:1px solid #d5dadd;border-radius:50%;background:#fff;color:#929a95;font-style:normal;font-size:12px}
+.find-door-steps .current i{background:var(--peacock);border-color:var(--peacock);color:#fff;box-shadow:0 0 0 3px #f8d30e55}
+.find-door-steps .done i{background:#e3f0f1;border-color:#a9ccce;color:var(--peacock)}
 .find-door-open{display:grid;gap:22px;align-items:center}
-.find-door-feature{margin:0;display:grid;width:100%;justify-items:stretch;gap:8px;padding:0;background:#e9f0f1}
+.find-door-feature{margin:0;display:grid;width:100%;justify-items:stretch;padding:0;background:#e9f0f1}
 .find-door-feature img{display:block;width:100%;max-width:none;height:auto;object-fit:cover;aspect-ratio:16/10}
-.find-door-feature figcaption{color:#243034;font-size:14px;font-weight:700}
 .find-door-hint{margin:10px 0 0;color:#3a4448;font-size:14px;line-height:1.4}
 .find-door-photo{display:block;width:min(100%,420px);max-height:180px;margin:12px 0;object-fit:contain;background:#e9f0f1}
 .find-door-file{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -29,59 +31,56 @@
 .find-door-actions .next,.find-door-actions .back,.find-door-actions .find-door-quiet{margin-left:0}
 .find-door-upload.next,.find-door-upload.back,.find-door-actions .next,.find-door-actions .back,.find-door-quiet{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;height:46px;padding:0 18px;border-radius:4px;font-size:14px;font-weight:700;text-decoration:none}
 .find-door-upload.next,.find-door-actions .next{border:0;background:var(--peacock);color:#fff}
-.find-door-upload.back,.find-door-actions .back,.find-door-quiet{border:1px solid var(--peacock);background:#fff;color:var(--peacock)}
+.find-door-actions .back,.find-door-upload.back{border:0;background:var(--black);color:#fff}
+.find-door-quiet{border:1px solid var(--peacock);background:#fff;color:var(--peacock)}
 .find-door-actions .next:disabled,.find-door-quiet:disabled{opacity:.55;cursor:wait}
 .find-door-text{min-height:44px;border:0;background:transparent;color:var(--peacock);font-size:14px;font-weight:700;padding:0}
-.find-door-gallery{margin-top:28px;min-width:0}
-.find-door-gallery h2{margin:0 0 6px;font-size:22px;line-height:1.2}
-.find-door-gallery>p{margin:0 0 12px;color:#3a4448;font-size:14px}
-.find-door-gallery-row{display:flex;gap:12px;max-width:100%;overflow-x:auto;padding:0 28px 8px 0;scroll-snap-type:x proximity;-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 36px),transparent)}
-.find-door-gallery-row button{flex:0 0 220px;scroll-snap-align:start;display:grid;padding:0;border:0;border-radius:2px;background:transparent;color:var(--black);text-align:left;overflow:hidden}
-.find-door-gallery-row button.selected{outline:3px solid var(--gold);outline-offset:-3px}
-.find-door-gallery-row img{width:100%;height:146px;object-fit:cover;aspect-ratio:3/2;background:#e9f0f1}
-.find-door-gallery-row span{display:grid;gap:2px;min-height:52px;padding:8px 10px 10px}
-.find-door-gallery-row strong{font-size:14px}
-.find-door-gallery-row em{color:#3a4448;font-size:13px;font-style:normal;font-weight:600}
+.find-door-gallery{margin-top:28px;min-width:0;max-width:100%;overflow:hidden}
+.find-door-gallery h2{margin:0 0 12px;font-size:22px;line-height:1.2}
+.find-door-marquee{position:relative;overflow:hidden;width:100%;max-width:100%;min-width:0;height:240px}
+.find-door-marquee-track{position:absolute;top:0;left:0;display:flex;width:max-content;height:100%;animation:find-door-marquee 90s linear infinite}
+.find-door-marquee:hover .find-door-marquee-track{animation-play-state:paused}
+.find-door-marquee-set{display:flex;flex:0 0 auto;height:100%}
+.find-door-marquee-item{flex:0 0 auto;width:360px;height:240px;margin:0 14px 0 0}
+.find-door-marquee-item img{display:block;width:100%;height:100%;object-fit:cover;background:#e9f0f1}
+@keyframes find-door-marquee{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
 .find-door-question{width:min(720px,100%)}
 .find-door-choices{display:grid;gap:8px}
-.find-door-choice{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:64px;padding:12px 14px;border:1px solid #dfe3e8;border-radius:4px;background:#fff;color:var(--black);text-align:left}
-.find-door-choice strong{font-size:16px}
-.find-door-choice span{color:#3a4448;font-size:14px;line-height:1.35;font-weight:500}
-.find-door-choice.selected{outline:3px solid var(--gold);outline-offset:-3px}
+.find-door-choice{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;min-height:72px;padding:14px 16px;border:1px solid #dfe3e8;border-radius:7px;background:#fff;color:var(--black);text-align:left;box-shadow:0 3px 12px #05040b08}
+.find-door-choice strong{font-size:16px;font-weight:700}
+.find-door-choice span{color:#555b61;font-size:14px;line-height:1.4;font-weight:500}
+.find-door-choice.selected{border:3px solid var(--gold);box-shadow:inset 5px 0 0 var(--peacock),0 10px 28px #0d666c20;outline:none}
 .find-door-fields{display:grid;gap:12px;margin-top:8px}
-.find-door-fields label{display:grid;gap:6px;color:#243034;font-size:14px;font-weight:700}
-.find-door-fields input{width:100%;min-height:48px;padding:0 12px;border:1px solid #8ea0a4;border-radius:4px;background:#fff;font-size:16px;font-weight:500}
+.find-door-fields label{display:grid;gap:6px;color:#243034;font-size:16px;font-weight:600}
+.find-door-fields input{width:100%;min-height:48px;padding:0 12px;border:1px solid #dfe3e8;border-radius:4px;background:#fff;font-size:16px;font-weight:400}
 .find-door-fields input:focus{border-color:var(--peacock);outline:3px solid #0d666c55;outline-offset:1px}
 .find-door-fields input[aria-invalid=true]{border-color:#9d3f31}
 .find-door-fields small{color:#9d3f31;font-size:13px;font-weight:600}
 .find-door-note{margin:12px 0 0;color:#243034;font-size:14px;line-height:1.4}
 .find-door-note-error{color:#9d3f31}
 .find-my-door-app,.find-my-door-main,.find-door-results,.find-door-stage,.find-door-options,.find-door-actions,.find-door-details{max-width:100%;min-width:0}
-.find-door-results{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);grid-template-areas:"options stage" "options actions" "options details";column-gap:28px;row-gap:0;align-items:start}
-.find-door-details{margin-top:12px}
-.find-door-options{grid-area:options}
-.find-door-stage{grid-area:stage;position:sticky;top:12px;display:flex;flex-direction:column;align-items:stretch;width:100%;min-height:0;padding:12px 12px 0;background:#e9f0f1}
-.find-door-results .find-door-actions.builder-actions{grid-area:actions;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch;width:100%;margin-top:0;padding:10px 12px 12px;background:#e9f0f1}
-.find-door-actions .find-door-text,.find-door-sent{grid-column:1 / -1}
-.find-door-details{grid-area:details}
-.find-door-stage h1{font-size:clamp(24px,3vw,32px);overflow-wrap:anywhere}
+.find-door-results{display:grid;grid-template-columns:minmax(340px,.92fr) minmax(0,1.2fr);align-items:stretch;width:100%}
+.find-door-options{padding:28px clamp(20px,3vw,40px) 36px;background:#fff}
+.find-door-stage{position:sticky;top:0;display:flex;flex-direction:column;align-items:stretch;width:100%;min-height:calc(100dvh - 164px);padding:16px 16px 20px;background:#e9f0f1}
+.find-door-options .find-door-actions.builder-actions{display:flex;flex-wrap:wrap;align-items:center;width:100%;margin-top:22px;padding-top:22px;border-top:1px solid #dfe3e8;background:transparent}
+.find-door-details{margin-top:16px}
 .find-door-reason{margin:0;padding:0 12px 12px;color:#243034;font-size:14px;line-height:1.35;overflow-wrap:anywhere}
 .find-door-read{margin:0 0 8px;color:#3a4448;font-size:14px;line-height:1.35;overflow-wrap:anywhere}
 .find-door-sent{margin:4px 0 0;color:#5c676c;font-size:13px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
-.find-door-stage .preview-view-toggle{position:static;width:max-content;max-width:100%;margin:10px 0 0;padding:3px;gap:0;border:1px solid #c5d0d3;border-radius:4px;background:#fff;box-shadow:none}
-.find-door-stage .preview-view-toggle button{min-height:44px;min-width:0;padding:8px 14px;border:0;border-radius:3px;background:transparent;color:var(--black);font-size:13px;font-weight:700;letter-spacing:0;text-transform:none}
-.find-door-stage .preview-view-toggle button.active{background:var(--peacock);color:#fff}
-.find-door-stage .aside-preview-area{position:relative;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-.find-door-stage .aside-preview-area{width:100%}
-.find-door-stage .preview-scene,.find-door-house-photo{width:100%;max-width:100%;height:min(460px,calc(100dvh - 420px));min-height:300px;object-fit:contain;background:transparent;overflow:hidden}
+.find-door-stage .preview-view-toggle{position:static;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:100%;max-width:none;margin:0 0 12px;padding:4px;gap:4px;border:2px solid var(--gold);border-radius:4px;background:#05040b;box-shadow:0 7px 20px #05040b45}
+.find-door-stage .preview-view-toggle button{min-height:48px;min-width:0;padding:8px 14px;border:1px solid #ffffff45;border-radius:3px;background:transparent;color:#fff;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.find-door-stage .preview-view-toggle button.active{border-color:var(--gold);background:var(--gold);color:#05040b}
+.find-door-stage .aside-preview-area{position:relative;display:flex;flex-direction:column;width:100%;min-height:0;overflow:hidden}
+.find-door-stage .preview-scene,.find-door-stage .cleanup-comparison-editor{width:100%;max-width:100%;height:min(860px,calc(100dvh - 250px));min-height:520px;object-fit:contain;background:transparent;overflow:hidden}
+.find-door-stage .visualizer-editor>.visualizer-zoom-controls{display:flex}
 .find-door-house-status{position:static;display:grid;gap:8px;margin-top:8px;padding:10px 12px;background:#fff;color:#243034}
 .find-door-house-status p{margin:0;font-size:14px;font-weight:700}
 .find-door-progress{display:block;height:6px;overflow:hidden;background:#d5e0e2}
 .find-door-progress:before{content:"";display:block;width:35%;height:100%;background:var(--peacock);animation:find-door-progress 1.1s ease-in-out infinite}
 @keyframes find-door-progress{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
 .find-door-picks{display:grid;gap:10px;min-width:0}
-.find-door-pick{min-width:0;border:1px solid #dfe3e8;border-radius:4px;background:#fff;overflow:hidden}
-.find-door-pick.selected{outline:3px solid var(--gold);outline-offset:-3px}
+.find-door-pick{min-width:0;border:1px solid #dfe3e8;border-radius:7px;background:#fff;box-shadow:0 3px 12px #05040b08;overflow:hidden}
+.find-door-pick.selected{border:3px solid var(--gold);box-shadow:inset 5px 0 0 var(--peacock),0 10px 28px #0d666c20;outline:none}
 .find-door-picks .option-card{display:grid;grid-template-columns:108px minmax(0,1fr);height:auto;min-height:112px;max-height:none;width:100%;border:0;border-radius:0;box-shadow:none}
 .find-door-picks .option-card.selected{outline:none;box-shadow:none}
 .find-door-picks .option-visual{height:112px;min-height:0;overflow:hidden;background:#e9f0f1}
@@ -91,7 +90,7 @@
 .find-door-picks .option-copy{align-self:center;min-width:0;padding:10px 12px}
 .find-door-picks .option-copy strong{display:block;font-size:15px;line-height:1.25;overflow-wrap:anywhere}
 .find-door-picks .option-copy span{display:block;color:#3a4448;font-size:13px;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
-.find-door-details .mini-summary{width:100%;margin:0;border-left:0;border-top:1px solid #e0e5e8;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 12px;padding:10px 0}
+.find-door-details .mini-summary{width:100%;margin:0;border-left:5px solid var(--gold);border-top:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 12px;padding:10px 0 10px 12px}
 .find-door-details .mini-summary span{min-width:0}
 .find-door-details .mini-summary b,.find-door-details .mini-summary strong{display:block;overflow-wrap:anywhere}
 .find-door-details .mini-summary b{margin-bottom:2px;color:#3a4448;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
@@ -101,9 +100,9 @@
 @keyframes find-door-shimmer{to{background-position:-200% 0}}
 .find-door-park{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (min-width:901px){
-  .find-door-results{height:auto;max-height:none;grid-template-rows:auto auto auto}
+  .find-door-results{height:auto;max-height:none}
   .find-door-stage{height:auto;overflow:visible}
-  .find-door-stage .preview-scene,.find-door-house-photo{height:min(980px,calc(100dvh - 80px));min-height:760px;max-height:none}
+  .find-door-stage .preview-scene,.find-door-stage .cleanup-comparison-editor{height:min(980px,calc(100dvh - 250px));min-height:640px;max-height:none}
 }
 @media (min-width:801px){
   .find-door-open{grid-template-columns:minmax(0,1.05fr) minmax(260px,.85fr);align-items:center}
@@ -115,20 +114,28 @@
   .find-door-feature{order:-1;width:100%;padding:0}
   .find-door-feature img{width:100%;height:210px;max-height:none;aspect-ratio:auto;object-fit:cover}
   .find-door-open .find-door-upload.next{width:100%}
+  .find-door-marquee{height:168px}
+  .find-door-marquee-item{width:252px;height:168px;margin-right:12px}
 }
 @media (max-width:900px){
-  .find-door-results{display:flex;flex-direction:column;gap:12px}
-  .find-door-stage{position:static;order:1;width:100%;padding:16px}
-  .find-door-stage h1,.find-door-stage .preview-view-toggle{margin-left:0}
+  .find-door-results{display:flex;flex-direction:column;gap:0}
+  .find-door-stage{position:static;order:1;width:100%;min-height:0;padding:16px}
   .find-door-options{order:2}
-  .find-door-actions{order:3}
-  .find-door-details{order:4}
-  .find-door-picks{display:flex;gap:10px;max-width:100%;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+  .find-door-picks{display:flex;gap:10px;max-width:100%;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory;scrollbar-width:none}
+  .find-door-picks::-webkit-scrollbar{display:none}
   .find-door-pick{flex:0 0 min(240px,78%);scroll-snap-align:start}
   .find-door-picks .option-card{height:auto}
-  .find-door-stage .preview-scene,.find-door-house-photo{height:55dvh;min-height:0}
-  .find-door-actions{grid-template-columns:minmax(0,1fr)}
+  .find-door-stage .preview-scene,.find-door-stage .cleanup-comparison-editor{height:55dvh;min-height:280px}
+}
+@media (max-width:560px){
+  .find-my-door-app>header.find-my-door-header{height:72px;min-height:72px}
+  .find-my-door-header .brand img{width:145px;height:48px}
+  .find-my-door-header .app-name{display:none}
 }
 @media (prefers-reduced-motion:reduce){
-  .find-door-progress:before,.find-door-skeleton{animation:none}
+  .find-door-progress:before,.find-door-skeleton,.find-door-marquee-track{animation:none}
+  .find-door-marquee{overflow-x:auto;overflow-y:hidden;height:auto;scrollbar-width:none}
+  .find-door-marquee::-webkit-scrollbar{display:none}
+  .find-door-marquee-track{position:relative;width:max-content;height:auto}
+  .find-door-marquee-set[aria-hidden="true"]{display:none}
 }
