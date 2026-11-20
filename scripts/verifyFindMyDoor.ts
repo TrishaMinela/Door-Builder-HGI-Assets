@@ -77,6 +77,8 @@ assert.match(lead.door_style, /3\/4|F48/i)
 assert.equal(dealerSlugFromPath('/findmydoor'), null)
 assert.equal(builderUx.showFindMyDoorEntry, false)
 assert.equal(FEATURED_DOOR, INSPIRATION[0])
+assert.equal(INSPIRATION.length, 10)
+assert.equal(INSPIRATION.some((door) => /round[- ]top/i.test(`${door.id} ${door.src} ${door.alt}`)), false)
 const jargon = /\b(?:20|22)[ -]?gauge\b|fiberglass/i
 for (const door of INSPIRATION) {
   assert.equal(jargon.test(door.alt), false, door.alt)
