@@ -103,7 +103,7 @@
 @media (min-width:901px){
   .find-door-results{height:auto;max-height:none;grid-template-rows:auto auto auto}
   .find-door-stage{height:auto;overflow:visible}
-  .find-door-stage .preview-scene,.find-door-house-photo{height:min(780px,74vh);min-height:620px;max-height:none}
+  .find-door-stage .preview-scene,.find-door-house-photo{height:min(980px,calc(100dvh - 80px));min-height:760px;max-height:none}
 }
 @media (min-width:801px){
   .find-door-open{grid-template-columns:minmax(0,1.05fr) minmax(260px,.85fr);align-items:center}
