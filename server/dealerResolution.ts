@@ -17,6 +17,16 @@ type DealerRow = {
   logo_header_variant?: string | null
   logo_pages_variant?: string | null
   logo_generated_light_usable?: boolean | null
+  logo_display?: string | null
+  logo_secondary_url?: string | null
+  logo_secondary_light_url?: string | null
+  logo_secondary_generated_light_url?: string | null
+  logo_secondary_generated_light_usable?: boolean | null
+  logo_secondary_black_url?: string | null
+  logo_secondary_generated_black_url?: string | null
+  logo_secondary_generated_black_usable?: boolean | null
+  logo_secondary_header_variant?: string | null
+  logo_secondary_pages_variant?: string | null
   logo_placement: string | null
   primary_color: string | null
   secondary_color: string | null
@@ -87,6 +97,16 @@ export async function resolveDealerBrand(dealerSlug: unknown): Promise<PublicDea
     logoHeaderVariant: safeLogoVariant(dealer.logo_header_variant),
     logoPagesVariant: safeLogoVariant(dealer.logo_pages_variant),
     logoPlacement: dealer.logo_placement === 'header' ? 'header' : 'hero',
+    logoDisplay: dealer.logo_display === 'dual' ? 'dual' : 'single',
+    logoSecondaryUrl: dealer.logo_secondary_url ?? null,
+    logoSecondaryLightUrl: dealer.logo_secondary_light_url ?? null,
+    logoSecondaryGeneratedLightUrl: dealer.logo_secondary_generated_light_url ?? null,
+    logoSecondaryGeneratedLightUsable: safeUsableFlag(dealer.logo_secondary_generated_light_usable),
+    logoSecondaryBlackUrl: dealer.logo_secondary_black_url ?? null,
+    logoSecondaryGeneratedBlackUrl: dealer.logo_secondary_generated_black_url ?? null,
+    logoSecondaryGeneratedBlackUsable: safeUsableFlag(dealer.logo_secondary_generated_black_usable),
+    logoSecondaryHeaderVariant: safeLogoVariant(dealer.logo_secondary_header_variant),
+    logoSecondaryPagesVariant: safeLogoVariant(dealer.logo_secondary_pages_variant),
     primaryColor: dealer.primary_color,
     secondaryColor: dealer.secondary_color,
     websiteUrl: safePublicWebsite(dealer.website),
@@ -107,16 +127,45 @@ export async function resolveDealerBrand(dealerSlug: unknown): Promise<PublicDea
 
 const dealerBrandColumns = 'id,is_active,slug,company_name,logo_url,logo_light_url,logo_generated_light_url,logo_placement,primary_color,secondary_color,website,heading_font_family,heading_font_weight,heading_font_size,body_font_family,body_font_weight,body_font_size,custom_heading_font_url,custom_heading_font_name,custom_heading_font_weight,custom_body_font_url,custom_body_font_name,custom_body_font_weight'
 const logoVariantColumns = 'logo_black_url,logo_generated_black_url,logo_generated_black_usable,logo_header_variant,logo_pages_variant,logo_generated_light_usable'
+const logoDualColumns = 'logo_display,logo_secondary_url,logo_secondary_light_url,logo_secondary_generated_light_url,logo_secondary_generated_light_usable,logo_secondary_black_url,logo_secondary_generated_black_url,logo_secondary_generated_black_usable'
+const logoSecondaryVariantColumns = 'logo_secondary_header_variant,logo_secondary_pages_variant'
 
 function missingLogoVariantColumns(status: number, body: string) {
   return status === 400 && /logo_black_url|logo_generated_black_url|logo_generated_black_usable|logo_header_variant|logo_pages_variant|logo_generated_light_usable/.test(body)
 }
 
+function missingDualLogoColumns(status: number, body: string) {
+  return status === 400 && /logo_display|logo_secondary_/.test(body)
+}
+
+function missingSecondaryVariantColumns(status: number, body: string) {
+  return status === 400 && /logo_secondary_header_variant|logo_secondary_pages_variant/.test(body)
+}
+
 async function fetchDealerRows(slug: string): Promise<DealerRow[]> {
-  const extended = await queryDealers(slug, `${dealerBrandColumns},${logoVariantColumns}`)
-  if (extended.ok) return await extended.json() as DealerRow[]
-  const body = await extended.text()
-  if (!missingLogoVariantColumns(extended.status, body)) throw new DealerResolutionError(502, 'Dealer lookup is unavailable.')
+  const full = await queryDealers(slug, `${dealerBrandColumns},${logoVariantColumns},${logoDualColumns},${logoSecondaryVariantColumns}`)
+  if (full.ok) return await full.json() as DealerRow[]
+  const fullBody = await full.text()
+  if (missingSecondaryVariantColumns(full.status, fullBody) && !/logo_display/.test(fullBody)) {
+    const withoutSecondaryVariants = await queryDealers(slug, `${dealerBrandColumns},${logoVariantColumns},${logoDualColumns}`)
+    if (withoutSecondaryVariants.ok) return await withoutSecondaryVariants.json() as DealerRow[]
+    const narrowedBody = await withoutSecondaryVariants.text()
+    return fetchWithoutDualColumns(slug, withoutSecondaryVariants.status, narrowedBody)
+  }
+  return fetchWithoutDualColumns(slug, full.status, fullBody)
+}
+
+async function fetchWithoutDualColumns(slug: string, status: number, body: string): Promise<DealerRow[]> {
+  if (missingDualLogoColumns(status, body)) {
+    const variants = await queryDealers(slug, `${dealerBrandColumns},${logoVariantColumns}`)
+    if (variants.ok) return await variants.json() as DealerRow[]
+    const variantBody = await variants.text()
+    if (!missingLogoVariantColumns(variants.status, variantBody)) throw new DealerResolutionError(502, 'Dealer lookup is unavailable.')
+    const fallback = await queryDealers(slug, dealerBrandColumns)
+    if (!fallback.ok) throw new DealerResolutionError(502, 'Dealer lookup is unavailable.')
+    return await fallback.json() as DealerRow[]
+  }
+  if (!missingLogoVariantColumns(status, body)) throw new DealerResolutionError(502, 'Dealer lookup is unavailable.')
   const fallback = await queryDealers(slug, dealerBrandColumns)
   if (!fallback.ok) throw new DealerResolutionError(502, 'Dealer lookup is unavailable.')
   return await fallback.json() as DealerRow[]

@@ -141,7 +141,7 @@ export function dealerSurfaceLogo(brand: PublicDealerBrand, surface: DealerLogoS
   const legacyLight = resolvedDealerLightLogo(brand)
   const variant = explicitLogoVariant(surface === 'page-header' ? brand.logoPagesVariant : brand.logoHeaderVariant)
   const legacy = surface === 'home-hero'
-    ? { logoUrl: brand.logoUrl || legacyLight, needsContrastContainer: false, usesDarkSurface: !brand.logoUrl && Boolean(legacyLight) }
+    ? { logoUrl: brand.logoUrl || legacyLight, needsContrastContainer: false, usesDarkSurface: false }
     : { logoUrl: headerIsDark ? legacyLight || brand.logoUrl : brand.logoUrl || legacyLight, needsContrastContainer: false, usesDarkSurface: false }
   if (!variant) return legacy
 
@@ -154,7 +154,7 @@ export function dealerSurfaceLogo(brand: PublicDealerBrand, surface: DealerLogoS
     return {
       logoUrl: selected,
       needsContrastContainer: false,
-      usesDarkSurface: variant === 'white' && surface === 'home-hero',
+      usesDarkSurface: false,
     }
   }
   const original = cleanLogoUrl(brand.logoUrl)
@@ -162,6 +162,55 @@ export function dealerSurfaceLogo(brand: PublicDealerBrand, surface: DealerLogoS
     return { logoUrl: original, needsContrastContainer: false, usesDarkSurface: false }
   }
   return { logoUrl: null, needsContrastContainer: false, usesDarkSurface: false }
+}
+
+export type DealerSurfaceLogos = {
+  primary: DealerSurfaceLogo | null
+  secondary: DealerSurfaceLogo | null
+  showPair: boolean
+}
+
+function secondaryBrand(brand: PublicDealerBrand): PublicDealerBrand {
+  return {
+    ...brand,
+    logoUrl: brand.logoSecondaryUrl ?? null,
+    logoLightUrl: brand.logoSecondaryLightUrl ?? null,
+    logoGeneratedLightUrl: brand.logoSecondaryGeneratedLightUrl ?? null,
+    logoGeneratedLightUsable: brand.logoSecondaryGeneratedLightUsable ?? null,
+    logoBlackUrl: brand.logoSecondaryBlackUrl ?? null,
+    logoGeneratedBlackUrl: brand.logoSecondaryGeneratedBlackUrl ?? null,
+    logoGeneratedBlackUsable: brand.logoSecondaryGeneratedBlackUsable ?? null,
+  }
+}
+
+/** NULL follows Logo 1. A missing selected file does not switch to another color. */
+export function secondaryVariantForSurface(brand: PublicDealerBrand, surface: DealerLogoSurface) {
+  const primary = explicitLogoVariant(surface === 'page-header' ? brand.logoPagesVariant : brand.logoHeaderVariant)
+  const own = explicitLogoVariant(surface === 'page-header' ? brand.logoSecondaryPagesVariant : brand.logoSecondaryHeaderVariant)
+  return own ?? primary
+}
+
+/** Selected file only. A missing white or black file does not switch to another color. */
+export function selectedSecondaryLogoUrl(brand: PublicDealerBrand, surface: DealerLogoSurface): string | null {
+  const second = secondaryBrand(brand)
+  const variant = secondaryVariantForSurface(brand, surface)
+  if (variant === 'white') return explicitWhiteLogoUrl(second)
+  if (variant === 'black') return explicitBlackLogoUrl(second)
+  if (variant === 'original') return cleanLogoUrl(second.logoUrl)
+  return dealerSurfaceLogo(second, surface)?.logoUrl ?? null
+}
+
+/** Two logos when the second file exists. A missing second file leaves the first logo alone. */
+export function dealerSurfaceLogos(brand: PublicDealerBrand, surface: DealerLogoSurface): DealerSurfaceLogos {
+  const primary = dealerSurfaceLogo(brand, surface)
+  if (brand.logoDisplay !== 'dual' || !primary?.logoUrl) return { primary, secondary: null, showPair: false }
+  const logoUrl = selectedSecondaryLogoUrl(brand, surface)
+  if (!logoUrl) return { primary, secondary: null, showPair: false }
+  return {
+    primary,
+    secondary: { logoUrl, needsContrastContainer: false, usesDarkSurface: false },
+    showPair: true,
+  }
 }
 
 export function isLightBrandColor(value: string | null) {

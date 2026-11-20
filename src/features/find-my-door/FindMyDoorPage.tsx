@@ -7,7 +7,7 @@ import { OptionCard } from '../../components/OptionCard'
 import { SiteFooter } from '../../components/SiteFooter'
 import type { PublicDealerBrand } from '../../types/dealerBranding'
 import type { ContactForm } from '../../types'
-import { dealerBrandStyle, dealerSurfaceLogo } from '../../utils/dealerBranding'
+import { dealerBrandStyle, dealerSurfaceLogos } from '../../utils/dealerBranding'
 import { isValidDealerSlug, normalizeDealerSlug } from '../../utils/dealerSlug'
 import { buildDoorBuilderSubmissionPayload, submitQuote } from '../../utils/submission'
 import { prepareAiHousePhoto } from '../home-visualizer/aiVisualization'
@@ -97,7 +97,8 @@ export function FindMyDoorPage() {
   const houseRef = useRef<HouseRenderHandle>(null)
   const homeHref = dealerSlug ? `/${dealerSlug}` : '/'
   const current = recommendations[selected] ?? null
-  const logo = dealerBrand ? dealerSurfaceLogo(dealerBrand, 'page-header') : null
+  const pageLogos = dealerBrand ? dealerSurfaceLogos(dealerBrand, 'page-header') : null
+  const logo = pageLogos?.primary ?? null
 
   useEffect(() => {
     const previous = document.title
@@ -263,7 +264,7 @@ export function FindMyDoorPage() {
     <div ref={setBannerTarget} className="dealer-mode-banner-slot" />
     <header className="find-my-door-header">
       <a className="brand" href={homeHref} aria-label="Home Guard Door Builder home">
-        {dealerBrand && logo ? <DealerBrandMark brand={dealerBrand} onDarkBackground={logo.usesDarkSurface} logoUrl={logo.logoUrl} contrastContainer={logo.needsContrastContainer} /> : <img src="/assets/branding/hgi-logo-black.webp" alt="Home Guard Industries" />}
+        {dealerBrand && logo ? <DealerBrandMark brand={dealerBrand} onDarkBackground={logo.usesDarkSurface} logoUrl={logo.logoUrl} secondaryLogoUrl={pageLogos?.showPair ? pageLogos.secondary?.logoUrl : null} contrastContainer={logo.needsContrastContainer} /> : <img src="/assets/branding/hgi-logo-black.webp" alt="Home Guard Industries" />}
         <span className="app-name"><strong>HGI Door Finder</strong></span>
       </a>
       <a className="home-return find-my-door-builder-link" href={homeHref}>Door Builder</a>
