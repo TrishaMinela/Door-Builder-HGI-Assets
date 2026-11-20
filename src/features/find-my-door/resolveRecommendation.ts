@@ -105,6 +105,11 @@ function normalizedLabel(value: string) {
   return value.toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+/** Subtitle rendered under the card title: finish and glass, without hardware. */
+export function recommendationSubtitle(finishName: string, glassName: string) {
+  return `${finishName} · ${glassName}`
+}
+
 /** Title from the finish that will actually be built, not the recipe's default name. */
 export function recommendationTitle(finishName: string, styleName: string, openingLabel: string) {
   const style = styleName.trim().toLowerCase()
