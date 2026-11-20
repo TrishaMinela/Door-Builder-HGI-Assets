@@ -40,6 +40,7 @@ import { DEFAULT_FRENCH_LOCK_PREP, doorConfigurationLabel, lockSetupOptionsForHa
 import { doorSwingDisplayName, savannahOpening } from './data/doorHanding'
 import { configurationPdfName } from './utils/pdfConfig'
 import { buildDoorBuilderSubmissionPayload, submitQuote } from './utils/submission'
+import { normalizeUsZip, postalCodeForSubmission } from './utils/usZip'
 import { fslArtsAndCraftsGridAsset, fslGlassCategories, fslGlassOptions, fslGridAsset, fslLowEStyleRules, fslPrairieGridAsset, fslSdlPatterns, fslStandardStyleRules, type FslGridLocationId, type SideliteGlassCategory, type SideliteGlassOption } from './data/fslGlass'
 import { f48slArtsAndCraftsGridAsset, f48slGlassCategories, f48slGlassOptions, f48slGridAsset, f48slLowEStyleRules, f48slPrairieGridAsset, f48slStandardStyleRules } from './data/f48slGlass'
 import { sslArtsAndCraftsGridAsset, sslGlassCategories, sslGlassOptions, sslGridAsset, sslLowEStyleRules, sslPrairieGridAsset, sslStandardStyleRules } from './data/sslGlass'
@@ -1983,7 +1984,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
     required.forEach((key) => { if (!contact[key].trim()) nextErrors[key] = 'Please complete this field.' })
     if (contact.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)) nextErrors.email = 'Enter a valid email address.'
     if (contact.phone && !/^[+]?[\d\s().-]{7,20}$/.test(contact.phone)) nextErrors.phone = 'Enter a valid phone number.'
-    if (contact.zip && !/^\d{5}(-\d{4})?$/.test(contact.zip)) nextErrors.zip = 'Enter a valid ZIP code.'
+    if (contact.zip.trim() && !normalizeUsZip(contact.zip)) nextErrors.zip = 'Enter a valid ZIP code.'
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors)
       return
@@ -1996,7 +1997,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
       if (!selectedFinish) throw new Error('Please select a door finish before sending your configuration.')
       if (!currentDoorConfiguration) throw new Error('Please complete your door configuration before sending it.')
       const configuration = currentDoorConfiguration
-      const flattenedSubmission = buildDoorBuilderSubmissionPayload({ configuration, contact })
+      const flattenedSubmission = buildDoorBuilderSubmissionPayload({ configuration, contact: { ...contact, zip: postalCodeForSubmission(contact.zip, dealerSlug) } })
       const doorConfiguration = { schemaVersion: 1 as const, configuration }
       const submissionFingerprint = JSON.stringify({ ...flattenedSubmission, doorConfiguration })
       const submissionId = submissionAttemptRef.current?.fingerprint === submissionFingerprint
