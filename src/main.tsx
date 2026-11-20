@@ -10,6 +10,8 @@ import './home.css'
 import './components/SiteFooter.css'
 import './components/DoorConfigurationStep.css'
 import './components/ButtonInteraction.css'
+import './styles/logoPair.css'
+import './styles/dealerAppearance.css'
 import { installStaleChunkRecovery } from './utils/staleChunkRecovery'
 
 installStaleChunkRecovery()

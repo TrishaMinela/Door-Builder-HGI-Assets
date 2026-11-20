@@ -86,6 +86,7 @@ assert.deepEqual(available.body, {
     bodyFontFamily: null, bodyFontWeight: null, bodyFontSize: null,
     customHeadingFontUrl: null, customHeadingFontName: null, customHeadingFontWeight: null,
     customBodyFontUrl: null, customBodyFontName: null, customBodyFontWeight: null,
+    appearance: null,
   },
 })
 assert.equal(JSON.stringify(available.body).includes(dealer.id), false)

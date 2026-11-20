@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { PublicDealerBrand } from '../types/dealerBranding'
+import { appearanceCssVars, resolvedBrandColors } from './doorBuilderAppearance'
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i
 const FONT_STACKS: Record<string,string>={system:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',arial:'Arial,sans-serif',helvetica:'Helvetica,Arial,sans-serif',verdana:'Verdana,Geneva,sans-serif',tahoma:'Tahoma,Verdana,sans-serif',trebuchet:'"Trebuchet MS",Arial,sans-serif',georgia:'Georgia,"Times New Roman",serif',times:'"Times New Roman",Times,serif',courier:'"Courier New",Courier,monospace',montserrat:'Montserrat,Arial,sans-serif',caladea:'Caladea,Georgia,serif'}
@@ -9,8 +10,9 @@ function safeColor(value: string | null, fallback: string) {
 }
 
 export function dealerBrandStyle(brand: PublicDealerBrand): CSSProperties {
-  const primary = safeColor(brand.primaryColor, '#0d666c')
-  const secondary = safeColor(brand.secondaryColor, '#05040b')
+  const brandColors = resolvedBrandColors({ primaryColor: brand.primaryColor, secondaryColor: brand.secondaryColor })
+  const primary = brandColors.primary
+  const secondary = brandColors.secondary
   const headingCustom=`DealerHeading-${brand.slug}`
   const bodyCustom=`DealerBody-${brand.slug}`
   const headingFont=brand.headingFontFamily==='custom'&&brand.customHeadingFontUrl?`"${headingCustom}",var(--font-heading)`:FONT_STACKS[brand.headingFontFamily||'']
@@ -28,6 +30,7 @@ export function dealerBrandStyle(brand: PublicDealerBrand): CSSProperties {
     ...(brand.bodyFontWeight?{'--dealer-body-weight':String(brand.bodyFontWeight)}:{}),
     ...(brand.headingFontSize?{'--dealer-heading-size':`${brand.headingFontSize}px`}:{}),
     ...(brand.bodyFontSize?{'--dealer-body-size':`${brand.bodyFontSize}px`}:{}),
+    ...appearanceCssVars(brand.appearance, brandColors),
   } as CSSProperties
 }
 
