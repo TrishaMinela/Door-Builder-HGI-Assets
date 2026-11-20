@@ -31,11 +31,9 @@ Exterior photos from homeguardindustries.com, saved as WebP in `public/assets/fi
 | File | Source | Label |
 | --- | --- | --- |
 | hero-craftsman-full-lite.webp | Entry-Doors-20-Gauge-Gallery-F.jpg | 20 Gauge full lite, Craftsman. Hero. |
-| round-top-brick.webp | Entry-Doors-20-Gauge-Round-Top-1.jpg | 20 Gauge round top, Brick |
 | signature-f482-sidelites.webp | Entry-Doors-Signature-Series-Gallery-F482-2.png | Signature Series F482, Farmhouse |
 | gauge-22-cr14.webp | Entry-Doors-Popular-Entry-Doors-CR14.jpg | 22 Gauge CR14, Craftsman |
 | brushed-smooth-full-lite.webp | Entry-Doors-Brushed-Smooth-Gallery-F-1.jpg | Brushed Smooth, Traditional |
-| round-top-modern.webp | Entry-Doors-20-Gauge-Round-Top-2.jpg | 20 Gauge round top, Modern |
 | signature-two-panel.webp | Entry-Doors-Signature-Series-Gallery-2PPLSS.jpg | Signature Series, Modern |
 | shaker-cottage.webp | Entry-Doors-22-Gauge-Gallery-SHAK3.png | 22 Gauge shaker, Cottage |
 | brushed-smooth-3-lite.webp | Entry-Doors-Brushed-Smooth-Gallery-3LT.jpg | Brushed Smooth 3 lite, Modern |

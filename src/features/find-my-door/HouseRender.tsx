@@ -1,8 +1,10 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type CSSProperties } from 'react'
+import { CleanupComparisonSlider } from '../home-visualizer/CleanupComparisonSlider'
 import { ConfiguredDoorSource, type DoorSourceState } from '../home-visualizer/ConfiguredDoorSource'
 import { AiVisualizationError, generateAiVisualization } from '../home-visualizer/aiVisualization'
 import { detectEntranceStructure } from '../home-visualizer/entranceDetection'
 import type { EntranceDetection } from '../home-visualizer/entranceFitStrategy'
+import { houseImageGeneration, houseImages } from './houseImageCache'
 import type { ResolvedRecommendation } from './resolveRecommendation'
 
 type Props = {
@@ -16,6 +18,10 @@ export type HouseRenderHandle = { seeOnHouse: () => void }
 
 const emptySource: DoorSourceState = { url: '', width: 0, height: 0, error: '', ready: false }
 
+function liveKey(photo: string, doorKey: string) {
+  return `${photo}\u0000${doorKey}`
+}
+
 async function snapshotDoor(url: string) {
   const blob = await fetch(url).then((response) => response.blob())
   return new Promise<string>((resolve, reject) => {
@@ -27,28 +33,48 @@ async function snapshotDoor(url: string) {
 }
 
 function failureMessage(error: unknown, aborted: boolean) {
-  if (aborted) return 'That took too long. Press See this on my house to try again.'
+  if (aborted) return 'That took too long. Choose On my house to try again.'
   if (error instanceof AiVisualizationError) return error.userMessage
   if (error instanceof Error && error.message) return error.message
-  return 'We couldn’t place the door on your photo. Press See this on my house to try again.'
+  return 'We couldn’t place the door on your photo. Choose On my house to try again.'
+}
+
+function waitForDoorSource(doorKey: string, sourceDoorRef: { current: string }, sourceRef: { current: DoorSourceState }, signal: AbortSignal) {
+  return new Promise<string>((resolve, reject) => {
+    const started = performance.now()
+    const check = () => {
+      if (signal.aborted) { reject(new DOMException('Aborted', 'AbortError')); return }
+      const latest = sourceRef.current
+      if (sourceDoorRef.current === doorKey && latest.ready && latest.url) { resolve(latest.url); return }
+      if (sourceDoorRef.current === doorKey && latest.error && performance.now() - started > 1000) { reject(new Error(latest.error)); return }
+      if (performance.now() - started > 30_000) { reject(new Error('We couldn’t prepare this door. Try again.')); return }
+      window.setTimeout(check, 200)
+    }
+    check()
+  })
 }
 
 export const HouseRender = forwardRef<HouseRenderHandle, Props>(function HouseRender({ photoUrl, resolved, showHouse, onProgress }, ref) {
   const [doorSource, setDoorSource] = useState<DoorSourceState>(emptySource)
-  const [image, setImage] = useState('')
-  const [status, setStatus] = useState<'idle' | 'working' | 'ready' | 'error'>('idle')
-  const [message, setMessage] = useState('')
-  const cache = useRef(new Map<string, string>())
+  const [live, setLive] = useState<{ key: string; status: 'idle' | 'working' | 'ready' | 'error'; message: string }>({ key: '', status: 'idle', message: '' })
+  const [photoRatio, setPhotoRatio] = useState('3 / 2')
   const detection = useRef<EntranceDetection | null>(null)
   const sourceRef = useRef(doorSource)
+  const sourceDoorRef = useRef(resolved.cacheKey)
   const resolvedRef = useRef(resolved)
   const photoRef = useRef(photoUrl)
-  const runRef = useRef(0)
   const onProgressRef = useRef(onProgress)
   sourceRef.current = doorSource
   resolvedRef.current = resolved
   photoRef.current = photoUrl
   onProgressRef.current = onProgress
+
+  const images = houseImages(photoUrl)
+  const doorKey = resolved.cacheKey
+  const cached = images.get(doorKey) ?? ''
+  const key = liveKey(photoUrl, doorKey)
+  const status = cached ? 'ready' : live.key === key ? live.status : 'idle'
+  const message = !cached && live.key === key ? live.message : ''
 
   useEffect(() => {
     const controller = new AbortController()
@@ -58,64 +84,65 @@ export const HouseRender = forwardRef<HouseRenderHandle, Props>(function HouseRe
   }, [photoUrl])
 
   useEffect(() => {
-    runRef.current += 1
-    const cached = cache.current.get(resolved.cacheKey)
-    setImage(cached ?? '')
-    setStatus(cached ? 'ready' : 'idle')
-    setMessage('')
-    onProgressRef.current?.(cached ? 'ready' : 'idle')
-  }, [photoUrl, resolved.cacheKey])
+    const image = new Image()
+    image.onload = () => {
+      if (image.naturalWidth && image.naturalHeight) setPhotoRatio(`${image.naturalWidth} / ${image.naturalHeight}`)
+    }
+    image.src = photoUrl
+  }, [photoUrl])
+
+  useEffect(() => { onProgressRef.current?.(status) }, [status])
 
   const seeOnHouse = useCallback(() => {
-    const request = ++runRef.current
+    const photo = photoRef.current
     const current = resolvedRef.current
+    const activeDoor = current.cacheKey
+    const store = houseImages(photo)
+    const saved = store.get(activeDoor)
+    const activeKey = liveKey(photo, activeDoor)
+    if (saved) {
+      setLive({ key: activeKey, status: 'ready', message: '' })
+      return
+    }
+    const decision = store.begin(activeDoor)
+    if (decision === 'inflight') {
+      setLive({ key: activeKey, status: 'working', message: '' })
+      return
+    }
+    const started = houseImageGeneration()
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), 170_000)
-    setStatus('working')
-    setMessage('')
-    onProgressRef.current?.('working')
+    const configuration = current.configuration
+    const finish = current.finish
+    const glassFrameFinish = current.preview.glassFrameFinish ?? null
+    const entranceDetection = detection.current
+    setLive({ key: activeKey, status: 'working', message: '' })
     void (async () => {
       try {
-        if (sourceRef.current.error) sourceRef.current.retry?.()
-        const source = await new Promise<DoorSourceState>((resolve, reject) => {
-          const started = performance.now()
-          let settled = false
-          const finish = (settle: () => void) => { if (settled) return; settled = true; settle() }
-          const check = () => {
-            if (settled) return
-            if (request !== runRef.current || controller.signal.aborted) { finish(() => reject(new DOMException('Aborted', 'AbortError'))); return }
-            const latest = sourceRef.current
-            if (latest.ready && latest.url) { finish(() => resolve(latest)); return }
-            if (latest.error && performance.now() - started > 1000) { finish(() => reject(new Error(latest.error))); return }
-            if (performance.now() - started > 30_000) { finish(() => reject(new Error('We couldn’t prepare this door. Try again.'))); return }
-            window.setTimeout(check, 200)
-          }
-          check()
-        })
-        if (request !== runRef.current) return
-        const productReferenceUrl = await snapshotDoor(source.url)
-        if (request !== runRef.current) return
+        let sourceUrl = sourceDoorRef.current === activeDoor && sourceRef.current.ready ? sourceRef.current.url : ''
+        if (!sourceUrl) {
+          if (sourceRef.current.error) sourceRef.current.retry?.()
+          sourceUrl = await waitForDoorSource(activeDoor, sourceDoorRef, sourceRef, controller.signal)
+        }
+        const productReferenceUrl = await snapshotDoor(sourceUrl)
+        if (houseImageGeneration() !== started) return
         const result = await generateAiVisualization({
-          photoUrl: photoRef.current,
+          photoUrl: photo,
           productReferenceUrl,
-          configuration: current.configuration,
-          jambFinish: current.finish,
-          glassFrameFinish: current.preview.glassFrameFinish ?? null,
-          entranceDetection: detection.current,
+          configuration,
+          jambFinish: finish,
+          glassFrameFinish,
+          entranceDetection,
           fitStrategy: 'use-selected-product',
           signal: controller.signal,
         })
-        if (request !== runRef.current) return
-        cache.current.set(current.cacheKey, result.image)
-        setImage(result.image)
-        setStatus('ready')
-        setMessage('')
-        onProgressRef.current?.('ready')
+        if (houseImageGeneration() !== started) return
+        houseImages(photo).fulfill(activeDoor, result.image)
+        if (photoRef.current === photo && resolvedRef.current.cacheKey === activeDoor) setLive({ key: activeKey, status: 'ready', message: '' })
       } catch (error) {
-        if (request !== runRef.current) return
-        setStatus('error')
-        setMessage(failureMessage(error, controller.signal.aborted))
-        onProgressRef.current?.('error')
+        if (houseImageGeneration() === started) houseImages(photo).fail(activeDoor)
+        if (photoRef.current !== photo || resolvedRef.current.cacheKey !== activeDoor) return
+        setLive({ key: activeKey, status: 'error', message: failureMessage(error, controller.signal.aborted) })
       } finally {
         window.clearTimeout(timeout)
       }
@@ -125,9 +152,9 @@ export const HouseRender = forwardRef<HouseRenderHandle, Props>(function HouseRe
   useImperativeHandle(ref, () => ({ seeOnHouse }), [seeOnHouse])
 
   return <>
-    <ConfiguredDoorSource configurationKey={resolved.cacheKey} previewProps={resolved.preview} onStateChange={setDoorSource} />
-    {showHouse && status === 'ready' && image && <img className="find-door-house-photo" src={image} alt={`${resolved.title} on your house`} />}
+    <ConfiguredDoorSource configurationKey={doorKey} previewProps={resolved.preview} onStateChange={(state) => { sourceDoorRef.current = resolvedRef.current.cacheKey; setDoorSource(state) }} />
+    {showHouse && status === 'ready' && cached && <div className="find-door-comparison" style={{ '--find-door-photo-ratio': photoRatio } as CSSProperties}><CleanupComparisonSlider originalSrc={photoUrl} cleanupSrc={cached} imageAlt={`${resolved.title} on your house`} originalLabel="Before" resultLabel="After" ariaLabel="Before and after comparison of your house and this door" visible /></div>}
     {showHouse && status === 'working' && <div className="find-door-house-status" role="status"><span className="find-door-progress" /><p>Placing this door on your photo.</p></div>}
-    {showHouse && status === 'error' && <p className="find-door-note find-door-note-error" role="alert">{message}</p>}
+    {showHouse && status === 'error' && <div className="find-door-house-status" role="alert"><p className="find-door-note find-door-note-error">{message}</p><button type="button" className="find-door-quiet" onClick={seeOnHouse}>Try again</button></div>}
   </>
 })
