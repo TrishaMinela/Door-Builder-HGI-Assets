@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type CSSProperties } from 'react'
 import { CleanupComparisonSlider } from '../home-visualizer/CleanupComparisonSlider'
 import { ConfiguredDoorSource, type DoorSourceState } from '../home-visualizer/ConfiguredDoorSource'
 import { AiVisualizationError, generateAiVisualization } from '../home-visualizer/aiVisualization'
@@ -57,6 +57,7 @@ function waitForDoorSource(doorKey: string, sourceDoorRef: { current: string }, 
 export const HouseRender = forwardRef<HouseRenderHandle, Props>(function HouseRender({ photoUrl, resolved, showHouse, onProgress }, ref) {
   const [doorSource, setDoorSource] = useState<DoorSourceState>(emptySource)
   const [live, setLive] = useState<{ key: string; status: 'idle' | 'working' | 'ready' | 'error'; message: string }>({ key: '', status: 'idle', message: '' })
+  const [photoRatio, setPhotoRatio] = useState('3 / 2')
   const detection = useRef<EntranceDetection | null>(null)
   const sourceRef = useRef(doorSource)
   const sourceDoorRef = useRef(resolved.cacheKey)
@@ -80,6 +81,14 @@ export const HouseRender = forwardRef<HouseRenderHandle, Props>(function HouseRe
     detection.current = null
     void detectEntranceStructure(photoUrl, controller.signal).then((found) => { detection.current = found }).catch(() => undefined)
     return () => controller.abort()
+  }, [photoUrl])
+
+  useEffect(() => {
+    const image = new Image()
+    image.onload = () => {
+      if (image.naturalWidth && image.naturalHeight) setPhotoRatio(`${image.naturalWidth} / ${image.naturalHeight}`)
+    }
+    image.src = photoUrl
   }, [photoUrl])
 
   useEffect(() => { onProgressRef.current?.(status) }, [status])
@@ -144,7 +153,7 @@ export const HouseRender = forwardRef<HouseRenderHandle, Props>(function HouseRe
 
   return <>
     <ConfiguredDoorSource configurationKey={doorKey} previewProps={resolved.preview} onStateChange={(state) => { sourceDoorRef.current = resolvedRef.current.cacheKey; setDoorSource(state) }} />
-    {showHouse && status === 'ready' && cached && <CleanupComparisonSlider originalSrc={photoUrl} cleanupSrc={cached} imageAlt={`${resolved.title} on your house`} originalLabel="Before" resultLabel="After" ariaLabel="Before and after comparison of your house and this door" visible />}
+    {showHouse && status === 'ready' && cached && <div className="find-door-comparison" style={{ '--find-door-photo-ratio': photoRatio } as CSSProperties}><CleanupComparisonSlider originalSrc={photoUrl} cleanupSrc={cached} imageAlt={`${resolved.title} on your house`} originalLabel="Before" resultLabel="After" ariaLabel="Before and after comparison of your house and this door" visible /></div>}
     {showHouse && status === 'working' && <div className="find-door-house-status" role="status"><span className="find-door-progress" /><p>Placing this door on your photo.</p></div>}
     {showHouse && status === 'error' && <div className="find-door-house-status" role="alert"><p className="find-door-note find-door-note-error">{message}</p><button type="button" className="find-door-quiet" onClick={seeOnHouse}>Try again</button></div>}
   </>
