@@ -7,7 +7,7 @@ process.env.NODE_ENV = 'production'
 process.env.VERCEL_ENV = 'production'
 process.env.SUPABASE_URL = 'https://dealer-portal.supabase.invalid'
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key'
-process.env.CRM_CREDENTIAL_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64')
+process.env.DOOR_BUILDER_WEBHOOK_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64')
 
 const master = 'https://hooks.zapier.com/hooks/catch/100/masterkey/'
 const abEnv = 'https://hooks.zapier.com/hooks/catch/200/abenvkey/'
@@ -146,10 +146,10 @@ const noWebhook = await invoke({ dealerSlug: 'future-dealer' })
 assert.deepEqual(urls(noWebhook), [master])
 assert.equal(noWebhook.requests[0].body?.lead_source, 'future-dealer-door-builder-lead')
 
-stored.set('11111111-1111-4111-8111-111111111111', seal(abDb))
-stored.set('22222222-2222-4222-8222-222222222222', seal(wdmDb))
-stored.set('55555555-5555-4555-8555-555555555555', portalVector)
-stored.set('66666666-6666-4666-8666-666666666666', seal(dealerBHook))
+stored.set('11111111-1111-4111-8111-111111111111', { ...seal(abDb), id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', verified: true })
+stored.set('22222222-2222-4222-8222-222222222222', { ...seal(wdmDb), id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', verified: true })
+stored.set('55555555-5555-4555-8555-555555555555', { ...portalVector, id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', verified: true })
+stored.set('66666666-6666-4666-8666-666666666666', { ...seal(dealerBHook), id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', verified: true })
 
 const abStored = await invoke({ dealerSlug: 'americas-best-windows-and-doors' })
 assert.equal(abStored.status, 200)
@@ -173,7 +173,7 @@ assert.equal(diligent.requests[1].body?.lead_source, 'diligent-door-builder-lead
 assert.equal(diligent.requests[1].body?.dealer_slug, 'diligent')
 assert.equal(diligent.supabaseWrites, 1)
 
-stored.set('33333333-3333-4333-8333-333333333333', seal(futureHook))
+stored.set('33333333-3333-4333-8333-333333333333', { ...seal(futureHook), id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', verified: true })
 const future = await invoke({ dealerSlug: 'future-dealer' })
 assert.deepEqual(urls(future), [master, futureHook])
 
@@ -227,7 +227,7 @@ assert.equal(redirected.result?.destinations?.dealerWebhook, 'failed')
 assert.equal(urls(redirected).filter((url) => url === dealerBHook).length, 1)
 httpStatus.delete(dealerBHook)
 
-stored.set('33333333-3333-4333-8333-333333333333', seal(master))
+stored.set('33333333-3333-4333-8333-333333333333', { ...seal(master), id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', verified: true })
 const sameAsMaster = await invoke({ dealerSlug: 'future-dealer' })
 assert.deepEqual(urls(sameAsMaster), [master])
 assert.equal(sameAsMaster.result?.destinations?.dealerWebhook, 'skipped')
@@ -238,11 +238,18 @@ stored.set('11111111-1111-4111-8111-111111111111', {
   webhook_auth_tag: portalVector.webhook_auth_tag,
   credential_key_version: 1,
 })
-const unreadable = await invoke({ dealerSlug: 'americas-best-windows-and-doors' })
-assert.equal(unreadable.status, 200)
-assert.deepEqual(urls(unreadable), [master])
-assert.equal(unreadable.result?.destinations?.dealerWebhook, 'failed')
-assert.equal(urls(unreadable).includes(abEnv), false)
+const unverified = await invoke({ dealerSlug: 'americas-best-windows-and-doors' })
+assert.equal(unverified.status, 200)
+assert.deepEqual(urls(unverified), [master, abEnv])
+stored.set('11111111-1111-4111-8111-111111111111', {
+  ...stored.get('11111111-1111-4111-8111-111111111111'),
+  verified: true,
+})
+const unreadableVerified = await invoke({ dealerSlug: 'americas-best-windows-and-doors' })
+assert.equal(unreadableVerified.status, 200)
+assert.deepEqual(urls(unreadableVerified), [master])
+assert.equal(unreadableVerified.result?.destinations?.dealerWebhook, 'failed')
+assert.equal(urls(unreadableVerified).includes(abEnv), false)
 
 missingTable = true
 const duringOutage = await invoke({ dealerSlug: 'wdm' })

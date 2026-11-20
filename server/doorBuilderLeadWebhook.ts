@@ -1,12 +1,30 @@
-import { createDecipheriv } from 'node:crypto'
+import { createDecipheriv, createHash } from 'node:crypto'
 
 declare const process: { env: Record<string, string | undefined> }
 
 export type StoredWebhookLookup =
   | { status: 'absent' }
   | { status: 'unavailable' }
-  | { status: 'unreadable' }
-  | { status: 'configured'; url: string }
+  | { status: 'unreadable'; verified: boolean }
+  | { status: 'configured'; url: string; verified: boolean; webhookId: string; fingerprint: string }
+
+const ENV_BACKED_SLUGS = new Set(['americas-best-windows-and-doors', 'wdm', 'uhr'])
+
+export type DealerCopyPlan =
+  | { kind: 'legacy-env' }
+  | { kind: 'saved'; url: string; webhookId: string; fingerprint: string }
+  | { kind: 'master-only'; reason: 'unreadable' | 'same-as-master' }
+
+export function resolveDealerCopyPlan(slug: string, lookup: StoredWebhookLookup, masterUrl: string): DealerCopyPlan {
+  const envBacked = ENV_BACKED_SLUGS.has(slug)
+  if (lookup.status === 'absent' || lookup.status === 'unavailable') return { kind: 'legacy-env' }
+  if (lookup.status === 'unreadable') {
+    return envBacked && !lookup.verified ? { kind: 'legacy-env' } : { kind: 'master-only', reason: 'unreadable' }
+  }
+  if (envBacked && !lookup.verified) return { kind: 'legacy-env' }
+  if (sameWebhookDestination(lookup.url, masterUrl)) return { kind: 'master-only', reason: 'same-as-master' }
+  return { kind: 'saved', url: lookup.url, webhookId: lookup.webhookId, fingerprint: lookup.fingerprint }
+}
 
 const CATCH_PATH = /^\/hooks\/catch\/(\d{1,12})\/([A-Za-z0-9]{6,80})\/?$/
 
@@ -26,6 +44,10 @@ export function validateZapierCatchHookUrl(input: unknown): string {
   return `https://hooks.zapier.com${canonicalPath}`
 }
 
+export function webhookDestinationFingerprint(webhookUrl: string) {
+  return createHash('sha256').update(validateZapierCatchHookUrl(webhookUrl)).digest('hex')
+}
+
 export function sameWebhookDestination(left: string, right: string) {
   try {
     const a = new URL(left)
@@ -41,7 +63,7 @@ export function sameWebhookDestination(left: string, right: string) {
 }
 
 function encryptionKey() {
-  const encoded = process.env.CRM_CREDENTIAL_ENCRYPTION_KEY
+  const encoded = process.env.DOOR_BUILDER_WEBHOOK_ENCRYPTION_KEY
   if (!encoded) return null
   const key = Buffer.from(encoded, 'base64')
   return key.byteLength === 32 ? key : null
@@ -49,7 +71,7 @@ function encryptionKey() {
 
 function decryptWebhook(row: Record<string, unknown>) {
   const key = encryptionKey()
-  if (!key) throw new Error('UNREADABLE')
+  if (!key || Number(row.credential_key_version) !== 1) throw new Error('UNREADABLE')
   const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(String(row.webhook_iv ?? ''), 'base64'))
   decipher.setAuthTag(Buffer.from(String(row.webhook_auth_tag ?? ''), 'base64'))
   const plaintext = Buffer.concat([
@@ -79,7 +101,7 @@ export async function lookupStoredDealerWebhook(dealerId: string): Promise<Store
   const access = credentials()
   if (!access) return { status: 'unavailable' }
   const query = new URLSearchParams({
-    select: 'webhook_ciphertext,webhook_iv,webhook_auth_tag,credential_key_version',
+    select: 'id,verified,webhook_ciphertext,webhook_iv,webhook_auth_tag,credential_key_version',
     dealer_id: `eq.${dealerId}`,
     limit: '2',
   })
@@ -101,11 +123,14 @@ export async function lookupStoredDealerWebhook(dealerId: string): Promise<Store
   let rows: unknown
   try { rows = JSON.parse(body) } catch { return { status: 'unavailable' } }
   if (!Array.isArray(rows) || rows.length === 0) return { status: 'absent' }
-  if (rows.length !== 1) return { status: 'unreadable' }
+  if (rows.length !== 1) return { status: 'unreadable', verified: false }
+  const row = rows[0] as Record<string, unknown>
+  const verified = row.verified === true
   try {
-    return { status: 'configured', url: decryptWebhook(rows[0] as Record<string, unknown>) }
+    const url = decryptWebhook(row)
+    return { status: 'configured', url, verified, webhookId: String(row.id), fingerprint: webhookDestinationFingerprint(url) }
   } catch {
-    return { status: 'unreadable' }
+    return { status: 'unreadable', verified }
   }
 }
 
@@ -127,13 +152,22 @@ export async function recordDealerWebhookFailure(dealerId: string, httpStatus: n
   })
 }
 
-async function claimDelivery(dealerId: string, submissionId: string) {
+async function claimDelivery(input: { dealerId: string; submissionId: string; webhookId: string; fingerprint: string; payload: unknown }) {
   const access = credentials()
   if (!access) return 'unrecorded' as const
   const response = await fetch(`${access.supabaseUrl}/rest/v1/dealer_door_builder_webhook_deliveries`, {
     method: 'POST',
     headers: serviceHeaders(access.serviceRoleKey, { 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
-    body: JSON.stringify({ dealer_id: dealerId, submission_id: submissionId, delivery_status: 'attempting' }),
+    body: JSON.stringify({
+      dealer_id: input.dealerId,
+      submission_id: input.submissionId,
+      webhook_id: input.webhookId,
+      destination_fingerprint: input.fingerprint,
+      payload: input.payload,
+      delivery_status: 'attempting',
+      attempt_number: 1,
+      lease_expires_at: new Date(Date.now() + 120_000).toISOString(),
+    }),
   })
   if (response.status === 201) return 'claimed' as const
   if (response.status === 409) return 'duplicate' as const
@@ -150,20 +184,22 @@ async function finishDelivery(dealerId: string, submissionId: string, status: 's
     body: JSON.stringify({ delivery_status: status, http_status: httpStatus, updated_at: new Date().toISOString() }),
   }).catch(() => undefined)
   await patchWebhook(dealerId, status === 'succeeded'
-    ? { last_success_at: new Date().toISOString(), last_success_http_status: httpStatus }
+    ? { last_success_at: new Date().toISOString(), last_success_http_status: httpStatus, verified: true }
     : { last_failure_at: new Date().toISOString(), last_failure_http_status: httpStatus })
 }
 
 export async function deliverDealerWebhookCopy(input: {
   dealerId: string
   submissionId: string
+  webhookId: string
   webhookUrl: string
+  fingerprint: string
   payload: unknown
 }): Promise<'succeeded' | 'failed' | 'duplicate'> {
   let destination: string
   try { destination = validateZapierCatchHookUrl(input.webhookUrl) } catch { return 'failed' }
   let claim: 'claimed' | 'duplicate' | 'unrecorded'
-  try { claim = await claimDelivery(input.dealerId, input.submissionId) } catch { return 'failed' }
+  try { claim = await claimDelivery(input) } catch { return 'failed' }
   if (claim === 'duplicate') return 'duplicate'
   if (claim !== 'claimed') return 'failed'
   let response: Response

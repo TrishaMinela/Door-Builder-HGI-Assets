@@ -1,5 +1,5 @@
 import { DealerResolutionError, resolveDealerIdentity } from '../server/dealerResolution.js'
-import { deliverDealerWebhookCopy, lookupStoredDealerWebhook, recordDealerWebhookFailure, sameWebhookDestination } from '../server/doorBuilderLeadWebhook.js'
+import { deliverDealerWebhookCopy, lookupStoredDealerWebhook, recordDealerWebhookFailure, resolveDealerCopyPlan } from '../server/doorBuilderLeadWebhook.js'
 import { isHiddenDecorativeGlass } from '../src/data/customerGlassAvailability.js'
 import { assertCustomerFinish } from '../src/utils/customerFinish.js'
 import type { Finish } from '../src/types.js'
@@ -157,7 +157,10 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   // A saved dealer webhook replaces that dealer's env-var copy. No saved row,
   // or a missing table, keeps the current master / AB / WDM / UHR env routing.
   const stored = dealer ? await lookupStoredDealerWebhook(dealer.id) : { status: 'absent' as const }
-  if (dealer && (stored.status === 'configured' || stored.status === 'unreadable')) {
+  const plan = dealer ? resolveDealerCopyPlan(dealer.slug, stored, process.env.ZAPIER_DOOR_BUILDER_WEBHOOK_URL ?? '') : { kind: 'legacy-env' as const }
+  if (plan.kind === 'legacy-env') {
+    // Fall through to the existing env-var routing below.
+  } else if (dealer && plan.kind === 'saved') {
     let masterUrl: string
     try { masterUrl = validatedZapierUrl(process.env.ZAPIER_DOOR_BUILDER_WEBHOOK_URL) }
     catch {
@@ -178,23 +181,40 @@ export default async function handler(request: ApiRequest, response: ApiResponse
       response.status(502).json({ error: 'Submission could not be completed. Please try again.', destinations: { supabase: 'succeeded', zapier: 'failed' } })
       return
     }
-    let dealerWebhook: 'succeeded' | 'failed' | 'duplicate' | 'skipped' = 'skipped'
-    if (stored.status === 'unreadable') {
+    let dealerWebhook: 'succeeded' | 'failed' | 'duplicate'
+    try {
+      dealerWebhook = await deliverDealerWebhookCopy({
+        dealerId: dealer.id,
+        submissionId,
+        webhookId: plan.webhookId,
+        webhookUrl: plan.url,
+        fingerprint: plan.fingerprint,
+        payload: attributedPayload,
+      })
+    } catch {
       dealerWebhook = 'failed'
-      await recordDealerWebhookFailure(dealer.id, null)
-    } else if (!sameWebhookDestination(stored.url, masterUrl)) {
-      try {
-        dealerWebhook = await deliverDealerWebhookCopy({
-          dealerId: dealer.id,
-          submissionId,
-          webhookUrl: stored.url,
-          payload: attributedPayload,
-        })
-      } catch {
-        dealerWebhook = 'failed'
-      }
     }
     response.status(200).json({ ok: true, destinations: { supabase: 'succeeded', zapier: 'succeeded', dealerWebhook } })
+    return
+  } else if (dealer && plan.kind === 'master-only') {
+    let masterUrl: string
+    try { masterUrl = validatedZapierUrl(process.env.ZAPIER_DOOR_BUILDER_WEBHOOK_URL) }
+    catch {
+      response.status(502).json({ error: 'Submission could not be completed. Please try again.', destinations: { supabase: 'skipped', zapier: 'failed' } })
+      return
+    }
+    try { await submitToSupabase(submissionId, attributedPayload, doorConfiguration, dealer.id) }
+    catch {
+      response.status(502).json({ error: 'Submission could not be completed. Please try again.', destinations: { supabase: 'failed', zapier: 'skipped' } })
+      return
+    }
+    try { await submitToZapier(attributedPayload, [masterUrl]) }
+    catch {
+      response.status(502).json({ error: 'Submission could not be completed. Please try again.', destinations: { supabase: 'succeeded', zapier: 'failed' } })
+      return
+    }
+    if (plan.reason === 'unreadable') await recordDealerWebhookFailure(dealer.id, null)
+    response.status(200).json({ ok: true, destinations: { supabase: 'succeeded', zapier: 'succeeded', dealerWebhook: plan.reason === 'unreadable' ? 'failed' : 'skipped' } })
     return
   }
 
