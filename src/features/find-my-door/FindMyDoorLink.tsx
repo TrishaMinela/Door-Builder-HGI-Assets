@@ -8,7 +8,7 @@ export function FindMyDoorLink({ dealerSlug, variant }: Props) {
   if (!builderUx.showFindMyDoorEntry) return null
   const href = findMyDoorHref(dealerSlug)
   if (variant === 'home') {
-    return <a className="find-my-door-home" href={href}>Find My Door</a>
+    return <a className="find-my-door-home" href={href}>HGI Door Finder</a>
   }
-  return <p className="find-my-door-step"><a href={href}>Find My Door</a><span>Upload a photo of your home and we’ll recommend a door.</span></p>
+  return <p className="find-my-door-step"><a href={href}>HGI Door Finder</a><span>Upload a photo of your home and we’ll recommend a door.</span></p>
 }

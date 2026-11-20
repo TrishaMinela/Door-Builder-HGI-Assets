@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
-import { ArrowLeft, ArrowRight, ImagePlus, Send } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { DealerMode, useDealerSession } from '../../components/DealerMode'
 import { DealerBrandMark } from '../../components/DealerBrandMark'
+import { DoorPreview } from '../../components/DoorPreview'
+import { OptionCard } from '../../components/OptionCard'
 import { SiteFooter } from '../../components/SiteFooter'
 import type { PublicDealerBrand } from '../../types/dealerBranding'
 import type { ContactForm } from '../../types'
@@ -10,15 +12,16 @@ import { isValidDealerSlug, normalizeDealerSlug } from '../../utils/dealerSlug'
 import { buildDoorBuilderSubmissionPayload, submitQuote } from '../../utils/submission'
 import { prepareAiHousePhoto } from '../home-visualizer/aiVisualization'
 import { normalizePhoto } from '../home-visualizer/HomeVisualizer'
-import { HouseRender } from './HouseRender'
+import { HouseRender, type HouseRenderHandle } from './HouseRender'
+import { FEATURED_DOOR, INSPIRATION } from './inspiration'
 import { launchBuilder } from './launch'
 import { recipeById } from './recipes'
 import { fallbackReason, resolveRecommendation, type ResolvedRecommendation } from './resolveRecommendation'
 import { chooseFinish, selectRecipes } from './selectRecipes'
-import { LIGHT_CHOICES, STYLE_CHOICES, lightChoice, styleChoice, type HouseReading, type LightPreference, type StyleMood } from './types'
+import { LIGHT_CHOICES, STYLE_CHOICES, type HouseReading, type LightPreference, type StyleMood } from './types'
 import './FindMyDoor.css'
 
-type Step = 'photo' | 'style' | 'details' | 'results'
+type Step = 'photo' | 'style' | 'glass' | 'details' | 'results'
 type RecommendPayload = {
   photoRead?: boolean
   house?: Partial<HouseReading>
@@ -29,6 +32,12 @@ type RecommendPayload = {
 const emptyHouse: HouseReading = { architecture: '', siding: '', trim: '', opening: 'unknown' }
 const emptyContact: ContactForm = { fullName: '', email: '', phone: '', zip: '', notes: '' }
 const PHOTO_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/heic', 'image/heif'])
+const STEP_LABEL: Record<Step, string> = { photo: 'Photo', style: 'Style', glass: 'Glass', details: 'Details', results: 'Door' }
+
+function oneLine(reason: string) {
+  const sentence = reason.split(/(?<=\.)\s/)[0] || reason
+  return sentence.length > 150 ? `${sentence.slice(0, 147).trim()}…` : sentence
+}
 
 function dealerFromLocation() {
   const value = normalizeDealerSlug(new URLSearchParams(window.location.search).get('dealer') ?? '')
@@ -76,18 +85,21 @@ export function FindMyDoorPage() {
   const [pageError, setPageError] = useState('')
   const [reading, setReading] = useState(false)
   const [photoRead, setPhotoRead] = useState(true)
-  const [house, setHouse] = useState<HouseReading>(emptyHouse)
   const [recommendations, setRecommendations] = useState<ResolvedRecommendation[]>([])
   const [selected, setSelected] = useState(0)
+  const [inspirationId, setInspirationId] = useState('')
+  const [previewMode, setPreviewMode] = useState<'door' | 'house'>('door')
+  const [renderStatus, setRenderStatus] = useState<'idle' | 'working' | 'ready' | 'error'>('idle')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const houseRef = useRef<HouseRenderHandle>(null)
   const homeHref = dealerSlug ? `/${dealerSlug}` : '/'
   const current = recommendations[selected] ?? null
   const logo = dealerBrand ? dealerSurfaceLogo(dealerBrand, 'page-header') : null
 
   useEffect(() => {
     const previous = document.title
-    document.title = 'Find My Door | Home Guard Door Builder'
+    document.title = 'HGI Door Finder | Home Guard Door Builder'
     return () => { document.title = previous }
   }, [])
 
@@ -106,8 +118,9 @@ export function FindMyDoorPage() {
   useEffect(() => {
     if (!dealerMode || step !== 'details') return
     setStep('results')
-    window.scrollTo({ top: 0 })
   }, [dealerMode, step])
+
+  useEffect(() => { window.scrollTo({ top: 0 }) }, [step])
 
   const onPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -160,7 +173,6 @@ export function FindMyDoorPage() {
       })
       const next = [...resolved, ...fallback].slice(0, 3)
       if (next.length < 2) throw new Error('unavailable')
-      setHouse(nextHouse)
       setPhotoRead(result.photoRead !== false)
       setRecommendations(next.map((item) => item.reason ? item : { ...item, reason: fallbackReason(item.finishName, item.styleName, nextHouse, mood) }))
       setSelected(0)
@@ -179,7 +191,6 @@ export function FindMyDoorPage() {
           setPageError('We couldn’t match a door just now. Please try again.')
         } else {
           setPhotoRead(false)
-          setHouse(emptyHouse)
           setRecommendations(local)
           setSelected(0)
         }
@@ -197,7 +208,7 @@ export function FindMyDoorPage() {
     if (Object.keys(nextErrors).length) return
     setSending(true)
     setPageError('')
-    const notes = `Find My Door: ${current.title}. ${current.reason}`
+    const notes = `HGI Door Finder: ${current.title}. ${current.reason}`
     const lead = { ...contact, notes }
     try {
       const payload = buildDoorBuilderSubmissionPayload({ contact: lead, configuration: current.configuration })
@@ -206,7 +217,7 @@ export function FindMyDoorPage() {
       setSent(true)
       setStep('results')
     } catch {
-      setPageError('We couldn’t send your details just now. You can retry, or view the door and send them from the quote step.')
+      setPageError('We couldn’t send that. Try again, or view the door first.')
     } finally {
       setSending(false)
     }
@@ -214,10 +225,28 @@ export function FindMyDoorPage() {
 
   const customize = () => {
     if (!current) return
-    const notes = `Find My Door: ${current.title}. ${current.reason}`
+    const notes = `HGI Door Finder: ${current.title}. ${current.reason}`
     // Dealers skip contact capture, the same way the builder skips the quote form.
     launchBuilder(current.draft, dealerMode ? { ...emptyContact, notes } : { ...contact, notes }, dealerSlug)
   }
+
+  const seeHouse = () => {
+    setPreviewMode('house')
+    houseRef.current?.seeOnHouse()
+  }
+
+  const touch = (key: keyof ContactForm) => {
+    const next = contactErrors(contact)
+    setErrors((currentErrors) => ({ ...currentErrors, [key]: next[key] }))
+  }
+
+  const flow: Step[] = dealerMode ? ['photo', 'style', 'glass', 'results'] : ['photo', 'style', 'glass', 'details', 'results']
+  const stepIndex = Math.max(0, flow.indexOf(step))
+  const houseReady = previewMode === 'house' && renderStatus === 'ready'
+  const upload = (primary: boolean) => <label className={primary ? 'next find-door-upload' : 'back find-door-upload'}>
+    {photoUrl ? 'Change photo' : 'Upload a photo of your home'}
+    <input className="find-door-file" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void onPhoto(event)} />
+  </label>
 
   return <div className={`shared-footer-shell find-my-door-app builder-typography${dealerBrand ? ' dealer-cobranded' : ''}`} style={dealerBrand ? dealerBrandStyle(dealerBrand) : undefined}>
     <div ref={setBannerTarget} className="dealer-mode-banner-slot" />
@@ -228,106 +257,127 @@ export function FindMyDoorPage() {
       <a className="find-my-door-builder-link" href={homeHref}>Door Builder</a>
     </header>
     <main className="find-my-door-main">
-      <p className="find-door-kicker">Find My Door</p>
+      <ol className="find-door-steps" aria-label="Progress">
+        {flow.map((item, index) => <li key={item}>
+          {index < stepIndex
+            ? <button type="button" className="done" onClick={() => setStep(item)}><i>{index + 1}</i>{STEP_LABEL[item]}</button>
+            : <span className={index === stepIndex ? 'current' : 'upcoming'} aria-current={index === stepIndex ? 'step' : undefined}><i>{index + 1}</i>{STEP_LABEL[item]}</span>}
+        </li>)}
+      </ol>
       {step === 'photo' && <>
-        <h1>Show us your entry.</h1>
-        <p className="find-door-lead">Upload a photo of the front door. We’ll recommend an HGI door that fits the house, then show it on your photo.</p>
-        <section className="find-door-card">
-          <h2>Photo of the front door</h2>
-          <ul className="find-door-tips">
-            <li>Face the front door straight on.</li>
-            <li>Use daylight, not a night flash.</li>
-            <li>Keep the whole entry in the frame.</li>
-          </ul>
-          <div className="find-door-drop">
-            {photoUrl && <img src={photoUrl} alt="Your uploaded entry" />}
-            <label className="find-door-primary">
-              <ImagePlus size={18} /> {photoUrl ? 'Choose a different photo' : 'Upload a photo'}
-              <input className="find-door-file" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void onPhoto(event)} />
-            </label>
-            {photoName && <p>{photoName}</p>}
+        <div className="find-door-open">
+          <div>
+            <p className="find-door-name">HGI Door Finder</p>
+            <h1>Find the right front door for your home.</h1>
+            <p className="find-door-lead">{dealerMode ? 'Upload a photo of the customer’s house. We’ll suggest Home Guard doors that fit its style, then show you one on their home.' : 'Upload a photo of your house. We’ll suggest Home Guard doors that fit its style, then show you one on your home.'}</p>
+            {photoUrl && <img className="find-door-photo" src={photoUrl} alt={photoName ? `Uploaded photo ${photoName}` : 'Uploaded entry'} />}
+            {pageError && <p className="find-door-note find-door-note-error" role="alert">{pageError}</p>}
+            <div className="find-door-actions builder-actions">
+              {upload(!photoUrl)}
+              {photoUrl && <button type="button" className="next" onClick={() => { setPageError(''); setStep('style') }}>Continue <ArrowRight size={16} /></button>}
+            </div>
+            <p className="find-door-hint">Best results: daylight, straight on, whole entry in frame.</p>
           </div>
-          {pageError && <p className="find-door-note find-door-note-error" role="alert">{pageError}</p>}
-          <div className="find-door-actions">
-            <button type="button" className="find-door-primary" disabled={!photoUrl} onClick={() => { setPageError(''); setStep('style') }}>Continue <ArrowRight size={16} /></button>
-          </div>
-        </section>
-      </>}
-      {step === 'style' && <>
-        <h1>What kind of door do you want?</h1>
-        <p className="find-door-lead">These answers steer the recommendation. The door itself still comes from the current HGI catalog.</p>
-        <section className="find-door-card">
-          <h2>How would you describe the new door you want?</h2>
-          <div className="find-door-choices" role="listbox" aria-label="Door style">
-            {STYLE_CHOICES.map((choice) => <button type="button" key={choice.id} className={mood === choice.id ? 'find-door-choice selected' : 'find-door-choice'} aria-pressed={mood === choice.id} onClick={() => setMood(choice.id)}><strong>{choice.name}</strong><span>{choice.description}</span></button>)}
-          </div>
-        </section>
-        <section className="find-door-card">
-          <h2>How much glass do you want?</h2>
-          <div className="find-door-choices" role="listbox" aria-label="Glass and privacy">
-            {LIGHT_CHOICES.map((choice) => <button type="button" key={choice.id} className={light === choice.id ? 'find-door-choice selected' : 'find-door-choice'} aria-pressed={light === choice.id} onClick={() => setLight(choice.id)}><strong>{choice.name}</strong><span>{choice.description}</span></button>)}
-          </div>
-          <div className="find-door-actions">
-            <button type="button" className="find-door-secondary" onClick={() => setStep('photo')}><ArrowLeft size={16} /> Back</button>
-            <button type="button" className="find-door-primary" disabled={!mood || !light} onClick={() => { setPageError(''); setStep(dealerMode ? 'results' : 'details'); void readHouse() }}>See my door <ArrowRight size={16} /></button>
-          </div>
-        </section>
-      </>}
-      {step === 'details' && <>
-        <h1>Where should we send it?</h1>
-        <p className="find-door-lead">The door is being matched to your photo. Leave your name and ZIP while that finishes — the ZIP is saved with your quote so the right dealer can follow up.</p>
-        <form className="find-door-card" onSubmit={(event) => void submitLead(event)}>
-          <h2>Your details</h2>
-          <div className="find-door-fields">
-            <label>Full name<input name="fullName" autoComplete="name" value={contact.fullName} aria-invalid={!!errors.fullName} onChange={(event) => setContact({ ...contact, fullName: event.target.value })} />{errors.fullName && <small>{errors.fullName}</small>}</label>
-            <label>Email<input name="email" type="email" autoComplete="email" value={contact.email} aria-invalid={!!errors.email} onChange={(event) => setContact({ ...contact, email: event.target.value })} />{errors.email && <small>{errors.email}</small>}</label>
-            <label>Phone<input name="phone" type="tel" autoComplete="tel" value={contact.phone} aria-invalid={!!errors.phone} onChange={(event) => setContact({ ...contact, phone: event.target.value })} />{errors.phone && <small>{errors.phone}</small>}</label>
-            <label>ZIP code<input name="zip" autoComplete="postal-code" inputMode="numeric" value={contact.zip} aria-invalid={!!errors.zip} onChange={(event) => setContact({ ...contact, zip: event.target.value })} />{errors.zip && <small>{errors.zip}</small>}</label>
-          </div>
-          <p className="find-door-note" role="status">{reading ? 'Reading the house and choosing doors from the HGI catalog…' : recommendations.length ? 'Your door is ready. Send your details to view it.' : 'Choose a photo and style to continue.'}</p>
-          {pageError && <p className="find-door-note find-door-note-error" role="alert">{pageError}</p>}
-          <div className="find-door-actions">
-            <button type="button" className="find-door-secondary" onClick={() => setStep('style')}><ArrowLeft size={16} /> Back</button>
-            <button type="submit" className="find-door-primary" disabled={sending || reading || !current}><Send size={16} /> {sending ? 'Sending…' : 'Show my door'}</button>
-            {pageError && current && <button type="button" className="find-door-secondary" onClick={() => setStep('results')}>View the door anyway</button>}
-          </div>
-        </form>
-      </>}
-      {step === 'results' && !current && <section className="find-door-card" aria-live="polite">
-        <h1>Matching a door to this photo.</h1>
-        <p className="find-door-lead">{pageError || (reading ? 'Choosing doors from the HGI catalog…' : 'This is taking longer than usual.')}</p>
-        {pageError && <button type="button" className="find-door-secondary" onClick={() => void readHouse()}>Try again</button>}
-      </section>}
-      {step === 'results' && current && <>
-        <h1>A door for this house.</h1>
-        <p className="find-door-lead">{photoRead ? 'Built from your photo, your style, and doors HGI actually makes.' : 'We couldn’t read the photo clearly, so these follow your style and glass choices. You can go back and try another photo.'}</p>
-        {(house.architecture || house.siding) && <p className="find-door-house">We read this as {house.architecture || 'a home entry'}{house.siding ? ` with ${house.siding}` : ''}{house.trim ? ` and ${house.trim} trim` : ''}.</p>}
-        <div className="find-door-recommendations" role="listbox" aria-label="Recommended doors">
-          {recommendations.map((item, index) => <button type="button" key={item.cacheKey} className={index === selected ? 'selected' : undefined} aria-pressed={index === selected} onClick={() => setSelected(index)}><strong>{item.title}</strong><span>{item.summary}</span></button>)}
+          <figure className="find-door-feature">
+            <img src={FEATURED_DOOR.src} width={FEATURED_DOOR.width} height={FEATURED_DOOR.height} alt={FEATURED_DOOR.alt} />
+            <figcaption>{FEATURED_DOOR.name}</figcaption>
+          </figure>
         </div>
-      </>}
-      {photoUrl && current && (step === 'details' || step === 'results') && <section className={step === 'results' ? 'find-door-card find-door-live' : 'find-door-park'}>
-        {step === 'results' && <><h2>{current.title}</h2><p>{current.reason}</p></>}
-        <HouseRender photoUrl={photoUrl} resolved={current} showResult={step === 'results'} />
-        {step === 'results' && <>
-          <ul className="find-door-spec">
-            <li><span>Door</span><strong>{current.styleName}</strong></li>
-            <li><span>Finish</span><strong>{current.finishName}</strong></li>
-            <li><span>Glass</span><strong>{current.glassName}</strong></li>
-            <li><span>Hardware</span><strong>{current.hardwareName}</strong></li>
-            <li><span>Opening</span><strong>{current.openingLabel}</strong></li>
-          </ul>
-          <div className="find-door-actions">
-            <button type="button" className="find-door-primary" onClick={customize}>Customize this door <ArrowRight size={16} /></button>
-            <button type="button" className="find-door-secondary" onClick={() => { setStep('photo'); setPageError('') }}>Try another photo</button>
+        <section className="find-door-gallery" aria-labelledby="find-door-gallery-title">
+          <h2 id="find-door-gallery-title">Popular right now</h2>
+          <p>Tap one to start there.</p>
+          <div className="find-door-gallery-row">
+            {INSPIRATION.filter((door) => door.id !== FEATURED_DOOR.id).map((door) => <button type="button" key={door.id} className={inspirationId === door.id ? 'selected' : undefined} aria-pressed={inspirationId === door.id} onClick={() => { setInspirationId(door.id); setMood(door.mood) }}>
+              <img src={door.src} width={door.width} height={door.height} alt={door.alt} loading="lazy" decoding="async" />
+              <span><strong>{door.name}</strong><em>{door.detail}</em></span>
+            </button>)}
           </div>
-          {sent && !dealerMode && <p className="find-door-note">Your details were sent. Customizing opens the door builder with this door already selected.</p>}
-          {dealerMode && <p className="find-door-note">Dealer Mode skips the contact form. Customize this door to keep going in the builder.</p>}
-          {dealerBrand && <p className="find-door-dealer">Shared with {dealerBrand.companyName}</p>}
-          {!photoRead && mood && light && <p className="find-door-note">Style: {styleChoice(mood).name}. Glass: {lightChoice(light).name}.</p>}
-        </>}
+        </section>
+      </>}
+      {step === 'style' && <section className="find-door-question">
+        <h1>What should it feel like?</h1>
+        <div className="find-door-choices" role="group" aria-label="Door style">
+          {STYLE_CHOICES.map((choice) => <button type="button" key={choice.id} className={mood === choice.id ? 'find-door-choice selected' : 'find-door-choice'} aria-pressed={mood === choice.id} onClick={() => setMood(choice.id)}><strong>{choice.name}</strong><span>{choice.description}</span></button>)}
+        </div>
+        <div className="builder-actions find-door-actions">
+          <button type="button" className="back" onClick={() => setStep('photo')}><ArrowLeft size={16} /> Back</button>
+          <button type="button" className="next" disabled={!mood} onClick={() => setStep('glass')}>Next <ArrowRight size={16} /></button>
+        </div>
       </section>}
+      {step === 'glass' && <section className="find-door-question">
+        <h1>How much glass?</h1>
+        <div className="find-door-choices" role="group" aria-label="Glass and privacy">
+          {LIGHT_CHOICES.map((choice) => <button type="button" key={choice.id} className={light === choice.id ? 'find-door-choice selected' : 'find-door-choice'} aria-pressed={light === choice.id} onClick={() => setLight(choice.id)}><strong>{choice.name}</strong><span>{choice.description}</span></button>)}
+        </div>
+        <div className="builder-actions find-door-actions">
+          <button type="button" className="back" onClick={() => setStep('style')}><ArrowLeft size={16} /> Back</button>
+          <button type="button" className="next" disabled={!light} onClick={() => { setPageError(''); setStep(dealerMode ? 'results' : 'details'); void readHouse() }}>See my door <ArrowRight size={16} /></button>
+        </div>
+      </section>}
+      {step === 'details' && <form className="find-door-question" onSubmit={(event) => void submitLead(event)}>
+        <h1>Where should we send it?</h1>
+        <p className="find-door-lead">A dealer follows up from here. Your ZIP stays with the quote.</p>
+        <div className="find-door-fields">
+          <label htmlFor="find-door-name">Full name<input id="find-door-name" name="fullName" autoComplete="name" value={contact.fullName} aria-invalid={!!errors.fullName} aria-describedby={errors.fullName ? 'find-door-name-error' : undefined} onBlur={() => touch('fullName')} onChange={(event) => setContact({ ...contact, fullName: event.target.value })} />{errors.fullName && <small id="find-door-name-error">{errors.fullName}</small>}</label>
+          <label htmlFor="find-door-email">Email<input id="find-door-email" name="email" type="email" autoComplete="email" value={contact.email} aria-invalid={!!errors.email} aria-describedby={errors.email ? 'find-door-email-error' : undefined} onBlur={() => touch('email')} onChange={(event) => setContact({ ...contact, email: event.target.value })} />{errors.email && <small id="find-door-email-error">{errors.email}</small>}</label>
+          <label htmlFor="find-door-phone">Phone<input id="find-door-phone" name="phone" type="tel" autoComplete="tel" value={contact.phone} aria-invalid={!!errors.phone} aria-describedby={errors.phone ? 'find-door-phone-error' : undefined} onBlur={() => touch('phone')} onChange={(event) => setContact({ ...contact, phone: event.target.value })} />{errors.phone && <small id="find-door-phone-error">{errors.phone}</small>}</label>
+          <label htmlFor="find-door-zip">ZIP code<input id="find-door-zip" name="zip" autoComplete="postal-code" inputMode="numeric" value={contact.zip} aria-invalid={!!errors.zip} aria-describedby={errors.zip ? 'find-door-zip-error' : undefined} onBlur={() => touch('zip')} onChange={(event) => setContact({ ...contact, zip: event.target.value })} />{errors.zip && <small id="find-door-zip-error">{errors.zip}</small>}</label>
+        </div>
+        {reading && <div aria-hidden="true"><div className="find-door-skeleton" /><div className="find-door-skeleton" /></div>}
+        <p className="find-door-note" role="status">{reading ? 'Choosing doors.' : current ? 'Your door is ready.' : 'Choose a photo and a style to continue.'}</p>
+        {pageError && <p className="find-door-note find-door-note-error" role="alert">{pageError}</p>}
+        <div className="builder-actions find-door-actions">
+          <button type="button" className="back" onClick={() => setStep('glass')}><ArrowLeft size={16} /> Back</button>
+          <button type="submit" className="next" disabled={sending || reading || !current}>{sending ? 'Sending…' : 'Show my door'}</button>
+          {pageError && current && <button type="button" className="find-door-quiet" onClick={() => setStep('results')}>View the door first</button>}
+        </div>
+      </form>}
+      {step === 'results' && !current && <section className="find-door-question" aria-live="polite">
+        <h1>{pageError ? 'No door yet.' : 'Choosing doors.'}</h1>
+        {reading && <div aria-hidden="true"><div className="find-door-skeleton" /><div className="find-door-skeleton" /><div className="find-door-skeleton-stage find-door-skeleton" /></div>}
+        {pageError && <p className="find-door-note find-door-note-error" role="alert">{pageError}</p>}
+        {pageError && <button type="button" className="next" onClick={() => void readHouse()}>Try again</button>}
+      </section>}
+      {step === 'results' && current && photoUrl && <div className="find-door-results">
+        <aside className="find-door-stage">
+          <h1>{current.title}</h1>
+          <div className="aside-preview-area">
+            {!houseReady && <DoorPreview {...current.preview} view="Exterior" showViewToggle={false} />}
+            <HouseRender ref={houseRef} photoUrl={photoUrl} resolved={current} showHouse={previewMode === 'house'} onProgress={setRenderStatus} />
+          </div>
+          <div className="preview-view-toggle" role="group" aria-label="Preview">
+            <button type="button" className={previewMode === 'door' ? 'active' : ''} aria-pressed={previewMode === 'door'} onClick={() => setPreviewMode('door')}>Door</button>
+            <button type="button" className={previewMode === 'house' ? 'active' : ''} aria-pressed={previewMode === 'house'} onClick={seeHouse}>On my house</button>
+          </div>
+        </aside>
+        <div className="find-door-options">
+          {!photoRead && <p className="find-door-read">These follow your style and glass choices.</p>}
+          <div className="find-door-picks" role="group" aria-label="Recommended doors">
+            {recommendations.map((item, index) => <div className={index === selected ? 'find-door-pick selected' : 'find-door-pick'} key={item.cacheKey}>
+              <OptionCard title={item.title} description={`${item.finishName} · ${item.glassName}`} selected={index === selected} onClick={() => setSelected(index)} visual={<span className="find-door-mini"><DoorPreview {...item.preview} view="Exterior" showViewToggle={false} /></span>} />
+              {index === selected && <p className="find-door-reason">{oneLine(item.reason)}</p>}
+            </div>)}
+          </div>
+        </div>
+        <div className="builder-actions find-door-actions">
+          <button type="button" className="next" onClick={seeHouse} disabled={renderStatus === 'working'}>See this on my house</button>
+          <button type="button" className="find-door-quiet" onClick={customize}>Customize this door <ArrowRight size={16} /></button>
+          <button type="button" className="find-door-text" onClick={() => { setStep('photo'); setPageError('') }}>Try another photo</button>
+          {sent && !dealerMode && <p className="find-door-sent">Your details were sent.</p>}
+          {dealerMode && <p className="find-door-sent">Dealer Mode skips the contact form.</p>}
+          {dealerBrand && <p className="find-door-sent">Shared with {dealerBrand.companyName}</p>}
+        </div>
+        <section className="find-door-details" aria-label="Door details">
+          <div className="mini-summary">
+            <span><b>Door</b><strong>{current.styleName}</strong></span>
+            <span><b>Finish</b><strong>{current.finishName}</strong></span>
+            <span><b>Glass</b><strong>{current.glassName}</strong></span>
+            <span><b>Hardware</b><strong>{current.hardwareName}</strong></span>
+            <span><b>Opening</b><strong>{current.openingLabel}</strong></span>
+          </div>
+        </section>
+      </div>}
     </main>
-    <SiteFooter currentStep="find-my-door" configuration={{ 'Find My Door': current?.title ?? '' }} dealerBrand={dealerBrand} dealerAccess={<DealerMode session={dealerSession} bannerTarget={bannerTarget} onExit={() => undefined} />} />
+    <SiteFooter currentStep="find-my-door" configuration={{ 'HGI Door Finder': current?.title ?? '' }} dealerBrand={dealerBrand} dealerAccess={<DealerMode session={dealerSession} bannerTarget={bannerTarget} onExit={() => undefined} />} />
   </div>
 }
