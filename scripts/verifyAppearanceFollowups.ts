@@ -22,7 +22,14 @@ const html = `<!doctype html><style>${styles}${footer}${pair}${css}
     <button class="option-card" id="plain-option"><span class="option-copy"><strong>Plain</strong></span></button>
     <button class="option-card selected" id="plain-option-selected"><span class="option-copy"><strong>Plain selected</strong></span></button>
     <article class="hardware-option-card" id="plain-hardware"><span class="option-copy"><strong>Plain hardware</strong></span></article>
-  </div></div></main>
+  </div>
+  <div class="options-grid door-configuration-grid door-style-catalog-grid">
+    <button class="option-card door-catalog-card door-configuration-card selected" id="plain-config"><span class="option-copy"><strong>Plain catalog</strong></span></button>
+  </div>
+  <div class="options-grid door-style-catalog-grid door-style-product-grid">
+    <article class="option-card door-catalog-card door-image-card" id="plain-image"><button class="door-details-trigger" type="button">View details</button></article>
+  </div>
+  </div></main>
 </div>
 <div class="app dealer-cobranded" style="--dealer-secondary:#8ebb53;--dealer-secondary-foreground:#101417;--dealer-primary:#235176;--db-card-background:#fff4d6;--db-card-title:#7a1f1f;--db-card-border:#c45500;--db-card-selected:#0b6b2a;--db-card-hover:#123a8a;--db-footer-text:#ffd24a">
   <header>
@@ -82,11 +89,18 @@ try {
   const config = await page.locator('#config').evaluate((element) => {
     const style = getComputedStyle(element)
     const title = getComputedStyle(element.querySelector('strong')!)
-    return { background: style.backgroundColor, border: style.borderTopColor, title: title.color }
+    return { background: style.backgroundColor, border: style.borderTopColor, outline: style.outlineColor, title: title.color }
   })
   assert.equal(config.background, 'rgb(255, 244, 214)')
   assert.equal(config.title, 'rgb(122, 31, 31)')
   assert.equal(config.border, 'rgb(11, 107, 42)')
+  assert.equal(config.outline, 'rgb(11, 107, 42)')
+  const plainOutline = await page.locator('#plain-config').evaluate((element) => getComputedStyle(element).outlineColor)
+  assert.equal(plainOutline, 'rgb(13, 102, 108)')
+  const imageBorder = await page.locator('#image').evaluate((element) => getComputedStyle(element).borderBottomColor)
+  const plainImageBorder = await page.locator('#plain-image').evaluate((element) => getComputedStyle(element).borderBottomColor)
+  assert.equal(imageBorder, 'rgb(196, 85, 0)')
+  assert.equal(plainImageBorder, 'rgb(190, 201, 204)')
   assert.equal(await borderOf('#config', true), 'rgb(11, 107, 42)')
   assert.equal(await borderOf('#sidelite'), 'rgb(196, 85, 0)')
   assert.equal(await borderOf('#sidelite', true), 'rgb(18, 58, 138)')
