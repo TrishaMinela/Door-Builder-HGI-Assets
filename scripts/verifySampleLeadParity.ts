@@ -35,6 +35,8 @@ assert.deepEqual(payload, {
   lock_setup: 'Lock on Main Door Only',
   door_swing: 'Both slabs operable',
   hinge_option: 'Not applicable',
+  working_with_dealer: '',
+  working_dealer_name: '',
 })
 
 console.log('PASS sample lead matches the live Door Builder payload builder')

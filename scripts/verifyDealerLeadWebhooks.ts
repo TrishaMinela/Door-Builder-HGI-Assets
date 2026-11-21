@@ -107,6 +107,7 @@ const submissionFields = [
   'main_door_glass', 'door_finish_type', 'door_finish_color', 'jamb_type', 'jamb_finish_type',
   'jamb_finish_color', 'hardware', 'lock_setup', 'door_swing', 'hinge_option',
   'lead_source', 'dealer_name', 'dealer_slug',
+  'working_with_dealer', 'working_dealer_name',
 ]
 
 async function invoke(body: Record<string, unknown> = {}) {
@@ -129,6 +130,33 @@ assert.equal(root.status, 200)
 assert.deepEqual(urls(root), [master])
 assert.equal(root.requests[0].body?.lead_source, 'HGI')
 assert.equal(root.requests[0].body?.test, undefined)
+
+const homeownerDealer = await invoke({ notes: 'Call after 5.', working_with_dealer: 'yes', working_dealer_name: 'Lake Door Co' })
+assert.equal(homeownerDealer.status, 200)
+assert.equal(homeownerDealer.requests[0].body?.working_with_dealer, 'yes')
+assert.equal(homeownerDealer.requests[0].body?.working_dealer_name, 'Lake Door Co')
+assert.equal(homeownerDealer.requests[0].body?.dealer_name, 'Home Guard Industries')
+assert.equal(homeownerDealer.requests[0].body?.notes, 'Call after 5.\nWorking with a dealer: Yes — Dealer: Lake Door Co')
+assert.equal('customFields' in (homeownerDealer.requests[0].body ?? {}), false)
+assert.equal('tags' in (homeownerDealer.requests[0].body ?? {}), false)
+
+process.env.PERSONIFY_FIELD_WORKING_WITH_DEALER = 'contact.working_with_dealer'
+process.env.PERSONIFY_FIELD_DEALER_NAME = 'personify-dealer-name-id'
+const mappedDealer = await invoke({ working_with_dealer: 'Yes', working_dealer_name: 'Lake Door Co' })
+assert.equal(mappedDealer.status, 200)
+assert.deepEqual(mappedDealer.requests[0].body?.customFields, [
+  { key: 'contact.working_with_dealer', field_value: 'Yes' },
+  { id: 'personify-dealer-name-id', field_value: 'Lake Door Co' },
+])
+delete process.env.PERSONIFY_FIELD_WORKING_WITH_DEALER
+delete process.env.PERSONIFY_FIELD_DEALER_NAME
+
+const declinedDealer = await invoke({ notes: 'Call after 5.', working_with_dealer: 'no', working_dealer_name: 'Lake Door Co' })
+assert.equal(declinedDealer.requests[0].body?.working_with_dealer, 'no')
+assert.equal(declinedDealer.requests[0].body?.working_dealer_name, '')
+assert.equal(declinedDealer.requests[0].body?.dealer_name, 'Home Guard Industries')
+assert.equal(declinedDealer.requests[0].body?.notes, 'Call after 5.\nWorking with a dealer: No')
+assert.equal('customFields' in (declinedDealer.requests[0].body ?? {}), false)
 
 const ab = await invoke({ dealerSlug: 'americas-best-windows-and-doors' })
 assert.deepEqual(urls(ab), [master, abEnv])
