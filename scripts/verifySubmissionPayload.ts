@@ -22,6 +22,18 @@ const baseConfiguration: DoorConfiguration = {
 }
 
 const contact = { fullName: 'Jane Marie Smith', email: ' jane@example.com ', phone: ' (555) 123-4567 ', zip: ' 46741 ', notes: 'Call after 5.' }
+const unanswered = buildDoorBuilderSubmissionPayload({ contact, configuration: baseConfiguration })
+assert.equal(unanswered.working_with_dealer, '')
+assert.equal(unanswered.working_dealer_name, '')
+assert.equal(unanswered.notes, 'Call after 5.')
+const withDealer = buildDoorBuilderSubmissionPayload({ contact: { ...contact, workingWithDealer: 'yes', dealerName: '  North  Side  Doors ' }, configuration: baseConfiguration })
+assert.equal(withDealer.working_with_dealer, 'yes')
+assert.equal(withDealer.working_dealer_name, 'North Side Doors')
+assert.equal(withDealer.notes, 'Call after 5.\nWorking with a dealer: Yes — Dealer: North Side Doors')
+const declined = buildDoorBuilderSubmissionPayload({ contact: { ...contact, notes: '', workingWithDealer: 'no', dealerName: 'Should not be sent' }, configuration: baseConfiguration })
+assert.equal(declined.working_with_dealer, 'no')
+assert.equal(declined.working_dealer_name, '')
+assert.equal(declined.notes, 'Working with a dealer: No')
 const placements: SideliteConfiguration[] = ['none', 'hinge-side', 'lock-side', 'both-sides']
 const configurationTypes: DoorConfigurationType[] = ['single', 'french', 'savannah']
 

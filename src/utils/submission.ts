@@ -33,6 +33,8 @@ export type DoorBuilderSubmissionPayload = {
   lock_setup: string
   door_swing: string
   hinge_option: string
+  working_with_dealer: '' | 'yes' | 'no'
+  working_dealer_name: string
 }
 
 export type DoorConfigurationSnapshot = {
@@ -61,6 +63,30 @@ function titleCase(value?: string | null) {
 function splitName(fullName: string) {
   const parts = fullName.trim().split(/\s+/).filter(Boolean)
   return { firstName: parts[0] ?? '', lastName: parts.slice(1).join(' ') }
+}
+
+export function workingWithDealerAnswer(value?: string | null): '' | 'yes' | 'no' {
+  const answer = value?.trim().toLowerCase()
+  return answer === 'yes' || answer === 'no' ? answer : ''
+}
+
+export function homeownerDealerName(answer: '' | 'yes' | 'no', value?: string | null) {
+  if (answer !== 'yes') return ''
+  return (value ?? '').replace(/\s+/g, ' ').trim()
+}
+
+/** One line for the lead notes body. Empty when the question was left unanswered. */
+export function workingWithDealerNote(answer: '' | 'yes' | 'no', dealerName: string) {
+  if (answer === 'yes' && dealerName) return `Working with a dealer: Yes — Dealer: ${dealerName}`
+  if (answer === 'yes') return 'Working with a dealer: Yes'
+  if (answer === 'no') return 'Working with a dealer: No'
+  return ''
+}
+
+export function notesWithDealerAnswer(notes: string, answer: '' | 'yes' | 'no', dealerName: string) {
+  const line = workingWithDealerNote(answer, dealerName)
+  if (!line || notes.includes(line)) return notes
+  return notes ? `${notes}\n${line}` : line
 }
 
 function readableDoorStyle(configuration: DoorConfiguration) {
@@ -110,6 +136,8 @@ export function buildDoorBuilderSubmissionPayload({ contact, configuration, subm
     throw new Error('Please choose an available glass option before submitting.')
   }
   const { firstName, lastName } = splitName(contact.fullName)
+  const workingWithDealer = workingWithDealerAnswer(contact.workingWithDealer)
+  const workingDealerName = homeownerDealerName(workingWithDealer, contact.dealerName)
   const configurationType = configuration.doorConfigurationType ?? 'single'
   const hasSidelites = (configuration.sidelitePlacement ?? configuration.sidelites) !== 'none'
   const lockSetup = configurationType === 'single'
@@ -124,7 +152,7 @@ export function buildDoorBuilderSubmissionPayload({ contact, configuration, subm
     email: contact.email.trim(),
     phone: contact.phone.trim(),
     postal_code: contact.zip.trim(),
-    notes: contact.notes.trim(),
+    notes: notesWithDealerAnswer(contact.notes.trim(), workingWithDealer, workingDealerName),
     door_configuration: doorConfigurationLabel(configurationType),
     door_line: configuration.doorLine?.trim() || configuration.product.doorType || NOT_APPLICABLE,
     door_style: readableDoorStyle(configuration),
@@ -141,6 +169,8 @@ export function buildDoorBuilderSubmissionPayload({ contact, configuration, subm
     lock_setup: lockSetup,
     door_swing: doorSwingDisplayName(configurationType, configuration.doorSwing),
     hinge_option: doorConfigurationHingeOptionLabel(configurationType) ?? NOT_APPLICABLE,
+    working_with_dealer: workingWithDealer,
+    working_dealer_name: workingDealerName,
   }
 }
 

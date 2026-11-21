@@ -61,7 +61,7 @@ type BuilderPage = 'door-configuration' | 'door-style' | 'door-line' | 'door-gra
 const mainDoorGlassPages = new Set<BuilderPage>(['glass-type', 'glass', 'glass-variant', 'grid-location', 'grid-style', 'grid-pattern', 'grid-color', 'grid-width'])
 const sideliteGlassPages = new Set<BuilderPage>(['sidelite-glass-type', 'sidelite-glass', 'sidelite-glass-variant', 'sidelite-grid-location', 'sidelite-grid-style', 'sidelite-grid-pattern', 'sidelite-grid-color', 'sidelite-grid-width'])
 type GlassCategory = 'clear' | 'decorative' | 'privacy' | 'blinds' | 'clic' | 'retro'
-const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '', notes: '' }
+const initialContact: ContactForm = { fullName: '', email: '', phone: '', zip: '', notes: '', workingWithDealer: '', dealerName: '' }
 const emptyPreviewHardware: PreviewHardware = { color: '#191919', type: 'long' }
 const temporaryPreviewHardware = hardwareOptions.find(item => item.manufacturer === 'Schlage' && item.style === 'Georgian Knob with Deadbolt' && item.finish === 'Matte Black')
 const proMatchTooltipTitle = 'About ProMatch® Colors'
@@ -1978,7 +1978,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
 
   const submit = async () => {
     if (submitting || submitted) return
-    const required: (keyof ContactForm)[] = ['fullName', 'email', 'phone', 'zip']
+    const required = ['fullName', 'email', 'phone', 'zip'] as const
     const nextErrors: Partial<Record<keyof ContactForm, string>> = {}
     required.forEach((key) => { if (!contact[key].trim()) nextErrors[key] = 'Please complete this field.' })
     if (contact.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)) nextErrors.email = 'Enter a valid email address.'

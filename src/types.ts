@@ -201,4 +201,8 @@ export type ContactForm = {
   phone: string
   zip: string
   notes: string
+  /** Optional homeowner answer: yes, no, or empty. */
+  workingWithDealer?: string
+  /** Shown only when workingWithDealer is yes. Cleared otherwise. */
+  dealerName?: string
 }

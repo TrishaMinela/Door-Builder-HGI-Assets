@@ -79,6 +79,7 @@ Set these in Vercel. Never prefix a secret with `VITE_`.
 | `DEALER_MODE_ORIGIN` | Optional. Defaults to `https://www.hgidoorbuilder.com` |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Dealer Portal project. Leads and dealer lookup |
 | `ZAPIER_DOOR_BUILDER_WEBHOOK_URL` | Lead forward after Supabase saves |
+| `PERSONIFY_FIELD_WORKING_WITH_DEALER`, `PERSONIFY_FIELD_DEALER_NAME` | Optional. Custom field id or `contact.*` key. Sent on the lead webhook only when set. |
 | `ZAPIER_AB_DOOR_BUILDER_WEBHOOK_URL`, `ZAPIER_WDM_DOOR_BUILDER_WEBHOOK_URL`, `ZAPIER_UHR_DOOR_BUILDER_WEBHOOK_URL` | Extra lead webhooks for those dealers. The master hook still fires. |
 | `ZAPIER_FEEDBACK_WEBHOOK_URL` | Feedback form |
 | `OPENAI_API_KEY` | AI visualizer. Optional model override: `OPENAI_ENTRANCE_DETECTION_MODEL` |

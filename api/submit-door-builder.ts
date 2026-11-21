@@ -14,6 +14,7 @@ const SUBMISSION_FIELDS = [
   'main_door_glass', 'door_finish_type', 'door_finish_color', 'jamb_type', 'jamb_finish_type',
   'jamb_finish_color', 'hardware', 'lock_setup', 'door_swing', 'hinge_option',
   'lead_source', 'dealer_name', 'dealer_slug',
+  'working_with_dealer', 'working_dealer_name',
 ] as const
 
 const MAX_CONFIGURATION_BYTES = 128 * 1024
@@ -31,6 +32,57 @@ function parseBody(body: unknown): JsonObject {
 
 function normalizePayload(source: JsonObject): ZapierPayload {
   return Object.fromEntries(SUBMISSION_FIELDS.map((field) => [field, typeof source[field] === 'string' ? source[field].trim() : ''])) as ZapierPayload
+}
+
+function workingWithDealerAnswer(value: string): '' | 'yes' | 'no' {
+  const answer = value.trim().toLowerCase()
+  return answer === 'yes' || answer === 'no' ? answer : ''
+}
+
+function workingWithDealerNote(answer: '' | 'yes' | 'no', dealerName: string) {
+  if (answer === 'yes' && dealerName) return `Working with a dealer: Yes — Dealer: ${dealerName}`
+  if (answer === 'yes') return 'Working with a dealer: Yes'
+  if (answer === 'no') return 'Working with a dealer: No'
+  return ''
+}
+
+function notesWithDealerAnswer(notes: string, answer: '' | 'yes' | 'no', dealerName: string) {
+  const line = workingWithDealerNote(answer, dealerName)
+  if (!line || notes.includes(line)) return notes
+  return notes ? `${notes}\n${line}` : line
+}
+
+/** dealer_name stays the attributed dealer. The homeowner's answer is separate. */
+function applyHomeownerDealer(payload: ZapierPayload): ZapierPayload {
+  const answer = workingWithDealerAnswer(payload.working_with_dealer)
+  const dealerName = answer === 'yes' ? payload.working_dealer_name.replace(/\s+/g, ' ').trim() : ''
+  return {
+    ...payload,
+    working_with_dealer: answer,
+    working_dealer_name: dealerName,
+    notes: notesWithDealerAnswer(payload.notes, answer, dealerName),
+  }
+}
+
+type PersonifyCustomField = { id: string; field_value: string } | { key: string; field_value: string }
+
+function personifyField(token: string | undefined, fieldValue: string): PersonifyCustomField | null {
+  const value = token?.trim()
+  if (!value || !fieldValue) return null
+  return value.includes('.') ? { key: value, field_value: fieldValue } : { id: value, field_value: fieldValue }
+}
+
+function personifyCustomFields(payload: ZapierPayload) {
+  const answer = payload.working_with_dealer === 'yes' ? 'Yes' : payload.working_with_dealer === 'no' ? 'No' : ''
+  return [
+    personifyField(process.env.PERSONIFY_FIELD_WORKING_WITH_DEALER, answer),
+    personifyField(process.env.PERSONIFY_FIELD_DEALER_NAME, payload.working_dealer_name),
+  ].filter((field): field is PersonifyCustomField => field !== null)
+}
+
+function zapierBody(payload: ZapierPayload) {
+  const customFields = personifyCustomFields(payload)
+  return customFields.length ? { ...payload, customFields } : payload
 }
 
 function configurationSnapshot(value: unknown): JsonObject | null {
@@ -70,7 +122,8 @@ function logDevelopmentSubmission(payload: ZapierPayload) {
     'Door Finish Color': payload.door_finish_color, 'Jamb Type': payload.jamb_type,
     'Jamb Finish Type': payload.jamb_finish_type, 'Jamb Finish Color': payload.jamb_finish_color,
     Hardware: payload.hardware, 'Lock Setup': payload.lock_setup, 'Door Swing': payload.door_swing,
-    'Hinge Option': payload.hinge_option,
+    'Hinge Option': payload.hinge_option, 'Working with a dealer': payload.working_with_dealer,
+    'Working dealer name': payload.working_dealer_name,
   })
 }
 
@@ -92,7 +145,7 @@ function zapierDestinations(dealerSlug: string) {
 }
 
 async function submitToZapier(payload: ZapierPayload, destinations: string[]) {
-  const body = JSON.stringify(payload)
+  const body = JSON.stringify(zapierBody(payload))
   const results = await Promise.all(destinations.map(webhookUrl => fetch(webhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body })))
   if (results.some(result => !result.ok)) throw new Error('One or more Zapier destinations rejected the submission.')
 }
@@ -123,7 +176,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   if (request.method !== 'POST') { response.setHeader('Allow', 'POST'); response.status(405).json({ error: 'Method not allowed.' }); return }
 
   const source = parseBody(request.body)
-  const payload = normalizePayload(source)
+  const payload = applyHomeownerDealer(normalizePayload(source))
   if (!payload.full_name || !payload.email || !payload.phone || !payload.postal_code) {
     response.status(400).json({ error: 'Required customer information is missing.' }); return
   }
