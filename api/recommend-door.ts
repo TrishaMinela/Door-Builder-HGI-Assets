@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { AiInputError, objectValue, prepareHouseAndMask } from '../server/aiImagePreprocessing.js'
 import { AI_MAX_REQUEST_BYTES } from '../src/features/home-visualizer/aiImagePreparation.js'
-import { recipeById, recipeMenu, RECIPES } from '../src/features/find-my-door/recipes.js'
-import { chooseFinish, selectRecipes } from '../src/features/find-my-door/selectRecipes.js'
+import { assembleRecommendations, type RawDoorPick } from '../src/features/find-my-door/assembleRecommendations.js'
+import { recipeMenu, RECIPES } from '../src/features/find-my-door/recipes.js'
 import { LIGHT_CHOICES, STYLE_CHOICES, type HouseReading, type LightPreference, type OpeningHint, type StyleMood } from '../src/features/find-my-door/types.js'
 
 type ApiRequest = { method?: string; body?: unknown }
@@ -23,6 +23,9 @@ const schema = {
     opening: { type: 'string', enum: ['single', 'double', 'sidelites', 'unknown'] },
     picks: {
       type: 'array',
+      minItems: 3,
+      maxItems: 3,
+      description: 'Exactly 3 visually distinct doors. Matching style, opening, finish, and glass are the same door. Hardware finish and swing do not count. Prefer different style and finish combinations.',
       items: {
         type: 'object', additionalProperties: false,
         properties: {
@@ -64,30 +67,20 @@ function reading(source: Record<string, unknown> | null): HouseReading {
   }
 }
 
-function picksFromModel(value: unknown, house: HouseReading) {
+function modelPicks(value: unknown): RawDoorPick[] {
   if (!Array.isArray(value)) return []
-  const used = new Set<string>()
-  const picks: { id: string; finishId: string; reason: string }[] = []
-  for (const item of value) {
+  return value.flatMap((item) => {
     const source = objectValue(item)
-    const recipe = recipeById(text(source?.recipeId, 80))
-    if (!recipe || used.has(recipe.id)) continue
-    used.add(recipe.id)
-    picks.push({
-      id: recipe.id,
-      finishId: chooseFinish(recipe, house.siding, text(source?.finishId, 80)),
-      reason: text(source?.reason, 280),
-    })
-    if (picks.length === 3) break
-  }
-  return picks
+    if (!source) return []
+    return [{ recipeId: text(source.recipeId, 80), finishId: text(source.finishId, 80), reason: text(source.reason, 280) }]
+  })
 }
 
-function preferencePicks(mood: StyleMood, light: LightPreference, house: HouseReading) {
-  return selectRecipes(mood, light, house.opening).map((recipe) => ({
-    id: recipe.id,
-    finishId: chooseFinish(recipe, house.siding),
-    reason: '',
+function recommendationPayload(mood: StyleMood, light: LightPreference, house: HouseReading, picks?: readonly RawDoorPick[]) {
+  return assembleRecommendations({ mood, light, house, picks }).map((item) => ({
+    id: item.id,
+    finishId: item.finish.id,
+    reason: item.reason,
   }))
 }
 
@@ -121,7 +114,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     const prepared = await prepareHouseAndMask(source.photo, null)
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) {
-      respond(response, 200, { photoRead: false, house: reading(null), recommendations: preferencePicks(mood as StyleMood, light as LightPreference, reading(null)), request_id: requestId })
+      respond(response, 200, { photoRead: false, house: reading(null), recommendations: recommendationPayload(mood as StyleMood, light as LightPreference, reading(null)), request_id: requestId })
       return
     }
     const styleName = STYLE_CHOICES.find((choice) => choice.id === mood)?.name
@@ -141,7 +134,8 @@ export default async function handler(request: ApiRequest, response: ApiResponse
               `The homeowner wants: ${styleName}. Glass preference: ${lightName}.`,
               'Look at the house photo. Describe the architecture in a few words, the siding or masonry color, and the trim color. Set opening to single, double, or sidelites from the existing front door. Use unknown when the opening is unclear.',
               'Set photoUsable to false only when the image is not a house entrance.',
-              'Return 2 or 3 different recipes. Prefer recipes whose light tag matches the glass preference, whose moods include the requested style, and whose opening matches the photo. Choose a finish id from that recipe to improve the house: contrast a light wall with a deeper door, or complement brick and dark siding with a lighter door. Stay inside the listed finishes.',
+              'Return exactly 3 picks. Prefer recipes whose light tag matches the glass preference, whose moods include the requested style, and whose opening matches the photo. Choose a finish id from that recipe to improve the house: contrast a light wall with a deeper door, or complement brick and dark siding with a lighter door. Stay inside the listed finishes.',
+              'The 3 doors must be visually distinct. A door is the same when the style, opening (single, sidelites, or French double doors), finish color, and glass or grids match. Never repeat a door. Hardware finish and door swing do not make a door different. Prefer 3 different style-and-finish combinations when the menu allows, so the homeowner sees different colors and door styles.',
               'Each reason is one or two sentences about this specific house. Mention a color or material you can see. Do not invent products, glass, or colors that are not in the chosen recipe.',
               'Menu:',
               recipeMenu(),
@@ -154,13 +148,13 @@ export default async function handler(request: ApiRequest, response: ApiResponse
       })
     } catch (error) {
       console.error('[find-my-door:provider]', { request_id: requestId, timeout: error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError') })
-      respond(response, 200, { photoRead: false, house: reading(null), recommendations: preferencePicks(mood as StyleMood, light as LightPreference, reading(null)), request_id: requestId })
+      respond(response, 200, { photoRead: false, house: reading(null), recommendations: recommendationPayload(mood as StyleMood, light as LightPreference, reading(null)), request_id: requestId })
       return
     }
     const result = await upstream.json().catch(() => null) as Record<string, unknown> | null
     if (!upstream.ok || !result) {
       console.error('[find-my-door:provider-status]', { request_id: requestId, status: upstream.status })
-      respond(response, 200, { photoRead: false, house: reading(null), recommendations: preferencePicks(mood as StyleMood, light as LightPreference, reading(null)), request_id: requestId })
+      respond(response, 200, { photoRead: false, house: reading(null), recommendations: recommendationPayload(mood as StyleMood, light as LightPreference, reading(null)), request_id: requestId })
       return
     }
     let parsed: Record<string, unknown> | null = null
@@ -170,19 +164,8 @@ export default async function handler(request: ApiRequest, response: ApiResponse
       respond(response, 422, { error: 'We couldn’t find a front door in that photo. Try a daylight photo with the whole entry in the frame.', request_id: requestId })
       return
     }
-    const recommendations = picksFromModel(parsed?.picks, house).filter((pick) => {
-      const recipe = recipeById(pick.id)
-      return recipe?.light === light
-    })
-    if (recommendations.length < 2) {
-      const extras = preferencePicks(mood as StyleMood, light as LightPreference, house)
-      for (const extra of extras) {
-        if (recommendations.some((pick) => pick.id === extra.id)) continue
-        recommendations.push(extra)
-        if (recommendations.length === 3) break
-      }
-    }
-    respond(response, 200, { photoRead: Boolean(parsed), house, recommendations: recommendations.slice(0, 3), request_id: requestId })
+    const recommendations = recommendationPayload(mood as StyleMood, light as LightPreference, house, modelPicks(parsed?.picks))
+    respond(response, 200, { photoRead: Boolean(parsed), house, recommendations, request_id: requestId })
   } catch (error) {
     const status = error instanceof AiInputError ? error.status : 400
     const message = error instanceof AiInputError && status === 413

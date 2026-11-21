@@ -16,9 +16,8 @@ import { HouseRender, type HouseRenderHandle } from './HouseRender'
 import { hasHouseImage, houseImages, modeAfterOptionChange } from './houseImageCache'
 import { FEATURED_DOOR, INSPIRATION } from './inspiration'
 import { launchBuilder } from './launch'
-import { recipeById } from './recipes'
-import { fallbackReason, resolveRecommendation, type ResolvedRecommendation } from './resolveRecommendation'
-import { chooseFinish, selectRecipes } from './selectRecipes'
+import { assembleRecommendations } from './assembleRecommendations'
+import { recommendationSubtitle, type ResolvedRecommendation } from './resolveRecommendation'
 import { LIGHT_CHOICES, STYLE_CHOICES, type HouseReading, type LightPreference, type StyleMood } from './types'
 import './FindMyDoor.css'
 
@@ -167,22 +166,10 @@ export function FindMyDoorPage() {
         trim: result.house?.trim || '',
         opening: result.house?.opening === 'single' || result.house?.opening === 'double' || result.house?.opening === 'sidelites' ? result.house.opening : 'unknown',
       }
-      const resolved = (result.recommendations ?? []).flatMap((pick) => {
-        const recipe = recipeById(pick.id || '')
-        if (!recipe || recipe.light !== light) return []
-        const finishId = chooseFinish(recipe, nextHouse.siding, pick.finishId)
-        const item = resolveRecommendation(recipe, finishId, pick.reason || '', nextHouse, mood)
-        return item ? [item] : []
-      })
-      const fallback = selectRecipes(mood, light, nextHouse.opening).flatMap((recipe) => {
-        if (resolved.some((item) => item.id === recipe.id)) return []
-        const item = resolveRecommendation(recipe, chooseFinish(recipe, nextHouse.siding), '', nextHouse, mood)
-        return item ? [item] : []
-      })
-      const next = [...resolved, ...fallback].slice(0, 3)
-      if (next.length < 2) throw new Error('unavailable')
+      const next = assembleRecommendations({ mood, light, house: nextHouse, picks: result.recommendations })
+      if (next.length < 3) throw new Error('unavailable')
       setPhotoRead(result.photoRead !== false)
-      setRecommendations(next.map((item) => item.reason ? item : { ...item, reason: fallbackReason(item.finishName, item.styleName, nextHouse, mood) }))
+      setRecommendations(next)
       setSelected(0)
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return
@@ -191,11 +178,8 @@ export function FindMyDoorPage() {
         setPageError(error.message)
         setStep('photo')
       } else {
-        const local = selectRecipes(mood, light, 'unknown').flatMap((recipe) => {
-          const item = resolveRecommendation(recipe, chooseFinish(recipe, ''), '', emptyHouse, mood)
-          return item ? [item] : []
-        })
-        if (local.length < 2) {
+        const local = assembleRecommendations({ mood, light, house: emptyHouse })
+        if (local.length < 3) {
           setPageError('We couldn’t match a door just now. Please try again.')
         } else {
           setPhotoRead(false)
@@ -372,7 +356,7 @@ export function FindMyDoorPage() {
           {!photoRead && <p className="find-door-read">These follow your style and glass choices.</p>}
           <div className="find-door-picks" role="group" aria-label="Recommended doors">
             {recommendations.map((item, index) => <div className={index === selected ? 'find-door-pick selected' : 'find-door-pick'} key={item.cacheKey}>
-              <OptionCard title={item.title} description={`${item.finishName} · ${item.glassName}`} selected={index === selected} onClick={() => chooseRecommendation(index)} visual={<span className="find-door-mini"><DoorPreview {...item.preview} view="Exterior" showViewToggle={false} /></span>} />
+              <OptionCard title={item.title} description={recommendationSubtitle(item.finishName, item.glassName)} selected={index === selected} onClick={() => chooseRecommendation(index)} visual={<span className="find-door-mini"><DoorPreview {...item.preview} view="Exterior" showViewToggle={false} /></span>} />
               {index === selected && <p className="find-door-reason">{oneLine(item.reason)}</p>}
             </div>)}
           </div>
