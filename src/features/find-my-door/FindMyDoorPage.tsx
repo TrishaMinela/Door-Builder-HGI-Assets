@@ -8,6 +8,7 @@ import { SiteFooter } from '../../components/SiteFooter'
 import type { PublicDealerBrand } from '../../types/dealerBranding'
 import type { ContactForm } from '../../types'
 import { dealerBrandStyle, dealerLogoAnchor, dealerSurfaceLogos } from '../../utils/dealerBranding'
+import { appearanceMode } from '../../utils/doorBuilderAppearance'
 import { isValidDealerSlug, normalizeDealerSlug } from '../../utils/dealerSlug'
 import { buildDoorBuilderSubmissionPayload, submitQuote } from '../../utils/submission'
 import { prepareAiHousePhoto } from '../home-visualizer/aiVisualization'
@@ -247,7 +248,7 @@ export function FindMyDoorPage() {
     <input className="find-door-file" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif" onChange={(event) => void onPhoto(event)} />
   </label>
 
-  return <div className={`shared-footer-shell find-my-door-app builder-typography${dealerBrand ? ' dealer-cobranded' : ''}`} style={dealerBrand ? dealerBrandStyle(dealerBrand) : undefined}>
+  return <div className={`shared-footer-shell find-my-door-app builder-typography${dealerBrand ? ' dealer-cobranded' : ''}`} data-appearance-mode={dealerBrand ? appearanceMode(dealerBrand.appearance) : undefined} style={dealerBrand ? dealerBrandStyle(dealerBrand) : undefined}>
     <div ref={setBannerTarget} className="dealer-mode-banner-slot" />
     <header className="find-my-door-header">
       {dealerBrand && logo && logosLinked ? (
