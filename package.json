@@ -16,6 +16,7 @@
     "test:submission": "node --import tsx scripts/verifySubmissionPayload.ts",
     "test:dealer-webhooks": "node --import tsx scripts/verifyDealerLeadWebhooks.ts",
     "test:dealer-cobranding": "node --import tsx scripts/verifyDealerCoBranding.ts",
+    "test:simplified-appearance": "node --import tsx scripts/verifySimplifiedAppearance.ts",
     "test:dealer-logo-variants": "node --import tsx scripts/verifyDealerLogoVariants.ts",
     "test:dealer-logo-links": "node --import tsx scripts/verifyDealerLogoLinks.ts",
     "test:dealer-logo-links:ui": "node --import tsx scripts/verifyDealerLogoLinksUi.ts",
