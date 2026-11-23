@@ -52,6 +52,7 @@ type SubmissionSource = {
   contact: ContactForm
   configuration: DoorConfiguration
   submittedAt?: string
+  linkedDealerName?: string | null
 }
 
 const NOT_APPLICABLE = 'Not applicable'
@@ -87,6 +88,13 @@ export function notesWithDealerAnswer(notes: string, answer: '' | 'yes' | 'no', 
   const line = workingWithDealerNote(answer, dealerName)
   if (!line || notes.includes(line)) return notes
   return notes ? `${notes}\n${line}` : line
+}
+
+export function dealerAnswer(contact: Pick<ContactForm, 'workingWithDealer' | 'dealerName'>, linkedDealerName?: string | null) {
+  const linked = linkedDealerName?.replace(/\s+/g, ' ').trim()
+  if (linked) return { workingWithDealer: 'yes' as const, workingDealerName: linked }
+  const workingWithDealer = workingWithDealerAnswer(contact.workingWithDealer)
+  return { workingWithDealer, workingDealerName: homeownerDealerName(workingWithDealer, contact.dealerName) }
 }
 
 function readableDoorStyle(configuration: DoorConfiguration) {
@@ -125,7 +133,7 @@ function readableSidelitePlacement(configuration: DoorConfiguration) {
   return 'No Sidelites'
 }
 
-export function buildDoorBuilderSubmissionPayload({ contact, configuration, submittedAt }: SubmissionSource): DoorBuilderSubmissionPayload {
+export function buildDoorBuilderSubmissionPayload({ contact, configuration, submittedAt, linkedDealerName }: SubmissionSource): DoorBuilderSubmissionPayload {
   assertCustomerFinish(configuration.finish)
   const context = { configurationType: configuration.doorConfigurationType ?? 'single', lineId: configuration.product.matchingVariants[0]?.lineId, grain: configuration.grain, openingCodes: configuration.product.styleCodes }
   const main = configuration.mainDoorGlass ?? configuration.glass
@@ -136,8 +144,7 @@ export function buildDoorBuilderSubmissionPayload({ contact, configuration, subm
     throw new Error('Please choose an available glass option before submitting.')
   }
   const { firstName, lastName } = splitName(contact.fullName)
-  const workingWithDealer = workingWithDealerAnswer(contact.workingWithDealer)
-  const workingDealerName = homeownerDealerName(workingWithDealer, contact.dealerName)
+  const { workingWithDealer, workingDealerName } = dealerAnswer(contact, linkedDealerName)
   const configurationType = configuration.doorConfigurationType ?? 'single'
   const hasSidelites = (configuration.sidelitePlacement ?? configuration.sidelites) !== 'none'
   const lockSetup = configurationType === 'single'

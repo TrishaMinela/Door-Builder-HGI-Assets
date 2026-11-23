@@ -52,6 +52,13 @@ function notesWithDealerAnswer(notes: string, answer: '' | 'yes' | 'no', dealerN
   return notes ? `${notes}\n${line}` : line
 }
 
+function applyDealerLinkAnswer<T extends ZapierPayload>(payload: T, dealer: { companyName: string } | null): T {
+  if (!dealer) return payload
+  const dealerName = dealer.companyName.replace(/\s+/g, ' ').trim()
+  const notes = payload.notes.split('\n').filter((line) => !line.startsWith('Working with a dealer:')).join('\n').trim()
+  return { ...payload, working_with_dealer: 'yes', working_dealer_name: dealerName, notes: notesWithDealerAnswer(notes, 'yes', dealerName) }
+}
+
 /** dealer_name stays the attributed dealer. The homeowner's answer is separate. */
 function applyHomeownerDealer(payload: ZapierPayload): ZapierPayload {
   const answer = workingWithDealerAnswer(payload.working_with_dealer)
@@ -205,7 +212,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     response.status(status).json({ error: status === 502 ? 'Dealer lookup is unavailable. Please try again.' : 'This dealer link is unavailable.' })
     return
   }
-  const attributedPayload = { ...payload, ...leadAttribution(dealer) }
+  const attributedPayload = applyDealerLinkAnswer({ ...payload, ...leadAttribution(dealer) }, dealer)
   const dealerId = dealer?.id ?? null
   // A saved dealer webhook replaces that dealer's env-var copy. No saved row,
   // or a missing table, keeps the current master / AB / WDM / UHR env routing.

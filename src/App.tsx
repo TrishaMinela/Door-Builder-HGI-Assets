@@ -1997,7 +1997,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
       if (!selectedFinish) throw new Error('Please select a door finish before sending your configuration.')
       if (!currentDoorConfiguration) throw new Error('Please complete your door configuration before sending it.')
       const configuration = currentDoorConfiguration
-      const flattenedSubmission = buildDoorBuilderSubmissionPayload({ configuration, contact })
+      const flattenedSubmission = buildDoorBuilderSubmissionPayload({ configuration, contact, linkedDealerName: dealerBrand?.companyName })
       const doorConfiguration = { schemaVersion: 1 as const, configuration }
       const submissionFingerprint = JSON.stringify({ ...flattenedSubmission, doorConfiguration })
       const submissionId = submissionAttemptRef.current?.fingerprint === submissionFingerprint
@@ -2245,7 +2245,7 @@ function DoorBuilderApp({ dealerSlug, dealerBrand }: { dealerSlug: string | null
             <h1 id="customer-form-title">Complete Your Information</h1>
             <p>{pendingCustomerAction === 'download-pdf' ? 'Enter your details to download your configured door quote.' : pendingCustomerAction === 'open-visualizer' ? 'Enter your details to view your configured door on your home.' : 'Enter your details to send your configured door to Home Guard.'}</p>
             {pendingCustomerAction === 'open-visualizer' && <div className="visualizer-form-guide"><img src="/assets/visualizer/view-on-your-home-tablet.webp" alt="Example of a configured door shown on a customer's house" /><div><strong>Next: Add a photo of your home</strong><p>After submitting, we’ll guide you through uploading a clear picture of your entrance and placing your configured door on it.</p></div></div>}
-            <QuoteForm values={contact} errors={errors} onChange={updateContact} />
+            <QuoteForm values={contact} errors={errors} onChange={updateContact} linkedDealerName={dealerBrand?.companyName} />
             <label className="consent"><input type="checkbox" defaultChecked /> <span>I agree to be contacted about this door configuration.</span></label>
             {submitError && <p className="submit-error" role="alert">{submitError}</p>}
             <button className="submit-button" type="button" disabled={submitting} onClick={submit}><Send size={18} /> {submitting ? 'Preparing & Sending...' : pendingCustomerAction === 'open-visualizer' ? 'Continue to Visualizer' : pendingCustomerAction === 'download-pdf' ? 'Submit & Download PDF' : 'Send My Door Configuration'}</button>
