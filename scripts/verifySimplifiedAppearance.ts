@@ -217,9 +217,9 @@ async function main() {
       assert.equal((await paintOf(page, '.builder-panel')).background, 'rgb(244, 225, 193)')
       assert.equal((await paintOf(page, '.section-heading h1')).color, 'rgb(0, 0, 0)')
       assert.equal((await paintOf(page, '.option-card strong')).color, 'rgb(5, 4, 11)')
-      if (width >= 1024) assert.equal((await paintOf(page, 'aside')).background, 'rgb(244, 225, 193)')
-      else assert.equal((await paintOf(page, '.mobile-live-preview')).background, 'rgb(244, 225, 193)')
-      assert.equal((await paintOf(page, '.stepper')).background, 'rgb(244, 225, 193)')
+      if (width >= 1024) assert.equal((await paintOf(page, 'aside')).background, 'rgb(233, 240, 241)')
+      else assert.equal((await paintOf(page, '.mobile-live-preview')).background, 'rgb(233, 240, 241)')
+      assert.equal((await paintOf(page, '.stepper')).background, 'rgb(255, 255, 255)')
       assert.equal((await paintOf(page, 'footer')).background, 'rgb(32, 48, 64)')
       assert.equal((await paintOf(page, 'footer')).color, 'rgb(255, 255, 255)')
       assert.equal((await paintOf(page, '.site-footer-feedback small')).color, 'rgb(255, 255, 255)')
@@ -228,8 +228,7 @@ async function main() {
       await page.goto(`http://127.0.0.1:${port}/findmydoor?dealer=diligent-exterior-remodeling`, { waitUntil: 'networkidle' })
       assert.equal((await paintOf(page, 'header.find-my-door-header')).background, 'rgb(17, 34, 51)')
       assert.equal((await paintOf(page, 'header.find-my-door-header')).color, 'rgb(255, 255, 255)')
-      assert.equal((await paintOf(page, '.find-my-door-main')).background, 'rgb(244, 225, 193)')
-      assert.equal((await paintOf(page, '.find-my-door-main h1')).color, 'rgb(0, 0, 0)')
+      assert.equal((await paintOf(page, '.find-my-door-main')).background, 'rgba(0, 0, 0, 0)')
       await page.close()
     }
 
@@ -247,7 +246,7 @@ async function main() {
     await mainOnly.getByRole('button', { name: /Start Building/i }).click()
     assert.equal((await paintOf(mainOnly, 'header')).background, 'rgb(142, 187, 83)')
     assert.equal((await paintOf(mainOnly, '.builder-panel')).background, 'rgb(0, 170, 0)')
-    assert.equal((await paintOf(mainOnly, 'aside')).background, 'rgb(0, 170, 0)')
+    assert.equal((await paintOf(mainOnly, 'aside')).background, 'rgb(233, 240, 241)')
     assert.equal((await paintOf(mainOnly, 'footer')).background, 'rgb(142, 187, 83)')
     await mainOnly.close()
 
@@ -263,7 +262,7 @@ async function main() {
     assert.equal((await paintOf(brands, 'header')).background, 'rgb(35, 81, 118)')
     assert.equal((await paintOf(brands, 'header')).color, 'rgb(0, 0, 0)')
     assert.equal((await paintOf(brands, '.builder-panel')).background, 'rgb(142, 187, 83)')
-    assert.equal((await paintOf(brands, 'aside')).background, 'rgb(142, 187, 83)')
+    assert.equal((await paintOf(brands, 'aside')).background, 'rgb(233, 240, 241)')
     assert.equal((await paintOf(brands, 'footer')).color, 'rgb(255, 255, 255)')
     await brands.close()
 

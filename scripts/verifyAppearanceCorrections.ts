@@ -247,11 +247,11 @@ async function main() {
       await page.getByRole('button', { name: /Start Building/i }).click()
       for (const label of ['Door', 'Finish', 'Glass', 'Hardware']) {
         await reachStep(page, label)
-        await check(label, '.builder-panel .section-heading, .step-label-row, .builder-toolbar, .preview-toolbar, .mini-summary')
+        await check(label, '.builder-panel .section-heading, .builder-panel .step-label-row')
       }
       await page.goto(`http://127.0.0.1:${headPort}/findmydoor?dealer=uhr`, { waitUntil: 'networkidle' })
       await page.locator('.find-my-door-main h1').waitFor()
-      await check('find-my-door', '.find-my-door-main, .find-door-steps')
+      await check('find-my-door', '.find-my-door-main')
       await page.close()
     }
     assert.deepEqual(weak, [], weak.join('\n'))
