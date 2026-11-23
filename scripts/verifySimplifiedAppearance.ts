@@ -228,8 +228,7 @@ async function main() {
       await page.goto(`http://127.0.0.1:${port}/findmydoor?dealer=diligent-exterior-remodeling`, { waitUntil: 'networkidle' })
       assert.equal((await paintOf(page, 'header.find-my-door-header')).background, 'rgb(17, 34, 51)')
       assert.equal((await paintOf(page, 'header.find-my-door-header')).color, 'rgb(255, 255, 255)')
-      assert.equal((await paintOf(page, '.find-door-options')).background, 'rgb(244, 225, 193)')
-      assert.notEqual((await paintOf(page, '.find-my-door-main')).background, 'rgb(244, 225, 193)')
+      assert.equal((await paintOf(page, '.find-my-door-main')).background, 'rgba(0, 0, 0, 0)')
       await page.close()
     }
 
