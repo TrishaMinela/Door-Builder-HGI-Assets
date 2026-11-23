@@ -6,6 +6,7 @@ type Props = {
   values: ContactForm
   errors: Partial<Record<keyof ContactForm, string>>
   onChange: (key: keyof ContactForm, value: string) => void
+  linkedDealerName?: string | null
 }
 
 const fields: { key: TextField; label: string; type?: string; placeholder: string; autoComplete: string; wide?: boolean }[] = [
@@ -16,7 +17,8 @@ const fields: { key: TextField; label: string; type?: string; placeholder: strin
 ]
 const notesField = { key: 'notes' as const, label: 'Notes', placeholder: 'Add any details you would like us to know.', autoComplete: 'off' }
 
-export function QuoteForm({ values, errors, onChange }: Props) {
+export function QuoteForm({ values, errors, onChange, linkedDealerName }: Props) {
+  const askDealerQuestion = !linkedDealerName
   const answer = values.workingWithDealer === 'yes' || values.workingWithDealer === 'no' ? values.workingWithDealer : ''
   const chooseDealer = (next: 'yes' | 'no') => {
     onChange('workingWithDealer', next)
@@ -32,7 +34,7 @@ export function QuoteForm({ values, errors, onChange }: Props) {
           {errors[field.key] && <small>{errors[field.key]}</small>}
         </label>
       ))}
-      <div className="field-wide dealer-question">
+      {askDealerQuestion && <div className="field-wide dealer-question">
         <span id="working-with-dealer-label">Are you currently working with a dealer?</span>
         <div className="dealer-choice" role="radiogroup" aria-labelledby="working-with-dealer-label">
           {(['yes', 'no'] as const).map((option) => (
@@ -42,8 +44,8 @@ export function QuoteForm({ values, errors, onChange }: Props) {
             </label>
           ))}
         </div>
-      </div>
-      {answer === 'yes' && (
+      </div>}
+      {askDealerQuestion && answer === 'yes' && (
         <label className="field-wide" htmlFor="dealer-name">
           <span>Dealer name</span>
           <input id="dealer-name" name="dealerName" autoComplete="organization" value={values.dealerName ?? ''} placeholder="Name of dealer" onChange={(e) => onChange('dealerName', e.target.value)} />

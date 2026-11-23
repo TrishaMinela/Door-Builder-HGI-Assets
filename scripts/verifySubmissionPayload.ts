@@ -34,6 +34,13 @@ const declined = buildDoorBuilderSubmissionPayload({ contact: { ...contact, note
 assert.equal(declined.working_with_dealer, 'no')
 assert.equal(declined.working_dealer_name, '')
 assert.equal(declined.notes, 'Working with a dealer: No')
+const linked = buildDoorBuilderSubmissionPayload({ contact: { ...contact, workingWithDealer: 'no', dealerName: 'Someone Else' }, configuration: baseConfiguration, linkedDealerName: ' Unified  Home Remodeling ' })
+assert.equal(linked.working_with_dealer, 'yes')
+assert.equal(linked.working_dealer_name, 'Unified Home Remodeling')
+assert.equal(linked.notes, 'Call after 5.\nWorking with a dealer: Yes — Dealer: Unified Home Remodeling')
+const unlinked = buildDoorBuilderSubmissionPayload({ contact, configuration: baseConfiguration, linkedDealerName: null })
+assert.equal(unlinked.working_with_dealer, '')
+assert.equal(unlinked.notes, 'Call after 5.')
 const placements: SideliteConfiguration[] = ['none', 'hinge-side', 'lock-side', 'both-sides']
 const configurationTypes: DoorConfigurationType[] = ['single', 'french', 'savannah']
 
