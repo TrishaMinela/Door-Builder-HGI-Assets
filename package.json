@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@techstark/opencv-js": "^5.0.0-release.1",
+    "@vercel/functions": "^3.11.3",
     "@vitejs/plugin-react": "^4.3.4",
     "heic2any": "^0.0.4",
     "html2canvas": "^1.4.1",

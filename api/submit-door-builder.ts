@@ -1,3 +1,4 @@
+import { waitUntil } from '@vercel/functions'
 import { DealerResolutionError, resolveDealerIdentity } from '../server/dealerResolution.js'
 import { deliverDealerWebhookCopy, lookupStoredDealerWebhook, recordDealerWebhookFailure, resolveDealerCopyPlan } from '../server/doorBuilderLeadWebhook.js'
 import { isHiddenDecorativeGlass } from '../src/data/customerGlassAvailability.js'
@@ -172,7 +173,27 @@ async function submitToSupabase(submissionId: string, payload: ZapierPayload, do
     }),
   })
   if (!result.ok) throw new Error(`Supabase returned HTTP ${result.status}.`)
+  scheduleOptaNotification(submissionId, payload.dealer_slug)
 }
+
+function scheduleOptaNotification(submissionId: string, dealerSlug: string) {
+  const secret = process.env.CRM_DELIVERY_TRIGGER_SECRET
+  if (dealerSlug !== 'americas-best-windows-and-doors' || !secret) return
+  // The scheduler keeps the task alive after the HTTP response; the daily sweep
+  // recovers failures. Never include lead details or credentials in this request.
+  try {
+    waitUntil(fetch('https://home-guard-dealer-portal.vercel.app/api/crm-delivery-trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-crm-delivery-secret': secret },
+      body: JSON.stringify({ submissionId }),
+      signal: AbortSignal.timeout(5000),
+      redirect: 'error',
+    }).then(result => { if (!result.ok) console.warn('CRM delivery notification failed.') }).catch(() => { console.warn('CRM delivery notification failed.') }))
+  } catch {
+    console.warn('CRM delivery notification could not be scheduled.')
+  }
+}
+
 
 function errorMessage(reason: unknown) {
   return reason instanceof Error ? reason.message : 'Unknown destination error.'
