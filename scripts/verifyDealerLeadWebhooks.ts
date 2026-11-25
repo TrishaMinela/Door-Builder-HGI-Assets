@@ -57,6 +57,8 @@ const httpStatus = new Map<string, number>()
 let missingTable = false
 let requests: Array<{ url: string; method: string; body: Record<string, unknown> | null }> = []
 let supabaseWrites = 0
+let failLeadWrite = false
+let notificationSecretSeen = false
 
 function resetCalls() {
   requests = []
@@ -90,9 +92,13 @@ globalThis.fetch = async (input, options) => {
   }
   if (url.pathname.endsWith('/leads')) {
     supabaseWrites += 1
-    return new Response(null, { status: 201 })
+    return new Response(null, { status: failLeadWrite ? 500 : 201 })
   }
   const body = options?.body ? JSON.parse(String(options.body)) as Record<string, unknown> : null
+  if (url.pathname === '/api/crm-delivery-trigger') {
+    assert.equal(supabaseWrites, 1)
+    notificationSecretSeen = new Headers(options?.headers).get('x-crm-delivery-secret') === process.env.CRM_DELIVERY_TRIGGER_SECRET
+  }
   requests.push({ url: url.href, method, body })
   return new Response(null, { status: httpStatus.get(url.href) ?? 200, headers: httpStatus.get(url.href) === 302 ? { Location: 'https://evil.example/collect' } : undefined })
 }
@@ -313,3 +319,29 @@ assert.doesNotMatch(branding, /webhook/i)
 assert.doesNotMatch(resolution, /dealer_door_builder_webhooks|webhook_ciphertext/)
 
 console.log('PASS per-dealer webhook precedence, isolation, idempotency, and master preservation')
+
+// Opta notification is additional, server-only, and follows a successful insert.
+process.env.CRM_DELIVERY_TRIGGER_SECRET = 'local-notification-test-secret'
+const notificationUrl = 'https://home-guard-dealer-portal.vercel.app/api/crm-delivery-trigger'
+const notified = await invoke({ dealerSlug: 'americas-best-windows-and-doors' })
+assert.equal(notified.status, 200)
+assert.equal(notified.supabaseWrites, 1)
+assert.equal(notificationSecretSeen, true)
+assert.equal(notified.requests.filter(request => request.url === notificationUrl).length, 1)
+assert.deepEqual(Object.keys(notified.requests.find(request => request.url === notificationUrl)?.body ?? {}), ['submissionId'])
+const isolated = await invoke({ dealerSlug: 'wdm' })
+assert.equal(isolated.requests.some(request => request.url === notificationUrl), false)
+httpStatus.set(notificationUrl, 500)
+const notificationFailed = await invoke({ dealerSlug: 'americas-best-windows-and-doors' })
+assert.equal(notificationFailed.status, 200)
+assert.equal(notificationFailed.supabaseWrites, 1)
+httpStatus.delete(notificationUrl)
+delete process.env.CRM_DELIVERY_TRIGGER_SECRET
+
+process.env.CRM_DELIVERY_TRIGGER_SECRET = 'local-notification-test-secret'
+failLeadWrite = true
+const failedWrite = await invoke({ dealerSlug: 'americas-best-windows-and-doors' })
+assert.equal(failedWrite.status, 502)
+assert.equal(failedWrite.requests.some(request => request.url === notificationUrl), false)
+failLeadWrite = false
+delete process.env.CRM_DELIVERY_TRIGGER_SECRET
